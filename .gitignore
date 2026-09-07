@@ -1,0 +1,8 @@
+# Entorno Python
+.venv/
+__pycache__/
+*.pyc
+
+# Editor / SO
+.vscode/
+.DS_Store
