@@ -113,22 +113,23 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 - Definir `_dep_configuracion.py`, `_dep_documentos.py`, `_dep_versiones.py`, `_dep_chunks.py` con `mtpk-postgres`.
 - Aplicar el esquema contra una Postgres de pruebas (`update_db.py`), incluyendo `CREATE EXTENSION vector`.
 
-**Fase 2 — Ingesta y consulta básicas (modo fulltext, sin depender aún de OpenAI)**
+**Fase 2 — Ingesta y consulta básicas (modo fulltext, sin depender aún de OpenAI)** — hecho (2026-09-07)
 - Modelos CRUD (`_mod_documentos.py`, `_mod_versiones.py`).
-- Tool `guardar_documento` (documento nuevo vs. nueva versión, con las preguntas mínimas ya definidas arriba).
-- Tool `buscar_documentos`.
-- Tool `consultar_documentos` en modo `fulltext` únicamente.
+- Tool `guardar_documento_gd` (documento nuevo vs. nueva versión, con las preguntas mínimas ya definidas arriba, en una única transacción).
+- Tool `buscar_documentos_gd`.
+- Tool `consultar_documentos_gd` en modo `fulltext` únicamente, con una configuración de búsqueda en español que ignora acentos (`spanish_unaccent`, creada al aprovisionar la base — ver `scripts/aprovisionar_proyecto.py` del repo core).
+- Probado de punta a punta contra una base Postgres real (proyecto de desarrollo interno, sin cliente todavía) y contra una réplica del árbol que produce `sync.py` del repo core.
 - Con esto hay ya un piloto funcional mínimo, sin coste de IA externa.
 
 **Fase 3 — Modo semántico**
-- Integración con la API de embeddings de OpenAI.
+- Integración con la API de embeddings de OpenAI (pendiente: dar de alta la clave de API — decisión de negocio, no técnica).
 - Chunking por encabezados + generación de `gd_chunks`.
-- Ampliar `consultar_documentos` para modo `semantico`.
+- Ampliar `consultar_documentos_gd` para modo `semantico`.
 - Proceso/tool de backfill para un cliente que pase de `fulltext` a `semantico`.
 
 **Fase 4 — Corrección de markdown + documento completo**
-- Tool `obtener_documento_completo`.
-- Decidir y construir el mecanismo de corrección (escenario B: tool para el cliente vs. proceso interno del equipo).
+- Tool `obtener_documento_completo_gd` — hecho (2026-09-07), probada de punta a punta (versión vigente, versión concreta, y los dos casos de error).
+- Pendiente: decidir y construir el mecanismo de corrección (escenario B: tool para el cliente vs. proceso interno del equipo) — decisión de producto, no técnica.
 
 **Fase 5 — Piloto con un cliente real**
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.
@@ -136,4 +137,4 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 ## Pendiente de definir
 - Mecanismo concreto de corrección del markdown (escenario B): ¿tool MCP para que el cliente la pida, o edición interna del equipo? (Fase 4)
 - Proceso de backfill de embeddings cuando un cliente cambia de modo `fulltext` a `semantico`. (Fase 3)
-- Tool(s) MCP de ingesta/guardado (`guardar_documento` y su lógica de nueva-versión-vs-documento-nuevo) — el flujo conversacional ya está definido arriba, falta la firma/detalle técnico de la tool. (Fase 2)
+- Clave de API de OpenAI y modelo de coste al cliente por su uso. (Fase 3)

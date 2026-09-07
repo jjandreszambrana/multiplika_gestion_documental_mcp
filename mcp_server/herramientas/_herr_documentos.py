@@ -71,3 +71,32 @@ async def consultar_documentos_gd(pregunta: str, limite: int = 5) -> list[dict]:
             f"El modo de búsqueda '{modo}' todavía no está implementado (solo 'fulltext' por ahora)"
         )
     return await VersionesCRUD(config).buscar_fulltext(pregunta, limite)
+
+
+@mcp_app.tool()
+async def obtener_documento_completo_gd(id_documento: int, id_version: int | None = None) -> dict:
+    """Devuelve el markdown completo de un documento (la versión vigente,
+    o `id_version` si se indica), para cuando un fragmento de
+    consultar_documentos_gd no basta. Usa buscar_documentos_gd antes si no
+    conoces el id_documento."""
+    config = await _config_actual()
+    documento = await DocumentosCRUD(config).obtener(id_documento)
+    if not documento:
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    version = await VersionesCRUD(config).obtener_completo(id_documento, id_version)
+    if not version:
+        raise ToolError(
+            f"No hay ninguna versión vigente para el documento {id_documento}"
+            if id_version is None
+            else f"La versión {id_version} no existe o no pertenece al documento {id_documento}"
+        )
+    return {
+        "id_documento": id_documento,
+        "id_version": version["id"],
+        "nombre": documento["nombre"],
+        "tipo_documento": documento["tipo_documento"],
+        "fecha_documento": version["fecha_documento"],
+        "vigente": version["vigente"],
+        "revisado_manualmente": version["revisado_manualmente"],
+        "markdown": version["markdown_actual"],
+    }

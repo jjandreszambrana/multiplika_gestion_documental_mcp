@@ -24,6 +24,16 @@ class VersionesCRUD(AsyncCrudBase):
         )
         return filas[0] if filas else None
 
+    async def obtener_completo(self, id_documento: int, id_version: int | None = None) -> dict | None:
+        """La versión vigente de `id_documento` (por defecto) o la versión
+        concreta `id_version`, siempre que pertenezca a ese documento."""
+        if id_version is None:
+            return await self.obtener_vigente(id_documento)
+        fila = await self.obtener(id_version)
+        if fila and fila["id_documento"] != id_documento:
+            return None
+        return fila
+
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con
