@@ -48,6 +48,7 @@ export const api = {
   login: (email, password) => peticion(BASE_ADMIN, "POST", "/auth/login", { email, password }),
 
   listarProyectosDeLaEmpresa: (idTenant) => peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/proyectos`),
+  verProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}`),
 
   listarOBuscarDocumentos: (idProyecto, q) =>
     peticion(

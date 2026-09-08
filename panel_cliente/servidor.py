@@ -49,6 +49,14 @@ app.add_middleware(
 )
 
 
+@app.get("/v1/proyectos/{id_proyecto}")
+async def ver_proyecto(id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> dict:
+    """Datos básicos del proyecto (nombre, slug) — lo usa el frontend
+    cuando entra directo a un proyecto conocido (enlace del superadmin
+    desde el panel de administración) sin pasar por el selector."""
+    return {"id": proyecto["id"], "nombre": proyecto["nombre"], "slug": proyecto["slug"]}
+
+
 @app.get("/v1/proyectos/{id_proyecto}/documentos")
 async def listar_o_buscar_documentos(
     id_proyecto: int, q: str | None = None, proyecto: dict = Depends(proyecto_gestion_documental_actual)
