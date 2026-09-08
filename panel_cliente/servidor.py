@@ -8,8 +8,16 @@ Reutiliza el login del panel de administración del repo core (mismo
 JWT, mismo usuario/contraseña de su empresa) y la misma capa `modelos`
 que usan las herramientas MCP — no hay lógica de negocio duplicada.
 
+Sirve a CUALQUIER cliente que use este producto (resuelve el proyecto
+por id en cada petición, con su base de datos propia) — por eso, a
+diferencia de mcp_server/herramientas/, sync.py del repo core NO lo
+despliega dentro de apps/mcp_server/proyectos/<slug>/ de ningún cliente
+concreto (eso lo dejaría atado a que ese proyecto en particular siga
+existiendo). Va a una ruta estable por producto:
+`apps/mcp_server/paneles_cliente/<nombre_del_repo>/`.
+
 Pensado para ejecutarse ya desplegado, vía
-`python -m apps.mcp_server.proyectos.<slug>.panel_cliente.servidor`
+`python -m apps.mcp_server.paneles_cliente.<nombre_del_repo>.panel_cliente.servidor`
 (WorkingDirectory = raíz del repo core, de ahí resuelven los imports
 absolutos a database.config_db / lib.*). Para probar en local antes de
 desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
