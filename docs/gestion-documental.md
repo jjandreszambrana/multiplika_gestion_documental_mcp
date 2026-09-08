@@ -67,7 +67,7 @@ Búsqueda (full-text o semántica): siempre filtra por `vigente = true`, salvo q
 
 **Correcciones — dos escenarios contemplados:**
 - **A) Nueva versión del documento** (el cliente sube una versión corregida/actualizada): nueva fila en `gd_versiones`, la anterior deja de ser `vigente`. Se guarda todo el histórico, sin límite de tiempo ni purga (decisión: el espacio que ocupa es marginal — texto y vectores pequeños; no se almacena el binario original).
-- **B) Corrección del markdown mal generado por la IA** (sin que haya documento nuevo del cliente): se edita `markdown_actual` de la versión existente, conservando `markdown_original` como lo que generó la IA la primera vez, y marcando `revisado_manualmente=true`. Pendiente de detallar: mecanismo concreto de corrección (¿tool MCP para que el cliente la pida, o edición interna del equipo?) — queda para cuando se aborde la implementación.
+- **B) Corrección del markdown mal generado por la IA** (sin que haya documento nuevo del cliente): se edita `markdown_actual` de la versión existente, conservando `markdown_original` como lo que generó la IA la primera vez, y marcando `revisado_manualmente=true`. Mecanismo (decidido 2026-09-08): siempre vía tool MCP (`corregir_documento_gd`), a petición del propio cliente a su IA — sin revisión de nadie del equipo, porque no hay capacidad para tenerla. El riesgo asumido es que una corrección mal hecha por la IA del cliente quede guardada sin que nadie la verifique; se acepta porque `markdown_original` nunca se pierde.
 
 ### Pipeline de ingesta (2026-09-06)
 Sin interfaz: el cliente le dice a su Claude "guárdame esta factura" (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.
@@ -122,19 +122,18 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 - Con esto hay ya un piloto funcional mínimo, sin coste de IA externa.
 
 **Fase 3 — Modo semántico**
-- Integración con la API de embeddings de OpenAI (pendiente: dar de alta la clave de API — decisión de negocio, no técnica).
+- Proveedor de embeddings: **Mistral Embed** (decidido 2026-09-08 — no OpenAI: Anthropic no ofrece este servicio, y entre las opciones de Mistral, "Mistral Embed" es la de texto general; "Codestral Embed" es para código, no aplica aquí). Pendiente: dar de alta la clave de API — decisión de negocio (coste), no técnica.
 - Chunking por encabezados + generación de `gd_chunks`.
 - Ampliar `consultar_documentos_gd` para modo `semantico`.
 - Proceso/tool de backfill para un cliente que pase de `fulltext` a `semantico`.
 
 **Fase 4 — Corrección de markdown + documento completo**
 - Tool `obtener_documento_completo_gd` — hecho (2026-09-07), probada de punta a punta (versión vigente, versión concreta, y los dos casos de error).
-- Pendiente: decidir y construir el mecanismo de corrección (escenario B: tool para el cliente vs. proceso interno del equipo) — decisión de producto, no técnica.
+- Mecanismo de corrección (escenario B): **decidido 2026-09-08 — siempre el cliente, con su propia IA, sin revisión de nadie del equipo** (no hay capacidad para que alguien del equipo esté pendiente de corregir). Tool `corregir_documento_gd` — hecho, probada de punta a punta (corrige `markdown_actual`, conserva `markdown_original` intacto, marca `revisado_manualmente=true`, rechaza versiones inexistentes o de otro documento).
 
 **Fase 5 — Piloto con un cliente real**
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.
 
 ## Pendiente de definir
-- Mecanismo concreto de corrección del markdown (escenario B): ¿tool MCP para que el cliente la pida, o edición interna del equipo? (Fase 4)
+- Clave de API de Mistral y modelo de coste al cliente por su uso. (Fase 3)
 - Proceso de backfill de embeddings cuando un cliente cambia de modo `fulltext` a `semantico`. (Fase 3)
-- Clave de API de OpenAI y modelo de coste al cliente por su uso. (Fase 3)

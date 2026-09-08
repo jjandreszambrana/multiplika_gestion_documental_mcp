@@ -34,6 +34,23 @@ class VersionesCRUD(AsyncCrudBase):
             return None
         return fila
 
+    async def corregir(
+        self, id_documento: int, markdown_corregido: str, id_version: int | None = None
+    ) -> dict | None:
+        """Corrige el markdown mal generado por la IA (escenario B de
+        docs/gestion-documental.md → "Correcciones"): edita
+        `markdown_actual` de la versión indicada (o la vigente, por
+        defecto) SIN tocar `markdown_original` ni crear una versión nueva
+        — es el mismo documento, solo se arregla un error de lectura.
+        Marca `revisado_manualmente=true`. Sin revisión de nadie del
+        equipo: quien corrige es siempre el propio cliente (decisión de
+        producto, 2026-09-08)."""
+        version = await self.obtener_completo(id_documento, id_version)
+        if not version:
+            return None
+        await self.update(version["id"], {"markdown_actual": markdown_corregido, "revisado_manualmente": True})
+        return await self.obtener(version["id"])
+
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con

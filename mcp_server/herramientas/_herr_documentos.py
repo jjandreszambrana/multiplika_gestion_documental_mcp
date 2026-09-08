@@ -100,3 +100,31 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "revisado_manualmente": version["revisado_manualmente"],
         "markdown": version["markdown_actual"],
     }
+
+
+@mcp_app.tool()
+async def corregir_documento_gd(
+    id_documento: int, markdown_corregido: str, id_version: int | None = None
+) -> dict:
+    """Corrige un error de lectura de la IA en un documento ya guardado
+    (por ejemplo, un importe o una fecha mal transcritos), sin subir un
+    documento nuevo. Usa esta tool solo para arreglar errores de
+    conversión, no para registrar cambios reales del propio documento —
+    eso es una nueva versión con guardar_documento_gd. Corrige la versión
+    vigente por defecto, o `id_version` si se indica. El cliente es
+    responsable de confirmar que la corrección es correcta antes de
+    llamar a esta tool: no hay revisión posterior de nadie más."""
+    config = await _config_actual()
+    version = await VersionesCRUD(config).corregir(id_documento, markdown_corregido, id_version)
+    if not version:
+        raise ToolError(
+            f"No hay ninguna versión vigente para el documento {id_documento}"
+            if id_version is None
+            else f"La versión {id_version} no existe o no pertenece al documento {id_documento}"
+        )
+    return {
+        "id_documento": id_documento,
+        "id_version": version["id"],
+        "markdown": version["markdown_actual"],
+        "revisado_manualmente": version["revisado_manualmente"],
+    }
