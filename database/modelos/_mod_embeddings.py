@@ -1,8 +1,9 @@
 """Chunking de markdown por encabezados y cliente de embeddings — soporta
 Mistral (proveedor por defecto) y OpenAI, seleccionable por cliente en
 gd_configuracion.proveedor_embedding (ver docs/gestion-documental.md →
-"Fase 3"). Las claves de API las gestiona el panel de administración del
-repo core (mcpc_configuracion_plataforma)."""
+"Fase 3"). Las claves de API las paga y gestiona la EMPRESA (tenant)
+dueña del proyecto, desde el panel de administración del repo core
+(mcpc_tenants) — no son globales de la plataforma."""
 
 import re
 
@@ -42,9 +43,9 @@ async def generar_embeddings(proveedor_embedding: str, api_key: str, textos: lis
     raise ValueError(f"No hay cliente implementado para el proveedor '{sdk}'")
 
 
-async def obtener_api_key(proveedor_embedding: str) -> str | None:
+async def obtener_api_key(proveedor_embedding: str, alias_proyecto: str) -> str | None:
     """Resuelve la clave de API correspondiente al proveedor configurado,
-    desde la configuración de plataforma del repo core."""
+    de la empresa (tenant) dueña de `alias_proyecto` (repo core)."""
     from database.config_db import get_mistral_api_key, get_openai_api_key
 
     if proveedor_embedding not in PROVEEDORES_EMBEDDING_SOPORTADOS:
@@ -52,7 +53,7 @@ async def obtener_api_key(proveedor_embedding: str) -> str | None:
     sdk, _ = proveedor_embedding.split(":", 1)
 
     if sdk == "mistral":
-        return await get_mistral_api_key()
+        return await get_mistral_api_key(alias_proyecto)
     if sdk == "openai":
-        return await get_openai_api_key()
+        return await get_openai_api_key(alias_proyecto)
     raise ValueError(f"No hay clave configurable para el proveedor '{sdk}'")

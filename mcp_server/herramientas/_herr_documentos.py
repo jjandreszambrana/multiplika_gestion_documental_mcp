@@ -15,23 +15,29 @@ from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_k
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
 
 
-async def _config_actual() -> dict:
+async def _contexto_actual() -> tuple[dict, str]:
+    """Config de conexión a la base del proyecto + su slug — el slug hace
+    falta para resolver de qué EMPRESA (tenant) tirar la clave de API de
+    embeddings, ya que cada una paga y gestiona la suya."""
     proyecto = await resolver_proyecto_actual()
-    return get_db_config(proyecto["slug"])
+    return get_db_config(proyecto["slug"]), proyecto["slug"]
 
 
-async def _clave_embedding_o_error(proveedor_embedding: str) -> str:
-    api_key = await obtener_api_key(proveedor_embedding)
+async def _clave_embedding_o_error(proveedor_embedding: str, alias_proyecto: str) -> str:
+    api_key = await obtener_api_key(proveedor_embedding, alias_proyecto)
     if not api_key:
         proveedor_legible = proveedor_embedding.split(":", 1)[0].capitalize()
         raise ToolError(
-            f"El modo de búsqueda es 'semantico' (proveedor {proveedor_embedding}) pero no hay "
-            f"ninguna clave de API de {proveedor_legible} configurada en el panel de administración"
+            f"El modo de búsqueda es 'semantico' (proveedor {proveedor_embedding}) pero la empresa "
+            f"dueña de este proyecto no tiene configurada ninguna clave de API de {proveedor_legible} "
+            f"en el panel de administración"
         )
     return api_key
 
 
-async def _reindexar_si_semantico(config: dict, id_documento: int, id_version: int, markdown: str) -> None:
+async def _reindexar_si_semantico(
+    config: dict, alias_proyecto: str, id_documento: int, id_version: int, markdown: str
+) -> None:
     """Tras guardar o corregir una versión: si el modo es semántico,
     recalcula sus chunks (con el proveedor de embedding configurado para
     este cliente) y limpia los de versiones que hayan dejado de ser
@@ -41,7 +47,7 @@ async def _reindexar_si_semantico(config: dict, id_documento: int, id_version: i
     if modo != "semantico":
         return
     proveedor_embedding = await configuracion.obtener_proveedor_embedding()
-    api_key = await _clave_embedding_o_error(proveedor_embedding)
+    api_key = await _clave_embedding_o_error(proveedor_embedding, alias_proyecto)
     await reindexar_version(config, proveedor_embedding, api_key, id_version, markdown)
     await limpiar_chunks_no_buscables(config, id_documento)
 
@@ -65,7 +71,7 @@ async def guardar_documento_gd(
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente); si no, crea un
     documento nuevo."""
-    config = await _config_actual()
+    config, alias_proyecto = await _contexto_actual()
     try:
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
@@ -73,7 +79,7 @@ async def guardar_documento_gd(
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
-    await _reindexar_si_semantico(config, resultado["id_documento"], resultado["id_version"], markdown)
+    await _reindexar_si_semantico(config, alias_proyecto, resultado["id_documento"], resultado["id_version"], markdown)
     return resultado
 
 
@@ -84,7 +90,7 @@ async def buscar_documentos_gd(
     """Busca documentos por nombre/referencia y/o tipo (no por contenido).
     Sirve tanto para consulta exploratoria como para confirmar si un
     documento ya existe antes de guardar una supuesta nueva versión."""
-    config = await _config_actual()
+    config, _ = await _contexto_actual()
     return await DocumentosCRUD(config).buscar(referencia, tipo_documento, limite)
 
 
@@ -94,14 +100,14 @@ async def consultar_documentos_gd(pregunta: str, limite: int = 5) -> list[dict]:
     documentos. Devuelve los fragmentos más relevantes con su documento,
     tipo, fecha e identificadores, para citar la fuente y poder pedir el
     documento completo si un fragmento no basta."""
-    config = await _config_actual()
+    config, alias_proyecto = await _contexto_actual()
     configuracion = ConfiguracionCRUD(config)
     modo = await configuracion.obtener_modo_busqueda()
     if modo == "fulltext":
         return await VersionesCRUD(config).buscar_fulltext(pregunta, limite)
 
     proveedor_embedding = await configuracion.obtener_proveedor_embedding()
-    api_key = await _clave_embedding_o_error(proveedor_embedding)
+    api_key = await _clave_embedding_o_error(proveedor_embedding, alias_proyecto)
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [pregunta])
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite)
 
@@ -114,10 +120,10 @@ async def activar_busqueda_semantica_gd() -> dict:
     base de datos. Solo hace falta llamarla una vez, al activar la
     búsqueda semántica; los documentos guardados o corregidos después ya
     se indexan solos."""
-    config = await _config_actual()
+    config, alias_proyecto = await _contexto_actual()
     configuracion = ConfiguracionCRUD(config)
     proveedor_embedding = await configuracion.obtener_proveedor_embedding()
-    api_key = await _clave_embedding_o_error(proveedor_embedding)
+    api_key = await _clave_embedding_o_error(proveedor_embedding, alias_proyecto)
 
     await configuracion.update(1, {"modo_busqueda": "semantico"})
 
@@ -138,7 +144,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
     o `id_version` si se indica), para cuando un fragmento de
     consultar_documentos_gd no basta. Usa buscar_documentos_gd antes si no
     conoces el id_documento."""
-    config = await _config_actual()
+    config, _ = await _contexto_actual()
     documento = await DocumentosCRUD(config).obtener(id_documento)
     if not documento:
         raise ToolError(f"No existe ningún documento con id {id_documento}")
@@ -173,7 +179,7 @@ async def corregir_documento_gd(
     vigente por defecto, o `id_version` si se indica. El cliente es
     responsable de confirmar que la corrección es correcta antes de
     llamar a esta tool: no hay revisión posterior de nadie más."""
-    config = await _config_actual()
+    config, alias_proyecto = await _contexto_actual()
     version = await VersionesCRUD(config).corregir(id_documento, markdown_corregido, id_version)
     if not version:
         raise ToolError(
@@ -181,7 +187,7 @@ async def corregir_documento_gd(
             if id_version is None
             else f"La versión {id_version} no existe o no pertenece al documento {id_documento}"
         )
-    await _reindexar_si_semantico(config, id_documento, version["id"], markdown_corregido)
+    await _reindexar_si_semantico(config, alias_proyecto, id_documento, version["id"], markdown_corregido)
     return {
         "id_documento": id_documento,
         "id_version": version["id"],
