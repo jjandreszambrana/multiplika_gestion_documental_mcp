@@ -11,9 +11,9 @@ CAMPOS_CONFIGURACION = [
             not_null=True, default="fulltext",
             comentario="Modo de búsqueda activo del cliente, cambiable en cualquier momento"),
     Columna(nombre="proveedor_embedding", tipo="VARCHAR", longitud=100, not_null=True,
-            default="openai:text-embedding-3-small",
+            default="mistral:mistral-embed",
             comentario="Proveedor:modelo de embedding usado si el modo es semántico"),
-    Columna(nombre="dimension_embedding", tipo="INT", not_null=True, default=1536,
+    Columna(nombre="dimension_embedding", tipo="INT", not_null=True, default=1024,
             comentario="Dimensión del vector de embedding (informativa; ver nota sobre gd_chunks.embedding)"),
 ]
 

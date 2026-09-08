@@ -3,6 +3,10 @@
 __pycache__/
 *.pyc
 
+# Secretos locales (la clave real vive cifrada en mcpc_configuracion_plataforma,
+# gestionada desde el panel de administración — ver apps/panel_admin/frontend)
+mistral/
+
 # Editor / SO
 .vscode/
 .DS_Store

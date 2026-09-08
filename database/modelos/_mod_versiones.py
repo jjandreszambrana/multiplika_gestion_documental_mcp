@@ -51,6 +51,19 @@ class VersionesCRUD(AsyncCrudBase):
         await self.update(version["id"], {"markdown_actual": markdown_corregido, "revisado_manualmente": True})
         return await self.obtener(version["id"])
 
+    async def listar_buscables(self) -> list[dict]:
+        """Todas las versiones actualmente buscables (vigentes, o todas
+        las de un documento con todas_versiones_buscables=true) — usado
+        por el backfill al activar el modo semántico."""
+        db = AsyncDatabase(**self.config)
+        sql = f"""
+            SELECT v.id, v.markdown_actual
+            FROM "{TABLA_VERSIONES.nombre}" v
+            JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
+            WHERE v.vigente = true OR d.todas_versiones_buscables = true
+        """
+        return await db.query(sql)
+
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con

@@ -6,10 +6,11 @@ from ._dep_versiones import NOMBRE_TABLA_VERSIONES
 NOMBRE_TABLA_CHUNKS = "gd_chunks"
 __DB_NAME__ = get_db_name("gestion_documental")
 
-# Dimensión de fábrica de la plataforma (openai:text-embedding-3-small).
+# Dimensión de fábrica de la plataforma (mistral:mistral-embed, confirmada
+# de verdad con una llamada real a la API — no es un dato de catálogo).
 # Fija en la columna por limitación de pgvector: ver nota en
 # docs/fase1-diseno-esqueleto.md sobre qué implica cambiarla para un cliente concreto.
-DIMENSION_EMBEDDING_DEFAULT = 1536
+DIMENSION_EMBEDDING_DEFAULT = 1024
 
 CAMPOS_CHUNKS = [
     Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,

@@ -121,11 +121,13 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 - Probado de punta a punta contra una base Postgres real (proyecto de desarrollo interno, sin cliente todavía) y contra una réplica del árbol que produce `sync.py` del repo core.
 - Con esto hay ya un piloto funcional mínimo, sin coste de IA externa.
 
-**Fase 3 — Modo semántico**
-- Proveedor de embeddings: **Mistral Embed** (decidido 2026-09-08 — no OpenAI: Anthropic no ofrece este servicio, y entre las opciones de Mistral, "Mistral Embed" es la de texto general; "Codestral Embed" es para código, no aplica aquí). Pendiente: dar de alta la clave de API — decisión de negocio (coste), no técnica.
-- Chunking por encabezados + generación de `gd_chunks`.
-- Ampliar `consultar_documentos_gd` para modo `semantico`.
-- Proceso/tool de backfill para un cliente que pase de `fulltext` a `semantico`.
+**Fase 3 — Modo semántico** — hecho (2026-09-08)
+- Proveedor de embeddings: **Mistral Embed** (`mistral-embed`, **1024 dimensiones — confirmado con una llamada real a la API**, no es el dato de catálogo de 1536 que traía OpenAI). Clave de API gestionada desde el panel de administración del repo core (`Configuración` → cifrada en `mcpc_configuracion_plataforma`, nunca en un archivo del repo).
+- Chunking por encabezados (`_mod_embeddings.py::chunkear_por_encabezados`) + generación de `gd_chunks` (`_mod_chunks.py`).
+- `consultar_documentos_gd` ampliada para modo `semantico` (búsqueda por similitud de coseno con pgvector, operador `<=>`).
+- Tool `activar_busqueda_semantica_gd` de backfill: cambia el modo y genera embeddings de todo lo ya guardado que sea buscable.
+- `guardar_documento_gd` y `corregir_documento_gd` reindexan solos cuando el modo es semántico (ver `_reindexar_si_semantico` en `_herr_documentos.py`); las versiones que dejan de ser buscables (superadas por una nueva, sin histórico completo) se limpian solas.
+- Probado de punta a punta contra Mistral real y Postgres real: activar, guardar (autoindexado), preguntar por dos aspectos distintos del mismo documento (cada uno prioriza el fragmento correcto), corregir (reindexa) y volver a preguntar (ya no aparece el dato viejo).
 
 **Fase 4 — Corrección de markdown + documento completo**
 - Tool `obtener_documento_completo_gd` — hecho (2026-09-07), probada de punta a punta (versión vigente, versión concreta, y los dos casos de error).
@@ -133,7 +135,4 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 
 **Fase 5 — Piloto con un cliente real**
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.
-
-## Pendiente de definir
-- Clave de API de Mistral y modelo de coste al cliente por su uso. (Fase 3)
-- Proceso de backfill de embeddings cuando un cliente cambia de modo `fulltext` a `semantico`. (Fase 3)
+- Pendiente: modelo de coste al cliente por el uso de embeddings — decisión de negocio, no técnica.
