@@ -3,12 +3,18 @@
 """Aplica el esquema de gestión documental sobre la base física de un cliente.
 
 Uso:
-    python update_db.py <alias_cliente>                    # aplicar
-    python update_db.py <alias_cliente> --permitir-drop     # + eliminar índices/FKs huérfanos
+    python update_db.py <alias_cliente>                                  # aplicar (mistral por defecto)
+    python update_db.py <alias_cliente> --proveedor-embedding openai:text-embedding-3-small
+    python update_db.py <alias_cliente> --permitir-drop                  # + eliminar índices/FKs huérfanos
 
 <alias_cliente> es el slug del proyecto en mcpc_proyectos (1 BD por cliente:
 hay que ejecutar esto una vez por cada cliente dado de alta, no una sola vez
 para toda la plataforma).
+
+El proveedor de embedding se fija al crear la base del cliente y no se
+puede cambiar después sin migrar gd_chunks.embedding a mano (columna
+VECTOR de tamaño fijo en Postgres) — ver PROVEEDORES_EMBEDDING_SOPORTADOS
+en database/dependencias/_dep_configuracion.py.
 """
 
 import argparse
@@ -20,28 +26,36 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mtpk_postgres.core_sync import ManagerDB
 
 from database.config_db import get_db_config
-from database.dependencias._dep_configuracion import TABLA_CONFIGURACION
+from database.dependencias._dep_configuracion import (
+    PROVEEDOR_EMBEDDING_POR_DEFECTO,
+    PROVEEDORES_EMBEDDING_SOPORTADOS,
+    construir_tabla_configuracion,
+)
 from database.dependencias._dep_documentos import TABLA_DOCUMENTOS
 from database.dependencias._dep_versiones import TABLA_VERSIONES
-from database.dependencias._dep_chunks import TABLA_CHUNKS
-
-TABLAS = [
-    TABLA_CONFIGURACION,
-    TABLA_DOCUMENTOS,
-    TABLA_VERSIONES,
-    TABLA_CHUNKS,
-]
+from database.dependencias._dep_chunks import construir_tabla_chunks
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("alias", help="Slug del proyecto de cliente (mcpc_proyectos)")
+    parser.add_argument(
+        "--proveedor-embedding", choices=list(PROVEEDORES_EMBEDDING_SOPORTADOS),
+        default=PROVEEDOR_EMBEDDING_POR_DEFECTO,
+    )
     parser.add_argument("--permitir-drop", action="store_true")
     args = parser.parse_args()
 
-    manager = ManagerDB(**get_db_config(args.alias))
+    dimension = PROVEEDORES_EMBEDDING_SOPORTADOS[args.proveedor_embedding]
+    tablas = [
+        construir_tabla_configuracion(args.proveedor_embedding),
+        TABLA_DOCUMENTOS,
+        TABLA_VERSIONES,
+        construir_tabla_chunks(dimension),
+    ]
 
-    for tabla in TABLAS:
+    manager = ManagerDB(**get_db_config(args.alias))
+    for tabla in tablas:
         manager.add_tabla(tabla)
     resultado = manager.crear_todo(permitir_drop=args.permitir_drop)
     manager.cerrar()

@@ -36,7 +36,9 @@ class ChunksCRUD(AsyncCrudBase):
         return await db.query(sql, (vector_sql, vector_sql, limite))
 
 
-async def reindexar_version(config: dict, api_key: str, id_version: int, markdown: str) -> int:
+async def reindexar_version(
+    config: dict, proveedor_embedding: str, api_key: str, id_version: int, markdown: str
+) -> int:
     """Recalcula los chunks de una versión a partir de su markdown actual
     (borra los que hubiera antes) — usado tanto al guardar una versión
     nueva como al corregir una existente. Devuelve cuántos chunks quedaron."""
@@ -46,7 +48,7 @@ async def reindexar_version(config: dict, api_key: str, id_version: int, markdow
     textos = chunkear_por_encabezados(markdown)
     if not textos:
         return 0
-    vectores = await generar_embeddings(api_key, textos)
+    vectores = await generar_embeddings(proveedor_embedding, api_key, textos)
 
     db = AsyncDatabase(**config)
     db.add_tabla(TABLA_CHUNKS)

@@ -1,13 +1,15 @@
-"""Chunking de markdown por encabezados y cliente de embeddings de Mistral
-(mistral-embed, 1024 dim — confirmado con una llamada real a la API, ver
-docs/gestion-documental.md → "Fase 3"). La clave de API la gestiona el
-panel de administración del repo core (mcpc_configuracion_plataforma)."""
+"""Chunking de markdown por encabezados y cliente de embeddings — soporta
+Mistral (proveedor por defecto) y OpenAI, seleccionable por cliente en
+gd_configuracion.proveedor_embedding (ver docs/gestion-documental.md →
+"Fase 3"). Las claves de API las gestiona el panel de administración del
+repo core (mcpc_configuracion_plataforma)."""
 
 import re
 
 from mistralai.client import Mistral
+from openai import AsyncOpenAI
 
-MODELO_EMBEDDING = "mistral-embed"
+from ..dependencias._dep_configuracion import PROVEEDORES_EMBEDDING_SOPORTADOS
 
 
 def chunkear_por_encabezados(markdown: str) -> list[str]:
@@ -19,8 +21,38 @@ def chunkear_por_encabezados(markdown: str) -> list[str]:
     return [p.strip() for p in partes if p.strip()]
 
 
-async def generar_embeddings(api_key: str, textos: list[str]) -> list[list[float]]:
-    """Un vector por cada texto de `textos`, en el mismo orden."""
-    cliente = Mistral(api_key=api_key)
-    respuesta = await cliente.embeddings.create_async(model=MODELO_EMBEDDING, inputs=textos)
-    return [dato.embedding for dato in respuesta.data]
+async def generar_embeddings(proveedor_embedding: str, api_key: str, textos: list[str]) -> list[list[float]]:
+    """Un vector por cada texto de `textos`, en el mismo orden.
+    `proveedor_embedding` es el valor de gd_configuracion.proveedor_embedding
+    (ej. "mistral:mistral-embed", "openai:text-embedding-3-small")."""
+    if proveedor_embedding not in PROVEEDORES_EMBEDDING_SOPORTADOS:
+        raise ValueError(f"Proveedor de embeddings desconocido: '{proveedor_embedding}'")
+    sdk, modelo = proveedor_embedding.split(":", 1)
+
+    if sdk == "mistral":
+        cliente = Mistral(api_key=api_key)
+        respuesta = await cliente.embeddings.create_async(model=modelo, inputs=textos)
+        return [dato.embedding for dato in respuesta.data]
+
+    if sdk == "openai":
+        cliente = AsyncOpenAI(api_key=api_key)
+        respuesta = await cliente.embeddings.create(model=modelo, input=textos)
+        return [dato.embedding for dato in respuesta.data]
+
+    raise ValueError(f"No hay cliente implementado para el proveedor '{sdk}'")
+
+
+async def obtener_api_key(proveedor_embedding: str) -> str | None:
+    """Resuelve la clave de API correspondiente al proveedor configurado,
+    desde la configuración de plataforma del repo core."""
+    from database.config_db import get_mistral_api_key, get_openai_api_key
+
+    if proveedor_embedding not in PROVEEDORES_EMBEDDING_SOPORTADOS:
+        raise ValueError(f"Proveedor de embeddings desconocido: '{proveedor_embedding}'")
+    sdk, _ = proveedor_embedding.split(":", 1)
+
+    if sdk == "mistral":
+        return await get_mistral_api_key()
+    if sdk == "openai":
+        return await get_openai_api_key()
+    raise ValueError(f"No hay clave configurable para el proveedor '{sdk}'")

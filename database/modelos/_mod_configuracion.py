@@ -13,3 +13,7 @@ class ConfiguracionCRUD(AsyncCrudBase):
     async def obtener_modo_busqueda(self) -> str:
         fila = await self.obtener(1)
         return fila["modo_busqueda"] if fila else "fulltext"
+
+    async def obtener_proveedor_embedding(self) -> str:
+        fila = await self.obtener(1)
+        return fila["proveedor_embedding"] if fila else "mistral:mistral-embed"

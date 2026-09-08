@@ -5,13 +5,13 @@ guia_nuevo_proyecto.md, paso 6)."""
 
 from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
-from database.config_db import get_db_config, get_mistral_api_key
+from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
-from ..database.modelos._mod_embeddings import generar_embeddings
+from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
 
 
@@ -20,22 +20,29 @@ async def _config_actual() -> dict:
     return get_db_config(proyecto["slug"])
 
 
+async def _clave_embedding_o_error(proveedor_embedding: str) -> str:
+    api_key = await obtener_api_key(proveedor_embedding)
+    if not api_key:
+        proveedor_legible = proveedor_embedding.split(":", 1)[0].capitalize()
+        raise ToolError(
+            f"El modo de búsqueda es 'semantico' (proveedor {proveedor_embedding}) pero no hay "
+            f"ninguna clave de API de {proveedor_legible} configurada en el panel de administración"
+        )
+    return api_key
+
+
 async def _reindexar_si_semantico(config: dict, id_documento: int, id_version: int, markdown: str) -> None:
     """Tras guardar o corregir una versión: si el modo es semántico,
-    recalcula sus chunks y limpia los de versiones que hayan dejado de ser
-    buscables. Si falla la llamada a Mistral, no revienta la tool que
-    guardó el documento — el documento ya quedó guardado; solo avisa."""
-    modo = await ConfiguracionCRUD(config).obtener_modo_busqueda()
+    recalcula sus chunks (con el proveedor de embedding configurado para
+    este cliente) y limpia los de versiones que hayan dejado de ser
+    buscables."""
+    configuracion = ConfiguracionCRUD(config)
+    modo = await configuracion.obtener_modo_busqueda()
     if modo != "semantico":
         return
-    api_key = await get_mistral_api_key()
-    if not api_key:
-        raise ToolError(
-            "El modo de búsqueda es 'semantico' pero no hay ninguna clave de API de Mistral "
-            "configurada en el panel de administración — el documento se guardó, pero no quedará "
-            "indexado para búsqueda semántica hasta que se configure"
-        )
-    await reindexar_version(config, api_key, id_version, markdown)
+    proveedor_embedding = await configuracion.obtener_proveedor_embedding()
+    api_key = await _clave_embedding_o_error(proveedor_embedding)
+    await reindexar_version(config, proveedor_embedding, api_key, id_version, markdown)
     await limpiar_chunks_no_buscables(config, id_documento)
 
 
@@ -88,38 +95,41 @@ async def consultar_documentos_gd(pregunta: str, limite: int = 5) -> list[dict]:
     tipo, fecha e identificadores, para citar la fuente y poder pedir el
     documento completo si un fragmento no basta."""
     config = await _config_actual()
-    modo = await ConfiguracionCRUD(config).obtener_modo_busqueda()
+    configuracion = ConfiguracionCRUD(config)
+    modo = await configuracion.obtener_modo_busqueda()
     if modo == "fulltext":
         return await VersionesCRUD(config).buscar_fulltext(pregunta, limite)
 
-    api_key = await get_mistral_api_key()
-    if not api_key:
-        raise ToolError(
-            "El modo de búsqueda es 'semantico' pero no hay ninguna clave de API de Mistral "
-            "configurada en el panel de administración"
-        )
-    (embedding_pregunta,) = await generar_embeddings(api_key, [pregunta])
+    proveedor_embedding = await configuracion.obtener_proveedor_embedding()
+    api_key = await _clave_embedding_o_error(proveedor_embedding)
+    (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [pregunta])
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite)
 
 
 @mcp_app.tool()
 async def activar_busqueda_semantica_gd() -> dict:
     """Cambia el modo de búsqueda de este proyecto a 'semantico' (de
-    'fulltext') e indexa con embeddings todo lo que ya estaba guardado.
-    Solo hace falta llamarla una vez, al activar la búsqueda semántica;
-    los documentos guardados o corregidos después ya se indexan solos."""
+    'fulltext') e indexa con embeddings todo lo que ya estaba guardado,
+    usando el proveedor de embedding fijado para este cliente al crear su
+    base de datos. Solo hace falta llamarla una vez, al activar la
+    búsqueda semántica; los documentos guardados o corregidos después ya
+    se indexan solos."""
     config = await _config_actual()
-    api_key = await get_mistral_api_key()
-    if not api_key:
-        raise ToolError("No hay ninguna clave de API de Mistral configurada en el panel de administración")
+    configuracion = ConfiguracionCRUD(config)
+    proveedor_embedding = await configuracion.obtener_proveedor_embedding()
+    api_key = await _clave_embedding_o_error(proveedor_embedding)
 
-    await ConfiguracionCRUD(config).update(1, {"modo_busqueda": "semantico"})
+    await configuracion.update(1, {"modo_busqueda": "semantico"})
 
     versiones_a_indexar = await VersionesCRUD(config).listar_buscables()
     for version in versiones_a_indexar:
-        await reindexar_version(config, api_key, version["id"], version["markdown_actual"])
+        await reindexar_version(config, proveedor_embedding, api_key, version["id"], version["markdown_actual"])
 
-    return {"modo_busqueda": "semantico", "versiones_indexadas": len(versiones_a_indexar)}
+    return {
+        "modo_busqueda": "semantico",
+        "proveedor_embedding": proveedor_embedding,
+        "versiones_indexadas": len(versiones_a_indexar),
+    }
 
 
 @mcp_app.tool()
