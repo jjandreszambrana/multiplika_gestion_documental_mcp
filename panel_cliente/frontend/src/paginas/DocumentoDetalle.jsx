@@ -4,6 +4,7 @@ import { api } from "../api"
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [documento, setDocumento] = useState(null)
   const [error, setError] = useState(null)
+  const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
 
   useEffect(() => {
     api
@@ -11,6 +12,21 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
       .then(setDocumento)
       .catch((err) => setError(err.message))
   }, [proyecto.id, idDocumento])
+
+  async function alternarArchivado() {
+    setCambiandoArchivo(true)
+    setError(null)
+    try {
+      const actualizado = documento.archivado
+        ? await api.desarchivarDocumento(proyecto.id, idDocumento)
+        : await api.archivarDocumento(proyecto.id, idDocumento)
+      setDocumento({ ...documento, ...actualizado })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCambiandoArchivo(false)
+    }
+  }
 
   return (
     <section>
@@ -23,11 +39,23 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
 
       {documento && (
         <>
-          <h2>{documento.nombre}</h2>
+          <h2>
+            {documento.nombre}
+            {documento.archivado && <span className="badge-archivado">🗄 Archivado</span>}
+          </h2>
           <p>
             {documento.tipo_documento} — {documento.fecha_documento}
             {documento.revisado_manualmente && " — corregido a mano"}
           </p>
+          {proyecto.es_admin && (
+            <button onClick={alternarArchivado} disabled={cambiandoArchivo}>
+              {cambiandoArchivo
+                ? "Guardando..."
+                : documento.archivado
+                  ? "Desarchivar"
+                  : "Archivar"}
+            </button>
+          )}
           <div className="documento-markdown">{documento.markdown}</div>
         </>
       )}

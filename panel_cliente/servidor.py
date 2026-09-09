@@ -79,7 +79,10 @@ async def listar_o_buscar_documentos(
     config = get_db_config(proyecto["slug"])
 
     if not q:
-        return await DocumentosCRUD(config).buscar(limite=200)
+        # A diferencia de la búsqueda por contenido, el listado simple sí
+        # incluye archivados (con su estado visible) — así se pueden
+        # encontrar para desarchivarlos.
+        return await DocumentosCRUD(config).buscar(limite=200, incluir_archivados=True)
 
     configuracion = ConfiguracionCRUD(config)
     modo = await configuracion.obtener_modo_busqueda()
@@ -109,6 +112,30 @@ async def obtener_documento(
         "fecha_documento": version["fecha_documento"] if version else None,
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
     }
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/archivar")
+async def archivar_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Archiva un documento (acción de administración: requiere admin_tenant
+    o superadmin, igual que gestionar las API keys)."""
+    config = get_db_config(proyecto["slug"])
+    documento = await DocumentosCRUD(config).archivar(id_documento)
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    return documento
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/desarchivar")
+async def desarchivar_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    documento = await DocumentosCRUD(config).desarchivar(id_documento)
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    return documento
 
 
 _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))

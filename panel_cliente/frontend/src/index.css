@@ -6,6 +6,9 @@
   --acento: #2563eb;
   --error: #b91c1c;
   --fondo-tabla-hover: #f3f6fa;
+  --archivado: #6b7280;
+  --archivado-fondo: #f3f4f6;
+  --archivado-borde: #d1d5db;
 }
 
 * {
@@ -151,6 +154,24 @@ tr.clicable {
 .fragmento {
   color: var(--texto-suave);
   font-size: 0.9rem;
+}
+
+.badge-archivado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  margin-left: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--archivado-fondo);
+  color: var(--archivado);
+  border: 1px solid var(--archivado-borde);
+}
+
+tr.fila-archivada td {
+  color: var(--texto-suave);
 }
 
 .documento-markdown {

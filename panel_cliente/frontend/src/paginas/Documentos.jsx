@@ -66,8 +66,15 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
             {resultados.map((r) => {
               const idDocumento = r.id ?? r.id_documento
               return (
-                <tr key={`${idDocumento}-${r.id_version ?? ""}`} className="clicable" onClick={() => onVerDocumento(idDocumento)}>
-                  <td>{r.nombre}</td>
+                <tr
+                  key={`${idDocumento}-${r.id_version ?? ""}`}
+                  className={`clicable${r.archivado ? " fila-archivada" : ""}`}
+                  onClick={() => onVerDocumento(idDocumento)}
+                >
+                  <td>
+                    {r.nombre}
+                    {r.archivado && <span className="badge-archivado">🗄 Archivado</span>}
+                  </td>
                   <td>{r.tipo_documento}</td>
                   <td className={q ? "fragmento" : undefined}>
                     {q ? r.fragmento : r.fecha_alta}

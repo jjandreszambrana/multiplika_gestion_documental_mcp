@@ -57,6 +57,10 @@ export const api = {
     ),
   obtenerDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}`),
+  archivarDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
+  desarchivarDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/desarchivar`),
 
   listarApiKeys: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/api-keys`),
   emitirApiKey: (idProyecto, nombre) =>
