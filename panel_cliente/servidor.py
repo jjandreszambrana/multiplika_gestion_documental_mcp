@@ -28,8 +28,9 @@ desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
 from pydantic import BaseModel
@@ -40,8 +41,10 @@ from lib.api_keys import generar_api_key
 
 from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
+from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD
 from .dependencias import admin_gestion_documental_actual, api_key_de_gestion_documental, es_admin_actual, proyecto_gestion_documental_actual
 
@@ -137,6 +140,179 @@ async def desarchivar_documento(
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
     return documento
+
+
+# --- Credenciales (ver docs/gestion-documental.md → "Credenciales") ---
+# Solo admin_tenant/superadmin: es la única información realmente sensible
+# de este panel, a diferencia de documentos o estilos.
+
+
+class NuevaCredencial(BaseModel):
+    nombre: str
+    descripcion: str
+    valor: str
+
+
+class ActualizarCredencial(BaseModel):
+    descripcion: str | None = None
+    valor: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/credenciales")
+async def listar_credenciales(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["slug"])
+    return await CredencialesCRUD(config).listar_metadatos()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/credenciales")
+async def crear_credencial(
+    id_proyecto: int, datos: NuevaCredencial, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    credenciales = CredencialesCRUD(config)
+    if await credenciales.obtener_por_nombre(datos.nombre):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una credencial llamada "{datos.nombre}"')
+    id_credencial = await credenciales.crear(datos.nombre, datos.descripcion, datos.valor)
+    fila = await credenciales.obtener(id_credencial)
+    return {k: v for k, v in fila.items() if k != "valor_cifrado"}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/credenciales/{id_credencial}")
+async def actualizar_credencial(
+    id_proyecto: int, id_credencial: int, datos: ActualizarCredencial,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    credenciales = CredencialesCRUD(config)
+    if not await credenciales.obtener(id_credencial):
+        raise HTTPException(404, "Credencial no encontrada")
+    await credenciales.actualizar(id_credencial, datos.descripcion, datos.valor)
+    fila = await credenciales.obtener(id_credencial)
+    return {k: v for k, v in fila.items() if k != "valor_cifrado"}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/credenciales/{id_credencial}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_credencial(
+    id_proyecto: int, id_credencial: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    config = get_db_config(proyecto["slug"])
+    await CredencialesCRUD(config).eliminar(id_credencial)
+
+
+# --- Tabla de estilos (ver docs/gestion-documental.md → "Tabla de estilos") ---
+# Lectura: cualquiera con acceso al proyecto. Alta/edición/borrado (incluidas
+# las imágenes): admin_tenant/superadmin, igual que las API keys — es
+# configuración de fondo, no el día a día con documentos.
+
+
+class NuevoEstilo(BaseModel):
+    nombre_tipo: str
+    instrucciones: str
+
+
+class ActualizarEstilo(BaseModel):
+    instrucciones: str
+
+
+@app.get("/v1/proyectos/{id_proyecto}/estilos")
+async def listar_estilos(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["slug"])
+    return await EstilosCRUD(config).listar_tipos()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/estilos")
+async def crear_estilo(
+    id_proyecto: int, datos: NuevoEstilo, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    estilos = EstilosCRUD(config)
+    if await estilos.obtener_por_tipo(datos.nombre_tipo):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe un estilo llamado "{datos.nombre_tipo}"')
+    id_estilo = await estilos.insert({"nombre_tipo": datos.nombre_tipo, "instrucciones": datos.instrucciones})
+    return await estilos.obtener(id_estilo)
+
+
+@app.put("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}")
+async def actualizar_estilo(
+    id_proyecto: int, id_estilo: int, datos: ActualizarEstilo,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    estilos = EstilosCRUD(config)
+    if not await estilos.obtener(id_estilo):
+        raise HTTPException(404, "Estilo no encontrado")
+    await estilos.update(id_estilo, {"instrucciones": datos.instrucciones})
+    return await estilos.obtener(id_estilo)
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_estilo(
+    id_proyecto: int, id_estilo: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    config = get_db_config(proyecto["slug"])
+    await EstilosCRUD(config).eliminar(id_estilo)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}/imagenes")
+async def listar_imagenes_estilo(
+    id_proyecto: int, id_estilo: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["slug"])
+    return await EstilosImagenesCRUD(config).listar_metadatos_de_estilo(id_estilo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}/imagenes")
+async def subir_imagen_estilo(
+    id_proyecto: int,
+    id_estilo: int,
+    nombre: str = Form(...),
+    descripcion_uso: str = Form(...),
+    archivo: UploadFile = File(...),
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    if not await EstilosCRUD(config).obtener(id_estilo):
+        raise HTTPException(404, "Estilo no encontrado")
+    contenido = await archivo.read()
+    imagenes = EstilosImagenesCRUD(config)
+    id_imagen = await imagenes.insert({
+        "id_estilo": id_estilo,
+        "nombre": nombre,
+        "descripcion_uso": descripcion_uso,
+        "imagen": contenido,
+        "tipo_mime": archivo.content_type or "application/octet-stream",
+    })
+    fila = await imagenes.obtener(id_imagen)
+    return {k: v for k, v in fila.items() if k != "imagen"}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}/imagenes/{id_imagen}/contenido")
+async def ver_imagen_estilo(
+    id_proyecto: int, id_estilo: int, id_imagen: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> Response:
+    """Sirve el binario — para previsualizarla en el panel (pide sesión, no es pública)."""
+    config = get_db_config(proyecto["slug"])
+    fila = await EstilosImagenesCRUD(config).obtener(id_imagen)
+    if not fila or fila["id_estilo"] != id_estilo:
+        raise HTTPException(404, "Imagen no encontrada")
+    return Response(content=bytes(fila["imagen"]), media_type=fila["tipo_mime"])
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/estilos/{id_estilo}/imagenes/{id_imagen}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def eliminar_imagen_estilo(
+    id_proyecto: int, id_estilo: int, id_imagen: int,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> None:
+    config = get_db_config(proyecto["slug"])
+    await EstilosImagenesCRUD(config).eliminar(id_imagen)
 
 
 _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))

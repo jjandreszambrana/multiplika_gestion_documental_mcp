@@ -2,3 +2,4 @@ mtpk_postgres>=0.1.6
 fastmcp
 mistralai
 openai
+python-multipart

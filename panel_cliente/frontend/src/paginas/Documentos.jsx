@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react"
 import { api } from "../api"
 
-export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento, onVerApiKeys }) {
+export default function Documentos({
+  proyecto,
+  onCambiarProyecto,
+  onVerDocumento,
+  onVerApiKeys,
+  onVerCredenciales,
+  onVerEstilos,
+}) {
   const [q, setQ] = useState("")
   const [resultados, setResultados] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -38,6 +45,12 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
       )}
       {onVerApiKeys && (
         <button onClick={onVerApiKeys}>API keys</button>
+      )}
+      {onVerCredenciales && (
+        <button onClick={onVerCredenciales}>Credenciales</button>
+      )}
+      {onVerEstilos && (
+        <button onClick={onVerEstilos}>Estilos de informe</button>
       )}
 
       <form onSubmit={buscar} className="formulario-linea">

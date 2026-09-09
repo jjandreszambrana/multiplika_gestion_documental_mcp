@@ -90,17 +90,82 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 
 **`archivar_documento_gd(id_documento)` / `desarchivar_documento_gd(id_documento)`** (añadidas 2026-09-09): un documento que ya no aplica (anulado, subido por error) se marca `archivado` en vez de borrarse — desaparece de `buscar_documentos_gd` (salvo `incluir_archivados=True`) y de `consultar_documentos_gd` (fulltext y semántico), pero sigue accesible por id y se puede recuperar sin perder nada del histórico.
 
+**`listar_credenciales_gd()`** (añadida 2026-09-09): nombre y descripción de cada credencial del proyecto — nunca el valor. Ver "Credenciales" más abajo.
+
+**`listar_estilos_informe_gd()` / `obtener_estilo_informe_gd(nombre_tipo)`** (añadidas 2026-09-09): tipos de informe disponibles, e instrucciones + imágenes fijas de uno en concreto (las imágenes llegan como contenido nativo de imagen de la propia respuesta, no como URL). Ver "Tabla de estilos" más abajo.
+
+### Credenciales (2026-09-09)
+Gestor genérico de credenciales del cliente para conectar con servicios externos — sin un servicio concreto todavía, así que se diseñó abierto: un nombre, para qué sirve, y un valor de texto libre cifrado (si la credencial necesita más de un dato — usuario+contraseña, client_id+client_secret — va como JSON dentro de ese mismo campo, no se abrieron columnas nuevas para cada caso).
+
+```
+gd_credenciales
+  - id
+  - nombre              VARCHAR(100) UNIQUE  -- p.ej. "erp_contabilidad"
+  - descripcion         MEDIUMTEXT           -- para qué sirve (esto sí lo ve la IA)
+  - valor_cifrado       VARCHAR(500)         -- Fernet, lib.cifrado del repo core
+  - fecha_actualizacion TIMESTAMP
+```
+
+Decisión clave: **se gestiona solo desde el panel, nunca por conversación con la IA** — mismo motivo por el que la clave de Mistral/OpenAI ya se gestiona así hoy (Fase 3): si el cliente se la dictara a su IA por chat, quedaría escrita en el historial de esa conversación. La herramienta MCP `listar_credenciales_gd()` es de solo lectura de metadatos — nombre y descripción, nunca el valor. No hay (todavía) ninguna herramienta que *use* una credencial para conectarse a algo: eso es una herramienta por servicio, y sin un caso real no tenía sentido inventarla. `CredencialesCRUD.valor_descifrado()` existe para cuando llegue ese caso (uso interno del backend, nunca expuesto tal cual por una API ni una tool).
+
+Endpoints del panel (`admin_gestion_documental_actual`, igual que las API keys — es la única información realmente sensible de este panel):
+```
+GET/POST   /v1/proyectos/{id}/credenciales
+PUT/DELETE /v1/proyectos/{id}/credenciales/{id_credencial}
+```
+
+### Tabla de estilos (2026-09-09)
+Por cada tipo de informe que la IA pueda construir (p.ej. "informe_mensual", "memoria_anual"): instrucciones de cómo montarlo, más sus imágenes fijas (logo, plantilla...), subidas una vez desde el panel — un estilo puede tener varias imágenes.
+
+```
+gd_estilos
+  - id
+  - nombre_tipo          VARCHAR(100) UNIQUE   -- "informe_mensual"
+  - instrucciones        MEDIUMTEXT            -- estructura, tono, apartados
+  - fecha_actualizacion  TIMESTAMP
+
+gd_estilos_imagenes
+  - id
+  - id_estilo         FK -> gd_estilos.id, ON DELETE CASCADE
+  - nombre            VARCHAR(150)   -- "logo_cabecera"
+  - descripcion_uso   MEDIUMTEXT     -- cuándo/cómo usarla
+  - imagen            BLOB (BYTEA en Postgres) -- el binario, directo en la fila
+  - tipo_mime         VARCHAR(50)    -- "image/png"
+  - fecha_alta        TIMESTAMP
+```
+
+**La imagen se guarda como `BYTEA` directo en la fila** — no hay almacén de ficheros en este proyecto y montar uno (S3, disco) solo para unos pocos logos/plantillas habría sido sobredimensionado.
+
+**Cómo le llegan las imágenes a la IA** (decisión 2026-09-09, con el usuario): el servidor MCP y el panel son dos backends con autenticación distinta (`x-api-key` la IA, JWT el panel), así que una URL del panel no le sirve a la IA sin más. Se descartó montar un endpoint público sin login. En su lugar, `obtener_estilo_informe_gd(nombre_tipo)` devuelve las imágenes **dentro de la propia respuesta de la tool**, como contenido de imagen nativo del protocolo MCP (`fastmcp.utilities.types.Image`) — sin URLs, sin permisos nuevos que gestionar. Cada imagen va precedida de un bloque de texto con su nombre y su `descripcion_uso`, para que la IA sepa cuál es cuál. Probado de punta a punta: la respuesta trae 3 bloques (instrucciones, texto identificador + imagen), cada imagen con su `mime_type` correcto.
+
+Endpoints del panel: lectura (`GET`) abierta a cualquiera con acceso al proyecto — no es información sensible, es contenido de plantilla. Alta/edición/borrado (incluida la subida de imágenes) restringido a `admin_gestion_documental_actual`, igual que las API keys — es configuración de fondo, no el día a día con documentos (a diferencia de archivar, que si es de cualquiera).
+```
+GET/POST   /v1/proyectos/{id}/estilos
+PUT/DELETE /v1/proyectos/{id}/estilos/{id_estilo}
+GET        /v1/proyectos/{id}/estilos/{id_estilo}/imagenes                    (metadatos, sin el binario)
+POST       /v1/proyectos/{id}/estilos/{id_estilo}/imagenes                    (multipart)
+GET        /v1/proyectos/{id}/estilos/{id_estilo}/imagenes/{id_imagen}/contenido  (sirve el binario, con sesión)
+DELETE     /v1/proyectos/{id}/estilos/{id_estilo}/imagenes/{id_imagen}
+```
+El frontend nunca pone el binario en un `<img src="...">` con el token en la URL (quedaría en logs del servidor) — lo trae con `fetch()` (cabecera `Authorization`) y lo muestra con un `object URL` (ver `ImagenEstilo` en `EstiloDetalle.jsx`).
+
 ### Estructura del repo: igual que cualquier proyecto de cliente de Multiplika MCP (2026-09-06)
 Este proyecto no inventa una estructura propia — sigue exactamente la misma que ya usa cualquier proyecto de cliente sobre Multiplika MCP, documentada en `guia_nuevo_proyecto.md` del repo core:
 
 ```
 multiplika_gestion_documental_mcp/
 ├── database/
-│   ├── dependencias/    # esquema (gd_configuracion, gd_documentos, gd_versiones, gd_chunks)
+│   ├── dependencias/    # esquema (gd_configuracion, gd_documentos, gd_versiones, gd_chunks,
+│   │                    #          gd_credenciales, gd_estilos, gd_estilos_imagenes)
 │   ├── modelos/         # CRUD y lógica de negocio
 │   └── update_db.py     # migración de esta base (vía mtpk-postgres, no mtpk-mariadb)
-└── mcp_server/
-    └── herramientas/     # las tools MCP (consultar_documentos, obtener_documento_completo, buscar_documentos...)
+├── mcp_server/
+│   └── herramientas/    # las tools MCP (consultar_documentos_gd, buscar_documentos_gd,
+│                        #  archivar/desarchivar, listar_credenciales_gd,
+│                        #  listar_estilos_informe_gd/obtener_estilo_informe_gd...)
+└── panel_cliente/       # panel web del cliente — ver "Panel del cliente" en el plan de fases
+    ├── servidor.py       # backend FastAPI: documentos, API keys, credenciales, estilos
+    └── frontend/         # React — se despliega ya compilado (dist/), sin Node en el servidor
 ```
 
 Repo propio e independiente del core (`multiplika_mcp`), igual que cualquier otro proyecto de cliente — se junta con la plataforma solo en el servidor, vía `sync.py`. La única diferencia respecto a un proyecto de cliente normal es el motor de base de datos (`mtpk-postgres` en vez de `mtpk-mariadb`), ya contemplado en `guia_nuevo_proyecto.md`.
@@ -145,6 +210,12 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 - Un tenant con varios proyectos de gestión documental ve un selector; con uno solo, entra directo — se resuelve por `mcpc_proyectos.tipo_producto = "gestion_documental"` (repo core), no hace falta que el cliente sepa nada de slugs ni ids.
 - Desplegado en `https://mcp-d.multiplika.net/gd`, servicio systemd propio (`multiplika_gd_panel`, puerto 8112) — primer proyecto de cliente con panel propio; `sync.py` del repo core ahora sabe sincronizar una carpeta `panel_cliente/` opcional (su frontend compilado no viaja por git, se copia aparte porque el servidor no tiene Node).
 - Probado de punta a punta en producción real: login, selección de proyecto, listado, búsqueda por contenido, ver un documento completo creado de verdad a través del MCP, y que no se puede ver el proyecto de otra empresa ni sin tener rol asignado.
+
+**Credenciales y tabla de estilos — hecho (2026-09-09)**
+- `gd_credenciales`: credenciales del cliente para servicios externos, cifradas, gestionadas solo desde el panel — ver "Credenciales" arriba. Tool `listar_credenciales_gd()`.
+- `gd_estilos` / `gd_estilos_imagenes`: instrucciones e imágenes fijas por tipo de informe — ver "Tabla de estilos" arriba. Tools `listar_estilos_informe_gd()` / `obtener_estilo_informe_gd()`.
+- Primera vez que el panel del cliente permite escribir más allá de archivar: crear/editar estilos y credenciales, y subir imágenes (`multipart/form-data`, `python-multipart` añadido a `requirements.txt`).
+- Probado de punta a punta contra `mcp-d.multiplika.net`: creación de una credencial y un estilo desde el panel (navegador real), subida de una imagen con miniatura visible, y verificación desde un cliente MCP real de que `listar_credenciales_gd()` nunca devuelve el valor y de que `obtener_estilo_informe_gd()` trae las instrucciones más la imagen como contenido nativo (bloque `image`, `mime_type` correcto). Datos de prueba limpiados al terminar.
 
 **Fase 5 — Piloto con un cliente real**
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.

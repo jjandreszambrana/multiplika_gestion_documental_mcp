@@ -37,6 +37,27 @@ async function peticion(base, metodo, ruta, cuerpo) {
   return res.json()
 }
 
+// Aparte de peticion(): esta manda multipart/form-data (subida de fichero),
+// no JSON, así que no puede reutilizar el Content-Type fijo de arriba.
+async function peticionConFichero(base, ruta, formData) {
+  const headers = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
+  const res = await fetch(`${base}${ruta}`, { method: "POST", headers, body: formData })
+
+  if (!res.ok) {
+    let detalle = res.statusText
+    try {
+      const cuerpoError = await res.json()
+      detalle = cuerpoError.detail || detalle
+    } catch {
+      // el cuerpo de error no era JSON, nos quedamos con statusText
+    }
+    throw new Error(detalle)
+  }
+  return res.json()
+}
+
 // Lee id_usuario/id_tenant del token sin comprobar la firma — solo para
 // saber qué mostrar; el servidor vuelve a comprobar todo siempre.
 export function leerToken(token) {
@@ -67,4 +88,44 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre: nombre || null }),
   revocarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "POST", `/api-keys/${idApiKey}/revocar`),
   eliminarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "DELETE", `/api-keys/${idApiKey}`),
+
+  listarCredenciales: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/credenciales`),
+  crearCredencial: (idProyecto, nombre, descripcion, valor) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/credenciales`, { nombre, descripcion, valor }),
+  actualizarCredencial: (idProyecto, idCredencial, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/credenciales/${idCredencial}`, datos),
+  eliminarCredencial: (idProyecto, idCredencial) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/credenciales/${idCredencial}`),
+
+  listarEstilos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos`),
+  crearEstilo: (idProyecto, nombreTipo, instrucciones) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/estilos`, { nombre_tipo: nombreTipo, instrucciones }),
+  actualizarEstilo: (idProyecto, idEstilo, instrucciones) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/estilos/${idEstilo}`, { instrucciones }),
+  eliminarEstilo: (idProyecto, idEstilo) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/estilos/${idEstilo}`),
+  listarImagenesEstilo: (idProyecto, idEstilo) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes`),
+  subirImagenEstilo: (idProyecto, idEstilo, nombre, descripcionUso, archivo) => {
+    const formData = new FormData()
+    formData.append("nombre", nombre)
+    formData.append("descripcion_uso", descripcionUso)
+    formData.append("archivo", archivo)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes`, formData)
+  },
+  // Devuelve un blob, no JSON: el <img> no puede mandar la cabecera
+  // Authorization él solo, así que se trae aquí y se muestra con un
+  // object URL (ver Estilos.jsx) en vez de poner el token en la URL.
+  obtenerImagenEstiloBlob: async (idProyecto, idEstilo, idImagen) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(
+      `${BASE_CLIENTE}/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes/${idImagen}/contenido`,
+      { headers },
+    )
+    if (!res.ok) throw new Error(res.statusText)
+    return res.blob()
+  },
+  eliminarImagenEstilo: (idProyecto, idEstilo, idImagen) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes/${idImagen}`),
 }

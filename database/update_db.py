@@ -34,6 +34,8 @@ from database.dependencias._dep_configuracion import (
 from database.dependencias._dep_documentos import TABLA_DOCUMENTOS
 from database.dependencias._dep_versiones import TABLA_VERSIONES
 from database.dependencias._dep_chunks import construir_tabla_chunks
+from database.dependencias._dep_credenciales import TABLA_CREDENCIALES
+from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAGENES
 
 
 def main():
@@ -52,6 +54,9 @@ def main():
         TABLA_DOCUMENTOS,
         TABLA_VERSIONES,
         construir_tabla_chunks(dimension),
+        TABLA_CREDENCIALES,
+        TABLA_ESTILOS,
+        TABLA_ESTILOS_IMAGENES,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

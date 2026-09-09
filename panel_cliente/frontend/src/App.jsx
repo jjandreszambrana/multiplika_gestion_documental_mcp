@@ -5,11 +5,15 @@ import ElegirProyecto from "./paginas/ElegirProyecto"
 import Documentos from "./paginas/Documentos"
 import DocumentoDetalle from "./paginas/DocumentoDetalle"
 import ApiKeys from "./paginas/ApiKeys"
+import Credenciales from "./paginas/Credenciales"
+import Estilos from "./paginas/Estilos"
+import EstiloDetalle from "./paginas/EstiloDetalle"
 
 export default function App() {
   const [sesion, setSesion] = useState(null)
   const [proyecto, setProyecto] = useState(null)
   const [idDocumentoActivo, setIdDocumentoActivo] = useState(null)
+  const [estiloActivo, setEstiloActivo] = useState(null)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
@@ -52,6 +56,8 @@ export default function App() {
     setSesion(null)
     setProyecto(null)
     setIdDocumentoActivo(null)
+    setEstiloActivo(null)
+    setVista("documentos")
   }
 
   if (comprobandoEnlace) {
@@ -102,12 +108,31 @@ export default function App() {
           />
         ) : vista === "api-keys" ? (
           <ApiKeys proyecto={proyecto} onVolver={() => setVista("documentos")} />
+        ) : vista === "credenciales" ? (
+          <Credenciales proyecto={proyecto} onVolver={() => setVista("documentos")} />
+        ) : vista === "estilos" && estiloActivo ? (
+          <EstiloDetalle
+            proyecto={proyecto}
+            estilo={estiloActivo}
+            onVolver={() => setEstiloActivo(null)}
+          />
+        ) : vista === "estilos" ? (
+          <Estilos
+            proyecto={proyecto}
+            onVolver={() => setVista("documentos")}
+            onVerEstilo={setEstiloActivo}
+          />
         ) : (
           <Documentos
             proyecto={proyecto}
             onCambiarProyecto={esSuperadmin ? null : () => setProyecto(null)}
             onVerDocumento={setIdDocumentoActivo}
             onVerApiKeys={proyecto.es_admin ? () => setVista("api-keys") : null}
+            onVerCredenciales={proyecto.es_admin ? () => setVista("credenciales") : null}
+            onVerEstilos={() => {
+              setEstiloActivo(null)
+              setVista("estilos")
+            }}
           />
         )}
       </main>
