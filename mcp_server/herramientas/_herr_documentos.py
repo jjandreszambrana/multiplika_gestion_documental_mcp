@@ -168,6 +168,20 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
 
 
 @mcp_app.tool()
+async def obtener_estado_proyecto_gd() -> dict:
+    """Estado actual de este proyecto: cuántos documentos hay guardados y
+    cuándo se subió el más reciente (alta de documento o de versión nueva
+    — una corrección de una versión ya existente no lo actualiza)."""
+    config, _ = await _contexto_actual()
+    _, total_documentos = await DocumentosCRUD(config).listar(limit=1)
+    ultimas, _ = await VersionesCRUD(config).listar(limit=1, orden="fecha_subida DESC")
+    return {
+        "total_documentos": total_documentos,
+        "ultima_actualizacion": ultimas[0]["fecha_subida"] if ultimas else None,
+    }
+
+
+@mcp_app.tool()
 async def corregir_documento_gd(
     id_documento: int, markdown_corregido: str, id_version: int | None = None
 ) -> dict:
