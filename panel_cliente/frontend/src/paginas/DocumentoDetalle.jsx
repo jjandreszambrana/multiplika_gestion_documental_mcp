@@ -47,15 +47,13 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
             {documento.tipo_documento} — {documento.fecha_documento}
             {documento.revisado_manualmente && " — corregido a mano"}
           </p>
-          {proyecto.es_admin && (
-            <button onClick={alternarArchivado} disabled={cambiandoArchivo}>
-              {cambiandoArchivo
-                ? "Guardando..."
-                : documento.archivado
-                  ? "Desarchivar"
-                  : "Archivar"}
-            </button>
-          )}
+          <button onClick={alternarArchivado} disabled={cambiandoArchivo}>
+            {cambiandoArchivo
+              ? "Guardando..."
+              : documento.archivado
+                ? "Desarchivar"
+                : "Archivar"}
+          </button>
           <div className="documento-markdown">{documento.markdown}</div>
         </>
       )}

@@ -116,10 +116,11 @@ async def obtener_documento(
 
 @app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/archivar")
 async def archivar_documento(
-    id_proyecto: int, id_documento: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> dict:
-    """Archiva un documento (acción de administración: requiere admin_tenant
-    o superadmin, igual que gestionar las API keys)."""
+    """Archiva un documento — cualquiera con acceso al proyecto puede
+    hacerlo (a diferencia de las API keys, no es una acción de
+    administración: es parte del día a día con los documentos)."""
     config = get_db_config(proyecto["slug"])
     documento = await DocumentosCRUD(config).archivar(id_documento)
     if not documento:
@@ -129,7 +130,7 @@ async def archivar_documento(
 
 @app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/desarchivar")
 async def desarchivar_documento(
-    id_proyecto: int, id_documento: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> dict:
     config = get_db_config(proyecto["slug"])
     documento = await DocumentosCRUD(config).desarchivar(id_documento)
