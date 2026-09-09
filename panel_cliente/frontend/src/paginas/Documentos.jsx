@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { api } from "../api"
 
-export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento }) {
+export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento, onVerApiKeys }) {
   const [q, setQ] = useState("")
   const [resultados, setResultados] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -35,6 +35,9 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
         <button className="volver" onClick={onCambiarProyecto}>
           ← Cambiar de proyecto
         </button>
+      )}
+      {onVerApiKeys && (
+        <button onClick={onVerApiKeys}>API keys</button>
       )}
 
       <form onSubmit={buscar} className="formulario-linea">

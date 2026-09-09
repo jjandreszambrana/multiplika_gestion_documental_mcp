@@ -4,11 +4,13 @@ import Login from "./paginas/Login"
 import ElegirProyecto from "./paginas/ElegirProyecto"
 import Documentos from "./paginas/Documentos"
 import DocumentoDetalle from "./paginas/DocumentoDetalle"
+import ApiKeys from "./paginas/ApiKeys"
 
 export default function App() {
   const [sesion, setSesion] = useState(null)
   const [proyecto, setProyecto] = useState(null)
   const [idDocumentoActivo, setIdDocumentoActivo] = useState(null)
+  const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
 
@@ -36,6 +38,13 @@ export default function App() {
   function iniciarSesion(token) {
     setToken(token)
     setSesion(leerToken(token))
+  }
+
+  function elegirProyecto(p) {
+    // El listado por tenant no trae `es_admin` (viene del panel de
+    // administración, no de este backend) — se pide aparte para saber
+    // si mostrar la gestión de API keys.
+    api.verProyecto(p.id).then(setProyecto).catch((err) => setError(err.message))
   }
 
   function cerrarSesion() {
@@ -69,7 +78,7 @@ export default function App() {
           {esSuperadmin ? (
             <p>No se ha podido cargar el proyecto del enlace.</p>
           ) : (
-            <ElegirProyecto idTenant={sesion.id_tenant} onElegir={setProyecto} />
+            <ElegirProyecto idTenant={sesion.id_tenant} onElegir={elegirProyecto} />
           )}
         </main>
       </div>
@@ -91,11 +100,14 @@ export default function App() {
             idDocumento={idDocumentoActivo}
             onVolver={() => setIdDocumentoActivo(null)}
           />
+        ) : vista === "api-keys" ? (
+          <ApiKeys proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : (
           <Documentos
             proyecto={proyecto}
             onCambiarProyecto={esSuperadmin ? null : () => setProyecto(null)}
             onVerDocumento={setIdDocumentoActivo}
+            onVerApiKeys={proyecto.es_admin ? () => setVista("api-keys") : null}
           />
         )}
       </main>

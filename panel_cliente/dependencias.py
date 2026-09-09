@@ -1,8 +1,10 @@
 """Quién hace la petición al panel del cliente de gestión documental —
 mismo JWT que el panel de administración del repo core (login
 compartido, ver lib/jwt_tokens.py) y su sistema de roles por proyecto
-(lib/roles_proyecto.py). Solo lectura: no hay acciones de administración
-aquí, guardar/corregir sigue siendo por conversación con la IA.
+(lib/roles_proyecto.py). Los documentos son de solo lectura (guardar/
+corregir sigue siendo por conversación con la IA); la única acción de
+administración real que vive aquí es gestionar las API keys del
+proyecto, restringida a admin_tenant (ver admin_gestion_documental_actual).
 
 Un superadmin también puede entrar (mismo token que usa en /panel, sin
 contraseña aparte — pensado para dar soporte a un cliente) pero SIEMPRE
@@ -17,13 +19,15 @@ from fastapi import Depends, Header, HTTPException, status
 from mtpk_mariadb import AsyncCrudBase
 
 from database.config_db import get_db_config
+from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_auditoria_soporte import TABLA_AUDITORIA_SOPORTE
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from lib.jwt_tokens import decodificar_token
-from lib.roles_proyecto import tiene_acceso_a_proyecto
+from lib.roles_proyecto import es_admin_de_proyecto, tiene_acceso_a_proyecto
 
 _proyectos = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
 _auditoria = AsyncCrudBase(TABLA_AUDITORIA_SOPORTE, get_db_config("control"))
+_api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
 
 
 @dataclass
@@ -74,3 +78,49 @@ async def proyecto_gestion_documental_actual(
     if not await tiene_acceso_a_proyecto(identidad.id, id_proyecto):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes acceso a este proyecto")
     return proyecto
+
+
+async def es_admin_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> bool:
+    """Si quien pide el proyecto puede además administrarlo (gestionar
+    sus API keys) — admin_tenant o superadmin, no basta cualquier rol."""
+    if identidad.tipo == "superadmin":
+        return True
+    return await es_admin_de_proyecto(identidad.id, proyecto["id"])
+
+
+async def admin_gestion_documental_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> dict:
+    """Como proyecto_gestion_documental_actual, pero además exige que un
+    usuario de empresa sea admin_tenant de este proyecto (no basta
+    cualquier rol) — las API keys sí son una acción de administración,
+    aunque vivan en este panel de solo lectura de documentos."""
+    if identidad.tipo == "usuario" and not await es_admin_de_proyecto(identidad.id, proyecto["id"]):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Requiere ser admin de este proyecto")
+    return proyecto
+
+
+async def api_key_de_gestion_documental(id_api_key: int, identidad: Identidad = Depends(identidad_actual)) -> dict:
+    """Para revocar/eliminar, que solo llevan id_api_key en el path (no
+    id_proyecto en la URL): resuelve el proyecto dueño de la key y aplica
+    las mismas comprobaciones que admin_gestion_documental_actual."""
+    fila_key = await _api_keys.obtener(id_api_key)
+    if not fila_key:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "API key no encontrada")
+
+    proyecto = await _proyectos.obtener(fila_key["id_proyecto"])
+    if not proyecto or proyecto["tipo_producto"] != "gestion_documental":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "API key no encontrada")
+
+    if identidad.tipo == "superadmin":
+        await _auditoria.insert({
+            "id_superadmin": identidad.id,
+            "id_proyecto": proyecto["id"],
+            "accion": "gestionar_api_keys_gd",
+        })
+    elif proyecto["id_tenant"] != identidad.id_tenant or not await es_admin_de_proyecto(identidad.id, proyecto["id"]):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Requiere ser admin de este proyecto")
+
+    return fila_key

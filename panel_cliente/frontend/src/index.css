@@ -107,6 +107,24 @@ main {
   margin-bottom: 1.5rem;
 }
 
+.aviso-key {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #fff7e6;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  color: #1a1a1a;
+}
+
+.aviso-key code {
+  display: block;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
