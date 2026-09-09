@@ -6,7 +6,7 @@ from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
-from ..dependencias._dep_versiones import TABLA_VERSIONES
+from ..dependencias._dep_versiones import PATRON_SIGLAS, TABLA_VERSIONES
 from ._mod_documentos import DocumentosCRUD
 
 
@@ -67,16 +67,21 @@ class VersionesCRUD(AsyncCrudBase):
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con
-        `pregunta`, con los metadatos del documento para citar la fuente."""
+        `pregunta`, con los metadatos del documento para citar la fuente.
+
+        `pregunta` pasa por el mismo PATRON_SIGLAS que tsvector_actual
+        antes de convertirse en tsquery, para que "SL" y "S.L." casen
+        igual (ver _dep_versiones.py)."""
         db = AsyncDatabase(**self.config)
+        tsquery = f"plainto_tsquery('spanish_unaccent', regexp_replace(%s, '{PATRON_SIGLAS}', '', 'g'))"
         sql = f"""
             SELECT v.id AS id_version, v.id_documento, v.fecha_documento,
                    d.nombre, d.tipo_documento,
-                   ts_headline('spanish_unaccent', v.markdown_actual, plainto_tsquery('spanish_unaccent', %s)) AS fragmento,
-                   ts_rank(v.tsvector_actual, plainto_tsquery('spanish_unaccent', %s)) AS relevancia
+                   ts_headline('spanish_unaccent', v.markdown_actual, {tsquery}) AS fragmento,
+                   ts_rank(v.tsvector_actual, {tsquery}) AS relevancia
             FROM "{TABLA_VERSIONES.nombre}" v
             JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
-            WHERE v.tsvector_actual @@ plainto_tsquery('spanish_unaccent', %s)
+            WHERE v.tsvector_actual @@ {tsquery}
               AND (v.vigente = true OR d.todas_versiones_buscables = true)
             ORDER BY relevancia DESC
             LIMIT %s

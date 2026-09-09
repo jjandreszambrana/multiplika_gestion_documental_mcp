@@ -7,6 +7,15 @@ from ._dep_documentos import NOMBRE_TABLA_DOCUMENTOS
 NOMBRE_TABLA_VERSIONES = "gd_versiones"
 __DB_NAME__ = get_db_name("gestion_documental")
 
+# Sigla como "S.L.", "S.A.U." o "C.I.F.": Postgres las tokeniza tal cual,
+# con los puntos, así que una búsqueda con "SL" (sin puntos, la forma
+# más habitual de escribirlo) no encontraba nada — buscar_fulltext()
+# aplica el mismo patrón a la pregunta para que ambas formas casen (ver
+# docs/gestion-documental.md → "Búsqueda"). Solo quita el punto cuando
+# le sigue otra letra-punto pegada (sin espacio) — no toca abreviaturas
+# sueltas como "p.ej." ni el punto final de una frase normal.
+PATRON_SIGLAS = r"\.(?=[A-Za-z]\.)"
+
 CAMPOS_VERSIONES = [
     Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
             comentario="Identificador interno de la versión"),
@@ -21,11 +30,14 @@ CAMPOS_VERSIONES = [
     Columna(nombre="revisado_manualmente", tipo="BOOLEAN", not_null=True, default=False,
             comentario="True si markdown_actual fue corregido a mano tras la generación"),
     Columna(nombre="tsvector_actual", tipo="TSVECTOR",
-            generado="to_tsvector('spanish_unaccent', markdown_actual)",
+            generado=f"to_tsvector('spanish_unaccent', regexp_replace(markdown_actual, "
+                     f"'{PATRON_SIGLAS}', '', 'g'))",
             comentario="Índice fulltext generado a partir de markdown_actual. Usa la "
                        "configuración 'spanish_unaccent' (creada al aprovisionar la base, "
                        "ver scripts/aprovisionar_proyecto.py del repo core) para que una "
-                       "búsqueda sin tildes encuentre texto con tildes y viceversa"),
+                       "búsqueda sin tildes encuentre texto con tildes y viceversa. Antes de "
+                       "tokenizar, quita los puntos internos de siglas (ver PATRON_SIGLAS) "
+                       "para que 'SL' y 'S.L.' indexen igual"),
     Columna(nombre="fecha_documento", tipo="DATE", not_null=True,
             comentario="Fecha del propio documento (no la de subida)"),
     Columna(nombre="fecha_subida", tipo="TIMESTAMP", not_null=True,
