@@ -15,6 +15,9 @@ CAMPOS_DOCUMENTOS = [
             not_null=True, comentario="Tipo de documento, elegido por el usuario al guardarlo"),
     Columna(nombre="todas_versiones_buscables", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Si es False (por defecto), solo la versión vigente entra en las búsquedas"),
+    Columna(nombre="archivado", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="True si el documento ya no aplica (anulado, subido por error...): sigue "
+                       "guardado pero desaparece de las búsquedas hasta desarchivarlo"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"), protegido_actualizar=True,
             comentario="Fecha de alta del documento en el sistema"),

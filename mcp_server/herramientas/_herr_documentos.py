@@ -85,13 +85,18 @@ async def guardar_documento_gd(
 
 @mcp_app.tool()
 async def buscar_documentos_gd(
-    referencia: str | None = None, tipo_documento: str | None = None, limite: int = 20
+    referencia: str | None = None,
+    tipo_documento: str | None = None,
+    limite: int = 20,
+    incluir_archivados: bool = False,
 ) -> list[dict]:
     """Busca documentos por nombre/referencia y/o tipo (no por contenido).
     Sirve tanto para consulta exploratoria como para confirmar si un
-    documento ya existe antes de guardar una supuesta nueva versión."""
+    documento ya existe antes de guardar una supuesta nueva versión. Por
+    defecto no incluye documentos archivados; usa incluir_archivados=True
+    para verlos también (por ejemplo, antes de desarchivar uno)."""
     config, _ = await _contexto_actual()
-    return await DocumentosCRUD(config).buscar(referencia, tipo_documento, limite)
+    return await DocumentosCRUD(config).buscar(referencia, tipo_documento, limite, incluir_archivados)
 
 
 @mcp_app.tool()
@@ -165,6 +170,29 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "revisado_manualmente": version["revisado_manualmente"],
         "markdown": version["markdown_actual"],
     }
+
+
+@mcp_app.tool()
+async def archivar_documento_gd(id_documento: int) -> dict:
+    """Archiva un documento que ya no aplica (anulado, subido por error...):
+    deja de aparecer en buscar_documentos_gd y consultar_documentos_gd, pero
+    no se borra — sigue accesible por id y se puede recuperar con
+    desarchivar_documento_gd."""
+    config, _ = await _contexto_actual()
+    documento = await DocumentosCRUD(config).archivar(id_documento)
+    if not documento:
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    return documento
+
+
+@mcp_app.tool()
+async def desarchivar_documento_gd(id_documento: int) -> dict:
+    """Recupera un documento archivado: vuelve a aparecer en las búsquedas."""
+    config, _ = await _contexto_actual()
+    documento = await DocumentosCRUD(config).desarchivar(id_documento)
+    if not documento:
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    return documento
 
 
 @mcp_app.tool()

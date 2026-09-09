@@ -11,14 +11,37 @@ class DocumentosCRUD(AsyncCrudBase):
         super().__init__(TABLA_DOCUMENTOS, config)
 
     async def buscar(
-        self, referencia: str | None = None, tipo_documento: str | None = None, limite: int = 20
+        self,
+        referencia: str | None = None,
+        tipo_documento: str | None = None,
+        limite: int = 20,
+        incluir_archivados: bool = False,
     ) -> list[dict]:
         """Búsqueda por metadatos (nombre, tipo), no por contenido — para
-        exploración del cliente y para evitar duplicados al ingerir."""
+        exploración del cliente y para evitar duplicados al ingerir. Por
+        defecto no incluye documentos archivados."""
         filtros = {}
         if referencia:
             filtros["nombre"] = {"op": "like", "valor": f"%{referencia}%"}
         if tipo_documento:
             filtros["tipo_documento"] = {"op": "=", "valor": tipo_documento}
+        if not incluir_archivados:
+            filtros["archivado"] = {"op": "=", "valor": False}
         filas, _ = await self.listar(filtros=filtros, limit=limite, orden="fecha_alta DESC")
         return filas
+
+    async def archivar(self, id_documento: int) -> dict | None:
+        """Marca un documento como archivado: sigue guardado, pero
+        desaparece de las búsquedas hasta desarchivarlo."""
+        documento = await self.obtener(id_documento)
+        if not documento:
+            return None
+        await self.update(id_documento, {"archivado": True})
+        return await self.obtener(id_documento)
+
+    async def desarchivar(self, id_documento: int) -> dict | None:
+        documento = await self.obtener(id_documento)
+        if not documento:
+            return None
+        await self.update(id_documento, {"archivado": False})
+        return await self.obtener(id_documento)

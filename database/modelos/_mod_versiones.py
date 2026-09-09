@@ -53,14 +53,15 @@ class VersionesCRUD(AsyncCrudBase):
 
     async def listar_buscables(self) -> list[dict]:
         """Todas las versiones actualmente buscables (vigentes, o todas
-        las de un documento con todas_versiones_buscables=true) — usado
-        por el backfill al activar el modo semántico."""
+        las de un documento con todas_versiones_buscables=true, y el
+        documento no archivado) — usado por el backfill al activar el modo
+        semántico."""
         db = AsyncDatabase(**self.config)
         sql = f"""
             SELECT v.id, v.markdown_actual
             FROM "{TABLA_VERSIONES.nombre}" v
             JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
-            WHERE v.vigente = true OR d.todas_versiones_buscables = true
+            WHERE (v.vigente = true OR d.todas_versiones_buscables = true) AND d.archivado = false
         """
         return await db.query(sql)
 
@@ -83,6 +84,7 @@ class VersionesCRUD(AsyncCrudBase):
             JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
             WHERE v.tsvector_actual @@ {tsquery}
               AND (v.vigente = true OR d.todas_versiones_buscables = true)
+              AND d.archivado = false
             ORDER BY relevancia DESC
             LIMIT %s
         """

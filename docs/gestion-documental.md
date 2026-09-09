@@ -88,6 +88,8 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 
 **`obtener_estado_proyecto_gd()`** (añadida 2026-09-09): total de documentos guardados y fecha de la última alta (documento o versión nueva) — es el dato de estado por proyecto planteado en `docs/decisiones.md` del repo core, apartado "Contexto compartido: separar negocio de preferencias" (paso 3). No refleja correcciones hechas con `corregir_documento_gd`, solo altas — para no necesitar tocar el esquema. Vive aquí porque es específico de este producto, no de la plataforma core.
 
+**`archivar_documento_gd(id_documento)` / `desarchivar_documento_gd(id_documento)`** (añadidas 2026-09-09): un documento que ya no aplica (anulado, subido por error) se marca `archivado` en vez de borrarse — desaparece de `buscar_documentos_gd` (salvo `incluir_archivados=True`) y de `consultar_documentos_gd` (fulltext y semántico), pero sigue accesible por id y se puede recuperar sin perder nada del histórico.
+
 ### Estructura del repo: igual que cualquier proyecto de cliente de Multiplika MCP (2026-09-06)
 Este proyecto no inventa una estructura propia — sigue exactamente la misma que ya usa cualquier proyecto de cliente sobre Multiplika MCP, documentada en `guia_nuevo_proyecto.md` del repo core:
 

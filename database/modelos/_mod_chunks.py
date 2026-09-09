@@ -29,7 +29,7 @@ class ChunksCRUD(AsyncCrudBase):
             FROM "{TABLA_CHUNKS.nombre}" c
             JOIN "{TABLA_VERSIONES.nombre}" v ON v.id = c.id_version
             JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
-            WHERE v.vigente = true OR d.todas_versiones_buscables = true
+            WHERE (v.vigente = true OR d.todas_versiones_buscables = true) AND d.archivado = false
             ORDER BY c.embedding <=> %s
             LIMIT %s
         """
