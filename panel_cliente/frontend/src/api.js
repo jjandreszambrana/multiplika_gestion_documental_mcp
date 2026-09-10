@@ -170,10 +170,10 @@ export const api = {
   actualizarConfiguracionAvisos: (idProyecto, emailAvisos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/avisos`, { email_avisos: emailAvisos || null }),
 
-  obtenerConfiguracionIngesta: (idProyecto) =>
-    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/configuracion/ingesta`),
-  actualizarConfiguracionIngesta: (idProyecto, emailIngesta) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/ingesta`, { email_ingesta: emailIngesta || null }),
+  obtenerCuentaEmail: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/configuracion/cuenta-email`),
+  actualizarCuentaEmail: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/cuenta-email`, datos),
 
   listarEstilos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos`),
   crearEstilo: (idProyecto, nombreTipo, instrucciones) =>

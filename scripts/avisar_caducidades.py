@@ -23,6 +23,13 @@ encima está la raíz del repo core, de donde salen `database.config_db`
 (resuelve el alias -> credenciales reales, con descifrado) y
 `database.control.dependencias._dep_proyectos` (mcpc_proyectos).
 
+El correo se manda desde la CUENTA PROPIA de cada cliente
+(gd_configuracion.email_cuenta_*, gestionable desde el panel), no desde un
+remitente compartido de la plataforma — decisión de producto, 2026-09-10
+(igual que la ingesta por email, ver scripts/revisar_correo_entrante.py y
+docs/gestion-documental.md → "Ingesta por email"). Sin cuenta configurada,
+o sin `email_avisos` (a quién avisar), se omite ese proyecto.
+
 Uso: python scripts/avisar_caducidades.py [--dias 30] [--simular]
 Necesita ENV_PATH apuntando a env/env.json, igual que el resto de scripts
 que corren ya desplegados (ver docs/despliegue.md)."""
@@ -43,9 +50,9 @@ from mtpk_postgres.async_adapter import AsyncDatabase  # noqa: E402
 
 from database.config_db import get_db_config  # noqa: E402
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS  # noqa: E402
+from lib.cifrado import descifrar  # noqa: E402
 
 DIAS_POR_DEFECTO = 30
-REMITENTE = "avisos-gestion-documental@facturae.multiplika.net"
 
 
 async def _proyectos_gestion_documental_activos() -> list[dict]:
@@ -82,12 +89,42 @@ async def _email_avisos(config: dict) -> str | None:
     return filas[0]["email_avisos"] if filas and filas[0]["email_avisos"] else None
 
 
+async def _cuenta_email(config: dict) -> dict | None:
+    db = AsyncDatabase(**config)
+    filas = await db.query(
+        "SELECT email_cuenta_direccion, email_cuenta_usuario, email_cuenta_password_cifrada, "
+        "email_cuenta_smtp_host, email_cuenta_smtp_port FROM gd_configuracion WHERE id = 1"
+    )
+    if not filas:
+        return None
+    fila = filas[0]
+    if not fila["email_cuenta_direccion"] or not fila["email_cuenta_password_cifrada"]:
+        return None
+    return {
+        "direccion": fila["email_cuenta_direccion"],
+        "usuario": fila["email_cuenta_usuario"] or fila["email_cuenta_direccion"],
+        "password": descifrar(fila["email_cuenta_password_cifrada"]),
+        "smtp_host": fila["email_cuenta_smtp_host"],
+        "smtp_port": fila["email_cuenta_smtp_port"] or 587,
+    }
+
+
 async def _marcar_avisados(config: dict, ids_version: list[int]) -> None:
     db = AsyncDatabase(**config)
     await db.query("UPDATE gd_versiones SET aviso_caducidad_enviado = true WHERE id = ANY(%s)", (ids_version,))
 
 
-def _enviar_email(destinatario: str, proyecto_nombre: str, documentos: list[dict]) -> None:
+def _conectar_smtp(cuenta: dict) -> smtplib.SMTP:
+    if cuenta["smtp_port"] == 465:
+        smtp = smtplib.SMTP_SSL(cuenta["smtp_host"], cuenta["smtp_port"])
+    else:
+        smtp = smtplib.SMTP(cuenta["smtp_host"], cuenta["smtp_port"])
+        smtp.starttls()
+    smtp.login(cuenta["usuario"], cuenta["password"])
+    return smtp
+
+
+def _enviar_email(cuenta: dict, destinatario: str, proyecto_nombre: str, documentos: list[dict]) -> None:
     lineas = [f'- "{d["nombre"]}" ({d["tipo_documento"]}) — caduca el {d["fecha_caducidad"]}' for d in documentos]
     cuerpo = (
         f"Documentos de {proyecto_nombre} por caducar:\n\n" + "\n".join(lineas) +
@@ -95,10 +132,10 @@ def _enviar_email(destinatario: str, proyecto_nombre: str, documentos: list[dict
     )
     mensaje = MIMEText(cuerpo, _charset="utf-8")
     mensaje["Subject"] = f"[{proyecto_nombre}] Documentos por caducar ({len(documentos)})"
-    mensaje["From"] = REMITENTE
+    mensaje["From"] = cuenta["direccion"]
     mensaje["To"] = destinatario
 
-    with smtplib.SMTP("localhost", 25) as smtp:
+    with _conectar_smtp(cuenta) as smtp:
         smtp.send_message(mensaje)
 
 
@@ -109,16 +146,20 @@ async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
         return
 
     destinatario = await _email_avisos(config)
-    if not destinatario:
-        print(f"{proyecto['slug']}: {len(documentos)} documento(s) por caducar, sin email_avisos configurado — se omite.")
+    cuenta = await _cuenta_email(config)
+    if not destinatario or not cuenta:
+        print(
+            f"{proyecto['slug']}: {len(documentos)} documento(s) por caducar, pero falta "
+            f"{'email_avisos' if not destinatario else 'la cuenta de correo'} — se omite."
+        )
         return
 
-    print(f"{proyecto['slug']}: avisando de {len(documentos)} documento(s) a {destinatario}.")
+    print(f"{proyecto['slug']}: avisando de {len(documentos)} documento(s) a {destinatario} desde {cuenta['direccion']}.")
     if simular:
         return
 
     try:
-        _enviar_email(destinatario, proyecto["nombre"], documentos)
+        _enviar_email(cuenta, destinatario, proyecto["nombre"], documentos)
     except (smtplib.SMTPException, OSError) as e:
         # Un email_avisos mal configurado (buzón inexistente, dominio caído...)
         # de UN cliente no debe tumbar el aviso de todos los demás — sin este

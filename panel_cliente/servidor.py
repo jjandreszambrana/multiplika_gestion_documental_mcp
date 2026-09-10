@@ -276,33 +276,45 @@ async def actualizar_configuracion_avisos(
     return {"email_avisos": await ConfiguracionCRUD(config).obtener_email_avisos()}
 
 
-# --- Ingesta por email (ver docs/gestion-documental.md → "Ingesta por
-# email") — el cliente elige la parte local de su dirección de ingesta;
-# el dominio es fijo para toda la plataforma y todavía no está decidido,
-# así que esto no hace nada útil aún (no hay ningún buzón real detrás),
-# pero se puede ir configurando. Solo admin, igual que los avisos.
+# --- Cuenta de correo del cliente (ver docs/gestion-documental.md →
+# "Ingesta por email") — su propia cuenta, no un buzón de la plataforma:
+# sirve tanto para mandar los avisos de caducidad como para recibir
+# documentos por email. Solo admin, igual que credenciales/avisos —
+# lleva una contraseña.
 
 
-class ActualizarConfiguracionIngesta(BaseModel):
-    email_ingesta: str | None = None
+class ActualizarCuentaEmail(BaseModel):
+    direccion: str | None = None
+    usuario: str | None = None
+    password: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    imap_host: str | None = None
+    imap_port: int | None = None
 
 
-@app.get("/v1/proyectos/{id_proyecto}/configuracion/ingesta")
-async def obtener_configuracion_ingesta(
+@app.get("/v1/proyectos/{id_proyecto}/configuracion/cuenta-email")
+async def obtener_cuenta_email(
     id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
+    """Nunca incluye la contraseña, aunque esté guardada — igual que
+    credenciales."""
     config = get_db_config(proyecto["slug"])
-    return {"email_ingesta": await ConfiguracionCRUD(config).obtener_email_ingesta()}
+    return await ConfiguracionCRUD(config).obtener_cuenta_email_metadatos()
 
 
-@app.put("/v1/proyectos/{id_proyecto}/configuracion/ingesta")
-async def actualizar_configuracion_ingesta(
-    id_proyecto: int, datos: ActualizarConfiguracionIngesta,
+@app.put("/v1/proyectos/{id_proyecto}/configuracion/cuenta-email")
+async def actualizar_cuenta_email(
+    id_proyecto: int, datos: ActualizarCuentaEmail,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
     config = get_db_config(proyecto["slug"])
-    await ConfiguracionCRUD(config).actualizar_email_ingesta(datos.email_ingesta)
-    return {"email_ingesta": await ConfiguracionCRUD(config).obtener_email_ingesta()}
+    configuracion = ConfiguracionCRUD(config)
+    await configuracion.actualizar_cuenta_email(
+        datos.direccion, datos.usuario, datos.password,
+        datos.smtp_host, datos.smtp_port, datos.imap_host, datos.imap_port,
+    )
+    return await configuracion.obtener_cuenta_email_metadatos()
 
 
 # --- Credenciales (ver docs/gestion-documental.md → "Credenciales") ---

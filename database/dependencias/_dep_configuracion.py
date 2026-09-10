@@ -33,12 +33,27 @@ def construir_tabla_configuracion(proveedor_embedding: str = PROVEEDOR_EMBEDDING
                 comentario="A quién avisar por email cuando hay documentos por caducar (aviso "
                            "proactivo diario, no solo si se pregunta — ver "
                            "listar_documentos_por_caducar_gd). NULL desactiva el aviso"),
-        Columna(nombre="email_ingesta", tipo="VARCHAR", longitud=100,
-                comentario="Parte local (antes de la @) de la dirección de ingesta de "
-                           "documentos por correo de este cliente — el dominio es fijo para "
-                           "toda la plataforma (ver scripts/procesar_correo_entrante.py, "
-                           "pendiente de un dominio real, ver docs/gestion-documental.md → "
-                           "'Ingesta por email'). NULL desactiva la ingesta por email"),
+        # Cuenta de correo PROPIA del cliente (no un buzón compartido de la
+        # plataforma) — la configura cada cliente con su dirección y
+        # contraseña, y sirve para las dos cosas: enviar los avisos de
+        # caducidad (scripts/avisar_caducidades.py) y recibir documentos
+        # por email (scripts/revisar_correo_entrante.py). Decisión de
+        # producto, 2026-09-10 — se descartó un dominio/buzón propio de la
+        # plataforma (ver docs/gestion-documental.md → "Ingesta por email").
+        Columna(nombre="email_cuenta_direccion", tipo="VARCHAR", longitud=255,
+                comentario="Dirección de la cuenta de correo del cliente. NULL desactiva tanto "
+                           "el envío de avisos como la ingesta por email"),
+        Columna(nombre="email_cuenta_usuario", tipo="VARCHAR", longitud=255,
+                comentario="Usuario de acceso SMTP/IMAP, si es distinto de la dirección "
+                           "(algunos proveedores lo piden aparte). NULL = usar la dirección"),
+        Columna(nombre="email_cuenta_password_cifrada", tipo="VARCHAR", longitud=500,
+                comentario="Contraseña (o contraseña de aplicación) de la cuenta, cifrada — "
+                           "Fernet, lib.cifrado del repo core, igual que gd_credenciales"),
+        Columna(nombre="email_cuenta_smtp_host", tipo="VARCHAR", longitud=255),
+        Columna(nombre="email_cuenta_smtp_port", tipo="INT", default=587,
+                comentario="587 (STARTTLS) por defecto; 465 se trata como SMTPS directo"),
+        Columna(nombre="email_cuenta_imap_host", tipo="VARCHAR", longitud=255),
+        Columna(nombre="email_cuenta_imap_port", tipo="INT", default=993),
     ]
     return Tabla(
         nombre=NOMBRE_TABLA_CONFIGURACION, columnas=campos,
