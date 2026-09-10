@@ -7,10 +7,40 @@
 const BASE_ADMIN = import.meta.env.VITE_API_ADMIN || "http://127.0.0.1:8001/v1"
 const BASE_CLIENTE = import.meta.env.VITE_API_CLIENTE || "http://127.0.0.1:8002/v1"
 
+// Antes el token solo vivía en esta variable: una recarga de página lo
+// perdía aunque siguiera siendo válido, obligando a volver a entrar todo
+// el rato. Se guarda también en localStorage y se recupera al cargar la
+// página (ver cargarTokenGuardado, usada desde App.jsx).
+const CLAVE_TOKEN = "gd_panel_token"
+
 let token = null
+
+function tokenSinCaducar(t) {
+  try {
+    const payload = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")))
+    return !payload.exp || payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
+
+export function cargarTokenGuardado() {
+  const guardado = localStorage.getItem(CLAVE_TOKEN)
+  if (!guardado || !tokenSinCaducar(guardado)) {
+    localStorage.removeItem(CLAVE_TOKEN)
+    return null
+  }
+  token = guardado
+  return guardado
+}
 
 export function setToken(nuevoToken) {
   token = nuevoToken
+  if (nuevoToken) {
+    localStorage.setItem(CLAVE_TOKEN, nuevoToken)
+  } else {
+    localStorage.removeItem(CLAVE_TOKEN)
+  }
 }
 
 async function peticion(base, metodo, ruta, cuerpo) {

@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react"
 import { Anchor, Box, Container, Group, Text, Title } from "@mantine/core"
-import { api, leerToken, setToken } from "./api"
+import { api, cargarTokenGuardado, leerToken, setToken } from "./api"
+
+// El id del proyecto activo se guarda aparte del token: hace falta para
+// recuperar la sesión de un superadmin que entró por el enlace directo
+// (?token=...&id_proyecto=...) — ese parámetro se borra de la URL nada
+// más leerlo, así que sin esto una recarga lo dejaría sin proyecto y sin
+// forma de volver a elegirlo (ElegirProyecto es solo para usuarios de
+// empresa, no para superadmin).
+const CLAVE_PROYECTO = "gd_panel_id_proyecto"
 import Login from "./paginas/Login"
 import ElegirProyecto from "./paginas/ElegirProyecto"
 import Documentos from "./paginas/Documentos"
@@ -11,7 +19,10 @@ import Estilos from "./paginas/Estilos"
 import EstiloDetalle from "./paginas/EstiloDetalle"
 
 export default function App() {
-  const [sesion, setSesion] = useState(null)
+  const [sesion, setSesion] = useState(() => {
+    const guardado = cargarTokenGuardado()
+    return guardado ? leerToken(guardado) : null
+  })
   const [proyecto, setProyecto] = useState(null)
   const [idDocumentoActivo, setIdDocumentoActivo] = useState(null)
   const [estiloActivo, setEstiloActivo] = useState(null)
@@ -26,19 +37,33 @@ export default function App() {
     const parametros = new URLSearchParams(window.location.search)
     const token = parametros.get("token")
     const idProyecto = parametros.get("id_proyecto")
-    if (!token || !idProyecto) {
-      setComprobandoEnlace(false)
+    if (token && idProyecto) {
+      window.history.replaceState({}, "", window.location.pathname)
+      setToken(token)
+      setSesion(leerToken(token))
+      cargarProyecto(idProyecto).finally(() => setComprobandoEnlace(false))
       return
     }
-    window.history.replaceState({}, "", window.location.pathname)
-    setToken(token)
-    setSesion(leerToken(token))
-    api
-      .verProyecto(idProyecto)
-      .then(setProyecto)
-      .catch((err) => setError(err.message))
-      .finally(() => setComprobandoEnlace(false))
+
+    // Sin enlace nuevo: si ya había sesión restaurada (recarga de página)
+    // y se conoce el último proyecto, recupéralo directamente.
+    const idProyectoGuardado = localStorage.getItem(CLAVE_PROYECTO)
+    if (sesion && idProyectoGuardado) {
+      cargarProyecto(idProyectoGuardado).finally(() => setComprobandoEnlace(false))
+      return
+    }
+    setComprobandoEnlace(false)
   }, [])
+
+  function cargarProyecto(idProyecto) {
+    return api
+      .verProyecto(idProyecto)
+      .then((p) => {
+        localStorage.setItem(CLAVE_PROYECTO, p.id)
+        setProyecto(p)
+      })
+      .catch((err) => setError(err.message))
+  }
 
   function iniciarSesion(token) {
     setToken(token)
@@ -49,7 +74,7 @@ export default function App() {
     // El listado por tenant no trae `es_admin` (viene del panel de
     // administración, no de este backend) — se pide aparte para saber
     // si mostrar la gestión de API keys.
-    api.verProyecto(p.id).then(setProyecto).catch((err) => setError(err.message))
+    cargarProyecto(p.id)
   }
 
   function cerrarSesion() {
@@ -59,6 +84,7 @@ export default function App() {
     setIdDocumentoActivo(null)
     setEstiloActivo(null)
     setVista("documentos")
+    localStorage.removeItem(CLAVE_PROYECTO)
   }
 
   if (comprobandoEnlace) {
@@ -127,7 +153,14 @@ export default function App() {
         ) : (
           <Documentos
             proyecto={proyecto}
-            onCambiarProyecto={esSuperadmin ? null : () => setProyecto(null)}
+            onCambiarProyecto={
+              esSuperadmin
+                ? null
+                : () => {
+                    setProyecto(null)
+                    localStorage.removeItem(CLAVE_PROYECTO)
+                  }
+            }
             onVerDocumento={setIdDocumentoActivo}
             onVerApiKeys={proyecto.es_admin ? () => setVista("api-keys") : null}
             onVerCredenciales={proyecto.es_admin ? () => setVista("credenciales") : null}
