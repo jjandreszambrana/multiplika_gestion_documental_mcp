@@ -122,10 +122,13 @@ export default function EstiloDetalle({ proyecto, estilo, onVolver }) {
 
       <Stack component="form" onSubmit={guardarInstrucciones} mb="xl">
         <Textarea
-          rows={6}
+          autosize
+          minRows={12}
+          maxRows={40}
           value={instrucciones}
           onChange={(e) => setInstrucciones(e.target.value)}
           disabled={!proyecto.es_admin}
+          styles={{ input: { fontFamily: "monospace" } }}
         />
         {proyecto.es_admin && (
           <Button type="submit" loading={guardandoInstrucciones} w="fit-content">

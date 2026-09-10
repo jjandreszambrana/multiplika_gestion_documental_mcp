@@ -55,7 +55,7 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
       </Text>
 
       {proyecto.es_admin && (
-        <Stack component="form" onSubmit={crear} maw={480} mb="xl">
+        <Stack component="form" onSubmit={crear} maw={640} mb="xl">
           <TextInput
             placeholder='Tipo de informe (ej. "informe_mensual")'
             value={nombreTipo}
@@ -64,7 +64,9 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
           />
           <Textarea
             placeholder="Instrucciones: estructura, tono, qué apartados lleva..."
-            rows={4}
+            autosize
+            minRows={6}
+            maxRows={30}
             value={instrucciones}
             onChange={(e) => setInstrucciones(e.target.value)}
             required
