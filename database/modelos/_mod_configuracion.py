@@ -8,8 +8,8 @@ from ..dependencias._dep_configuracion import TABLA_CONFIGURACION
 
 CAMPOS_CUENTA_EMAIL_METADATOS = (
     "email_cuenta_direccion", "email_cuenta_usuario",
-    "email_cuenta_smtp_host", "email_cuenta_smtp_port",
-    "email_cuenta_imap_host", "email_cuenta_imap_port",
+    "email_cuenta_smtp_host", "email_cuenta_smtp_port", "email_cuenta_smtp_seguridad",
+    "email_cuenta_imap_host", "email_cuenta_imap_port", "email_cuenta_imap_seguridad",
 )
 
 
@@ -41,7 +41,8 @@ class ConfiguracionCRUD(AsyncCrudBase):
 
     async def actualizar_cuenta_email(
         self, direccion: str | None, usuario: str | None, password: str | None,
-        smtp_host: str | None, smtp_port: int | None, imap_host: str | None, imap_port: int | None,
+        smtp_host: str | None, smtp_port: int | None, smtp_seguridad: str | None,
+        imap_host: str | None, imap_port: int | None, imap_seguridad: str | None,
     ) -> None:
         """Todos los parámetros son opcionales: solo se actualiza lo que
         se manda (no None), igual que CredencialesCRUD.actualizar — así se
@@ -54,8 +55,10 @@ class ConfiguracionCRUD(AsyncCrudBase):
             "email_cuenta_usuario": usuario,
             "email_cuenta_smtp_host": smtp_host,
             "email_cuenta_smtp_port": smtp_port,
+            "email_cuenta_smtp_seguridad": smtp_seguridad,
             "email_cuenta_imap_host": imap_host,
             "email_cuenta_imap_port": imap_port,
+            "email_cuenta_imap_seguridad": imap_seguridad,
         }
         cambios = {campo: valor for campo, valor in posibles.items() if valor is not None}
         if password:
@@ -78,6 +81,8 @@ class ConfiguracionCRUD(AsyncCrudBase):
             "password": descifrar(fila["email_cuenta_password_cifrada"]),
             "smtp_host": fila["email_cuenta_smtp_host"],
             "smtp_port": fila["email_cuenta_smtp_port"] or 587,
+            "smtp_seguridad": fila["email_cuenta_smtp_seguridad"] or "starttls",
             "imap_host": fila["email_cuenta_imap_host"],
             "imap_port": fila["email_cuenta_imap_port"] or 993,
+            "imap_seguridad": fila["email_cuenta_imap_seguridad"] or "ssl",
         }

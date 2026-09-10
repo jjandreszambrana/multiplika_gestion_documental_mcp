@@ -93,7 +93,8 @@ async def _cuenta_email(config: dict) -> dict | None:
     db = AsyncDatabase(**config)
     filas = await db.query(
         "SELECT email_cuenta_direccion, email_cuenta_usuario, email_cuenta_password_cifrada, "
-        "email_cuenta_smtp_host, email_cuenta_smtp_port FROM gd_configuracion WHERE id = 1"
+        "email_cuenta_smtp_host, email_cuenta_smtp_port, email_cuenta_smtp_seguridad "
+        "FROM gd_configuracion WHERE id = 1"
     )
     if not filas:
         return None
@@ -106,6 +107,7 @@ async def _cuenta_email(config: dict) -> dict | None:
         "password": descifrar(fila["email_cuenta_password_cifrada"]),
         "smtp_host": fila["email_cuenta_smtp_host"],
         "smtp_port": fila["email_cuenta_smtp_port"] or 587,
+        "smtp_seguridad": fila["email_cuenta_smtp_seguridad"] or "starttls",
     }
 
 
@@ -115,11 +117,15 @@ async def _marcar_avisados(config: dict, ids_version: list[int]) -> None:
 
 
 def _conectar_smtp(cuenta: dict) -> smtplib.SMTP:
-    if cuenta["smtp_port"] == 465:
+    """`smtp_seguridad` es explícito, elegido por el cliente en el panel —
+    antes se adivinaba por el puerto (465 = SSL, cualquier otro =
+    STARTTLS), lo que no vale para configuraciones fuera de lo habitual."""
+    if cuenta["smtp_seguridad"] == "ssl":
         smtp = smtplib.SMTP_SSL(cuenta["smtp_host"], cuenta["smtp_port"])
     else:
         smtp = smtplib.SMTP(cuenta["smtp_host"], cuenta["smtp_port"])
-        smtp.starttls()
+        if cuenta["smtp_seguridad"] == "starttls":
+            smtp.starttls()
     smtp.login(cuenta["usuario"], cuenta["password"])
     return smtp
 

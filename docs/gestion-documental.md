@@ -307,9 +307,11 @@ gd_configuracion (añadido a la fila única)
   - email_cuenta_direccion         VARCHAR(255)
   - email_cuenta_usuario           VARCHAR(255)  -- login SMTP/IMAP si es distinto de la dirección
   - email_cuenta_password_cifrada  VARCHAR(500)  -- Fernet, lib.cifrado, igual que gd_credenciales
-  - email_cuenta_smtp_host / _smtp_port  (587 por defecto)
-  - email_cuenta_imap_host / _imap_port  (993 por defecto)
+  - email_cuenta_smtp_host / _smtp_port (587) / _smtp_seguridad ENUM('starttls','ssl','ninguna')
+  - email_cuenta_imap_host / _imap_port (993) / _imap_seguridad ENUM('ssl','starttls','ninguna')
 ```
+
+`_seguridad` es explícito, elegido por el cliente en el panel — la primera versión lo adivinaba por el puerto (465 = SSL, cualquier otro = STARTTLS, e IMAP siempre SSL), lo que no vale para configuraciones fuera de lo habitual. El usuario lo pidió al revisar la pantalla.
 
 - Panel: `GET/PUT /v1/proyectos/{id}/configuracion/cuenta-email` (solo admin) — pantalla "Cuenta de correo" (botón junto a los demás en `Documentos.jsx`). El `GET` nunca devuelve la contraseña, aunque esté guardada; el `PUT` solo la sobrescribe si se manda una nueva (dejarla vacía no la borra) — mismo patrón que `gd_credenciales`.
 - `scripts/revisar_correo_entrante.py` (cron cada 15 min, `mcp_gd_revisar_correo`): por cada proyecto con cuenta configurada, se conecta por IMAP, busca correos no leídos, extrae los adjuntos válidos (imagen o PDF) de cada uno, los inserta en `gd_documentos_pendientes` con `origen='email'`, y marca el correo como leído (tenga o no adjuntos válidos, para no revisarlo otra vez). Una cuenta mal configurada (contraseña caducada, servidor caído...) de un cliente no impide revisar la de los demás — mismo `try/except` por proyecto que ya lleva `avisar_caducidades.py`.

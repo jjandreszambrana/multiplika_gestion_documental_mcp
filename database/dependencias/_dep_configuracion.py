@@ -50,10 +50,17 @@ def construir_tabla_configuracion(proveedor_embedding: str = PROVEEDOR_EMBEDDING
                 comentario="Contraseña (o contraseña de aplicación) de la cuenta, cifrada — "
                            "Fernet, lib.cifrado del repo core, igual que gd_credenciales"),
         Columna(nombre="email_cuenta_smtp_host", tipo="VARCHAR", longitud=255),
-        Columna(nombre="email_cuenta_smtp_port", tipo="INT", default=587,
-                comentario="587 (STARTTLS) por defecto; 465 se trata como SMTPS directo"),
+        Columna(nombre="email_cuenta_smtp_port", tipo="INT", default=587),
+        Columna(nombre="email_cuenta_smtp_seguridad", tipo="ENUM",
+                enum_opciones=["starttls", "ssl", "ninguna"], not_null=True, default="starttls",
+                comentario="Cómo se cifra la conexión SMTP — elegido explícitamente, no adivinado "
+                           "por el puerto (antes se asumía SSL en el 465 y STARTTLS en cualquier "
+                           "otro, lo que no vale para configuraciones fuera de lo habitual)"),
         Columna(nombre="email_cuenta_imap_host", tipo="VARCHAR", longitud=255),
         Columna(nombre="email_cuenta_imap_port", tipo="INT", default=993),
+        Columna(nombre="email_cuenta_imap_seguridad", tipo="ENUM",
+                enum_opciones=["ssl", "starttls", "ninguna"], not_null=True, default="ssl",
+                comentario="Igual que email_cuenta_smtp_seguridad, para IMAP"),
     ]
     return Tabla(
         nombre=NOMBRE_TABLA_CONFIGURACION, columnas=campos,

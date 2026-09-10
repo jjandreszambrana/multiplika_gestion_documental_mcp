@@ -27,6 +27,7 @@ desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
 
 import os
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -283,14 +284,19 @@ async def actualizar_configuracion_avisos(
 # lleva una contraseña.
 
 
+SeguridadEmail = Literal["starttls", "ssl", "ninguna"]
+
+
 class ActualizarCuentaEmail(BaseModel):
     direccion: str | None = None
     usuario: str | None = None
     password: str | None = None
     smtp_host: str | None = None
     smtp_port: int | None = None
+    smtp_seguridad: SeguridadEmail | None = None
     imap_host: str | None = None
     imap_port: int | None = None
+    imap_seguridad: SeguridadEmail | None = None
 
 
 @app.get("/v1/proyectos/{id_proyecto}/configuracion/cuenta-email")
@@ -312,7 +318,8 @@ async def actualizar_cuenta_email(
     configuracion = ConfiguracionCRUD(config)
     await configuracion.actualizar_cuenta_email(
         datos.direccion, datos.usuario, datos.password,
-        datos.smtp_host, datos.smtp_port, datos.imap_host, datos.imap_port,
+        datos.smtp_host, datos.smtp_port, datos.smtp_seguridad,
+        datos.imap_host, datos.imap_port, datos.imap_seguridad,
     )
     return await configuracion.obtener_cuenta_email_metadatos()
 

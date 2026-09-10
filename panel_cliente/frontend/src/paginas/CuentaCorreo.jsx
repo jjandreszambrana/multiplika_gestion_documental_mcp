@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Button, Group, PasswordInput, Stack, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Button, Group, PasswordInput, Select, Stack, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+
+const OPCIONES_SEGURIDAD = [
+  { value: "starttls", label: "STARTTLS" },
+  { value: "ssl", label: "SSL/TLS" },
+  { value: "ninguna", label: "Ninguna" },
+]
 
 export default function CuentaCorreo({ proyecto, onVolver }) {
   const [direccion, setDireccion] = useState("")
@@ -8,8 +14,10 @@ export default function CuentaCorreo({ proyecto, onVolver }) {
   const [password, setPassword] = useState("")
   const [smtpHost, setSmtpHost] = useState("")
   const [smtpPort, setSmtpPort] = useState("587")
+  const [smtpSeguridad, setSmtpSeguridad] = useState("starttls")
   const [imapHost, setImapHost] = useState("")
   const [imapPort, setImapPort] = useState("993")
+  const [imapSeguridad, setImapSeguridad] = useState("ssl")
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
@@ -22,8 +30,10 @@ export default function CuentaCorreo({ proyecto, onVolver }) {
         setUsuario(c.email_cuenta_usuario || "")
         setSmtpHost(c.email_cuenta_smtp_host || "")
         setSmtpPort(String(c.email_cuenta_smtp_port || 587))
+        setSmtpSeguridad(c.email_cuenta_smtp_seguridad || "starttls")
         setImapHost(c.email_cuenta_imap_host || "")
         setImapPort(String(c.email_cuenta_imap_port || 993))
+        setImapSeguridad(c.email_cuenta_imap_seguridad || "ssl")
       })
       .catch((err) => setError(err.message))
       .finally(() => setCargando(false))
@@ -41,8 +51,10 @@ export default function CuentaCorreo({ proyecto, onVolver }) {
         password: password || null,
         smtp_host: smtpHost.trim() || null,
         smtp_port: smtpPort ? Number(smtpPort) : null,
+        smtp_seguridad: smtpSeguridad,
         imap_host: imapHost.trim() || null,
         imap_port: imapPort ? Number(imapPort) : null,
+        imap_seguridad: imapSeguridad,
       })
       setPassword("")
       setGuardado(true)
@@ -97,34 +109,52 @@ export default function CuentaCorreo({ proyecto, onVolver }) {
             data-1p-ignore
             data-lpignore="true"
           />
-          <Group grow>
+          <Group align="flex-end">
             <TextInput
               label="Servidor SMTP (envío)"
               placeholder="smtp.vuestraempresa.com"
               value={smtpHost}
               onChange={(e) => setSmtpHost(e.target.value)}
               autoComplete="off"
+              style={{ flex: 1 }}
             />
             <TextInput
-              label="Puerto SMTP"
+              label="Puerto"
               value={smtpPort}
               onChange={(e) => setSmtpPort(e.target.value)}
-              w={100}
+              w={80}
+            />
+            <Select
+              label="Seguridad"
+              data={OPCIONES_SEGURIDAD}
+              value={smtpSeguridad}
+              onChange={(valor) => setSmtpSeguridad(valor || "starttls")}
+              w={140}
+              allowDeselect={false}
             />
           </Group>
-          <Group grow>
+          <Group align="flex-end">
             <TextInput
               label="Servidor IMAP (recepción)"
               placeholder="imap.vuestraempresa.com"
               value={imapHost}
               onChange={(e) => setImapHost(e.target.value)}
               autoComplete="off"
+              style={{ flex: 1 }}
             />
             <TextInput
-              label="Puerto IMAP"
+              label="Puerto"
               value={imapPort}
               onChange={(e) => setImapPort(e.target.value)}
-              w={100}
+              w={80}
+            />
+            <Select
+              label="Seguridad"
+              data={OPCIONES_SEGURIDAD}
+              value={imapSeguridad}
+              onChange={(valor) => setImapSeguridad(valor || "ssl")}
+              w={140}
+              allowDeselect={false}
             />
           </Group>
           <Button type="submit" loading={guardando}>

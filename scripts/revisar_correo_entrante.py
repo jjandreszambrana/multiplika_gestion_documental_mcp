@@ -63,7 +63,8 @@ async def _cuenta_email(config: dict) -> dict | None:
     db = AsyncDatabase(**config)
     filas = await db.query(
         "SELECT email_cuenta_direccion, email_cuenta_usuario, email_cuenta_password_cifrada, "
-        "email_cuenta_imap_host, email_cuenta_imap_port FROM gd_configuracion WHERE id = 1"
+        "email_cuenta_imap_host, email_cuenta_imap_port, email_cuenta_imap_seguridad "
+        "FROM gd_configuracion WHERE id = 1"
     )
     if not filas:
         return None
@@ -76,7 +77,21 @@ async def _cuenta_email(config: dict) -> dict | None:
         "password": descifrar(fila["email_cuenta_password_cifrada"]),
         "imap_host": fila["email_cuenta_imap_host"],
         "imap_port": fila["email_cuenta_imap_port"] or 993,
+        "imap_seguridad": fila["email_cuenta_imap_seguridad"] or "ssl",
     }
+
+
+def _conectar_imap(cuenta: dict) -> imaplib.IMAP4:
+    """`imap_seguridad` es explícito, elegido por el cliente en el panel
+    — antes siempre se asumía SSL/TLS directo, sin opción de STARTTLS ni
+    de una conexión sin cifrar (poco común, pero algún servidor interno
+    de cliente podría no tener certificado)."""
+    if cuenta["imap_seguridad"] == "ssl":
+        return imaplib.IMAP4_SSL(cuenta["imap_host"], cuenta["imap_port"])
+    imap = imaplib.IMAP4(cuenta["imap_host"], cuenta["imap_port"])
+    if cuenta["imap_seguridad"] == "starttls":
+        imap.starttls()
+    return imap
 
 
 def _es_adjunto_valido(parte: Message) -> bool:
@@ -98,7 +113,7 @@ def _leer_adjuntos_no_leidos(cuenta: dict) -> list[tuple[bytes, str, str]]:
     Marca cada correo como leído según lo procesa, tenga o no adjuntos
     válidos, para no revisarlo otra vez en la siguiente ejecución."""
     adjuntos = []
-    imap = imaplib.IMAP4_SSL(cuenta["imap_host"], cuenta["imap_port"])
+    imap = _conectar_imap(cuenta)
     try:
         imap.login(cuenta["usuario"], cuenta["password"])
         imap.select("INBOX")
