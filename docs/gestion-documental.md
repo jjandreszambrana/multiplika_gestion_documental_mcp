@@ -236,6 +236,26 @@ Antes, dar de alta un usuario de la empresa o asignarle un rol en un proyecto er
 
 Probado con una usuaria real (no el enlace de soporte de superadmin): login normal con su propio email/contraseña, ve el botón, crea otro usuario ella sola sin que nadie del equipo intervenga. Datos de prueba limpiados al terminar.
 
+**Conservar el archivo original — planificado (2026-09-10), pendiente de implementar**
+
+Hoy solo se guarda el markdown que genera la IA; la foto o el PDF que sube el cliente se descarta. Riesgo real para un cliente tipo gestoría: si la IA lee mal algo, o si hace falta el escaneado original para algo legal, no está en ningún sitio. Diseño acordado con el usuario, sin implementar todavía:
+
+- **Nueva tabla `gd_versiones_originales`** (no columnas dentro de `gd_versiones`, para no arrastrar binarios pesados en cada búsqueda/listado normal): `id`, `id_version` (FK → `gd_versiones.id`, única — una por versión, ON DELETE CASCADE), `archivo` (BLOB/BYTEA), `tipo_mime`, `nombre_fichero` (opcional), `fecha_alta`. No todas las versiones tendrán fila aquí — una corrección (`corregir_documento_gd`) no sube archivo nuevo.
+- **`guardar_documento_gd` gana tres parámetros opcionales**: `archivo_original_base64`, `archivo_tipo_mime`, `archivo_nombre`. Opcionales para no romper casos sin archivo real, pero la propia herramienta debe instruir a la IA para que los mande siempre que tenga el archivo.
+- **Vía de subida decidida**: la IA manda el archivo junto con el markdown, en la misma llamada — no una subida aparte desde el panel. Motivo: un solo paso, no cambia el flujo actual de conversación. Riesgo aceptado y pendiente de probar: un PDF escaneado de muchas páginas podría no caber bien en una llamada — validar con un caso real grande antes de darlo por cerrado.
+- **Base64 solo de paso, nunca almacenado así**: es la única forma de que el archivo viaje dentro de una llamada a herramienta (JSON no lleva binario), pero en cuanto llega se decodifica y se guarda como binario de verdad (BYTEA) — un archivo en base64 ocupa un 33% más que en binario, y con miles de documentos acumulándose se nota.
+- **Recuperación**: botón "Descargar original" en el detalle del documento del panel, mismo patrón que las imágenes de estilos (`GET .../documentos/{id}/original/contenido`, autenticado, sirve el binario con su `tipo_mime`). Exponerlo también a la IA (para que pueda mostrarlo/adjuntarlo) queda como posible fase 2, no imprescindible para la primera versión.
+
 **Fase 5 — Piloto con un cliente real**
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.
 - Pendiente: modelo de coste al cliente por el uso de embeddings — decisión de negocio, no técnica.
+
+## Ideas para más adelante (2026-09-10, sin diseñar todavía)
+
+Además de conservar el archivo original (arriba, ya diseñado), quedan sobre la mesa, solo anotadas:
+
+- **Fechas de caducidad y avisos**: contratos, seguros, certificados... caducan, y hoy no hay dónde guardar cuándo ni forma de que la IA avise de lo que caduca pronto.
+- **Exportar un informe de verdad**: la tabla de estilos le da a la IA instrucciones e imágenes, pero el resultado se queda en markdown dentro de la conversación — falta poder sacarlo como PDF real con el logo puesto.
+- **Ingesta por email**: que el cliente reenvíe una factura a una dirección propia y se ingiera sola, sin pasar por el chat — probablemente el cambio con más impacto en el uso real del producto, pero también el de más envergadura.
+- **Subida masiva**: para dar de alta a un cliente nuevo con años de documentos atrás, sin hacerlo uno a uno por conversación.
+- **Filtros en la búsqueda del panel**: por tipo de documento o por fecha, hoy es solo una caja de texto suelta.
