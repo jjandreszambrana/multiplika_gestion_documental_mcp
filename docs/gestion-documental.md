@@ -250,12 +250,56 @@ Hoy solo se guarda el markdown que genera la IA; la foto o el PDF que sube el cl
 - Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.
 - Pendiente: modelo de coste al cliente por el uso de embeddings — decisión de negocio, no técnica.
 
-## Ideas para más adelante (2026-09-10, sin diseñar todavía)
+## Cinco mejoras planificadas (2026-09-10), pendientes de implementar
 
-Además de conservar el archivo original (arriba, ya diseñado), quedan sobre la mesa, solo anotadas:
+Diseño acordado con el usuario para las cinco ideas que quedaron solo anotadas. Se implementan en este orden, de más a menos autocontenida.
 
-- **Fechas de caducidad y avisos**: contratos, seguros, certificados... caducan, y hoy no hay dónde guardar cuándo ni forma de que la IA avise de lo que caduca pronto.
-- **Exportar un informe de verdad**: la tabla de estilos le da a la IA instrucciones e imágenes, pero el resultado se queda en markdown dentro de la conversación — falta poder sacarlo como PDF real con el logo puesto.
-- **Ingesta por email**: que el cliente reenvíe una factura a una dirección propia y se ingiera sola, sin pasar por el chat — probablemente el cambio con más impacto en el uso real del producto, pero también el de más envergadura.
-- **Subida masiva**: para dar de alta a un cliente nuevo con años de documentos atrás, sin hacerlo uno a uno por conversación.
-- **Filtros en la búsqueda del panel**: por tipo de documento o por fecha, hoy es solo una caja de texto suelta.
+### 1. Filtros en la búsqueda del panel
+
+Hoy `GET /v1/proyectos/{id}/documentos` es una caja de texto suelta. Añade parámetros opcionales `tipo_documento` y `fecha_desde`/`fecha_hasta` al listado (no a la búsqueda por contenido, que sigue siendo solo el texto), y un par de controles en `Documentos.jsx` (un `Select` de tipo, dos selectores de fecha). Sin cambios de esquema.
+
+### 2. Documentos pendientes: la pieza compartida por subida masiva e ingesta por email
+
+Decidido con el usuario: cuando un documento llega **sin nadie delante** (un lote subido al panel, o un email reenviado), no puede pasar por las preguntas que la IA siempre hace (tipo, nombre, si es una versión nueva...) — así que se queda **pendiente** hasta que el cliente habla con su IA, que lo procesa entonces con las mismas preguntas de siempre. No cambia la regla de "la IA siempre pregunta", solo cambia cuándo pregunta.
+
+```
+gd_documentos_pendientes
+  - id
+  - archivo         BLOB (BYTEA)   -- el fichero tal cual llegó
+  - tipo_mime        VARCHAR(50)
+  - nombre_original   VARCHAR(255)   -- nombre de fichero o asunto del email
+  - origen            ENUM('panel', 'email')
+  - fecha_alta         TIMESTAMP
+```
+
+Tools MCP nuevas:
+- `listar_documentos_pendientes_gd()` — metadatos de lo que hay en la cola (nombre, origen, fecha), para que la IA pueda avisar al cliente ("tienes 2 documentos nuevos, ¿los proceso?") al empezar una conversación.
+- `obtener_documento_pendiente_gd(id)` — devuelve el fichero como contenido de imagen/archivo nativo de la respuesta (mismo mecanismo que las imágenes de estilos), para que la IA pueda leerlo de verdad antes de preguntar.
+- `guardar_documento_gd` gana un parámetro opcional `id_documento_pendiente` — si se indica, al guardar con éxito borra esa fila de la cola.
+
+**Subida masiva** (vía panel, decidido): nuevo endpoint `POST /v1/proyectos/{id}/documentos/pendientes` (multipart, varios ficheros en una sola petición) que inserta una fila en `gd_documentos_pendientes` por cada archivo. Pantalla nueva o ampliación de `Documentos.jsx` con un selector de múltiples ficheros.
+
+**Ingesta por email** (decidido: cola, no automático — ver más abajo): el proceso que lee el correo entrante inserta en esta misma tabla, con `origen='email'`.
+
+### 3. Ingesta por email
+
+El servidor ya tiene correo de verdad montado (Postfix + `getmail`, mismo patrón que `pylula.multiplika.net`) — no hace falta infraestructura nueva, solo conectarlo.
+
+- **Dirección configurable por proyecto** (decidido con el usuario): nuevo campo `gd_configuracion.email_ingesta` (por ejemplo, `<algo-elegido-por-el-cliente>@documentos.multiplika.net` — un único dominio/buzón para toda la plataforma, con la parte local identificando al proyecto, para no tener que dar de alta un buzón nuevo en ISPConfig por cada cliente).
+- Un script (`scripts/procesar_correo_entrante.py` en este repo, desplegado junto a `panel_cliente/` a la ruta estable de producto, mismo patrón) invocado por `getmail` cada vez que llega un correo a ese buzón: identifica el proyecto por la dirección de destino (cruzando contra `email_ingesta` de cada cliente), extrae los adjuntos, y los inserta en `gd_documentos_pendientes` de la base de ESE cliente.
+- Sin adjuntos válidos (imagen/PDF) → se ignora o se responde con un aviso (a decidir en la implementación).
+
+### 4. Fechas de caducidad y avisos proactivos por email
+
+- `gd_versiones.fecha_caducidad` (DATE, opcional) — junto a `fecha_documento`, no en `gd_documentos`: la caducidad es del contenido de esa versión concreta (un contrato renovado es, en la práctica, otra fecha).
+- `guardar_documento_gd` gana un parámetro opcional `fecha_caducidad`.
+- Tool `listar_documentos_por_caducar_gd(dias=30)` — para que la IA pueda responder si se le pregunta.
+- **Aviso proactivo por email, decidido explícitamente por el usuario** (no basta con que la IA responda si se le pregunta): `gd_configuracion` gana `email_avisos` (a quién avisar). Script diario (cron, mismo patrón que `backup_diario.py` del core: recorre `mcpc_proyectos` con `tipo_producto='gestion_documental'`, y por cada uno consulta si hay documentos por caducar pronto) que manda un correo si hay algo — usando el Postfix local del propio servidor (`smtplib` a `localhost:25`, mismo patrón ya usado en `pylula`), sin necesidad de ninguna credencial ni servicio externo.
+
+### 5. Exportar un informe a PDF
+
+Decidido: sencillo para empezar (texto formateado + logo, no maquetación compleja). Nueva tool `generar_informe_pdf_gd(markdown, nombre_archivo, nombre_tipo_estilo=None)`: convierte el markdown que acaba de escribir la IA a HTML y de ahí a PDF (biblioteca a instalar: `markdown` + `WeasyPrint` — valorado `pandoc`, no está instalado en el servidor y añadiría una dependencia externa al margen de Python), incrustando el logo del estilo indicado si se pasa uno, y devuelve el PDF como contenido de archivo nativo de la respuesta (la IA se lo entrega al cliente directamente, sin pasar por el panel).
+
+---
+
+Orden de implementación: 1 → 2 (con subida masiva) → 5 → 4 → 3 (ingesta por email última, por ser la pieza más grande y la que depende de que el resto — sobre todo "documentos pendientes" — ya exista).
