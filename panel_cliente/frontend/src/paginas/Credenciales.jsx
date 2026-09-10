@@ -71,28 +71,42 @@ export default function Credenciales({ proyecto, onVolver }) {
         lleva), pero nunca la contraseña.
       </Text>
 
-      <Stack component="form" onSubmit={crear} maw={480} mb="xl">
+      <Stack component="form" onSubmit={crear} maw={480} mb="xl" autoComplete="off">
         <TextInput
           placeholder='Nombre corto (ej. "erp_contabilidad")'
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          autoComplete="off"
           required
         />
         <TextInput
           placeholder="Para qué sirve"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
+          autoComplete="off"
           required
         />
+        {/* El navegador reconoce cualquier campo de texto + uno de
+            contraseña como un formulario de login y ofrece autorrellenar
+            con credenciales guardadas de OTRO sitio — esto es para
+            credenciales de un servicio externo, no para entrar aquí.
+            autoComplete="off"/"new-password" no lo bloquea al 100% en
+            todos los navegadores, pero es lo que reconocen la mayoría. */}
         <TextInput
           placeholder="Usuario (opcional — solo si el servicio lo pide)"
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
         />
         <PasswordInput
           placeholder="Contraseña, API key o token"
           value={valor}
           onChange={(e) => setValor(e.target.value)}
+          autoComplete="new-password"
+          data-1p-ignore
+          data-lpignore="true"
           required
         />
         <Button type="submit" loading={creando}>
