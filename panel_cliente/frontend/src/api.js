@@ -117,11 +117,15 @@ export const api = {
   quitarRol: (idProyecto, idUsuario) =>
     peticion(BASE_ADMIN, "DELETE", `/proyectos/${idProyecto}/usuarios/${idUsuario}/rol`),
 
-  listarOBuscarDocumentos: (idProyecto, q) =>
-    peticion(
-      BASE_CLIENTE, "GET",
-      `/proyectos/${idProyecto}/documentos${q ? `?q=${encodeURIComponent(q)}` : ""}`,
-    ),
+  listarOBuscarDocumentos: (idProyecto, q, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    if (q) parametros.set("q", q)
+    if (filtros.tipoDocumento) parametros.set("tipo_documento", filtros.tipoDocumento)
+    if (filtros.fechaDesde) parametros.set("fecha_desde", filtros.fechaDesde)
+    if (filtros.fechaHasta) parametros.set("fecha_hasta", filtros.fechaHasta)
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos${query ? `?${query}` : ""}`)
+  },
   obtenerDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}`),
   archivarDocumento: (idProyecto, idDocumento) =>
@@ -144,6 +148,12 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/credenciales/${idCredencial}`, datos),
   eliminarCredencial: (idProyecto, idCredencial) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/credenciales/${idCredencial}`),
+
+  listarTiposDocumento: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/tipos-documento`),
+  crearTipoDocumento: (idProyecto, nombre) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/tipos-documento`, { nombre }),
+  eliminarTipoDocumento: (idProyecto, idTipo) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/tipos-documento/${idTipo}`),
 
   listarEstilos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos`),
   crearEstilo: (idProyecto, nombreTipo, instrucciones) =>

@@ -12,6 +12,7 @@ from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscabl
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
 
 
@@ -53,6 +54,18 @@ async def _reindexar_si_semantico(
 
 
 @mcp_app.tool()
+async def listar_tipos_documento_gd() -> list[dict]:
+    """Tipos de documento ya usados en este proyecto (p.ej. "factura",
+    "contrato"...) — no es una lista cerrada, es solo para reutilizar un
+    tipo ya existente en vez de crear uno nuevo por una variación del
+    nombre (p.ej. "Factura" vs "facturas"). Consúltala antes de preguntar
+    el tipo al guardar un documento; si el que hace falta no está,
+    guardar_documento_gd lo añade solo la primera vez que se usa."""
+    config, _ = await _contexto_actual()
+    return await TiposDocumentoCRUD(config).listar_nombres()
+
+
+@mcp_app.tool()
 async def guardar_documento_gd(
     nombre: str,
     tipo_documento: str,
@@ -62,12 +75,14 @@ async def guardar_documento_gd(
     todas_versiones_buscables: bool = False,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla,
-    pregunta siempre al usuario: tipo de documento (factura/certificado/
-    contrato/informe/otro), nombre o referencia corta, si es una versión
-    nueva de un documento ya guardado (usa buscar_documentos_gd para
-    confirmar cuál, no lo adivines) o uno distinto, la fecha del propio
-    documento (no la de hoy), y si todo su histórico debe quedar buscable
-    o solo la última versión (por defecto solo la última).
+    pregunta siempre al usuario: tipo de documento (consulta antes
+    listar_tipos_documento_gd() y sugiere uno de los ya existentes si
+    encaja; si no, se puede usar uno nuevo sin darlo de alta antes), nombre
+    o referencia corta, si es una versión nueva de un documento ya guardado
+    (usa buscar_documentos_gd para confirmar cuál, no lo adivines) o uno
+    distinto, la fecha del propio documento (no la de hoy), y si todo su
+    histórico debe quedar buscable o solo la última versión (por defecto
+    solo la última).
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente); si no, crea un
     documento nuevo."""

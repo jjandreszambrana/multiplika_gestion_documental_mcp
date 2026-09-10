@@ -16,10 +16,12 @@ class DocumentosCRUD(AsyncCrudBase):
         tipo_documento: str | None = None,
         limite: int = 20,
         incluir_archivados: bool = False,
+        fecha_desde: str | None = None,
+        fecha_hasta: str | None = None,
     ) -> list[dict]:
-        """Búsqueda por metadatos (nombre, tipo), no por contenido — para
-        exploración del cliente y para evitar duplicados al ingerir. Por
-        defecto no incluye documentos archivados."""
+        """Búsqueda por metadatos (nombre, tipo, fecha de alta), no por
+        contenido — para exploración del cliente y para evitar duplicados
+        al ingerir. Por defecto no incluye documentos archivados."""
         filtros = {}
         if referencia:
             filtros["nombre"] = {"op": "like", "valor": f"%{referencia}%"}
@@ -27,6 +29,12 @@ class DocumentosCRUD(AsyncCrudBase):
             filtros["tipo_documento"] = {"op": "=", "valor": tipo_documento}
         if not incluir_archivados:
             filtros["archivado"] = {"op": "=", "valor": False}
+        if fecha_desde and fecha_hasta:
+            filtros["fecha_alta"] = {"op": "between", "valor": [fecha_desde, f"{fecha_hasta} 23:59:59"]}
+        elif fecha_desde:
+            filtros["fecha_alta"] = {"op": ">=", "valor": fecha_desde}
+        elif fecha_hasta:
+            filtros["fecha_alta"] = {"op": "<=", "valor": f"{fecha_hasta} 23:59:59"}
         filas, _ = await self.listar(filtros=filtros, limit=limite, orden="fecha_alta DESC")
         return filas
 

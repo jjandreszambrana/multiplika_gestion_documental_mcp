@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Table, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, Group, Select, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Documentos({
@@ -12,15 +12,25 @@ export default function Documentos({
   onVerUsuarios,
 }) {
   const [q, setQ] = useState("")
+  const [tipoDocumento, setTipoDocumento] = useState("")
+  const [fechaDesde, setFechaDesde] = useState("")
+  const [fechaHasta, setFechaHasta] = useState("")
   const [resultados, setResultados] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [tiposDocumento, setTiposDocumento] = useState([])
 
-  async function cargar(consulta) {
+  useEffect(() => {
+    api.listarTiposDocumento(proyecto.id)
+      .then((tipos) => setTiposDocumento(tipos.map((t) => ({ value: t.nombre, label: t.nombre }))))
+      .catch(() => setTiposDocumento([]))
+  }, [proyecto.id])
+
+  async function cargar(consulta, filtros = {}) {
     setCargando(true)
     setError(null)
     try {
-      setResultados(await api.listarOBuscarDocumentos(proyecto.id, consulta))
+      setResultados(await api.listarOBuscarDocumentos(proyecto.id, consulta, filtros))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -32,10 +42,30 @@ export default function Documentos({
     cargar("")
   }, [proyecto.id])
 
+  // Los filtros solo aplican al listado simple, no a la búsqueda por
+  // contenido — son dos modos que no se combinan (ver panel_cliente/servidor.py).
   function buscar(evento) {
     evento.preventDefault()
+    setTipoDocumento("")
+    setFechaDesde("")
+    setFechaHasta("")
     cargar(q)
   }
+
+  function aplicarFiltros(evento) {
+    evento.preventDefault()
+    setQ("")
+    cargar("", { tipoDocumento, fechaDesde, fechaHasta })
+  }
+
+  function limpiarFiltros() {
+    setTipoDocumento("")
+    setFechaDesde("")
+    setFechaHasta("")
+    cargar("")
+  }
+
+  const hayFiltros = tipoDocumento || fechaDesde || fechaHasta
 
   return (
     <>
@@ -55,7 +85,7 @@ export default function Documentos({
         {onVerUsuarios && <Button variant="light" onClick={onVerUsuarios}>Usuarios</Button>}
       </Group>
 
-      <Group component="form" onSubmit={buscar} mb="lg">
+      <Group component="form" onSubmit={buscar} mb="sm">
         <TextInput
           placeholder="Buscar por contenido (déjalo vacío para ver todos)"
           value={q}
@@ -63,6 +93,38 @@ export default function Documentos({
           style={{ flex: 1 }}
         />
         <Button type="submit">Buscar</Button>
+      </Group>
+
+      <Group component="form" onSubmit={aplicarFiltros} mb="lg" align="flex-end">
+        <Select
+          placeholder="Tipo de documento"
+          data={tiposDocumento}
+          value={tipoDocumento}
+          onChange={(valor) => setTipoDocumento(valor || "")}
+          searchable
+          clearable
+          w={180}
+        />
+        <TextInput
+          label="Desde"
+          type="date"
+          value={fechaDesde}
+          onChange={(e) => setFechaDesde(e.target.value)}
+        />
+        <TextInput
+          label="Hasta"
+          type="date"
+          value={fechaHasta}
+          onChange={(e) => setFechaHasta(e.target.value)}
+        />
+        <Button type="submit" variant="light">
+          Filtrar
+        </Button>
+        {hayFiltros && (
+          <Button variant="subtle" onClick={limpiarFiltros}>
+            Quitar filtros
+          </Button>
+        )}
       </Group>
 
       {error && (

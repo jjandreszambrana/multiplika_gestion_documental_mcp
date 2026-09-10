@@ -18,6 +18,7 @@ en database/dependencias/_dep_configuracion.py.
 """
 
 import argparse
+import asyncio
 import os
 import sys
 
@@ -36,6 +37,20 @@ from database.dependencias._dep_versiones import TABLA_VERSIONES
 from database.dependencias._dep_chunks import construir_tabla_chunks
 from database.dependencias._dep_credenciales import TABLA_CREDENCIALES
 from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAGENES
+from database.dependencias._dep_tipos_documento import TABLA_TIPOS_DOCUMENTO, TIPOS_POR_DEFECTO
+from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
+
+
+async def _sembrar_tipos_documento_por_defecto(config: dict) -> None:
+    """Solo si la tabla está vacía — un cliente que ya haya quitado/añadido
+    tipos no debe verlos reaparecer en cada migración."""
+    tipos = TiposDocumentoCRUD(config)
+    existentes, _ = await tipos.listar(limit=1)
+    if existentes:
+        return
+    for nombre in TIPOS_POR_DEFECTO:
+        await tipos.crear(nombre)
+    print(f"Tipos de documento por defecto creados: {', '.join(TIPOS_POR_DEFECTO)}")
 
 
 def main():
@@ -57,6 +72,7 @@ def main():
         TABLA_CREDENCIALES,
         TABLA_ESTILOS,
         TABLA_ESTILOS_IMAGENES,
+        TABLA_TIPOS_DOCUMENTO,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))
@@ -69,6 +85,8 @@ def main():
         print("\nError aplicando el esquema:")
         print(resultado["error"])
         sys.exit(1)
+
+    asyncio.run(_sembrar_tipos_documento_por_defecto(get_db_config(args.alias)))
 
 
 if __name__ == "__main__":

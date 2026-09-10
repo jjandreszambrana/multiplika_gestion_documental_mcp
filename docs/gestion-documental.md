@@ -40,8 +40,13 @@ gd_configuracion (1 fila)
 gd_documentos
   - id
   - nombre / referencia
-  - tipo_documento
+  - tipo_documento       VARCHAR(50), texto libre (ver "Tipos de documento" más abajo)
   - todas_versiones_buscables  BOOLEAN DEFAULT FALSE
+  - fecha_alta
+
+gd_tipos_documento (catálogo abierto de sugerencias, no una lista cerrada — ver más abajo)
+  - id
+  - nombre       VARCHAR(50) UNIQUE
   - fecha_alta
 
 gd_versiones
@@ -73,7 +78,7 @@ Búsqueda (full-text o semántica): siempre filtra por `vigente = true`, salvo q
 Sin interfaz: el cliente le dice a su Claude "guárdame esta factura" (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.
 
 La IA **siempre pregunta** al usuario antes de guardar (no infiere del contenido), como mínimo:
-1. Tipo de documento (factura, certificado, contrato, informe, otro).
+1. Tipo de documento — consultando antes `listar_tipos_documento_gd()` para sugerir uno ya existente (ver "Tipos de documento" más abajo).
 2. Nombre/referencia corta para identificarlo después.
 3. Si es una versión nueva de un documento ya guardado o uno distinto — si dice que es nueva versión, la IA debe confirmar cuál usando `buscar_documentos()`, no adivinar.
 4. Fecha del propio documento (no la de subida).
@@ -93,6 +98,16 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 **`listar_credenciales_gd()`** (añadida 2026-09-09): nombre, descripción y usuario (si lo lleva) de cada credencial del proyecto — nunca la contraseña/API key. Ver "Credenciales" más abajo.
 
 **`listar_estilos_informe_gd()` / `obtener_estilo_informe_gd(nombre_tipo)`** (añadidas 2026-09-09): tipos de informe disponibles, e instrucciones + imágenes fijas de uno en concreto (las imágenes llegan como contenido nativo de imagen de la propia respuesta, no como URL). Ver "Tabla de estilos" más abajo.
+
+### Tipos de documento: catálogo abierto, no lista cerrada (2026-09-10)
+`tipo_documento` empezó siendo una lista cerrada de 5 valores fija en el esquema (factura/certificado/contrato/informe/otro). El cliente pidió que fuera "amplia, incluso configurable por el propio cliente" — se sustituyó por texto libre (`VARCHAR(50)`) más una tabla de sugerencias, `gd_tipos_documento`, que NO restringe qué se puede guardar: es solo una lista de "ya usados" para que la IA reutilice uno existente en vez de crear variaciones del mismo tipo (p.ej. "Factura" vs "facturas").
+
+- **`listar_tipos_documento_gd()`** (tool MCP): devuelve el catálogo. La IA la consulta antes de preguntar el tipo al guardar un documento, y sugiere uno de los ya existentes si encaja.
+- **`guardar_documento_gd`**: si el tipo indicado no está en el catálogo (y es un documento nuevo, no una versión nueva de uno existente), se añade solo — sin que el cliente tenga que darlo de alta antes en el panel.
+- **Gestión desde el panel**: `GET/POST /v1/proyectos/{id}/tipos-documento` (cualquier usuario del proyecto) y `DELETE /v1/proyectos/{id}/tipos-documento/{id_tipo}` (solo admin) — un cliente puede curar su propio catálogo (añadir tipos por adelantado, borrar uno mal escrito) sin depender de nosotros. Borrar una entrada del catálogo no afecta a los documentos que ya usan ese texto como `tipo_documento` — son independientes, el catálogo es solo una ayuda de sugerencia.
+- Al aplicar el esquema (`update_db.py`) se siembran los 5 tipos por defecto **solo si la tabla está vacía** — así un cliente que ya haya editado su catálogo no los ve reaparecer en cada migración futura.
+
+**Gotcha de migración encontrado al probarlo (2026-09-10):** el proyecto ya provisionado (`desarrollo_interno_gestion_documental_dev`) tenía, además del tipo de columna, una restricción `CHECK` residual (`gd_documentos_tipo_documento_check`, `tipo_documento IN ('factura', ...)`) de una versión anterior del esquema. `ManagerDB.crear_todo()` de `mtpk_postgres` no la detectó ni la quitó (ni siquiera con `--permitir-drop`, que solo cubre índices/FKs huérfanos) — guardar un tipo nuevo fallaba con un error de Postgres hasta borrar la restricción a mano (`ALTER TABLE gd_documentos DROP CONSTRAINT gd_documentos_tipo_documento_check`). Si en el futuro hay más clientes con Postgres ya provisionados antes de este cambio, hay que revisar si tienen la misma restricción residual antes de darlos por migrados.
 
 ### Credenciales (2026-09-09, ampliada 2026-09-10)
 Gestor genérico de credenciales del cliente para conectar con servicios externos — sin un servicio concreto todavía, así que se diseñó abierto: un nombre, para qué sirve, un usuario opcional y la contraseña/API key/token, cifrada.
@@ -254,9 +269,11 @@ Hoy solo se guarda el markdown que genera la IA; la foto o el PDF que sube el cl
 
 Diseño acordado con el usuario para las cinco ideas que quedaron solo anotadas. Se implementan en este orden, de más a menos autocontenida.
 
-### 1. Filtros en la búsqueda del panel
+### 1. Filtros en la búsqueda del panel — implementado y probado (2026-09-10)
 
-Hoy `GET /v1/proyectos/{id}/documentos` es una caja de texto suelta. Añade parámetros opcionales `tipo_documento` y `fecha_desde`/`fecha_hasta` al listado (no a la búsqueda por contenido, que sigue siendo solo el texto), y un par de controles en `Documentos.jsx` (un `Select` de tipo, dos selectores de fecha). Sin cambios de esquema.
+`GET /v1/proyectos/{id}/documentos` acepta ahora parámetros opcionales `tipo_documento` y `fecha_desde`/`fecha_hasta` (no a la búsqueda por contenido, que sigue siendo solo el texto — son dos modos que no se combinan), con un `Select` de tipo y dos selectores de fecha en `Documentos.jsx`.
+
+A mitad de esta implementación el cliente pidió que la lista de tipos dejara de ser cerrada — ver "Tipos de documento" más arriba, que se implementó primero por ser un prerrequisito: el `Select` de este filtro ahora carga sus opciones desde `listar_tipos_documento_gd()`/`GET /v1/proyectos/{id}/tipos-documento` en vez de una lista fija en el frontend.
 
 ### 2. Documentos pendientes: la pieza compartida por subida masiva e ingesta por email
 

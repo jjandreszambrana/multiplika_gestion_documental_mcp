@@ -8,6 +8,7 @@ from mtpk_postgres.async_adapter import AsyncDatabase
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
 from ..dependencias._dep_versiones import PATRON_SIGLAS, TABLA_VERSIONES
 from ._mod_documentos import DocumentosCRUD
+from ._mod_tipos_documento import TiposDocumentoCRUD
 
 
 class VersionesCRUD(AsyncCrudBase):
@@ -122,6 +123,7 @@ async def guardar_documento(
                 conexion=cx,
             )
         else:
+            await TiposDocumentoCRUD(config).asegurar_existe(tipo_documento)
             id_documento = await documentos.insert(
                 {
                     "nombre": nombre,

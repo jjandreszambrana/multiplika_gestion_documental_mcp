@@ -45,6 +45,7 @@ from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
+from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD
 from .dependencias import admin_gestion_documental_actual, api_key_de_gestion_documental, es_admin_actual, proyecto_gestion_documental_actual
 
@@ -80,17 +81,27 @@ async def ver_proyecto(
 
 @app.get("/v1/proyectos/{id_proyecto}/documentos")
 async def listar_o_buscar_documentos(
-    id_proyecto: int, q: str | None = None, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+    id_proyecto: int,
+    q: str | None = None,
+    tipo_documento: str | None = None,
+    fecha_desde: str | None = None,
+    fecha_hasta: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> list[dict]:
-    """Sin `q`: listado simple de documentos. Con `q`: búsqueda por
-    contenido (fulltext o semántica, según el modo activo del proyecto)."""
+    """Sin `q`: listado simple de documentos, con filtros opcionales de
+    tipo y rango de fechas. Con `q`: búsqueda por contenido (fulltext o
+    semántica, según el modo activo del proyecto) — los filtros no
+    aplican ahí, solo al listado simple."""
     config = get_db_config(proyecto["slug"])
 
     if not q:
         # A diferencia de la búsqueda por contenido, el listado simple sí
         # incluye archivados (con su estado visible) — así se pueden
         # encontrar para desarchivarlos.
-        return await DocumentosCRUD(config).buscar(limite=200, incluir_archivados=True)
+        return await DocumentosCRUD(config).buscar(
+            tipo_documento=tipo_documento, limite=200, incluir_archivados=True,
+            fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+        )
 
     configuracion = ConfiguracionCRUD(config)
     modo = await configuracion.obtener_modo_busqueda()
@@ -103,6 +114,47 @@ async def listar_o_buscar_documentos(
         raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
+
+
+# --- Tipos de documento (catálogo abierto, no una lista cerrada) ---
+# Lectura para cualquiera con acceso (lo usa el filtro del listado);
+# alta/borrado del catálogo, solo admin — igual criterio que estilos.
+
+
+class NuevoTipoDocumento(BaseModel):
+    nombre: str
+
+
+@app.get("/v1/proyectos/{id_proyecto}/tipos-documento")
+async def listar_tipos_documento(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["slug"])
+    return await TiposDocumentoCRUD(config).listar_nombres()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/tipos-documento")
+async def crear_tipo_documento(
+    id_proyecto: int, datos: NuevoTipoDocumento, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    tipos = TiposDocumentoCRUD(config)
+    existentes, _ = await tipos.listar(filtros={"nombre": {"op": "=", "valor": datos.nombre}}, limit=1)
+    if existentes:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe el tipo "{datos.nombre}"')
+    id_tipo = await tipos.crear(datos.nombre)
+    return await tipos.obtener(id_tipo)
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/tipos-documento/{id_tipo}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_tipo_documento(
+    id_proyecto: int, id_tipo: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    """Solo quita el tipo del catálogo de sugerencias — los documentos ya
+    guardados con ese tipo no cambian, tipo_documento es texto libre, sin
+    referencia a esta tabla."""
+    config = get_db_config(proyecto["slug"])
+    await TiposDocumentoCRUD(config).eliminar(id_tipo)
 
 
 @app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}")

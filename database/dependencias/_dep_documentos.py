@@ -10,9 +10,10 @@ CAMPOS_DOCUMENTOS = [
             comentario="Identificador interno del documento"),
     Columna(nombre="nombre", tipo="VARCHAR", longitud=255, not_null=True,
             comentario="Nombre/referencia corta para identificar el documento"),
-    Columna(nombre="tipo_documento", tipo="ENUM",
-            enum_opciones=["factura", "certificado", "contrato", "informe", "otro"],
-            not_null=True, comentario="Tipo de documento, elegido por el usuario al guardarlo"),
+    Columna(nombre="tipo_documento", tipo="VARCHAR", longitud=50, not_null=True,
+            comentario="Tipo de documento, elegido por el usuario al guardarlo — texto libre, "
+                       "no una lista cerrada (ver gd_tipos_documento: catálogo de sugerencias, "
+                       "no una restricción)"),
     Columna(nombre="todas_versiones_buscables", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Si es False (por defecto), solo la versión vigente entra en las búsquedas"),
     Columna(nombre="archivado", tipo="BOOLEAN", not_null=True, default=False,
