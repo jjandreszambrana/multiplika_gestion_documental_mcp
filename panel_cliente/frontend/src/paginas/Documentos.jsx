@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Badge, Button, Group, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Documentos({
@@ -36,69 +37,86 @@ export default function Documentos({
   }
 
   return (
-    <section>
-      <h2>{proyecto.nombre}</h2>
+    <>
+      <Title order={2} mb="md">
+        {proyecto.nombre}
+      </Title>
       {onCambiarProyecto && (
-        <button className="volver" onClick={onCambiarProyecto}>
+        <Anchor component="button" type="button" onClick={onCambiarProyecto} mb="md" display="block">
           ← Cambiar de proyecto
-        </button>
+        </Anchor>
       )}
-      <div className="botones-cabecera">
-        {onVerApiKeys && <button onClick={onVerApiKeys}>API keys</button>}
-        {onVerCredenciales && <button onClick={onVerCredenciales}>Credenciales</button>}
-        {onVerEstilos && <button onClick={onVerEstilos}>Estilos de informe</button>}
-      </div>
 
-      <form onSubmit={buscar} className="formulario-linea">
-        <input
+      <Group mb="lg">
+        {onVerApiKeys && <Button variant="light" onClick={onVerApiKeys}>API keys</Button>}
+        {onVerCredenciales && <Button variant="light" onClick={onVerCredenciales}>Credenciales</Button>}
+        {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
+      </Group>
+
+      <Group component="form" onSubmit={buscar} mb="lg">
+        <TextInput
           placeholder="Buscar por contenido (déjalo vacío para ver todos)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{ flex: 1 }}
         />
-        <button type="submit">Buscar</button>
-      </form>
+        <Button type="submit">Buscar</Button>
+      </Group>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
       {cargando ? (
-        <p>Cargando...</p>
+        <Text>Cargando...</Text>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>{q ? "Fragmento" : "Fecha de alta"}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Nombre</Table.Th>
+              <Table.Th>Tipo</Table.Th>
+              <Table.Th>{q ? "Fragmento" : "Fecha de alta"}</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {resultados.map((r) => {
               const idDocumento = r.id ?? r.id_documento
               return (
-                <tr
+                <Table.Tr
                   key={`${idDocumento}-${r.id_version ?? ""}`}
-                  className={`clicable${r.archivado ? " fila-archivada" : ""}`}
                   onClick={() => onVerDocumento(idDocumento)}
+                  style={{ cursor: "pointer", opacity: r.archivado ? 0.6 : 1 }}
                 >
-                  <td>
+                  <Table.Td>
                     {r.nombre}
-                    {r.archivado && <span className="badge-archivado">🗄 Archivado</span>}
-                  </td>
-                  <td>{r.tipo_documento}</td>
-                  <td className={q ? "fragmento" : undefined}>
-                    {q ? r.fragmento : r.fecha_alta}
-                  </td>
-                </tr>
+                    {r.archivado && (
+                      <Badge ml="sm" color="gray" variant="light">
+                        🗄 Archivado
+                      </Badge>
+                    )}
+                  </Table.Td>
+                  <Table.Td>{r.tipo_documento}</Table.Td>
+                  <Table.Td>
+                    {q ? (
+                      <Text c="dimmed" size="sm">
+                        {r.fragmento}
+                      </Text>
+                    ) : (
+                      r.fecha_alta
+                    )}
+                  </Table.Td>
+                </Table.Tr>
               )
             })}
             {resultados.length === 0 && (
-              <tr>
-                <td colSpan={3}>{q ? "Sin resultados." : "No hay ningún documento todavía."}</td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={3}>{q ? "Sin resultados." : "No hay ningún documento todavía."}</Table.Td>
+              </Table.Tr>
             )}
-          </tbody>
-        </table>
+          </Table.Tbody>
+        </Table>
       )}
-    </section>
+    </>
   )
 }

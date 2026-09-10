@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Button, Card, FileInput, Group, Image, Stack, Text, Textarea, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 function ImagenEstilo({ proyecto, estilo, imagen, onEliminar }) {
@@ -19,12 +20,18 @@ function ImagenEstilo({ proyecto, estilo, imagen, onEliminar }) {
   }, [proyecto.id, estilo.id, imagen.id])
 
   return (
-    <div className="tarjeta-eleccion">
-      {url && <img src={url} alt={imagen.nombre} style={{ maxWidth: "200px", display: "block", marginBottom: "0.5rem" }} />}
-      <strong>{imagen.nombre}</strong>
-      <p className="estado-fecha">{imagen.descripcion_uso}</p>
-      {proyecto.es_admin && <button onClick={() => onEliminar(imagen.id)}>Eliminar</button>}
-    </div>
+    <Card withBorder w={220}>
+      {url && <Image src={url} alt={imagen.nombre} h={120} fit="contain" mb="sm" />}
+      <Text fw={600}>{imagen.nombre}</Text>
+      <Text c="dimmed" size="sm" mb="sm">
+        {imagen.descripcion_uso}
+      </Text>
+      {proyecto.es_admin && (
+        <Button size="xs" variant="light" color="red" onClick={() => onEliminar(imagen.id)}>
+          Eliminar
+        </Button>
+      )}
+    </Card>
   )
 }
 
@@ -99,60 +106,68 @@ export default function EstiloDetalle({ proyecto, estilo, onVolver }) {
   }
 
   return (
-    <section>
-      <button className="volver" onClick={onVolver}>
+    <>
+      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
         ← Estilos
-      </button>
-      <h2>{estilo.nombre_tipo}</h2>
+      </Anchor>
+      <Title order={2} mb="lg">
+        {estilo.nombre_tipo}
+      </Title>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
 
-      <form onSubmit={guardarInstrucciones} className="formulario-columna">
-        <textarea
+      <Stack component="form" onSubmit={guardarInstrucciones} mb="xl">
+        <Textarea
           rows={6}
           value={instrucciones}
           onChange={(e) => setInstrucciones(e.target.value)}
           disabled={!proyecto.es_admin}
         />
         {proyecto.es_admin && (
-          <button type="submit" disabled={guardandoInstrucciones}>
-            {guardandoInstrucciones ? "Guardando..." : "Guardar instrucciones"}
-          </button>
+          <Button type="submit" loading={guardandoInstrucciones} w="fit-content">
+            Guardar instrucciones
+          </Button>
         )}
-      </form>
+      </Stack>
 
-      <h3>Imágenes</h3>
+      <Title order={4} mb="md">
+        Imágenes
+      </Title>
       {cargandoImagenes ? (
-        <p>Cargando...</p>
+        <Text>Cargando...</Text>
       ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+        <Group mb="xl" align="flex-start">
           {imagenes.map((img) => (
             <ImagenEstilo key={img.id} proyecto={proyecto} estilo={estilo} imagen={img} onEliminar={eliminarImagen} />
           ))}
-          {imagenes.length === 0 && <p>Este estilo no tiene ninguna imagen todavía.</p>}
-        </div>
+          {imagenes.length === 0 && <Text>Este estilo no tiene ninguna imagen todavía.</Text>}
+        </Group>
       )}
 
       {proyecto.es_admin && (
-        <form onSubmit={subirImagen} className="formulario-columna" style={{ marginTop: "1.5rem" }}>
-          <input
+        <Stack component="form" onSubmit={subirImagen} maw={480}>
+          <TextInput
             placeholder='Nombre (ej. "logo_cabecera")'
             value={nombreImagen}
             onChange={(e) => setNombreImagen(e.target.value)}
             required
           />
-          <input
+          <TextInput
             placeholder="Cuándo/cómo debe usarla la IA"
             value={descripcionUsoImagen}
             onChange={(e) => setDescripcionUsoImagen(e.target.value)}
             required
           />
-          <input type="file" accept="image/*" onChange={(e) => setArchivo(e.target.files[0] || null)} required />
-          <button type="submit" disabled={subiendo || !archivo}>
-            {subiendo ? "Subiendo..." : "Subir imagen"}
-          </button>
-        </form>
+          <FileInput placeholder="Elige una imagen" accept="image/*" value={archivo} onChange={setArchivo} required />
+          <Button type="submit" loading={subiendo} disabled={!archivo} w="fit-content">
+            Subir imagen
+          </Button>
+        </Stack>
       )}
-    </section>
+    </>
   )
 }

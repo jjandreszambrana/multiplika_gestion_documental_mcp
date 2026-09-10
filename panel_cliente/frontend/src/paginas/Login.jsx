@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Alert, Button, Center, Paper, PasswordInput, Stack, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Login({ onLogin }) {
@@ -22,33 +23,31 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="pantalla-login">
-      <form onSubmit={enviar}>
-        <h1>Gestión documental</h1>
-        <label>
-          Usuario
-          <input
-            type="text"
+    <Center mih="100vh">
+      <Paper component="form" onSubmit={enviar} withBorder shadow="sm" p="xl" w={320}>
+        <Stack gap="md">
+          <Title order={2} size="h3">
+            Gestión documental
+          </Title>
+          <TextInput
+            label="Usuario"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoFocus
           />
-        </label>
-        <label>
-          Contraseña
-          <input
-            type="password"
+          <PasswordInput
+            label="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={enviando}>
-          {enviando ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-    </div>
+          {error && <Alert color="red">{error}</Alert>}
+          <Button type="submit" loading={enviando}>
+            Entrar
+          </Button>
+        </Stack>
+      </Paper>
+    </Center>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Badge, Button, CopyButton, Group, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function ApiKeys({ proyecto, onVolver }) {
@@ -63,69 +64,99 @@ export default function ApiKeys({ proyecto, onVolver }) {
   }
 
   return (
-    <section>
-      <button className="volver" onClick={onVolver}>
+    <>
+      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
         ← Volver
-      </button>
-      <h2>API keys de {proyecto.nombre}</h2>
-      <p>Cada key conecta un cliente MCP (por ejemplo, Claude Desktop) a este proyecto.</p>
+      </Anchor>
+      <Title order={2} mb="xs">
+        API keys de {proyecto.nombre}
+      </Title>
+      <Text c="dimmed" mb="lg">
+        Cada key conecta un cliente MCP (por ejemplo, Claude Desktop) a este proyecto.
+      </Text>
 
-      <form onSubmit={emitir} className="formulario-linea">
-        <input
+      <Group component="form" onSubmit={emitir} align="flex-end" mb="xl">
+        <TextInput
           placeholder="Nombre para identificarla (opcional, ej. Claude Desktop de Juan)"
           value={nombreNueva}
           onChange={(e) => setNombreNueva(e.target.value)}
           style={{ flex: 1 }}
         />
-        <button type="submit" disabled={emitiendo}>
-          {emitiendo ? "Emitiendo..." : "Emitir API key nueva"}
-        </button>
-      </form>
+        <Button type="submit" loading={emitiendo}>
+          Emitir API key nueva
+        </Button>
+      </Group>
 
       {keyRecienEmitida && (
-        <div className="aviso-key">
-          <p>Copia esta key ahora — no se puede volver a ver:</p>
-          <code>{keyRecienEmitida}</code>
-          <button onClick={() => setKeyRecienEmitida(null)}>Ya la copié</button>
-        </div>
+        <Alert color="yellow" mb="md" title="Copia esta key ahora — no se puede volver a ver">
+          <Group justify="space-between">
+            <Text ff="monospace">{keyRecienEmitida}</Text>
+            <CopyButton value={keyRecienEmitida}>
+              {({ copied, copy }) => (
+                <Button size="xs" variant="light" onClick={copy}>
+                  {copied ? "Copiada" : "Copiar"}
+                </Button>
+              )}
+            </CopyButton>
+          </Group>
+          <Button size="xs" variant="subtle" mt="sm" onClick={() => setKeyRecienEmitida(null)}>
+            Ya la copié
+          </Button>
+        </Alert>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
       {cargando ? (
-        <p>Cargando...</p>
+        <Text>Cargando...</Text>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Prefijo</th>
-              <th>Estado</th>
-              <th>Emitida</th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Nombre</Table.Th>
+              <Table.Th>Prefijo</Table.Th>
+              <Table.Th>Estado</Table.Th>
+              <Table.Th>Emitida</Table.Th>
+              <Table.Th></Table.Th>
+              <Table.Th></Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {keys.map((k) => (
-              <tr key={k.id}>
-                <td>{k.nombre || "—"}</td>
-                <td>{k.prefijo}</td>
-                <td>{k.estado ? "activa" : "revocada"}</td>
-                <td>{k.fecha_emision}</td>
-                <td>{k.estado === 1 && <button onClick={() => revocar(k.id)}>Revocar</button>}</td>
-                <td>
-                  <button onClick={() => eliminar(k.id)}>Eliminar</button>
-                </td>
-              </tr>
+              <Table.Tr key={k.id}>
+                <Table.Td>{k.nombre || "—"}</Table.Td>
+                <Table.Td>{k.prefijo}</Table.Td>
+                <Table.Td>
+                  <Badge color={k.estado ? "green" : "gray"} variant="light">
+                    {k.estado ? "activa" : "revocada"}
+                  </Badge>
+                </Table.Td>
+                <Table.Td>{k.fecha_emision}</Table.Td>
+                <Table.Td>
+                  {k.estado === 1 && (
+                    <Anchor component="button" type="button" onClick={() => revocar(k.id)}>
+                      Revocar
+                    </Anchor>
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  <Anchor component="button" type="button" c="red" onClick={() => eliminar(k.id)}>
+                    Eliminar
+                  </Anchor>
+                </Table.Td>
+              </Table.Tr>
             ))}
             {keys.length === 0 && (
-              <tr>
-                <td colSpan={6}>Este proyecto no tiene ninguna API key todavía.</td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={6}>Este proyecto no tiene ninguna API key todavía.</Table.Td>
+              </Table.Tr>
             )}
-          </tbody>
-        </table>
+          </Table.Tbody>
+        </Table>
       )}
-    </section>
+    </>
   )
 }

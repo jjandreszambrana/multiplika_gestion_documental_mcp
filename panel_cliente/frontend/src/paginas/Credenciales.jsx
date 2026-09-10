@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Button, PasswordInput, Stack, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Credenciales({ proyecto, onVolver }) {
@@ -55,72 +56,80 @@ export default function Credenciales({ proyecto, onVolver }) {
   }
 
   return (
-    <section>
-      <button className="volver" onClick={onVolver}>
+    <>
+      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
         ← Volver
-      </button>
-      <h2>Credenciales de {proyecto.nombre}</h2>
-      <p>
+      </Anchor>
+      <Title order={2} mb="xs">
+        Credenciales de {proyecto.nombre}
+      </Title>
+      <Text c="dimmed" mb="lg">
         Para que la IA pueda conectar con servicios externos. El valor se guarda cifrado y no
         vuelve a mostrarse — la IA solo ve el nombre y para qué sirve cada una, nunca el valor.
-      </p>
+      </Text>
 
-      <form onSubmit={crear} className="formulario-columna">
-        <input
+      <Stack component="form" onSubmit={crear} maw={480} mb="xl">
+        <TextInput
           placeholder='Nombre corto (ej. "erp_contabilidad")'
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
         />
-        <input
+        <TextInput
           placeholder="Para qué sirve"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           required
         />
-        <input
+        <PasswordInput
           placeholder="Valor (API key, token...)"
           value={valor}
           onChange={(e) => setValor(e.target.value)}
           required
         />
-        <button type="submit" disabled={creando}>
-          {creando ? "Guardando..." : "Guardar credencial"}
-        </button>
-      </form>
+        <Button type="submit" loading={creando}>
+          Guardar credencial
+        </Button>
+      </Stack>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
       {cargando ? (
-        <p>Cargando...</p>
+        <Text>Cargando...</Text>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Para qué sirve</th>
-              <th>Actualizada</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Nombre</Table.Th>
+              <Table.Th>Para qué sirve</Table.Th>
+              <Table.Th>Actualizada</Table.Th>
+              <Table.Th></Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {credenciales.map((c) => (
-              <tr key={c.id}>
-                <td>{c.nombre}</td>
-                <td>{c.descripcion}</td>
-                <td>{c.fecha_actualizacion}</td>
-                <td>
-                  <button onClick={() => eliminar(c.id)}>Eliminar</button>
-                </td>
-              </tr>
+              <Table.Tr key={c.id}>
+                <Table.Td>{c.nombre}</Table.Td>
+                <Table.Td>{c.descripcion}</Table.Td>
+                <Table.Td>{c.fecha_actualizacion}</Table.Td>
+                <Table.Td>
+                  <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
+                    Eliminar
+                  </Anchor>
+                </Table.Td>
+              </Table.Tr>
             ))}
             {credenciales.length === 0 && (
-              <tr>
-                <td colSpan={4}>Este proyecto no tiene ninguna credencial todavía.</td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={4}>Este proyecto no tiene ninguna credencial todavía.</Table.Td>
+              </Table.Tr>
             )}
-          </tbody>
-        </table>
+          </Table.Tbody>
+        </Table>
       )}
-    </section>
+    </>
   )
 }

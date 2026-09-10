@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Badge, Button, Group, Paper, Text, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
@@ -29,34 +30,42 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   }
 
   return (
-    <section>
-      <button className="volver" onClick={onVolver}>
+    <>
+      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
         ← Documentos
-      </button>
+      </Anchor>
 
-      {error && <p className="error">{error}</p>}
-      {!documento && !error && <p>Cargando...</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
+      {!documento && !error && <Text>Cargando...</Text>}
 
       {documento && (
         <>
-          <h2>
-            {documento.nombre}
-            {documento.archivado && <span className="badge-archivado">🗄 Archivado</span>}
-          </h2>
-          <p>
+          <Group gap="sm" mb="xs">
+            <Title order={2}>{documento.nombre}</Title>
+            {documento.archivado && (
+              <Badge color="gray" variant="light">
+                🗄 Archivado
+              </Badge>
+            )}
+          </Group>
+          <Text c="dimmed" mb="md">
             {documento.tipo_documento} — {documento.fecha_documento}
             {documento.revisado_manualmente && " — corregido a mano"}
-          </p>
-          <button onClick={alternarArchivado} disabled={cambiandoArchivo}>
-            {cambiandoArchivo
-              ? "Guardando..."
-              : documento.archivado
-                ? "Desarchivar"
-                : "Archivar"}
-          </button>
-          <div className="documento-markdown">{documento.markdown}</div>
+          </Text>
+          <Button onClick={alternarArchivado} loading={cambiandoArchivo} mb="md" variant="light">
+            {documento.archivado ? "Desarchivar" : "Archivar"}
+          </Button>
+          <Paper withBorder p="lg">
+            <Text ff="monospace" size="sm" style={{ whiteSpace: "pre-wrap" }}>
+              {documento.markdown}
+            </Text>
+          </Paper>
         </>
       )}
-    </section>
+    </>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Alert, Anchor, Button, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
@@ -42,60 +43,68 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
   }
 
   return (
-    <section>
-      <button className="volver" onClick={onVolver}>
+    <>
+      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
         ← Volver
-      </button>
-      <h2>Estilos de informe de {proyecto.nombre}</h2>
-      <p>Cómo debe construir la IA cada tipo de informe, y qué imágenes fijas debe usar.</p>
+      </Anchor>
+      <Title order={2} mb="xs">
+        Estilos de informe de {proyecto.nombre}
+      </Title>
+      <Text c="dimmed" mb="lg">
+        Cómo debe construir la IA cada tipo de informe, y qué imágenes fijas debe usar.
+      </Text>
 
       {proyecto.es_admin && (
-        <form onSubmit={crear} className="formulario-columna">
-          <input
+        <Stack component="form" onSubmit={crear} maw={480} mb="xl">
+          <TextInput
             placeholder='Tipo de informe (ej. "informe_mensual")'
             value={nombreTipo}
             onChange={(e) => setNombreTipo(e.target.value)}
             required
           />
-          <textarea
+          <Textarea
             placeholder="Instrucciones: estructura, tono, qué apartados lleva..."
             rows={4}
             value={instrucciones}
             onChange={(e) => setInstrucciones(e.target.value)}
             required
           />
-          <button type="submit" disabled={creando}>
-            {creando ? "Guardando..." : "Crear estilo"}
-          </button>
-        </form>
+          <Button type="submit" loading={creando}>
+            Crear estilo
+          </Button>
+        </Stack>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
       {cargando ? (
-        <p>Cargando...</p>
+        <Text>Cargando...</Text>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Tipo de informe</th>
-              <th>Actualizado</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Tipo de informe</Table.Th>
+              <Table.Th>Actualizado</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {estilos.map((e) => (
-              <tr key={e.id} className="clicable" onClick={() => onVerEstilo(e)}>
-                <td>{e.nombre_tipo}</td>
-                <td>{e.fecha_actualizacion}</td>
-              </tr>
+              <Table.Tr key={e.id} onClick={() => onVerEstilo(e)} style={{ cursor: "pointer" }}>
+                <Table.Td>{e.nombre_tipo}</Table.Td>
+                <Table.Td>{e.fecha_actualizacion}</Table.Td>
+              </Table.Tr>
             ))}
             {estilos.length === 0 && (
-              <tr>
-                <td colSpan={2}>Este proyecto no tiene ningún estilo de informe todavía.</td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={2}>Este proyecto no tiene ningún estilo de informe todavía.</Table.Td>
+              </Table.Tr>
             )}
-          </tbody>
-        </table>
+          </Table.Tbody>
+        </Table>
       )}
-    </section>
+    </>
   )
 }

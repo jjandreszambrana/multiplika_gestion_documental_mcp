@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Anchor, Box, Container, Group, Text, Title } from "@mantine/core"
 import { api, leerToken, setToken } from "./api"
 import Login from "./paginas/Login"
 import ElegirProyecto from "./paginas/ElegirProyecto"
@@ -61,7 +62,11 @@ export default function App() {
   }
 
   if (comprobandoEnlace) {
-    return <p>Cargando...</p>
+    return (
+      <Container size="md" py="xl">
+        <Text>Cargando...</Text>
+      </Container>
+    )
   }
 
   if (!sesion) {
@@ -72,34 +77,39 @@ export default function App() {
 
   if (!proyecto) {
     return (
-      <div className="app">
-        <header>
-          <h1>Gestión documental</h1>
-          <div className="sesion">
-            <button onClick={cerrarSesion}>Cerrar sesión</button>
-          </div>
-        </header>
-        <main>
-          {error && <p className="error">{error}</p>}
+      <Box>
+        <Box component="header" bg="white" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
+          <Group justify="space-between" px="xl" py="md">
+            <Title order={3}>Gestión documental</Title>
+            <Anchor component="button" type="button" onClick={cerrarSesion}>
+              Cerrar sesión
+            </Anchor>
+          </Group>
+        </Box>
+        <Container size="md" py="xl">
+          {error && <Text c="red">{error}</Text>}
           {esSuperadmin ? (
-            <p>No se ha podido cargar el proyecto del enlace.</p>
+            <Text>No se ha podido cargar el proyecto del enlace.</Text>
           ) : (
             <ElegirProyecto idTenant={sesion.id_tenant} onElegir={elegirProyecto} />
           )}
-        </main>
-      </div>
+        </Container>
+      </Box>
     )
   }
 
   return (
-    <div className="app">
-      <header>
-        <h1>Gestión documental{esSuperadmin && " — modo soporte"}</h1>
-        <div className="sesion">
-          <button onClick={cerrarSesion}>Cerrar sesión</button>
-        </div>
-      </header>
-      <main>
+    <Box>
+      <Box component="header" bg="white" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
+        <Group justify="space-between" px="xl" py="md">
+          <Title order={3}>Gestión documental{esSuperadmin && " — modo soporte"}</Title>
+          <Anchor component="button" type="button" onClick={cerrarSesion}>
+            Cerrar sesión
+          </Anchor>
+        </Group>
+      </Box>
+
+      <Container size="md" py="xl">
         {idDocumentoActivo ? (
           <DocumentoDetalle
             proyecto={proyecto}
@@ -111,17 +121,9 @@ export default function App() {
         ) : vista === "credenciales" ? (
           <Credenciales proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : vista === "estilos" && estiloActivo ? (
-          <EstiloDetalle
-            proyecto={proyecto}
-            estilo={estiloActivo}
-            onVolver={() => setEstiloActivo(null)}
-          />
+          <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
         ) : vista === "estilos" ? (
-          <Estilos
-            proyecto={proyecto}
-            onVolver={() => setVista("documentos")}
-            onVerEstilo={setEstiloActivo}
-          />
+          <Estilos proyecto={proyecto} onVolver={() => setVista("documentos")} onVerEstilo={setEstiloActivo} />
         ) : (
           <Documentos
             proyecto={proyecto}
@@ -135,7 +137,7 @@ export default function App() {
             }}
           />
         )}
-      </main>
-    </div>
+      </Container>
+    </Box>
   )
 }
