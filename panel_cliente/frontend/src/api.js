@@ -120,8 +120,10 @@ export const api = {
   eliminarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "DELETE", `/api-keys/${idApiKey}`),
 
   listarCredenciales: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/credenciales`),
-  crearCredencial: (idProyecto, nombre, descripcion, valor) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/credenciales`, { nombre, descripcion, valor }),
+  crearCredencial: (idProyecto, nombre, descripcion, valor, usuario) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/credenciales`, {
+      nombre, descripcion, valor, usuario: usuario || null,
+    }),
   actualizarCredencial: (idProyecto, idCredencial, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/credenciales/${idCredencial}`, datos),
   eliminarCredencial: (idProyecto, idCredencial) =>

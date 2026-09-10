@@ -22,17 +22,22 @@ class CredencialesCRUD(AsyncCrudBase):
         filas, _ = await self.listar(filtros={"nombre": {"op": "=", "valor": nombre}}, limit=1)
         return filas[0] if filas else None
 
-    async def crear(self, nombre: str, descripcion: str, valor: str) -> int:
+    async def crear(self, nombre: str, descripcion: str, valor: str, usuario: str | None = None) -> int:
         return await self.insert({
             "nombre": nombre,
             "descripcion": descripcion,
+            "usuario": usuario,
             "valor_cifrado": cifrar(valor),
         })
 
-    async def actualizar(self, id_credencial: int, descripcion: str | None, valor: str | None) -> None:
+    async def actualizar(
+        self, id_credencial: int, descripcion: str | None, valor: str | None, usuario: str | None = None
+    ) -> None:
         cambios = {}
         if descripcion is not None:
             cambios["descripcion"] = descripcion
+        if usuario is not None:
+            cambios["usuario"] = usuario
         if valor is not None:
             cambios["valor_cifrado"] = cifrar(valor)
         if cambios:

@@ -8,6 +8,7 @@ export default function Credenciales({ proyecto, onVolver }) {
   const [error, setError] = useState(null)
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [usuario, setUsuario] = useState("")
   const [valor, setValor] = useState("")
   const [creando, setCreando] = useState(false)
 
@@ -32,9 +33,10 @@ export default function Credenciales({ proyecto, onVolver }) {
     setCreando(true)
     setError(null)
     try {
-      await api.crearCredencial(proyecto.id, nombre, descripcion, valor)
+      await api.crearCredencial(proyecto.id, nombre, descripcion, valor, usuario)
       setNombre("")
       setDescripcion("")
+      setUsuario("")
       setValor("")
       await recargar()
     } catch (err) {
@@ -64,8 +66,9 @@ export default function Credenciales({ proyecto, onVolver }) {
         Credenciales de {proyecto.nombre}
       </Title>
       <Text c="dimmed" mb="lg">
-        Para que la IA pueda conectar con servicios externos. El valor se guarda cifrado y no
-        vuelve a mostrarse — la IA solo ve el nombre y para qué sirve cada una, nunca el valor.
+        Para que la IA pueda conectar con servicios externos. La contraseña/API key se guarda
+        cifrada y no vuelve a mostrarse — la IA ve el nombre, para qué sirve y el usuario (si
+        lleva), pero nunca la contraseña.
       </Text>
 
       <Stack component="form" onSubmit={crear} maw={480} mb="xl">
@@ -81,8 +84,13 @@ export default function Credenciales({ proyecto, onVolver }) {
           onChange={(e) => setDescripcion(e.target.value)}
           required
         />
+        <TextInput
+          placeholder="Usuario (opcional — solo si el servicio lo pide)"
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+        />
         <PasswordInput
-          placeholder="Valor (API key, token...)"
+          placeholder="Contraseña, API key o token"
           value={valor}
           onChange={(e) => setValor(e.target.value)}
           required
@@ -105,6 +113,7 @@ export default function Credenciales({ proyecto, onVolver }) {
             <Table.Tr>
               <Table.Th>Nombre</Table.Th>
               <Table.Th>Para qué sirve</Table.Th>
+              <Table.Th>Usuario</Table.Th>
               <Table.Th>Actualizada</Table.Th>
               <Table.Th></Table.Th>
             </Table.Tr>
@@ -114,6 +123,7 @@ export default function Credenciales({ proyecto, onVolver }) {
               <Table.Tr key={c.id}>
                 <Table.Td>{c.nombre}</Table.Td>
                 <Table.Td>{c.descripcion}</Table.Td>
+                <Table.Td>{c.usuario || "—"}</Table.Td>
                 <Table.Td>{c.fecha_actualizacion}</Table.Td>
                 <Table.Td>
                   <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
@@ -124,7 +134,7 @@ export default function Credenciales({ proyecto, onVolver }) {
             ))}
             {credenciales.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={4}>Este proyecto no tiene ninguna credencial todavía.</Table.Td>
+                <Table.Td colSpan={5}>Este proyecto no tiene ninguna credencial todavía.</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>

@@ -12,11 +12,14 @@ CAMPOS_CREDENCIALES = [
             comentario='Identificador corto puesto por el cliente, p.ej. "erp_contabilidad"'),
     Columna(nombre="descripcion", tipo="MEDIUMTEXT", not_null=True,
             comentario="Para qué sirve esta credencial — es lo que ve la IA, nunca el valor"),
+    Columna(nombre="usuario", tipo="VARCHAR", longitud=150,
+            comentario="Usuario, si esta credencial lo necesita (no todas — un token o una API "
+                       "key sueltos no lo llevan). No es secreto, se guarda sin cifrar y la IA "
+                       "sí puede verlo, a diferencia del valor"),
     Columna(nombre="valor_cifrado", tipo="VARCHAR", longitud=500, not_null=True,
-            comentario="Texto libre cifrado con Fernet (lib.cifrado del repo core, mismo "
-                       "mecanismo que mcpc_api_keys) — si la credencial tiene más de un dato "
-                       "(usuario+contraseña, client_id+client_secret), va como JSON en este "
-                       "mismo campo"),
+            comentario="La contraseña, token o API key — lo único realmente secreto, cifrado "
+                       "con Fernet (lib.cifrado del repo core, mismo mecanismo que "
+                       "mcpc_api_keys)"),
     Columna(nombre="fecha_actualizacion", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"),
             comentario="Fecha de creación o de la última vez que se cambió el valor"),

@@ -12,9 +12,10 @@ from ..database.modelos._mod_credenciales import CredencialesCRUD
 
 @mcp_app.tool()
 async def listar_credenciales_gd() -> list[dict]:
-    """Credenciales disponibles para este proyecto: nombre y para qué sirve
-    cada una — nunca su valor. Se dan de alta y se cambian solo desde el
-    panel, no por conversación con la IA."""
+    """Credenciales disponibles para este proyecto: nombre, para qué sirve
+    y el usuario (si esta credencial lo lleva) — nunca la contraseña/API
+    key. Se dan de alta y se cambian solo desde el panel, no por
+    conversación con la IA."""
     proyecto = await resolver_proyecto_actual()
     config = get_db_config(proyecto["slug"])
     return await CredencialesCRUD(config).listar_metadatos()

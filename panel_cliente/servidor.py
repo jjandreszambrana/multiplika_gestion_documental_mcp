@@ -151,11 +151,13 @@ class NuevaCredencial(BaseModel):
     nombre: str
     descripcion: str
     valor: str
+    usuario: str | None = None
 
 
 class ActualizarCredencial(BaseModel):
     descripcion: str | None = None
     valor: str | None = None
+    usuario: str | None = None
 
 
 @app.get("/v1/proyectos/{id_proyecto}/credenciales")
@@ -174,7 +176,7 @@ async def crear_credencial(
     credenciales = CredencialesCRUD(config)
     if await credenciales.obtener_por_nombre(datos.nombre):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una credencial llamada "{datos.nombre}"')
-    id_credencial = await credenciales.crear(datos.nombre, datos.descripcion, datos.valor)
+    id_credencial = await credenciales.crear(datos.nombre, datos.descripcion, datos.valor, datos.usuario)
     fila = await credenciales.obtener(id_credencial)
     return {k: v for k, v in fila.items() if k != "valor_cifrado"}
 
@@ -188,7 +190,7 @@ async def actualizar_credencial(
     credenciales = CredencialesCRUD(config)
     if not await credenciales.obtener(id_credencial):
         raise HTTPException(404, "Credencial no encontrada")
-    await credenciales.actualizar(id_credencial, datos.descripcion, datos.valor)
+    await credenciales.actualizar(id_credencial, datos.descripcion, datos.valor, datos.usuario)
     fila = await credenciales.obtener(id_credencial)
     return {k: v for k, v in fila.items() if k != "valor_cifrado"}
 
