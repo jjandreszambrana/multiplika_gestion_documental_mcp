@@ -43,15 +43,11 @@ export default function Documentos({
           ← Cambiar de proyecto
         </button>
       )}
-      {onVerApiKeys && (
-        <button onClick={onVerApiKeys}>API keys</button>
-      )}
-      {onVerCredenciales && (
-        <button onClick={onVerCredenciales}>Credenciales</button>
-      )}
-      {onVerEstilos && (
-        <button onClick={onVerEstilos}>Estilos de informe</button>
-      )}
+      <div className="botones-cabecera">
+        {onVerApiKeys && <button onClick={onVerApiKeys}>API keys</button>}
+        {onVerCredenciales && <button onClick={onVerCredenciales}>Credenciales</button>}
+        {onVerEstilos && <button onClick={onVerEstilos}>Estilos de informe</button>}
+      </div>
 
       <form onSubmit={buscar} className="formulario-linea">
         <input
