@@ -69,8 +69,13 @@ async def ver_proyecto(
     """Datos básicos del proyecto (nombre, slug) — lo usa el frontend
     cuando entra directo a un proyecto conocido (enlace del superadmin
     desde el panel de administración) sin pasar por el selector.
-    `es_admin` le dice al frontend si mostrar la gestión de API keys."""
-    return {"id": proyecto["id"], "nombre": proyecto["nombre"], "slug": proyecto["slug"], "es_admin": es_admin}
+    `es_admin` le dice al frontend si mostrar la gestión de API keys y de
+    usuarios; `id_tenant` hace falta para gestionar los usuarios de la
+    empresa (viven por tenant, no por proyecto)."""
+    return {
+        "id": proyecto["id"], "id_tenant": proyecto["id_tenant"], "nombre": proyecto["nombre"],
+        "slug": proyecto["slug"], "es_admin": es_admin,
+    }
 
 
 @app.get("/v1/proyectos/{id_proyecto}/documentos")

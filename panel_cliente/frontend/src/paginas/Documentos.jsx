@@ -9,6 +9,7 @@ export default function Documentos({
   onVerApiKeys,
   onVerCredenciales,
   onVerEstilos,
+  onVerUsuarios,
 }) {
   const [q, setQ] = useState("")
   const [resultados, setResultados] = useState([])
@@ -51,6 +52,7 @@ export default function Documentos({
         {onVerApiKeys && <Button variant="light" onClick={onVerApiKeys}>API keys</Button>}
         {onVerCredenciales && <Button variant="light" onClick={onVerCredenciales}>Credenciales</Button>}
         {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
+        {onVerUsuarios && <Button variant="light" onClick={onVerUsuarios}>Usuarios</Button>}
       </Group>
 
       <Group component="form" onSubmit={buscar} mb="lg">

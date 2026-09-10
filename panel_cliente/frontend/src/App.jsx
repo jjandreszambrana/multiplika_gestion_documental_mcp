@@ -17,6 +17,7 @@ import ApiKeys from "./paginas/ApiKeys"
 import Credenciales from "./paginas/Credenciales"
 import Estilos from "./paginas/Estilos"
 import EstiloDetalle from "./paginas/EstiloDetalle"
+import Usuarios from "./paginas/Usuarios"
 
 export default function App() {
   const [sesion, setSesion] = useState(() => {
@@ -146,6 +147,8 @@ export default function App() {
           <ApiKeys proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : vista === "credenciales" ? (
           <Credenciales proyecto={proyecto} onVolver={() => setVista("documentos")} />
+        ) : vista === "usuarios" ? (
+          <Usuarios proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : vista === "estilos" && estiloActivo ? (
           <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
         ) : vista === "estilos" ? (
@@ -164,6 +167,7 @@ export default function App() {
             onVerDocumento={setIdDocumentoActivo}
             onVerApiKeys={proyecto.es_admin ? () => setVista("api-keys") : null}
             onVerCredenciales={proyecto.es_admin ? () => setVista("credenciales") : null}
+            onVerUsuarios={proyecto.es_admin ? () => setVista("usuarios") : null}
             onVerEstilos={() => {
               setEstiloActivo(null)
               setVista("estilos")

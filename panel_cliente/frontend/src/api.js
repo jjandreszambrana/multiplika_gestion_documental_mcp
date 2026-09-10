@@ -101,6 +101,22 @@ export const api = {
   listarProyectosDeLaEmpresa: (idTenant) => peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/proyectos`),
   verProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}`),
 
+  // Gestión de usuarios/roles: vive en el backend del panel de
+  // administración (mismo JWT, se puede llamar desde aquí igual que
+  // login/listarProyectosDeLaEmpresa) — permitido para admin_tenant de
+  // este proyecto, no solo para superadmin (ver _api_usuarios.py del core).
+  listarUsuarios: (idTenant, idProyecto) =>
+    peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/usuarios?id_proyecto=${idProyecto}`),
+  crearUsuario: (idTenant, idProyecto, nombre, email, password) =>
+    peticion(BASE_ADMIN, "POST", `/tenants/${idTenant}/usuarios?id_proyecto=${idProyecto}`, {
+      nombre, email, password,
+    }),
+  listarRolesProyecto: (idProyecto) => peticion(BASE_ADMIN, "GET", `/proyectos/${idProyecto}/usuarios`),
+  asignarRol: (idProyecto, idUsuario, idRol) =>
+    peticion(BASE_ADMIN, "POST", `/proyectos/${idProyecto}/usuarios/${idUsuario}/rol`, { id_rol: idRol }),
+  quitarRol: (idProyecto, idUsuario) =>
+    peticion(BASE_ADMIN, "DELETE", `/proyectos/${idProyecto}/usuarios/${idUsuario}/rol`),
+
   listarOBuscarDocumentos: (idProyecto, q) =>
     peticion(
       BASE_CLIENTE, "GET",
