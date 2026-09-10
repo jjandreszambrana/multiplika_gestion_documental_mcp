@@ -7,10 +7,12 @@ from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
+from fastmcp.utilities.types import File, Image
 
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
+from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
@@ -66,6 +68,41 @@ async def listar_tipos_documento_gd() -> list[dict]:
 
 
 @mcp_app.tool()
+async def listar_documentos_pendientes_gd() -> list[dict]:
+    """Documentos que llegaron sin que nadie estuviera delante (subida
+    masiva desde el panel, o un correo recibido) y siguen sin procesar —
+    ni tipo, ni nombre, ni nada decidido todavía. Llama a esta tool al
+    empezar una conversación para poder avisar al cliente si hay algo en
+    cola ("tienes 2 documentos nuevos, ¿los proceso?"). Para leer uno de
+    verdad antes de preguntar, usa obtener_documento_pendiente_gd(id)."""
+    config, _ = await _contexto_actual()
+    return await DocumentosPendientesCRUD(config).listar_metadatos()
+
+
+@mcp_app.tool()
+async def obtener_documento_pendiente_gd(id: int) -> list:
+    """Devuelve el fichero de un documento pendiente (como imagen o
+    archivo nativo de la respuesta) para que puedas leerlo de verdad antes
+    de hacerle al cliente las preguntas de siempre (tipo, nombre...). Una
+    vez guardado con guardar_documento_gd (pasando este `id` como
+    `id_documento_pendiente`), sale solo de esta cola."""
+    config, _ = await _contexto_actual()
+    pendiente = await DocumentosPendientesCRUD(config).obtener(id)
+    if not pendiente:
+        raise ToolError(f"No existe ningún documento pendiente con id {id}")
+
+    contenido = bytes(pendiente["archivo"])
+    tipo_mime = pendiente["tipo_mime"] or "application/octet-stream"
+    subtipo = tipo_mime.split("/", 1)[-1]
+    archivo = (
+        Image(data=contenido, format=subtipo)
+        if tipo_mime.startswith("image/")
+        else File(data=contenido, format=subtipo, name=pendiente["nombre_original"])
+    )
+    return [f'Documento pendiente "{pendiente["nombre_original"]}" (origen: {pendiente["origen"]}):', archivo]
+
+
+@mcp_app.tool()
 async def guardar_documento_gd(
     nombre: str,
     tipo_documento: str,
@@ -73,6 +110,8 @@ async def guardar_documento_gd(
     fecha_documento: str,
     id_documento_existente: int | None = None,
     todas_versiones_buscables: bool = False,
+    id_documento_pendiente: int | None = None,
+    fecha_caducidad: str | None = None,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla,
     pregunta siempre al usuario: tipo de documento (consulta antes
@@ -80,22 +119,39 @@ async def guardar_documento_gd(
     encaja; si no, se puede usar uno nuevo sin darlo de alta antes), nombre
     o referencia corta, si es una versión nueva de un documento ya guardado
     (usa buscar_documentos_gd para confirmar cuál, no lo adivines) o uno
-    distinto, la fecha del propio documento (no la de hoy), y si todo su
-    histórico debe quedar buscable o solo la última versión (por defecto
-    solo la última).
+    distinto, la fecha del propio documento (no la de hoy), si tiene fecha
+    de caducidad (contratos, certificados...; si no aplica, déjalo vacío),
+    y si todo su histórico debe quedar buscable o solo la última versión
+    (por defecto solo la última).
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente); si no, crea un
-    documento nuevo."""
+    documento nuevo.
+    Si este documento viene de la cola de pendientes (obtenido con
+    obtener_documento_pendiente_gd), pasa su id en
+    `id_documento_pendiente`: al guardar con éxito sale solo de la cola."""
     config, alias_proyecto = await _contexto_actual()
     try:
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
-            id_documento_existente, todas_versiones_buscables,
+            id_documento_existente, todas_versiones_buscables, fecha_caducidad,
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
     await _reindexar_si_semantico(config, alias_proyecto, resultado["id_documento"], resultado["id_version"], markdown)
+    if id_documento_pendiente is not None:
+        await DocumentosPendientesCRUD(config).eliminar(id_documento_pendiente)
     return resultado
+
+
+@mcp_app.tool()
+async def listar_documentos_por_caducar_gd(dias: int = 30) -> list[dict]:
+    """Documentos (versión vigente, no archivados) con fecha de caducidad
+    dentro de los próximos `dias` días, incluidas las ya vencidas —
+    responde si el cliente pregunta "¿qué tengo por caducar?". El aviso
+    proactivo por email es independiente de esta tool (ver
+    docs/gestion-documental.md → "Fechas de caducidad")."""
+    config, _ = await _contexto_actual()
+    return await VersionesCRUD(config).listar_por_caducar(dias)
 
 
 @mcp_app.tool()

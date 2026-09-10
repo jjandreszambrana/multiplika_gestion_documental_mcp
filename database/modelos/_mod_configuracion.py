@@ -17,3 +17,17 @@ class ConfiguracionCRUD(AsyncCrudBase):
     async def obtener_proveedor_embedding(self) -> str:
         fila = await self.obtener(1)
         return fila["proveedor_embedding"] if fila else "mistral:mistral-embed"
+
+    async def obtener_email_avisos(self) -> str | None:
+        fila = await self.obtener(1)
+        return fila["email_avisos"] if fila else None
+
+    async def actualizar_email_avisos(self, email: str | None) -> None:
+        await self.update(1, {"email_avisos": email})
+
+    async def obtener_email_ingesta(self) -> str | None:
+        fila = await self.obtener(1)
+        return fila["email_ingesta"] if fila else None
+
+    async def actualizar_email_ingesta(self, parte_local: str | None) -> None:
+        await self.update(1, {"email_ingesta": parte_local})

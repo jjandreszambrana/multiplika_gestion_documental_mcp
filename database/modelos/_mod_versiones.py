@@ -66,6 +66,27 @@ class VersionesCRUD(AsyncCrudBase):
         """
         return await db.query(sql)
 
+    async def listar_por_caducar(self, dias: int = 30) -> list[dict]:
+        """Versiones vigentes (de documentos no archivados) con
+        `fecha_caducidad` dentro de los próximos `dias` días (incluye ya
+        vencidas) — para que la IA pueda responder si se le pregunta, y
+        para el aviso proactivo por email (ver scripts/avisar_caducidades.py)."""
+        db = AsyncDatabase(**self.config)
+        sql = f"""
+            SELECT v.id AS id_version, v.id_documento, v.fecha_caducidad, v.aviso_caducidad_enviado,
+                   d.nombre, d.tipo_documento
+            FROM "{TABLA_VERSIONES.nombre}" v
+            JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
+            WHERE v.vigente = true AND d.archivado = false
+              AND v.fecha_caducidad IS NOT NULL
+              AND v.fecha_caducidad <= CURRENT_DATE + %s::int
+            ORDER BY v.fecha_caducidad ASC
+        """
+        return await db.query(sql, (dias,))
+
+    async def marcar_aviso_caducidad_enviado(self, id_version: int) -> None:
+        await self.update(id_version, {"aviso_caducidad_enviado": True})
+
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con
@@ -100,6 +121,7 @@ async def guardar_documento(
     fecha_documento: str,
     id_documento_existente: int | None = None,
     todas_versiones_buscables: bool = False,
+    fecha_caducidad: str | None = None,
 ) -> dict:
     """Documento nuevo (crea `gd_documentos` + primera versión) o nueva
     versión de uno existente (desmarca la vigente anterior e inserta la
@@ -140,6 +162,7 @@ async def guardar_documento(
                 "markdown_original": markdown,
                 "markdown_actual": markdown,
                 "fecha_documento": fecha_documento,
+                "fecha_caducidad": fecha_caducidad,
             },
             db=db,
             conexion=cx,

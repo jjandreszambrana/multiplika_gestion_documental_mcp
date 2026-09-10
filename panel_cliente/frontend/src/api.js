@@ -149,11 +149,31 @@ export const api = {
   eliminarCredencial: (idProyecto, idCredencial) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/credenciales/${idCredencial}`),
 
+  listarDocumentosPendientes: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos-pendientes`),
+  subirDocumentosPendientes: (idProyecto, archivos) => {
+    const formData = new FormData()
+    for (const archivo of archivos) formData.append("archivos", archivo)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/documentos-pendientes`, formData)
+  },
+  eliminarDocumentoPendiente: (idProyecto, idPendiente) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}`),
+
   listarTiposDocumento: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/tipos-documento`),
   crearTipoDocumento: (idProyecto, nombre) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/tipos-documento`, { nombre }),
   eliminarTipoDocumento: (idProyecto, idTipo) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/tipos-documento/${idTipo}`),
+
+  obtenerConfiguracionAvisos: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/configuracion/avisos`),
+  actualizarConfiguracionAvisos: (idProyecto, emailAvisos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/avisos`, { email_avisos: emailAvisos || null }),
+
+  obtenerConfiguracionIngesta: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/configuracion/ingesta`),
+  actualizarConfiguracionIngesta: (idProyecto, emailIngesta) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/ingesta`, { email_ingesta: emailIngesta || null }),
 
   listarEstilos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos`),
   crearEstilo: (idProyecto, nombreTipo, instrucciones) =>

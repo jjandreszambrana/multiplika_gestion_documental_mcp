@@ -43,11 +43,19 @@ CAMPOS_VERSIONES = [
     Columna(nombre="fecha_subida", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"), protegido_actualizar=True,
             comentario="Fecha en que se subió/generó esta versión"),
+    Columna(nombre="fecha_caducidad", tipo="DATE",
+            comentario="Opcional — de esta versión concreta, no del documento: un contrato "
+                       "renovado es, en la práctica, otra fecha (ver gd_versiones, no "
+                       "gd_documentos). NULL si no aplica"),
+    Columna(nombre="aviso_caducidad_enviado", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="Un solo aviso por email al entrar en la ventana de aviso, no uno "
+                       "diario (decisión de producto, 2026-09-10) — este flag evita repetirlo"),
 ]
 
 INDICES_VERSIONES = [
     Index(columnas=["id_documento", "vigente"]),
     Index(columnas=["tsvector_actual"], metodo="gin"),
+    Index(columnas=["fecha_caducidad"]),
 ]
 
 FKS_VERSIONES = [

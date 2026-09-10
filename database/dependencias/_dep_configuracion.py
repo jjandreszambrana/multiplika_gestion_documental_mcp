@@ -29,6 +29,16 @@ def construir_tabla_configuracion(proveedor_embedding: str = PROVEEDOR_EMBEDDING
                 comentario="Proveedor:modelo de embedding usado si el modo es semántico"),
         Columna(nombre="dimension_embedding", tipo="INT", not_null=True, default=dimension,
                 comentario="Dimensión del vector de embedding — debe coincidir con gd_chunks.embedding"),
+        Columna(nombre="email_avisos", tipo="VARCHAR", longitud=255,
+                comentario="A quién avisar por email cuando hay documentos por caducar (aviso "
+                           "proactivo diario, no solo si se pregunta — ver "
+                           "listar_documentos_por_caducar_gd). NULL desactiva el aviso"),
+        Columna(nombre="email_ingesta", tipo="VARCHAR", longitud=100,
+                comentario="Parte local (antes de la @) de la dirección de ingesta de "
+                           "documentos por correo de este cliente — el dominio es fijo para "
+                           "toda la plataforma (ver scripts/procesar_correo_entrante.py, "
+                           "pendiente de un dominio real, ver docs/gestion-documental.md → "
+                           "'Ingesta por email'). NULL desactiva la ingesta por email"),
     ]
     return Tabla(
         nombre=NOMBRE_TABLA_CONFIGURACION, columnas=campos,

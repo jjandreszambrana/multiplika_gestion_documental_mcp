@@ -33,6 +33,7 @@ from database.dependencias._dep_configuracion import (
     construir_tabla_configuracion,
 )
 from database.dependencias._dep_documentos import TABLA_DOCUMENTOS
+from database.dependencias._dep_documentos_pendientes import TABLA_DOCUMENTOS_PENDIENTES
 from database.dependencias._dep_versiones import TABLA_VERSIONES
 from database.dependencias._dep_chunks import construir_tabla_chunks
 from database.dependencias._dep_credenciales import TABLA_CREDENCIALES
@@ -67,6 +68,7 @@ def main():
     tablas = [
         construir_tabla_configuracion(args.proveedor_embedding),
         TABLA_DOCUMENTOS,
+        TABLA_DOCUMENTOS_PENDIENTES,
         TABLA_VERSIONES,
         construir_tabla_chunks(dimension),
         TABLA_CREDENCIALES,

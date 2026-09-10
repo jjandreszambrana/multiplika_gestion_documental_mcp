@@ -3,3 +3,5 @@ fastmcp
 mistralai
 openai
 python-multipart
+markdown
+weasyprint

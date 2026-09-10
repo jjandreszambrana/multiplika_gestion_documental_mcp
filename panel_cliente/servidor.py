@@ -43,6 +43,7 @@ from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
+from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
@@ -116,6 +117,54 @@ async def listar_o_buscar_documentos(
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
 
 
+# --- Documentos pendientes (subida masiva; más adelante también la
+# ingesta por email escribirá aquí) — ver docs/gestion-documental.md →
+# "Documentos pendientes". Mismo criterio de permisos que
+# archivar/desarchivar: día a día con documentos, no admin.
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos-pendientes")
+async def listar_documentos_pendientes(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["slug"])
+    return await DocumentosPendientesCRUD(config).listar_metadatos()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos-pendientes")
+async def subir_documentos_pendientes(
+    id_proyecto: int,
+    archivos: list[UploadFile] = File(...),
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """Subida masiva: varios ficheros en una sola petición, uno por cada
+    fila nueva en la cola de pendientes. No se procesan aquí — eso lo hace
+    la IA en una conversación posterior (ver guardar_documento_gd)."""
+    config = get_db_config(proyecto["slug"])
+    pendientes = DocumentosPendientesCRUD(config)
+    creados = []
+    for archivo in archivos:
+        contenido = await archivo.read()
+        id_pendiente = await pendientes.crear(
+            contenido, archivo.content_type or "application/octet-stream",
+            archivo.filename or "sin_nombre", "panel",
+        )
+        creados.append(await pendientes.obtener(id_pendiente))
+    return [{k: v for k, v in fila.items() if k != "archivo"} for fila in creados]
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/documentos-pendientes/{id_pendiente}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def eliminar_documento_pendiente(
+    id_proyecto: int, id_pendiente: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> None:
+    """Descarta un pendiente sin procesarlo (p.ej. una subida por error)."""
+    config = get_db_config(proyecto["slug"])
+    await DocumentosPendientesCRUD(config).eliminar(id_pendiente)
+
+
 # --- Tipos de documento (catálogo abierto, no una lista cerrada) ---
 # Lectura para cualquiera con acceso (lo usa el filtro del listado);
 # alta/borrado del catálogo, solo admin — igual criterio que estilos.
@@ -170,6 +219,7 @@ async def obtener_documento(
         **documento,
         "markdown": version["markdown_actual"] if version else None,
         "fecha_documento": version["fecha_documento"] if version else None,
+        "fecha_caducidad": version["fecha_caducidad"] if version else None,
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
     }
 
@@ -197,6 +247,62 @@ async def desarchivar_documento(
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
     return documento
+
+
+# --- Aviso de caducidad por email (ver docs/gestion-documental.md →
+# "Fechas de caducidad") — solo admin, es configuración de cuenta, no día
+# a día con documentos.
+
+
+class ActualizarConfiguracionAvisos(BaseModel):
+    email_avisos: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/configuracion/avisos")
+async def obtener_configuracion_avisos(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    return {"email_avisos": await ConfiguracionCRUD(config).obtener_email_avisos()}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/configuracion/avisos")
+async def actualizar_configuracion_avisos(
+    id_proyecto: int, datos: ActualizarConfiguracionAvisos,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    await ConfiguracionCRUD(config).actualizar_email_avisos(datos.email_avisos)
+    return {"email_avisos": await ConfiguracionCRUD(config).obtener_email_avisos()}
+
+
+# --- Ingesta por email (ver docs/gestion-documental.md → "Ingesta por
+# email") — el cliente elige la parte local de su dirección de ingesta;
+# el dominio es fijo para toda la plataforma y todavía no está decidido,
+# así que esto no hace nada útil aún (no hay ningún buzón real detrás),
+# pero se puede ir configurando. Solo admin, igual que los avisos.
+
+
+class ActualizarConfiguracionIngesta(BaseModel):
+    email_ingesta: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/configuracion/ingesta")
+async def obtener_configuracion_ingesta(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    return {"email_ingesta": await ConfiguracionCRUD(config).obtener_email_ingesta()}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/configuracion/ingesta")
+async def actualizar_configuracion_ingesta(
+    id_proyecto: int, datos: ActualizarConfiguracionIngesta,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["slug"])
+    await ConfiguracionCRUD(config).actualizar_email_ingesta(datos.email_ingesta)
+    return {"email_ingesta": await ConfiguracionCRUD(config).obtener_email_ingesta()}
 
 
 # --- Credenciales (ver docs/gestion-documental.md → "Credenciales") ---

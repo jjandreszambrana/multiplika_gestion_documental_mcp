@@ -54,6 +54,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
           </Group>
           <Text c="dimmed" mb="md">
             {documento.tipo_documento} — {documento.fecha_documento}
+            {documento.fecha_caducidad && ` — caduca el ${documento.fecha_caducidad}`}
             {documento.revisado_manualmente && " — corregido a mano"}
           </Text>
           <Button onClick={alternarArchivado} loading={cambiandoArchivo} mb="md" variant="light">

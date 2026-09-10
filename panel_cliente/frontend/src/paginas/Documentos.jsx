@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Select, Table, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, FileButton, Group, Select, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function Documentos({
@@ -10,6 +10,7 @@ export default function Documentos({
   onVerCredenciales,
   onVerEstilos,
   onVerUsuarios,
+  onVerAvisos,
 }) {
   const [q, setQ] = useState("")
   const [tipoDocumento, setTipoDocumento] = useState("")
@@ -19,12 +20,50 @@ export default function Documentos({
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [tiposDocumento, setTiposDocumento] = useState([])
+  const [pendientes, setPendientes] = useState([])
+  const [subiendo, setSubiendo] = useState(false)
+  const [errorPendientes, setErrorPendientes] = useState(null)
 
   useEffect(() => {
     api.listarTiposDocumento(proyecto.id)
       .then((tipos) => setTiposDocumento(tipos.map((t) => ({ value: t.nombre, label: t.nombre }))))
       .catch(() => setTiposDocumento([]))
   }, [proyecto.id])
+
+  async function cargarPendientes() {
+    try {
+      setPendientes(await api.listarDocumentosPendientes(proyecto.id))
+    } catch (err) {
+      setErrorPendientes(err.message)
+    }
+  }
+
+  useEffect(() => {
+    cargarPendientes()
+  }, [proyecto.id])
+
+  async function subirPendientes(archivos) {
+    if (!archivos || archivos.length === 0) return
+    setSubiendo(true)
+    setErrorPendientes(null)
+    try {
+      await api.subirDocumentosPendientes(proyecto.id, archivos)
+      await cargarPendientes()
+    } catch (err) {
+      setErrorPendientes(err.message)
+    } finally {
+      setSubiendo(false)
+    }
+  }
+
+  async function descartarPendiente(idPendiente) {
+    try {
+      await api.eliminarDocumentoPendiente(proyecto.id, idPendiente)
+      await cargarPendientes()
+    } catch (err) {
+      setErrorPendientes(err.message)
+    }
+  }
 
   async function cargar(consulta, filtros = {}) {
     setCargando(true)
@@ -83,7 +122,55 @@ export default function Documentos({
         {onVerCredenciales && <Button variant="light" onClick={onVerCredenciales}>Credenciales</Button>}
         {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
         {onVerUsuarios && <Button variant="light" onClick={onVerUsuarios}>Usuarios</Button>}
+        {onVerAvisos && <Button variant="light" onClick={onVerAvisos}>Avisos de caducidad</Button>}
       </Group>
+
+      <Group mb="lg" align="center">
+        <FileButton onChange={subirPendientes} multiple>
+          {(props) => (
+            <Button {...props} variant="light" loading={subiendo}>
+              Subir documentos
+            </Button>
+          )}
+        </FileButton>
+        <Text c="dimmed" size="sm">
+          Se suben a la cola de pendientes: tu IA los procesará la próxima vez que hables con ella
+          (te preguntará el tipo, el nombre...), no aparecen todavía en el listado de abajo.
+        </Text>
+      </Group>
+
+      {errorPendientes && (
+        <Alert color="red" mb="md" onClose={() => setErrorPendientes(null)} withCloseButton>
+          {errorPendientes}
+        </Alert>
+      )}
+
+      {pendientes.length > 0 && (
+        <Table striped withTableBorder mb="lg">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Documento pendiente</Table.Th>
+              <Table.Th>Origen</Table.Th>
+              <Table.Th>Fecha de alta</Table.Th>
+              <Table.Th></Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {pendientes.map((p) => (
+              <Table.Tr key={p.id}>
+                <Table.Td>{p.nombre_original}</Table.Td>
+                <Table.Td>{p.origen === "email" ? "Email" : "Panel"}</Table.Td>
+                <Table.Td>{p.fecha_alta}</Table.Td>
+                <Table.Td>
+                  <Button variant="subtle" color="red" size="xs" onClick={() => descartarPendiente(p.id)}>
+                    Descartar
+                  </Button>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
 
       <Group component="form" onSubmit={buscar} mb="sm">
         <TextInput

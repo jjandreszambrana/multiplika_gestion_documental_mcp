@@ -275,7 +275,7 @@ Diseño acordado con el usuario para las cinco ideas que quedaron solo anotadas.
 
 A mitad de esta implementación el cliente pidió que la lista de tipos dejara de ser cerrada — ver "Tipos de documento" más arriba, que se implementó primero por ser un prerrequisito: el `Select` de este filtro ahora carga sus opciones desde `listar_tipos_documento_gd()`/`GET /v1/proyectos/{id}/tipos-documento` en vez de una lista fija en el frontend.
 
-### 2. Documentos pendientes: la pieza compartida por subida masiva e ingesta por email
+### 2. Documentos pendientes: la pieza compartida por subida masiva e ingesta por email — implementado y probado (2026-09-10)
 
 Decidido con el usuario: cuando un documento llega **sin nadie delante** (un lote subido al panel, o un email reenviado), no puede pasar por las preguntas que la IA siempre hace (tipo, nombre, si es una versión nueva...) — así que se queda **pendiente** hasta que el cliente habla con su IA, que lo procesa entonces con las mismas preguntas de siempre. No cambia la regla de "la IA siempre pregunta", solo cambia cuándo pregunta.
 
@@ -289,33 +289,43 @@ gd_documentos_pendientes
   - fecha_alta         TIMESTAMP
 ```
 
-Tools MCP nuevas:
+Tools MCP:
 - `listar_documentos_pendientes_gd()` — metadatos de lo que hay en la cola (nombre, origen, fecha), para que la IA pueda avisar al cliente ("tienes 2 documentos nuevos, ¿los proceso?") al empezar una conversación.
-- `obtener_documento_pendiente_gd(id)` — devuelve el fichero como contenido de imagen/archivo nativo de la respuesta (mismo mecanismo que las imágenes de estilos), para que la IA pueda leerlo de verdad antes de preguntar.
+- `obtener_documento_pendiente_gd(id)` — devuelve el fichero como contenido de imagen/archivo nativo de la respuesta (mismo mecanismo que las imágenes de estilos: `Image` para `image/*`, `File` para el resto — PDF incluido), para que la IA pueda leerlo de verdad antes de preguntar.
 - `guardar_documento_gd` gana un parámetro opcional `id_documento_pendiente` — si se indica, al guardar con éxito borra esa fila de la cola.
 
-**Subida masiva** (vía panel, decidido): nuevo endpoint `POST /v1/proyectos/{id}/documentos/pendientes` (multipart, varios ficheros en una sola petición) que inserta una fila en `gd_documentos_pendientes` por cada archivo. Pantalla nueva o ampliación de `Documentos.jsx` con un selector de múltiples ficheros.
+**Subida masiva** (vía panel): `GET/POST /v1/proyectos/{id}/documentos-pendientes` (POST multipart, campo repetido `archivos`, una fila por fichero) y `DELETE /v1/proyectos/{id}/documentos-pendientes/{id_pendiente}` para descartar uno sin procesarlo. Abierto a cualquier usuario del proyecto (no solo admin) — mismo criterio que archivar/desarchivar: es día a día con documentos, no configuración sensible. `Documentos.jsx` tiene un botón "Subir documentos" (selector múltiple) y, si hay algo en cola, una tabla pequeña con botón "Descartar" por fila.
 
-**Ingesta por email** (decidido: cola, no automático — ver más abajo): el proceso que lee el correo entrante inserta en esta misma tabla, con `origen='email'`.
+**Ingesta por email** (decidido: cola, no automático — ver más abajo): el proceso que lee el correo entrante insertará en esta misma tabla, con `origen='email'` — pendiente de implementar (ver "3. Ingesta por email").
 
-### 3. Ingesta por email
+### 3. Ingesta por email — parcialmente implementado, bloqueado en el dominio (2026-09-10)
 
-El servidor ya tiene correo de verdad montado (Postfix + `getmail`, mismo patrón que `pylula.multiplika.net`) — no hace falta infraestructura nueva, solo conectarlo.
+El servidor ya tiene correo de verdad montado (Postfix + `getmail`, mismo patrón que `pylula.multiplika.net`) — no hace falta infraestructura nueva, solo conectarlo. **Pero al llegar a este punto, `mail_domain` en la base de ISPConfig del servidor estaba vacía: no hay ningún dominio de correo dado de alta todavía**, y crear uno nuevo (`documentos.multiplika.net` u otro) implica tocar DNS del dominio raíz — se le preguntó al usuario y decidió aplazar esta decisión concreta ("dejar esta fase para el final, sin decidir ahora") en vez de improvisar un dominio. Se implementó todo lo que NO depende de esa decisión:
 
-- **Dirección configurable por proyecto** (decidido con el usuario): nuevo campo `gd_configuracion.email_ingesta` (por ejemplo, `<algo-elegido-por-el-cliente>@documentos.multiplika.net` — un único dominio/buzón para toda la plataforma, con la parte local identificando al proyecto, para no tener que dar de alta un buzón nuevo en ISPConfig por cada cliente).
-- Un script (`scripts/procesar_correo_entrante.py` en este repo, desplegado junto a `panel_cliente/` a la ruta estable de producto, mismo patrón) invocado por `getmail` cada vez que llega un correo a ese buzón: identifica el proyecto por la dirección de destino (cruzando contra `email_ingesta` de cada cliente), extrae los adjuntos, y los inserta en `gd_documentos_pendientes` de la base de ESE cliente.
-- Sin adjuntos válidos (imagen/PDF) → se ignora o se responde con un aviso (a decidir en la implementación).
+- **Dirección configurable por proyecto**: `gd_configuracion.email_ingesta` — el cliente guarda solo la PARTE LOCAL que elige (antes de la @); el dominio será fijo para toda la plataforma en cuanto se decida. Gestionable vía `GET/PUT /v1/proyectos/{id}/configuracion/ingesta` (solo admin) — de momento sin pantalla en el panel (no tendría sentido mostrar un campo que todavía no hace nada útil), solo API.
+- `scripts/procesar_correo_entrante.py` (en este repo, misma ruta estable que `avisar_caducidades.py`): recibe el correo completo por stdin y la dirección de destino como argumento (patrón MDA habitual de procmail/dovecot-lda — el argumento exacto que pasará `getmail` de verdad puede necesitar ajuste cuando se configure), identifica el proyecto cruzando la parte local contra `email_ingesta` de cada cliente, extrae los adjuntos válidos (imagen o PDF) y los inserta en `gd_documentos_pendientes` con `origen='email'` — igual que la subida masiva del panel. Sin proyecto que reconozca la dirección, o sin adjuntos válidos: no crea nada, no responde al remitente (evita backscatter con un remitente falsificado), solo lo informa por stdout.
+- Probado con un correo sintético por stdin (parseo MIME, extracción de adjuntos, cruce de `email_ingesta`, inserción en la cola) — **no probado de punta a punta con correo real**, porque eso requiere el buzón que todavía no existe.
 
-### 4. Fechas de caducidad y avisos proactivos por email
+**Lo que falta cuando se decida el dominio** (lista corta, nada de esto está bloqueado por código): elegir dominio/subdominio, crear el registro MX apuntando a `mcp-d`/`facturae`, dar de alta el buzón en ISPConfig (`mail_domain` + `mail_get` o alias), configurar `getmail` para invocar `procesar_correo_entrante.py` en cada correo entrante (ajustando la firma del script si hace falta, ver arriba), y probar con un correo real de principio a fin.
 
-- `gd_versiones.fecha_caducidad` (DATE, opcional) — junto a `fecha_documento`, no en `gd_documentos`: la caducidad es del contenido de esa versión concreta (un contrato renovado es, en la práctica, otra fecha).
+### 4. Fechas de caducidad y avisos proactivos por email — implementado (2026-09-10)
+
+- `gd_versiones.fecha_caducidad` (DATE, opcional) — junto a `fecha_documento`, no en `gd_documentos`: la caducidad es del contenido de esa versión concreta (un contrato renovado es, en la práctica, otra fecha). `gd_versiones.aviso_caducidad_enviado` (BOOLEAN) acompaña al campo: **un solo aviso por documento, no un recordatorio diario** (decidido explícitamente por el usuario al planificar esto) — se marca a `true` en cuanto se manda el correo, para no repetirlo.
 - `guardar_documento_gd` gana un parámetro opcional `fecha_caducidad`.
-- Tool `listar_documentos_por_caducar_gd(dias=30)` — para que la IA pueda responder si se le pregunta.
-- **Aviso proactivo por email, decidido explícitamente por el usuario** (no basta con que la IA responda si se le pregunta): `gd_configuracion` gana `email_avisos` (a quién avisar). Script diario (cron, mismo patrón que `backup_diario.py` del core: recorre `mcpc_proyectos` con `tipo_producto='gestion_documental'`, y por cada uno consulta si hay documentos por caducar pronto) que manda un correo si hay algo — usando el Postfix local del propio servidor (`smtplib` a `localhost:25`, mismo patrón ya usado en `pylula`), sin necesidad de ninguna credencial ni servicio externo.
+- Tool `listar_documentos_por_caducar_gd(dias=30)` — para que la IA pueda responder si se le pregunta (independiente del aviso proactivo).
+- **Aviso proactivo por email**: `gd_configuracion.email_avisos` (a quién avisar; NULL desactiva el aviso), gestionable desde el panel (`GET/PUT /v1/proyectos/{id}/configuracion/avisos`, solo admin — pantalla "Avisos de caducidad", botón junto a los demás en `Documentos.jsx`) sin depender de nosotros. Script diario `scripts/avisar_caducidades.py` (cron `mcp_gd_avisos_caducidad`, 07:15 — mismo patrón que `backup_diario.py` del core: recorre `mcpc_proyectos` con `motor='postgres'` y `tipo_producto='gestion_documental'`) que, por cada proyecto con algo por caducar y `email_avisos` configurado, manda UN correo con todo lo pendiente y marca esas versiones como avisadas — usando el Postfix local del propio servidor (`smtplib` a `localhost:25`), sin necesidad de ninguna credencial ni servicio externo.
 
-### 5. Exportar un informe a PDF
+**Bug real encontrado al probarlo end-to-end (2026-09-10):** el envío por `smtplib` no tenía manejo de errores — un `email_avisos` mal configurado (buzón inexistente, dominio caído...) de UN solo cliente propagaba la excepción hasta abortar el script entero, dejando sin avisar a TODOS los demás clientes esa noche (sin pérdida de datos: al no marcarse `aviso_caducidad_enviado`, se reintenta solo con la siguiente ejecución diaria, pero silenciosamente hasta entonces). Arreglado con un `try/except` alrededor del envío en `_procesar_proyecto()`, que solo salta ese proyecto y sigue con el resto. Autocontenido a propósito (SQL en línea contra `gd_versiones`/`gd_documentos`/`gd_configuracion`, sin pasar por `database/modelos` de este repo) para no depender de que sus imports relativos funcionen fuera del árbol de despliegue del servidor MCP — ver el docstring del propio script para el razonamiento completo. Desplegado junto a `panel_cliente/`, en `apps/mcp_server/paneles_cliente/multiplika_gestion_documental_mcp/scripts/`.
 
-Decidido: sencillo para empezar (texto formateado + logo, no maquetación compleja). Nueva tool `generar_informe_pdf_gd(markdown, nombre_archivo, nombre_tipo_estilo=None)`: convierte el markdown que acaba de escribir la IA a HTML y de ahí a PDF (biblioteca a instalar: `markdown` + `WeasyPrint` — valorado `pandoc`, no está instalado en el servidor y añadiría una dependencia externa al margen de Python), incrustando el logo del estilo indicado si se pasa uno, y devuelve el PDF como contenido de archivo nativo de la respuesta (la IA se lo entrega al cliente directamente, sin pasar por el panel).
+### 5. Exportar un informe a PDF — implementado (2026-09-10)
+
+Sencillo para empezar (texto formateado + logo, no maquetación compleja). Tool `generar_informe_pdf_gd(markdown, nombre_archivo, nombre_tipo_estilo=None)`: convierte el markdown que acaba de escribir la IA a HTML (biblioteca `markdown`) y de ahí a PDF (`WeasyPrint` — valorado `pandoc`, no está instalado en el servidor y añadiría una dependencia externa al margen de Python), incrustando las imágenes fijas del estilo indicado (si se pasa uno) al principio del documento, y devuelve el PDF como contenido de archivo nativo de la respuesta (la IA se lo entrega al cliente directamente, sin pasar por el panel).
+
+**Infraestructura de servidor que hizo falta (no solo pip):** WeasyPrint necesita bibliotecas nativas del sistema (Pango, Cairo, GDK-Pixbuf, GObject) — `libgdk-pixbuf-2.0-0` no estaba instalada en `mcp-d`; el mirror `security.debian.org` tenía el índice caducado para la versión exacta esperada, así que se instaló la versión equivalente disponible en el mirror normal (`apt-get install libgdk-pixbuf-2.0-0=2.42.2+dfsg-1+deb11u2 ...`).
+
+**Gotcha real de conda encontrado al probarlo:** el proceso del servidor MCP corre en un entorno conda (`py313mcp`) **compartido por las herramientas de todos los proyectos**. Ese entorno trae su propio `libffi`, incompatible con el `libgobject` del sistema que WeasyPrint carga por `dlopen` (fallo real: `undefined symbol: ffi_type_uint32, version LIBFFI_BASE_7.0`). Instalar Pango/Cairo/GObject vía `conda install -c conda-forge pango` habría sido la solución "de manual", pero el servidor solo tiene ~1 GB de RAM libre y sin swap — el solver de conda-forge se quedó sin memoria y el proceso murió (`Terminado (killed)`), en un servidor que aloja más servicios además de este. Se descartó por riesgo de tumbar algo más mientras resuelve.
+
+Solución adoptada, sin tocar el entorno compartido: `generar_informe_pdf_gd` lanza el render de WeasyPrint en un **subproceso aparte** (`asyncio.create_subprocess_exec`, HTML por stdin, PDF por stdout), con `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libffi.so.7` puesto solo en el entorno de ese subproceso — fuerza a usar el libffi del sistema (compatible con el gobject del sistema) sin cambiar nada del proceso principal del servidor ni de las demás herramientas que comparten ese mismo entorno conda.
 
 ---
 
