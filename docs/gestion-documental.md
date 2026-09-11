@@ -343,3 +343,15 @@ Solución adoptada, sin tocar el entorno compartido: `generar_informe_pdf_gd` la
 ---
 
 Orden de implementación: 1 → 2 (con subida masiva) → 5 → 4 → 3. Las cinco, implementadas y desplegadas el 2026-09-10 — la 3 tuvo que rediseñarse a mitad de camino (ver su apartado: se descartó un buzón/dominio propio de la plataforma a favor de que cada cliente use su propia cuenta de correo).
+
+## Normativas legales como caso de uso (2026-09-11)
+
+Un cliente puede usar la Gestión Documental para consultar normativas legales (leyes, reglamentos, órdenes) además de sus propios documentos. No hizo falta esquema nuevo salvo un campo:
+
+- **Tipo de documento**: `"normativa"` como cualquier otro valor de `tipo_documento` — el catálogo ya es texto libre (ver "Tipos de documento" más arriba), no hace falta ningún cambio.
+- **Vigente / derogada**: ya cubierto por el mecanismo de versiones existente. Cuando una normativa se sustituye por otra, es una nueva versión del mismo documento (`guardar_documento_gd` con `id_documento_existente`): la anterior deja de ser `vigente` pero queda en el histórico, tal cual ya funciona hoy para cualquier documento corregido.
+- **`gd_versiones.url_origen`** (VARCHAR(1000), opcional, campo nuevo): URL pública de donde se leyó esa versión (p.ej. la ficha del BOE de esa publicación concreta). Es solo referencia para poder volver a consultar la fuente si hace falta — el markdown guardado sigue siendo la fuente de verdad, no se depende de que la URL siga viva. Cada versión de una normativa suele tener su propia URL oficial (una revisión posterior es una publicación distinta), así que vive en `gd_versiones`, no en `gd_documentos`.
+
+**Flujo de ingesta desde una URL**: no hay una tool de descarga en el servidor MCP — es el propio cliente IA (Claude Desktop/Code, con su capacidad de leer URLs) quien descarga y lee el PDF, igual que hoy lee un PDF adjunto en la conversación. `guardar_documento_gd` gana el parámetro opcional `url_origen` para guardar esa referencia; el resto del pipeline (preguntas de siempre, markdown, indexado) no cambia.
+
+Implementado: columna en `_dep_versiones.py`, parámetro en `guardar_documento()` (`database/modelos/_mod_versiones.py`) y en la tool `guardar_documento_gd` (`mcp_server/herramientas/_herr_documentos.py`), devuelto también por `obtener_documento_completo_gd` y por el detalle de documento del panel (`GET /v1/proyectos/{id}/documentos/{id}`, mostrado en `DocumentoDetalle.jsx` como enlace "Fuente"). **Pendiente:** aplicar la migración de esquema (`update_db.py`) en cada base de cliente ya provisionada antes de este cambio.

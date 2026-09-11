@@ -122,6 +122,7 @@ async def guardar_documento(
     id_documento_existente: int | None = None,
     todas_versiones_buscables: bool = False,
     fecha_caducidad: str | None = None,
+    url_origen: str | None = None,
 ) -> dict:
     """Documento nuevo (crea `gd_documentos` + primera versión) o nueva
     versión de uno existente (desmarca la vigente anterior e inserta la
@@ -163,6 +164,7 @@ async def guardar_documento(
                 "markdown_actual": markdown,
                 "fecha_documento": fecha_documento,
                 "fecha_caducidad": fecha_caducidad,
+                "url_origen": url_origen,
             },
             db=db,
             conexion=cx,

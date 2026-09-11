@@ -47,6 +47,11 @@ CAMPOS_VERSIONES = [
             comentario="Opcional — de esta versión concreta, no del documento: un contrato "
                        "renovado es, en la práctica, otra fecha (ver gd_versiones, no "
                        "gd_documentos). NULL si no aplica"),
+    Columna(nombre="url_origen", tipo="VARCHAR(1000)",
+            comentario="Opcional — URL pública de donde se descargó/leyó esta versión (p.ej. "
+                       "una normativa publicada en el BOE). Solo referencia para poder volver "
+                       "a consultar la fuente; el markdown guardado sigue siendo lo que manda, "
+                       "no se depende de que la URL siga viva"),
     Columna(nombre="aviso_caducidad_enviado", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Un solo aviso por email al entrar en la ventana de aviso, no uno "
                        "diario (decisión de producto, 2026-09-10) — este flag evita repetirlo"),

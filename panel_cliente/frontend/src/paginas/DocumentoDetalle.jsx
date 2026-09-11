@@ -57,6 +57,14 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
             {documento.fecha_caducidad && ` — caduca el ${documento.fecha_caducidad}`}
             {documento.revisado_manualmente && " — corregido a mano"}
           </Text>
+          {documento.url_origen && (
+            <Text mb="md">
+              Fuente:{" "}
+              <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer">
+                {documento.url_origen}
+              </Anchor>
+            </Text>
+          )}
           <Button onClick={alternarArchivado} loading={cambiandoArchivo} mb="md" variant="light">
             {documento.archivado ? "Desarchivar" : "Archivar"}
           </Button>
