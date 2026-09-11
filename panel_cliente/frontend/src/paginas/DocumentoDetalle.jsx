@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Text, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, Group, Paper, Table, Text, Title } from "@mantine/core"
 import { api } from "../api"
 
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
@@ -52,19 +52,50 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               </Badge>
             )}
           </Group>
-          <Text c="dimmed" mb="md">
-            {documento.tipo_documento} — {documento.fecha_documento}
-            {documento.fecha_caducidad && ` — caduca el ${documento.fecha_caducidad}`}
-            {documento.revisado_manualmente && " — corregido a mano"}
-          </Text>
-          {documento.url_origen && (
-            <Text mb="md">
-              Fuente:{" "}
-              <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer">
-                {documento.url_origen}
-              </Anchor>
-            </Text>
-          )}
+          <Table withTableBorder mb="lg" w="fit-content">
+            <Table.Tbody>
+              <Table.Tr>
+                <Table.Th>Tipo de documento</Table.Th>
+                <Table.Td>{documento.tipo_documento}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Fecha del documento</Table.Th>
+                <Table.Td>{documento.fecha_documento}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Dado de alta el</Table.Th>
+                <Table.Td>{documento.fecha_alta}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Última versión subida el</Table.Th>
+                <Table.Td>{documento.fecha_subida}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Fecha de caducidad</Table.Th>
+                <Table.Td>{documento.fecha_caducidad || "—"}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Corregido a mano</Table.Th>
+                <Table.Td>{documento.revisado_manualmente ? "Sí" : "No"}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Histórico completo buscable</Table.Th>
+                <Table.Td>{documento.todas_versiones_buscables ? "Sí" : "No, solo la última versión"}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Th>Fuente</Table.Th>
+                <Table.Td>
+                  {documento.url_origen ? (
+                    <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer">
+                      {documento.url_origen}
+                    </Anchor>
+                  ) : (
+                    "—"
+                  )}
+                </Table.Td>
+              </Table.Tr>
+            </Table.Tbody>
+          </Table>
           <Button onClick={alternarArchivado} loading={cambiandoArchivo} mb="md" variant="light">
             {documento.archivado ? "Desarchivar" : "Archivar"}
           </Button>

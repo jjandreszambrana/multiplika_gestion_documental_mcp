@@ -221,6 +221,7 @@ async def obtener_documento(
         "markdown": version["markdown_actual"] if version else None,
         "fecha_documento": version["fecha_documento"] if version else None,
         "fecha_caducidad": version["fecha_caducidad"] if version else None,
+        "fecha_subida": version["fecha_subida"] if version else None,
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
         "url_origen": version["url_origen"] if version else None,
     }
