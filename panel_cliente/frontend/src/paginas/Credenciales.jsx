@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Button, PasswordInput, Stack, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 
 export default function Credenciales({ proyecto, onVolver }) {
   const [credenciales, setCredenciales] = useState([])
@@ -138,7 +139,7 @@ export default function Credenciales({ proyecto, onVolver }) {
                 <Table.Td>{c.nombre}</Table.Td>
                 <Table.Td>{c.descripcion}</Table.Td>
                 <Table.Td>{c.usuario || "—"}</Table.Td>
-                <Table.Td>{c.fecha_actualizacion}</Table.Td>
+                <Table.Td>{formatearFecha(c.fecha_actualizacion)}</Table.Td>
                 <Table.Td>
                   <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
                     Eliminar

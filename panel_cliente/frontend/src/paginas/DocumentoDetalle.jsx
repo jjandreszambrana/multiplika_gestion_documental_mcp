@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, Group, Paper, Table, Text, Title } from "@mantine/core"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [documento, setDocumento] = useState(null)
@@ -64,19 +65,19 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Fecha del documento</Table.Th>
-                <Table.Td>{documento.fecha_documento}</Table.Td>
+                <Table.Td>{formatearFecha(documento.fecha_documento)}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Dado de alta el</Table.Th>
-                <Table.Td>{documento.fecha_alta}</Table.Td>
+                <Table.Td>{formatearFecha(documento.fecha_alta)}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Última versión subida el</Table.Th>
-                <Table.Td>{documento.fecha_subida}</Table.Td>
+                <Table.Td>{formatearFecha(documento.fecha_subida)}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Fecha de caducidad</Table.Th>
-                <Table.Td>{documento.fecha_caducidad || "—"}</Table.Td>
+                <Table.Td>{formatearFecha(documento.fecha_caducidad)}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Corregido a mano</Table.Th>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, FileButton, Group, Select, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 
 export default function Documentos({
   proyecto,
@@ -162,7 +163,7 @@ export default function Documentos({
               <Table.Tr key={p.id}>
                 <Table.Td>{p.nombre_original}</Table.Td>
                 <Table.Td>{p.origen === "email" ? "Email" : "Panel"}</Table.Td>
-                <Table.Td>{p.fecha_alta}</Table.Td>
+                <Table.Td>{formatearFecha(p.fecha_alta)}</Table.Td>
                 <Table.Td>
                   <Button variant="subtle" color="red" size="xs" onClick={() => descartarPendiente(p.id)}>
                     Descartar
@@ -256,7 +257,7 @@ export default function Documentos({
                         {r.fragmento}
                       </Text>
                     ) : (
-                      r.fecha_alta
+                      formatearFecha(r.fecha_alta)
                     )}
                   </Table.Td>
                 </Table.Tr>

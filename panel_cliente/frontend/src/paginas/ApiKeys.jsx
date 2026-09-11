@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, CopyButton, Group, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 
 export default function ApiKeys({ proyecto, onVolver }) {
   const [keys, setKeys] = useState([])
@@ -134,7 +135,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
                     {k.estado ? "activa" : "revocada"}
                   </Badge>
                 </Table.Td>
-                <Table.Td>{k.fecha_emision}</Table.Td>
+                <Table.Td>{formatearFecha(k.fecha_emision)}</Table.Td>
                 <Table.Td>
                   {k.estado === 1 && (
                     <Anchor component="button" type="button" onClick={() => revocar(k.id)}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Button, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 
 export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
   const [estilos, setEstilos] = useState([])
@@ -96,7 +97,7 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
             {estilos.map((e) => (
               <Table.Tr key={e.id} onClick={() => onVerEstilo(e)} style={{ cursor: "pointer" }}>
                 <Table.Td>{e.nombre_tipo}</Table.Td>
-                <Table.Td>{e.fecha_actualizacion}</Table.Td>
+                <Table.Td>{formatearFecha(e.fecha_actualizacion)}</Table.Td>
               </Table.Tr>
             ))}
             {estilos.length === 0 && (
