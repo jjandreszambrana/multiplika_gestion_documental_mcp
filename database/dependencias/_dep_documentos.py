@@ -14,6 +14,11 @@ CAMPOS_DOCUMENTOS = [
             comentario="Tipo de documento, elegido por el usuario al guardarlo — texto libre, "
                        "no una lista cerrada (ver gd_tipos_documento: catálogo de sugerencias, "
                        "no una restricción)"),
+    Columna(nombre="ambito", tipo="VARCHAR", longitud=50,
+            comentario="Opcional — ámbito de aplicación (p.ej. 'nacional', 'autonómica', "
+                       "'privada' para normativas). Texto libre como tipo_documento pero sin "
+                       "catálogo de sugerencias: no aplica a todos los tipos de documento, "
+                       "NULL si no aplica"),
     Columna(nombre="todas_versiones_buscables", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Si es False (por defecto), solo la versión vigente entra en las búsquedas"),
     Columna(nombre="archivado", tipo="BOOLEAN", not_null=True, default=False,

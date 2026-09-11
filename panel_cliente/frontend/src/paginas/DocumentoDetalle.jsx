@@ -59,6 +59,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 <Table.Td>{documento.tipo_documento}</Table.Td>
               </Table.Tr>
               <Table.Tr>
+                <Table.Th>Ámbito</Table.Th>
+                <Table.Td>{documento.ambito || "—"}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
                 <Table.Th>Fecha del documento</Table.Th>
                 <Table.Td>{documento.fecha_documento}</Table.Td>
               </Table.Tr>

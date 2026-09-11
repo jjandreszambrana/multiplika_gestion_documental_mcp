@@ -113,6 +113,7 @@ async def guardar_documento_gd(
     id_documento_pendiente: int | None = None,
     fecha_caducidad: str | None = None,
     url_origen: str | None = None,
+    ambito: str | None = None,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla,
     pregunta siempre al usuario: tipo de documento (consulta antes
@@ -134,12 +135,16 @@ async def guardar_documento_gd(
     publicada en el BOE) que tú mismo has descargado y convertido a
     markdown, pasa esa URL en `url_origen` — queda guardada solo como
     referencia para poder volver a consultarla, no la vuelve a descargar
-    esta tool."""
+    esta tool.
+    `ambito` es opcional y solo aplica a algunos tipos de documento (p.ej.
+    una normativa: 'nacional', 'autonómica', 'privada'...) — déjalo vacío
+    si no aplica. Solo se guarda al crear el documento, no se puede
+    cambiar al subir una versión nueva de uno ya existente."""
     config, alias_proyecto = await _contexto_actual()
     try:
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
-            id_documento_existente, todas_versiones_buscables, fecha_caducidad, url_origen,
+            id_documento_existente, todas_versiones_buscables, fecha_caducidad, url_origen, ambito,
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
@@ -242,6 +247,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "id_version": version["id"],
         "nombre": documento["nombre"],
         "tipo_documento": documento["tipo_documento"],
+        "ambito": documento["ambito"],
         "fecha_documento": version["fecha_documento"],
         "vigente": version["vigente"],
         "revisado_manualmente": version["revisado_manualmente"],
