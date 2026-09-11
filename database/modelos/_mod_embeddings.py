@@ -43,9 +43,9 @@ async def generar_embeddings(proveedor_embedding: str, api_key: str, textos: lis
     raise ValueError(f"No hay cliente implementado para el proveedor '{sdk}'")
 
 
-async def obtener_api_key(proveedor_embedding: str, alias_proyecto: str) -> str | None:
+async def obtener_api_key(proveedor_embedding: str, id_proyecto: int) -> str | None:
     """Resuelve la clave de API correspondiente al proveedor configurado,
-    de la empresa (tenant) dueña de `alias_proyecto` (repo core)."""
+    de la empresa (tenant) dueña del proyecto `id_proyecto` (repo core)."""
     from database.config_db import get_mistral_api_key, get_openai_api_key
 
     if proveedor_embedding not in PROVEEDORES_EMBEDDING_SOPORTADOS:
@@ -53,7 +53,7 @@ async def obtener_api_key(proveedor_embedding: str, alias_proyecto: str) -> str 
     sdk, _ = proveedor_embedding.split(":", 1)
 
     if sdk == "mistral":
-        return await get_mistral_api_key(alias_proyecto)
+        return await get_mistral_api_key(id_proyecto)
     if sdk == "openai":
-        return await get_openai_api_key(alias_proyecto)
+        return await get_openai_api_key(id_proyecto)
     raise ValueError(f"No hay clave configurable para el proveedor '{sdk}'")

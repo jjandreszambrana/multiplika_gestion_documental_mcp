@@ -18,7 +18,7 @@ async def listar_estilos_informe_gd() -> list[dict]:
     "memoria_anual"). Usa obtener_estilo_informe_gd(nombre_tipo) para ver
     cómo construir uno en concreto."""
     proyecto = await resolver_proyecto_actual()
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await EstilosCRUD(config).listar_tipos()
 
 
@@ -29,7 +29,7 @@ async def obtener_estilo_informe_gd(nombre_tipo: str) -> list:
     nombre y para qué sirve — así sabes cuál es cuál y dónde va cada una
     en el informe."""
     proyecto = await resolver_proyecto_actual()
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
 
     estilo = await EstilosCRUD(config).obtener_por_tipo(nombre_tipo)
     if not estilo:

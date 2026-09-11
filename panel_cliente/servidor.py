@@ -14,7 +14,7 @@ que usan las herramientas MCP — no hay lógica de negocio duplicada.
 Sirve a CUALQUIER cliente que use este producto (resuelve el proyecto
 por id en cada petición, con su base de datos propia) — por eso, a
 diferencia de mcp_server/herramientas/, sync.py del repo core NO lo
-despliega dentro de apps/mcp_server/proyectos/<slug>/ de ningún cliente
+despliega dentro de apps/mcp_server/proyectos/p<id>/ de ningún cliente
 concreto (eso lo dejaría atado a que ese proyecto en particular siga
 existiendo). Va a una ruta estable por producto:
 `apps/mcp_server/paneles_cliente/<nombre_del_repo>/`.
@@ -79,15 +79,15 @@ async def ver_proyecto(
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     es_admin: bool = Depends(es_admin_actual),
 ) -> dict:
-    """Datos básicos del proyecto (nombre, slug) — lo usa el frontend
-    cuando entra directo a un proyecto conocido (enlace del superadmin
-    desde el panel de administración) sin pasar por el selector.
-    `es_admin` le dice al frontend si mostrar la gestión de API keys y de
-    usuarios; `id_tenant` hace falta para gestionar los usuarios de la
-    empresa (viven por tenant, no por proyecto)."""
+    """Datos básicos del proyecto (nombre) — lo usa el frontend cuando
+    entra directo a un proyecto conocido (enlace del superadmin desde el
+    panel de administración) sin pasar por el selector. `es_admin` le
+    dice al frontend si mostrar la gestión de API keys y de usuarios;
+    `id_tenant` hace falta para gestionar los usuarios de la empresa
+    (viven por tenant, no por proyecto)."""
     return {
         "id": proyecto["id"], "id_tenant": proyecto["id_tenant"], "nombre": proyecto["nombre"],
-        "slug": proyecto["slug"], "es_admin": es_admin,
+        "es_admin": es_admin,
     }
 
 
@@ -104,7 +104,7 @@ async def listar_o_buscar_documentos(
     tipo y rango de fechas. Con `q`: búsqueda por contenido (fulltext o
     semántica, según el modo activo del proyecto) — los filtros no
     aplican ahí, solo al listado simple."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
 
     if not q:
         # A diferencia de la búsqueda por contenido, el listado simple sí
@@ -121,7 +121,7 @@ async def listar_o_buscar_documentos(
         return await VersionesCRUD(config).buscar_fulltext(q, limite=30)
 
     proveedor_embedding = await configuracion.obtener_proveedor_embedding()
-    api_key = await obtener_api_key(proveedor_embedding, proyecto["slug"])
+    api_key = await obtener_api_key(proveedor_embedding, proyecto["id"])
     if not api_key:
         raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
@@ -138,7 +138,7 @@ async def listar_o_buscar_documentos(
 async def listar_documentos_pendientes(
     id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> list[dict]:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await DocumentosPendientesCRUD(config).listar_metadatos()
 
 
@@ -151,7 +151,7 @@ async def subir_documentos_pendientes(
     """Subida masiva: varios ficheros en una sola petición, uno por cada
     fila nueva en la cola de pendientes. No se procesan aquí — eso lo hace
     la IA en una conversación posterior (ver guardar_documento_gd)."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     pendientes = DocumentosPendientesCRUD(config)
     creados = []
     for archivo in archivos:
@@ -172,7 +172,7 @@ async def eliminar_documento_pendiente(
     id_proyecto: int, id_pendiente: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> None:
     """Descarta un pendiente sin procesarlo (p.ej. una subida por error)."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await DocumentosPendientesCRUD(config).eliminar(id_pendiente)
 
 
@@ -189,7 +189,7 @@ class NuevoTipoDocumento(BaseModel):
 async def listar_tipos_documento(
     id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> list[dict]:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await TiposDocumentoCRUD(config).listar_nombres()
 
 
@@ -197,7 +197,7 @@ async def listar_tipos_documento(
 async def crear_tipo_documento(
     id_proyecto: int, datos: NuevoTipoDocumento, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     tipos = TiposDocumentoCRUD(config)
     existentes, _ = await tipos.listar(filtros={"nombre": {"op": "=", "valor": datos.nombre}}, limit=1)
     if existentes:
@@ -213,7 +213,7 @@ async def eliminar_tipo_documento(
     """Solo quita el tipo del catálogo de sugerencias — los documentos ya
     guardados con ese tipo no cambian, tipo_documento es texto libre, sin
     referencia a esta tabla."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await TiposDocumentoCRUD(config).eliminar(id_tipo)
 
 
@@ -221,7 +221,7 @@ async def eliminar_tipo_documento(
 async def obtener_documento(
     id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).obtener(id_documento)
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
@@ -244,7 +244,7 @@ async def archivar_documento(
     """Archiva un documento — cualquiera con acceso al proyecto puede
     hacerlo (a diferencia de las API keys, no es una acción de
     administración: es parte del día a día con los documentos)."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).archivar(id_documento)
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
@@ -255,7 +255,7 @@ async def archivar_documento(
 async def desarchivar_documento(
     id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).desarchivar(id_documento)
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
@@ -275,7 +275,7 @@ class ActualizarConfiguracionAvisos(BaseModel):
 async def obtener_configuracion_avisos(
     id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return {"email_avisos": await ConfiguracionCRUD(config).obtener_email_avisos()}
 
 
@@ -284,7 +284,7 @@ async def actualizar_configuracion_avisos(
     id_proyecto: int, datos: ActualizarConfiguracionAvisos,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await ConfiguracionCRUD(config).actualizar_email_avisos(datos.email_avisos)
     return {"email_avisos": await ConfiguracionCRUD(config).obtener_email_avisos()}
 
@@ -317,7 +317,7 @@ async def obtener_cuenta_email(
 ) -> dict:
     """Nunca incluye la contraseña, aunque esté guardada — igual que
     credenciales."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await ConfiguracionCRUD(config).obtener_cuenta_email_metadatos()
 
 
@@ -326,7 +326,7 @@ async def actualizar_cuenta_email(
     id_proyecto: int, datos: ActualizarCuentaEmail,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     configuracion = ConfiguracionCRUD(config)
     await configuracion.actualizar_cuenta_email(
         datos.direccion, datos.usuario, datos.password,
@@ -358,7 +358,7 @@ class ActualizarCredencial(BaseModel):
 async def listar_credenciales(
     id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> list[dict]:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await CredencialesCRUD(config).listar_metadatos()
 
 
@@ -366,7 +366,7 @@ async def listar_credenciales(
 async def crear_credencial(
     id_proyecto: int, datos: NuevaCredencial, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     credenciales = CredencialesCRUD(config)
     if await credenciales.obtener_por_nombre(datos.nombre):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una credencial llamada "{datos.nombre}"')
@@ -380,7 +380,7 @@ async def actualizar_credencial(
     id_proyecto: int, id_credencial: int, datos: ActualizarCredencial,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     credenciales = CredencialesCRUD(config)
     if not await credenciales.obtener(id_credencial):
         raise HTTPException(404, "Credencial no encontrada")
@@ -393,7 +393,7 @@ async def actualizar_credencial(
 async def eliminar_credencial(
     id_proyecto: int, id_credencial: int, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> None:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await CredencialesCRUD(config).eliminar(id_credencial)
 
 
@@ -416,7 +416,7 @@ class ActualizarEstilo(BaseModel):
 async def listar_estilos(
     id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> list[dict]:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await EstilosCRUD(config).listar_tipos()
 
 
@@ -424,7 +424,7 @@ async def listar_estilos(
 async def crear_estilo(
     id_proyecto: int, datos: NuevoEstilo, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     estilos = EstilosCRUD(config)
     if await estilos.obtener_por_tipo(datos.nombre_tipo):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe un estilo llamado "{datos.nombre_tipo}"')
@@ -437,7 +437,7 @@ async def actualizar_estilo(
     id_proyecto: int, id_estilo: int, datos: ActualizarEstilo,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     estilos = EstilosCRUD(config)
     if not await estilos.obtener(id_estilo):
         raise HTTPException(404, "Estilo no encontrado")
@@ -449,7 +449,7 @@ async def actualizar_estilo(
 async def eliminar_estilo(
     id_proyecto: int, id_estilo: int, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> None:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await EstilosCRUD(config).eliminar(id_estilo)
 
 
@@ -457,7 +457,7 @@ async def eliminar_estilo(
 async def listar_imagenes_estilo(
     id_proyecto: int, id_estilo: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
 ) -> list[dict]:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await EstilosImagenesCRUD(config).listar_metadatos_de_estilo(id_estilo)
 
 
@@ -470,7 +470,7 @@ async def subir_imagen_estilo(
     archivo: UploadFile = File(...),
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> dict:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     if not await EstilosCRUD(config).obtener(id_estilo):
         raise HTTPException(404, "Estilo no encontrado")
     contenido = await archivo.read()
@@ -492,7 +492,7 @@ async def ver_imagen_estilo(
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> Response:
     """Sirve el binario — para previsualizarla en el panel (pide sesión, no es pública)."""
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     fila = await EstilosImagenesCRUD(config).obtener(id_imagen)
     if not fila or fila["id_estilo"] != id_estilo:
         raise HTTPException(404, "Imagen no encontrada")
@@ -507,7 +507,7 @@ async def eliminar_imagen_estilo(
     id_proyecto: int, id_estilo: int, id_imagen: int,
     proyecto: dict = Depends(admin_gestion_documental_actual),
 ) -> None:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     await EstilosImagenesCRUD(config).eliminar(id_imagen)
 
 

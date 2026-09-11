@@ -146,7 +146,7 @@ def _enviar_email(cuenta: dict, destinatario: str, proyecto_nombre: str, documen
 
 
 async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     documentos = await _documentos_por_caducar(config, dias)
     if not documentos:
         return
@@ -155,12 +155,12 @@ async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
     cuenta = await _cuenta_email(config)
     if not destinatario or not cuenta:
         print(
-            f"{proyecto['slug']}: {len(documentos)} documento(s) por caducar, pero falta "
+            f"{proyecto['nombre']}: {len(documentos)} documento(s) por caducar, pero falta "
             f"{'email_avisos' if not destinatario else 'la cuenta de correo'} — se omite."
         )
         return
 
-    print(f"{proyecto['slug']}: avisando de {len(documentos)} documento(s) a {destinatario} desde {cuenta['direccion']}.")
+    print(f"{proyecto['nombre']}: avisando de {len(documentos)} documento(s) a {destinatario} desde {cuenta['direccion']}.")
     if simular:
         return
 
@@ -173,7 +173,7 @@ async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
         # bucle entero (bug real encontrado al probarlo, 2026-09-10). No se
         # marca aviso_caducidad_enviado: se reintenta solo en la siguiente
         # ejecución diaria, nada se pierde.
-        print(f"{proyecto['slug']}: fallo mandando el aviso a {destinatario}: {e}")
+        print(f"{proyecto['nombre']}: fallo mandando el aviso a {destinatario}: {e}")
         return
 
     await _marcar_avisados(config, [d["id_version"] for d in documentos])

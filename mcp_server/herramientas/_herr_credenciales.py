@@ -17,5 +17,5 @@ async def listar_credenciales_gd() -> list[dict]:
     key. Se dan de alta y se cambian solo desde el panel, no por
     conversación con la IA."""
     proyecto = await resolver_proyecto_actual()
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     return await CredencialesCRUD(config).listar_metadatos()

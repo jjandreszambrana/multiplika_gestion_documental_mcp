@@ -67,7 +67,7 @@ async def generar_informe_pdf_gd(
     listar_estilos_informe_gd()), incrusta sus imágenes fijas (logo...) al
     principio del PDF."""
     proyecto = await resolver_proyecto_actual()
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
 
     imagenes_html = ""
     if nombre_tipo_estilo:

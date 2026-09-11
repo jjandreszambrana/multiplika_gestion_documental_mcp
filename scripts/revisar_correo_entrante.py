@@ -140,7 +140,7 @@ def _leer_adjuntos_no_leidos(cuenta: dict) -> list[tuple[bytes, str, str]]:
 
 
 async def _procesar_proyecto(proyecto: dict) -> None:
-    config = get_db_config(proyecto["slug"])
+    config = get_db_config(proyecto["id"])
     cuenta = await _cuenta_email(config)
     if not cuenta:
         return
@@ -150,14 +150,14 @@ async def _procesar_proyecto(proyecto: dict) -> None:
     except (imaplib.IMAP4.error, OSError) as e:
         # Una cuenta mal configurada (contraseña caducada, servidor caído...)
         # de un cliente no debe impedir revisar la de los demás.
-        print(f"{proyecto['slug']}: fallo revisando {cuenta['direccion']}: {e}")
+        print(f"{proyecto['nombre']}: fallo revisando {cuenta['direccion']}: {e}")
         return
 
     for contenido, tipo_mime, nombre in adjuntos:
         await _guardar_pendiente(config, contenido, tipo_mime, nombre)
 
     if adjuntos:
-        print(f"{proyecto['slug']}: {len(adjuntos)} adjunto(s) guardado(s) como pendientes.")
+        print(f"{proyecto['nombre']}: {len(adjuntos)} adjunto(s) guardado(s) como pendientes.")
 
 
 async def main() -> None:
