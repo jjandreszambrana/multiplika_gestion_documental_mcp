@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Paper, Text } from "@mantine/core"
 import { api } from "../api"
+import Markdown from "../componentes/Markdown"
 
 export default function Ayuda({ onVolver }) {
   const [markdown, setMarkdown] = useState(null)
@@ -28,9 +29,7 @@ export default function Ayuda({ onVolver }) {
 
       {markdown && (
         <Paper withBorder p="lg">
-          <Text ff="monospace" size="sm" style={{ whiteSpace: "pre-wrap" }}>
-            {markdown}
-          </Text>
+          <Markdown>{markdown}</Markdown>
         </Paper>
       )}
     </>

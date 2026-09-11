@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, Group, Paper, Table, Text, Title } from "@mantine/core"
 import { api } from "../api"
+import Markdown from "../componentes/Markdown"
 import { formatearFecha } from "../formato"
 
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
@@ -105,9 +106,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
             {documento.archivado ? "Desarchivar" : "Archivar"}
           </Button>
           <Paper withBorder p="lg">
-            <Text ff="monospace" size="sm" style={{ whiteSpace: "pre-wrap" }}>
-              {documento.markdown}
-            </Text>
+            <Markdown>{documento.markdown}</Markdown>
           </Paper>
         </>
       )}
