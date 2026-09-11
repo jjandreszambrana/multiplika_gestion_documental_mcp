@@ -229,6 +229,13 @@ Requisito previo, no es una fase de este proyecto: `mtpk-postgres` (librería in
 - Desplegado en `https://mcp-d.multiplika.net/gd`, servicio systemd propio (`multiplika_gd_panel`, puerto 8112) — primer proyecto de cliente con panel propio; `sync.py` del repo core ahora sabe sincronizar una carpeta `panel_cliente/` opcional (su frontend compilado no viaja por git, se copia aparte porque el servidor no tiene Node).
 - Probado de punta a punta en producción real: login, selección de proyecto, listado, búsqueda por contenido, ver un documento completo creado de verdad a través del MCP, y que no se puede ver el proyecto de otra empresa ni sin tener rol asignado.
 
+**Cómo compilar el frontend para producción (gotcha real, 2026-09-11):** `panel_cliente/frontend/vite.config.js` y `src/api.js` leen tres variables de entorno en build time — sin ellas, `npm run build` genera un `dist/` que solo funciona en local, no detrás del proxy de Apache:
+```bash
+cd panel_cliente/frontend
+VITE_BASE=/gd/ VITE_API_ADMIN=/panel/v1 VITE_API_CLIENTE=/gd/v1 npm run build
+```
+Sin `VITE_BASE`, Vite genera rutas de assets absolutas desde la raíz (`/assets/...`) en vez de con el prefijo `/gd/` bajo el que vive el panel — el navegador pide `/assets/index-xxx.js` a un dominio que solo tiene `/gd/assets/index-xxx.js`, Apache lo devuelve 404 (no hay `ProxyPass "/assets"`, solo `/mcp`, `/panel` y `/gd`) y la página sale en blanco. Sin `VITE_API_ADMIN`/`VITE_API_CLIENTE`, `api.js` usa sus valores por defecto de desarrollo (`http://127.0.0.1:8001` y `:8002`) — localhost del navegador de quien entra al panel, no del servidor, así que cualquier llamada a la API falla con "Failed to fetch" aunque la página cargue bien. Al subir el `dist/` compilado siempre hay que borrar lo anterior (`rsync --delete`) — los ficheros llevan hash de contenido en el nombre, así que un `dist/` a medio actualizar puede dejar un `index.html` apuntando a un asset ya borrado.
+
 **Archivar/desarchivar desde el panel — hecho (2026-09-09)**
 Primera acción de escritura real del panel del cliente sobre documentos (hasta entonces solo lectura). Botón Archivar/Desarchivar en el detalle del documento, y una etiqueta gris "🗄 Archivado" tanto en el detalle como en el listado (que a partir de aquí incluye también los archivados, antes se excluían). Permiso: **para cualquiera con acceso al proyecto, no solo admins** — decidido así explícitamente: archivar es parte del día a día con los documentos, no una acción de administración como gestionar API keys. Probado de punta a punta contra `mcp-d.multiplika.net`.
 
