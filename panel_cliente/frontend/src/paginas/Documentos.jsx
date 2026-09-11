@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, FileButton, Group, Select, Table, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, FileButton, Group, Menu, Select, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -13,7 +13,6 @@ export default function Documentos({
   onVerUsuarios,
   onVerAvisos,
   onVerCuentaEmail,
-  onVerAyuda,
 }) {
   const [q, setQ] = useState("")
   const [tipoDocumento, setTipoDocumento] = useState("")
@@ -120,29 +119,39 @@ export default function Documentos({
         </Anchor>
       )}
 
-      <Group mb="lg">
-        {onVerApiKeys && <Button variant="light" onClick={onVerApiKeys}>API keys</Button>}
-        {onVerCredenciales && <Button variant="light" onClick={onVerCredenciales}>Credenciales</Button>}
-        {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
-        {onVerUsuarios && <Button variant="light" onClick={onVerUsuarios}>Usuarios</Button>}
-        {onVerAvisos && <Button variant="light" onClick={onVerAvisos}>Avisos de caducidad</Button>}
-        {onVerCuentaEmail && <Button variant="light" onClick={onVerCuentaEmail}>Cuenta de correo</Button>}
-        {onVerAyuda && <Button variant="light" onClick={onVerAyuda}>Ayuda</Button>}
+      <Group mb="lg" justify="space-between" align="flex-start">
+        <Group>
+          <FileButton onChange={subirPendientes} multiple>
+            {(props) => (
+              <Button {...props} variant="light" loading={subiendo}>
+                Subir documentos
+              </Button>
+            )}
+          </FileButton>
+          {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
+        </Group>
+
+        {(onVerApiKeys || onVerCredenciales || onVerUsuarios || onVerAvisos || onVerCuentaEmail) && (
+          <Menu shadow="md" position="bottom-end">
+            <Menu.Target>
+              <Button variant="default">Configuración ⌄</Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {onVerCuentaEmail && <Menu.Item onClick={onVerCuentaEmail}>Cuenta de correo</Menu.Item>}
+              {onVerAvisos && <Menu.Item onClick={onVerAvisos}>Avisos de caducidad</Menu.Item>}
+              {onVerCredenciales && <Menu.Item onClick={onVerCredenciales}>Credenciales</Menu.Item>}
+              <Menu.Divider />
+              {onVerUsuarios && <Menu.Item onClick={onVerUsuarios}>Usuarios</Menu.Item>}
+              {onVerApiKeys && <Menu.Item onClick={onVerApiKeys}>API keys</Menu.Item>}
+            </Menu.Dropdown>
+          </Menu>
+        )}
       </Group>
 
-      <Group mb="lg" align="center">
-        <FileButton onChange={subirPendientes} multiple>
-          {(props) => (
-            <Button {...props} variant="light" loading={subiendo}>
-              Subir documentos
-            </Button>
-          )}
-        </FileButton>
-        <Text c="dimmed" size="sm">
-          Se suben a la cola de pendientes: tu IA los procesará la próxima vez que hables con ella
-          (te preguntará el tipo, el nombre...), no aparecen todavía en el listado de abajo.
-        </Text>
-      </Group>
+      <Text c="dimmed" size="sm" mb="lg">
+        Los documentos que subas se ponen en la cola de pendientes: tu IA los procesará la próxima vez que
+        hables con ella (te preguntará el tipo, el nombre...), no aparecen todavía en el listado de abajo.
+      </Text>
 
       {errorPendientes && (
         <Alert color="red" mb="md" onClose={() => setErrorPendientes(null)} withCloseButton>

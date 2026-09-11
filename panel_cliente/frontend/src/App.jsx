@@ -133,9 +133,14 @@ export default function App() {
       <Box component="header" bg="white" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
         <Group justify="space-between" px="xl" py="md">
           <Title order={3}>Gestión documental{esSuperadmin && " — modo soporte"}</Title>
-          <Anchor component="button" type="button" onClick={cerrarSesion}>
-            Cerrar sesión
-          </Anchor>
+          <Group gap="lg">
+            <Anchor component="button" type="button" onClick={() => setVista("ayuda")}>
+              Ayuda
+            </Anchor>
+            <Anchor component="button" type="button" onClick={cerrarSesion}>
+              Cerrar sesión
+            </Anchor>
+          </Group>
         </Group>
       </Box>
 
@@ -179,7 +184,6 @@ export default function App() {
             onVerUsuarios={proyecto.es_admin ? () => setVista("usuarios") : null}
             onVerAvisos={proyecto.es_admin ? () => setVista("avisos") : null}
             onVerCuentaEmail={proyecto.es_admin ? () => setVista("cuenta-email") : null}
-            onVerAyuda={() => setVista("ayuda")}
             onVerEstilos={() => {
               setEstiloActivo(null)
               setVista("estilos")
