@@ -1,21 +1,7 @@
 import { useEffect, useState } from "react"
-import {
-  Alert,
-  Anchor,
-  Badge,
-  Button,
-  FileButton,
-  Group,
-  List,
-  Menu,
-  Paper,
-  Select,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core"
+import { Alert, Anchor, Badge, Button, Group, Menu, Select, Table, Text, TextInput, Title } from "@mantine/core"
 import { api } from "../api"
+import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
 import { formatearFecha } from "../formato"
 
 export default function Documentos({
@@ -40,6 +26,7 @@ export default function Documentos({
   const [pendientes, setPendientes] = useState([])
   const [subiendo, setSubiendo] = useState(false)
   const [errorPendientes, setErrorPendientes] = useState(null)
+  const [modalSubidaAbierto, setModalSubidaAbierto] = useState(false)
 
   useEffect(() => {
     api.listarTiposDocumento(proyecto.id)
@@ -135,11 +122,17 @@ export default function Documentos({
       )}
 
       <Group mb="lg" justify="space-between" align="flex-start">
-        {onVerEstilos ? (
-          <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>
-        ) : (
-          <div />
-        )}
+        <Group>
+          <Button variant="light" onClick={() => setModalSubidaAbierto(true)}>
+            Subir documentos...
+            {pendientes.length > 0 && (
+              <Badge ml="xs" size="sm" circle>
+                {pendientes.length}
+              </Badge>
+            )}
+          </Button>
+          {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
+        </Group>
 
         {(onVerApiKeys || onVerCredenciales || onVerUsuarios || onVerAvisos || onVerCuentaEmail) && (
           <Menu shadow="md" position="bottom-end">
@@ -158,59 +151,16 @@ export default function Documentos({
         )}
       </Group>
 
-      <Paper withBorder p="md" mb="lg">
-        <Title order={4} mb="xs">Subir documentos sin hablar con tu IA ahora mismo</Title>
-        <List size="sm" spacing="xs" mb="md">
-          <List.Item>Sube aquí el PDF o la foto (varios a la vez si quieres) — todavía no se guarda nada, entra en una cola de <b>pendientes</b>.</List.Item>
-          <List.Item>La próxima vez que hables con tu IA, te avisa de lo que tienes en cola y te hace las preguntas de siempre (tipo de documento, nombre, si es una versión nueva de algo que ya tenías...) antes de guardarlo de verdad.</List.Item>
-          <List.Item>Si tienes una cuenta de correo configurada (menú Configuración → Cuenta de correo), lo que le reenvíes entra en esta misma cola sin que tengas que venir al panel.</List.Item>
-        </List>
-
-        <FileButton onChange={subirPendientes} multiple>
-          {(props) => (
-            <Button {...props} loading={subiendo}>
-              Subir documentos
-            </Button>
-          )}
-        </FileButton>
-
-        {errorPendientes && (
-          <Alert color="red" mt="md" onClose={() => setErrorPendientes(null)} withCloseButton>
-            {errorPendientes}
-          </Alert>
-        )}
-
-        {pendientes.length > 0 ? (
-          <Table striped withTableBorder mt="md">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Documento pendiente</Table.Th>
-                <Table.Th>Origen</Table.Th>
-                <Table.Th>Fecha de alta</Table.Th>
-                <Table.Th></Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {pendientes.map((p) => (
-                <Table.Tr key={p.id}>
-                  <Table.Td>{p.nombre_original}</Table.Td>
-                  <Table.Td>{p.origen === "email" ? "Email" : "Panel"}</Table.Td>
-                  <Table.Td>{formatearFecha(p.fecha_alta)}</Table.Td>
-                  <Table.Td>
-                    <Button variant="subtle" color="red" size="xs" onClick={() => descartarPendiente(p.id)}>
-                      Descartar
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        ) : (
-          <Text c="dimmed" size="sm" mt="md">
-            No tienes ningún documento pendiente ahora mismo.
-          </Text>
-        )}
-      </Paper>
+      <SubirDocumentosModal
+        opened={modalSubidaAbierto}
+        onClose={() => setModalSubidaAbierto(false)}
+        pendientes={pendientes}
+        subiendo={subiendo}
+        error={errorPendientes}
+        onCerrarError={() => setErrorPendientes(null)}
+        onSubir={subirPendientes}
+        onDescartar={descartarPendiente}
+      />
 
       <Group component="form" onSubmit={buscar} mb="sm">
         <TextInput

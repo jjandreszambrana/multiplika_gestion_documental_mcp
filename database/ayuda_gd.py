@@ -57,7 +57,11 @@ pierde.
 Dos formas de meter documentos en la cola sin hablar con tu IA en ese \
 momento:
 
-- **Subida masiva desde el panel** (botón "Subir documentos").
+- **Subida masiva desde el panel**: botón "Subir documentos...", arriba \
+  del listado. Se abre una ventana donde arrastras o eliges varios \
+  ficheros a la vez (PDF o foto) — se pueden ir añadiendo de uno en uno \
+  o todos juntos, y quitar alguno antes de confirmar. Ahí mismo ves lo \
+  que ya tienes en cola y puedes descartar algo que no haga falta.
 - **Reenviándolos a tu cuenta de correo** (si la tienes configurada en \
   el panel) — tu IA los recoge de ahí sola.
 
