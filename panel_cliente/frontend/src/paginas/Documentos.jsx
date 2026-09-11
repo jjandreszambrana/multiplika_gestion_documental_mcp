@@ -1,5 +1,20 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, FileButton, Group, Menu, Select, Table, Text, TextInput, Title } from "@mantine/core"
+import {
+  Alert,
+  Anchor,
+  Badge,
+  Button,
+  FileButton,
+  Group,
+  List,
+  Menu,
+  Paper,
+  Select,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -120,16 +135,11 @@ export default function Documentos({
       )}
 
       <Group mb="lg" justify="space-between" align="flex-start">
-        <Group>
-          <FileButton onChange={subirPendientes} multiple>
-            {(props) => (
-              <Button {...props} variant="light" loading={subiendo}>
-                Subir documentos
-              </Button>
-            )}
-          </FileButton>
-          {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
-        </Group>
+        {onVerEstilos ? (
+          <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>
+        ) : (
+          <div />
+        )}
 
         {(onVerApiKeys || onVerCredenciales || onVerUsuarios || onVerAvisos || onVerCuentaEmail) && (
           <Menu shadow="md" position="bottom-end">
@@ -148,43 +158,59 @@ export default function Documentos({
         )}
       </Group>
 
-      <Text c="dimmed" size="sm" mb="lg">
-        Los documentos que subas se ponen en la cola de pendientes: tu IA los procesará la próxima vez que
-        hables con ella (te preguntará el tipo, el nombre...), no aparecen todavía en el listado de abajo.
-      </Text>
+      <Paper withBorder p="md" mb="lg">
+        <Title order={4} mb="xs">Subir documentos sin hablar con tu IA ahora mismo</Title>
+        <List size="sm" spacing="xs" mb="md">
+          <List.Item>Sube aquí el PDF o la foto (varios a la vez si quieres) — todavía no se guarda nada, entra en una cola de <b>pendientes</b>.</List.Item>
+          <List.Item>La próxima vez que hables con tu IA, te avisa de lo que tienes en cola y te hace las preguntas de siempre (tipo de documento, nombre, si es una versión nueva de algo que ya tenías...) antes de guardarlo de verdad.</List.Item>
+          <List.Item>Si tienes una cuenta de correo configurada (menú Configuración → Cuenta de correo), lo que le reenvíes entra en esta misma cola sin que tengas que venir al panel.</List.Item>
+        </List>
 
-      {errorPendientes && (
-        <Alert color="red" mb="md" onClose={() => setErrorPendientes(null)} withCloseButton>
-          {errorPendientes}
-        </Alert>
-      )}
+        <FileButton onChange={subirPendientes} multiple>
+          {(props) => (
+            <Button {...props} loading={subiendo}>
+              Subir documentos
+            </Button>
+          )}
+        </FileButton>
 
-      {pendientes.length > 0 && (
-        <Table striped withTableBorder mb="lg">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Documento pendiente</Table.Th>
-              <Table.Th>Origen</Table.Th>
-              <Table.Th>Fecha de alta</Table.Th>
-              <Table.Th></Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {pendientes.map((p) => (
-              <Table.Tr key={p.id}>
-                <Table.Td>{p.nombre_original}</Table.Td>
-                <Table.Td>{p.origen === "email" ? "Email" : "Panel"}</Table.Td>
-                <Table.Td>{formatearFecha(p.fecha_alta)}</Table.Td>
-                <Table.Td>
-                  <Button variant="subtle" color="red" size="xs" onClick={() => descartarPendiente(p.id)}>
-                    Descartar
-                  </Button>
-                </Table.Td>
+        {errorPendientes && (
+          <Alert color="red" mt="md" onClose={() => setErrorPendientes(null)} withCloseButton>
+            {errorPendientes}
+          </Alert>
+        )}
+
+        {pendientes.length > 0 ? (
+          <Table striped withTableBorder mt="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Documento pendiente</Table.Th>
+                <Table.Th>Origen</Table.Th>
+                <Table.Th>Fecha de alta</Table.Th>
+                <Table.Th></Table.Th>
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      )}
+            </Table.Thead>
+            <Table.Tbody>
+              {pendientes.map((p) => (
+                <Table.Tr key={p.id}>
+                  <Table.Td>{p.nombre_original}</Table.Td>
+                  <Table.Td>{p.origen === "email" ? "Email" : "Panel"}</Table.Td>
+                  <Table.Td>{formatearFecha(p.fecha_alta)}</Table.Td>
+                  <Table.Td>
+                    <Button variant="subtle" color="red" size="xs" onClick={() => descartarPendiente(p.id)}>
+                      Descartar
+                    </Button>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        ) : (
+          <Text c="dimmed" size="sm" mt="md">
+            No tienes ningún documento pendiente ahora mismo.
+          </Text>
+        )}
+      </Paper>
 
       <Group component="form" onSubmit={buscar} mb="sm">
         <TextInput
