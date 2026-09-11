@@ -20,6 +20,7 @@ import EstiloDetalle from "./paginas/EstiloDetalle"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
+import Ayuda from "./paginas/Ayuda"
 
 export default function App() {
   const [sesion, setSesion] = useState(() => {
@@ -155,6 +156,8 @@ export default function App() {
           <Avisos proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : vista === "cuenta-email" ? (
           <CuentaCorreo proyecto={proyecto} onVolver={() => setVista("documentos")} />
+        ) : vista === "ayuda" ? (
+          <Ayuda onVolver={() => setVista("documentos")} />
         ) : vista === "estilos" && estiloActivo ? (
           <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
         ) : vista === "estilos" ? (
@@ -176,6 +179,7 @@ export default function App() {
             onVerUsuarios={proyecto.es_admin ? () => setVista("usuarios") : null}
             onVerAvisos={proyecto.es_admin ? () => setVista("avisos") : null}
             onVerCuentaEmail={proyecto.es_admin ? () => setVista("cuenta-email") : null}
+            onVerAyuda={() => setVista("ayuda")}
             onVerEstilos={() => {
               setEstiloActivo(null)
               setVista("estilos")

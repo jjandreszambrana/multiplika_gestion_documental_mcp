@@ -40,6 +40,7 @@ from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from lib.api_keys import generar_api_key
 
+from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
@@ -61,6 +62,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/v1/ayuda")
+async def obtener_ayuda() -> dict:
+    """Mismo texto que la tool MCP `obtener_ayuda_gd()` (ver
+    database/ayuda_gd.py) — cómo funciona la Gestión Documental, para la
+    pantalla "Ayuda" del panel. No depende de ningún proyecto ni requiere
+    sesión: es contenido estático, igual para cualquier cliente."""
+    return {"markdown": TEXTO_AYUDA_GD}
 
 
 @app.get("/v1/proyectos/{id_proyecto}")

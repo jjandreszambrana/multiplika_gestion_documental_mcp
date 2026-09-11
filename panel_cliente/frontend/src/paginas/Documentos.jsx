@@ -13,6 +13,7 @@ export default function Documentos({
   onVerUsuarios,
   onVerAvisos,
   onVerCuentaEmail,
+  onVerAyuda,
 }) {
   const [q, setQ] = useState("")
   const [tipoDocumento, setTipoDocumento] = useState("")
@@ -126,6 +127,7 @@ export default function Documentos({
         {onVerUsuarios && <Button variant="light" onClick={onVerUsuarios}>Usuarios</Button>}
         {onVerAvisos && <Button variant="light" onClick={onVerAvisos}>Avisos de caducidad</Button>}
         {onVerCuentaEmail && <Button variant="light" onClick={onVerCuentaEmail}>Cuenta de correo</Button>}
+        {onVerAyuda && <Button variant="light" onClick={onVerAyuda}>Ayuda</Button>}
       </Group>
 
       <Group mb="lg" align="center">

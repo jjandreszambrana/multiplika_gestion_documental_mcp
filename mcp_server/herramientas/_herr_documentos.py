@@ -9,6 +9,7 @@ from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
 
+from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
@@ -53,6 +54,16 @@ async def _reindexar_si_semantico(
     api_key = await _clave_embedding_o_error(proveedor_embedding, alias_proyecto)
     await reindexar_version(config, proveedor_embedding, api_key, id_version, markdown)
     await limpiar_chunks_no_buscables(config, id_documento)
+
+
+@mcp_app.tool()
+async def obtener_ayuda_gd() -> str:
+    """Explicación en lenguaje sencillo de cómo funciona la Gestión
+    Documental (guardar, buscar, corregir, archivar, caducidades,
+    normativas, el panel web...). Úsala cuando el cliente pregunte cómo
+    funciona esto, qué puede hacer, o esté perdido — mismo texto que la
+    pantalla "Ayuda" del panel."""
+    return TEXTO_AYUDA_GD
 
 
 @mcp_app.tool()
