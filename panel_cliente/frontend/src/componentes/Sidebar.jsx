@@ -122,11 +122,12 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
             </ActionIcon>
           </Tooltip>
         </Group>
-        <Tooltip label={`Compilado el ${formatearFecha(__BUILD_DATE__)}`} position="top" openDelay={300}>
-          <Text size="11px" c="dimmed" ta="center" mt="6" style={{ cursor: "default" }}>
-            v{__APP_VERSION__} · rev. {__APP_REVISION__}
-          </Text>
-        </Tooltip>
+        <Text size="11px" c="dimmed" ta="center" mt="6">
+          v{__APP_VERSION__} · rev. {__APP_REVISION__}
+        </Text>
+        <Text size="11px" c="dimmed" ta="center">
+          {formatearFecha(__BUILD_DATE__)}
+        </Text>
       </AppShell.Section>
     </AppShell.Navbar>
   )

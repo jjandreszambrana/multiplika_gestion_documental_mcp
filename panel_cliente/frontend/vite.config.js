@@ -6,10 +6,12 @@ import { defineConfig } from 'vite'
 const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url))).version
 
 function revisionGit() {
+  // En decimal (número de commits), no el hash corto — más fácil de
+  // comparar de un vistazo entre servidores ("¿cuál es más reciente?").
   try {
-    return execSync('git rev-parse --short HEAD', { cwd: import.meta.dirname }).toString().trim()
+    return execSync('git rev-list --count HEAD', { cwd: import.meta.dirname }).toString().trim()
   } catch {
-    return "sin-git"
+    return "0"
   }
 }
 
