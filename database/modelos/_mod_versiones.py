@@ -70,6 +70,18 @@ class VersionesCRUD(AsyncCrudBase):
         await self.update(version["id"], {"borrador": False})
         return await self.obtener(version["id"])
 
+    async def actualizar_incumplimientos(
+        self, id_documento: int, incumplimientos: str | None, id_version: int | None = None
+    ) -> dict | None:
+        """Ver gd_versiones.incumplimientos — la IA la llama tras
+        evaluar el documento contra el formato_requerido/normativa_aplicable
+        de su tipo (o tras corregirlo, para dejarlo en NULL si ya cumple)."""
+        version = await self.obtener_completo(id_documento, id_version)
+        if not version:
+            return None
+        await self.update(version["id"], {"incumplimientos": incumplimientos})
+        return await self.obtener(version["id"])
+
     async def guardar_borrador(self, id_version: int, markdown: str, id_usuario: int) -> dict | None:
         """Guardado intermedio desde el editor del panel (ver
         docs/gestion-documental.md → "Edición desde el panel"): pisa
@@ -157,6 +169,7 @@ async def guardar_documento(
     url_origen: str | None = None,
     ambito: str | None = None,
     borrador: bool = False,
+    incumplimientos: str | None = None,
 ) -> dict:
     """Documento nuevo (crea `gd_documentos` + primera versión) o nueva
     versión de uno existente (desmarca la vigente anterior e inserta la
@@ -193,6 +206,7 @@ async def guardar_documento(
                         "url_origen": url_origen,
                         "revisado_manualmente": False,
                         "borrador": borrador,
+                        "incumplimientos": incumplimientos,
                     },
                     db=db,
                     conexion=cx,
@@ -226,6 +240,7 @@ async def guardar_documento(
                 "fecha_caducidad": fecha_caducidad,
                 "url_origen": url_origen,
                 "borrador": borrador,
+                "incumplimientos": incumplimientos,
             },
             db=db,
             conexion=cx,

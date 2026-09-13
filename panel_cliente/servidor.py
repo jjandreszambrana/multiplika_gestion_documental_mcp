@@ -211,6 +211,11 @@ class NuevoTipoDocumento(BaseModel):
     nombre: str
 
 
+class ActualizarTipoDocumento(BaseModel):
+    formato_requerido: str | None = None
+    normativa_aplicable: str | None = None
+
+
 @app.get("/v1/proyectos/{id_proyecto}/tipos-documento")
 async def listar_tipos_documento(
     id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
@@ -229,6 +234,24 @@ async def crear_tipo_documento(
     if existentes:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe el tipo "{datos.nombre}"')
     id_tipo = await tipos.crear(datos.nombre)
+    return await tipos.obtener(id_tipo)
+
+
+@app.put("/v1/proyectos/{id_proyecto}/tipos-documento/{id_tipo}")
+async def actualizar_tipo_documento(
+    id_proyecto: int, id_tipo: int, datos: ActualizarTipoDocumento,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    """Define (o borra) el formato/normativa que debe cumplir un
+    documento de este tipo — ver docs/gestion-documental.md →
+    "Cumplimiento de formato/normativa". No afecta a documentos ya
+    guardados, solo a cómo la IA evalúa los que se guarden a partir de
+    ahora."""
+    config = get_db_config(proyecto["id"])
+    tipos = TiposDocumentoCRUD(config)
+    if not await tipos.obtener(id_tipo):
+        raise HTTPException(404, "Tipo de documento no encontrado")
+    await tipos.actualizar_requisitos(id_tipo, datos.formato_requerido, datos.normativa_aplicable)
     return await tipos.obtener(id_tipo)
 
 
@@ -260,6 +283,7 @@ async def obtener_documento(
         "fecha_caducidad": version["fecha_caducidad"] if version else None,
         "fecha_subida": version["fecha_subida"] if version else None,
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
+        "incumplimientos": version["incumplimientos"] if version else None,
         "url_origen": version["url_origen"] if version else None,
         # Borrador de edición sin confirmar (ver docs/gestion-documental.md
         # → "Edición desde el panel") — si "tmp" tiene contenido, el

@@ -73,7 +73,13 @@ async def listar_tipos_documento_gd() -> list[dict]:
     tipo ya existente en vez de crear uno nuevo por una variación del
     nombre (p.ej. "Factura" vs "facturas"). Consúltala antes de preguntar
     el tipo al guardar un documento; si el que hace falta no está,
-    guardar_documento_gd lo añade solo la primera vez que se usa."""
+    guardar_documento_gd lo añade solo la primera vez que se usa.
+
+    Algunos tipos llevan `formato_requerido` y/o `normativa_aplicable`
+    (los gestiona el admin del proyecto desde el panel) — si el tipo del
+    documento que vas a guardar los tiene, compáralo contra ese texto
+    antes de llamar a guardar_documento_gd y pasa lo que no cumpla en su
+    parámetro `incumplimientos` (ver esa tool)."""
     config, _ = await _contexto_actual()
     return await TiposDocumentoCRUD(config).listar_nombres()
 
@@ -126,6 +132,7 @@ async def guardar_documento_gd(
     url_origen: str | None = None,
     ambito: str | None = None,
     borrador: bool = False,
+    incumplimientos: str | None = None,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla,
     pregunta siempre al usuario: tipo de documento (consulta antes
@@ -167,13 +174,22 @@ async def guardar_documento_gd(
     `ambito` es opcional y solo aplica a algunos tipos de documento (p.ej.
     una normativa: 'nacional', 'autonómica', 'privada'...) — déjalo vacío
     si no aplica. Solo se guarda al crear el documento, no se puede
-    cambiar al subir una versión nueva de uno ya existente."""
+    cambiar al subir una versión nueva de uno ya existente.
+
+    `incumplimientos`: si el tipo de este documento tiene
+    `formato_requerido` y/o `normativa_aplicable` (consulta
+    listar_tipos_documento_gd antes de guardar), compara el documento
+    contra ellos y describe aquí, en tus propias palabras, lo que no
+    cumpla (p.ej. "falta el desglose de IVA por tipo impositivo"). Déjalo
+    vacío si cumple o su tipo no tiene requisitos definidos. Si más
+    adelante se corrige y ya cumple, usa actualizar_incumplimientos_gd
+    para dejarlo vacío — no se limpia solo."""
     config, id_proyecto = await _contexto_actual()
     try:
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
             id_documento_existente, todas_versiones_buscables, fecha_caducidad, url_origen, ambito,
-            borrador,
+            borrador, incumplimientos,
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
@@ -205,6 +221,32 @@ async def confirmar_documento_gd(id_documento: int, id_version: int | None = Non
         "id_documento": id_documento,
         "id_version": version["id"],
         "borrador": version["borrador"],
+    }
+
+
+@mcp_app.tool()
+async def actualizar_incumplimientos_gd(
+    id_documento: int, incumplimientos: str | None, id_version: int | None = None
+) -> dict:
+    """Actualiza qué no cumple un documento respecto al formato/normativa
+    de su tipo (ver `incumplimientos` en guardar_documento_gd), sin tocar
+    su contenido. Úsala tras corregir_documento_gd o guardar_documento_gd
+    si eso cambia el cumplimiento, o si simplemente vuelves a evaluarlo:
+    pasa `incumplimientos=None` para dejarlo en blanco (ya cumple), o el
+    texto actualizado si sigue sin cumplir. Actúa sobre la versión
+    vigente por defecto, o `id_version` si se indica."""
+    config, _ = await _contexto_actual()
+    version = await VersionesCRUD(config).actualizar_incumplimientos(id_documento, incumplimientos, id_version)
+    if not version:
+        raise ToolError(
+            f"No hay ninguna versión vigente para el documento {id_documento}"
+            if id_version is None
+            else f"La versión {id_version} no existe o no pertenece al documento {id_documento}"
+        )
+    return {
+        "id_documento": id_documento,
+        "id_version": version["id"],
+        "incumplimientos": version["incumplimientos"],
     }
 
 
@@ -306,6 +348,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "vigente": version["vigente"],
         "borrador": version["borrador"],
         "revisado_manualmente": version["revisado_manualmente"],
+        "incumplimientos": version["incumplimientos"],
         "url_origen": version["url_origen"],
         "markdown": version["markdown_actual"],
     }
@@ -375,4 +418,5 @@ async def corregir_documento_gd(
         "markdown": version["markdown_actual"],
         "revisado_manualmente": version["revisado_manualmente"],
         "borrador": version["borrador"],
+        "incumplimientos": version["incumplimientos"],
     }

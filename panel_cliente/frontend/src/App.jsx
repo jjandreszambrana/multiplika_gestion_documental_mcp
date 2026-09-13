@@ -16,6 +16,7 @@ import DocumentoDetalle from "./paginas/DocumentoDetalle"
 import ApiKeys from "./paginas/ApiKeys"
 import Credenciales from "./paginas/Credenciales"
 import Estilos from "./paginas/Estilos"
+import TiposDocumento from "./paginas/TiposDocumento"
 import EstiloDetalle from "./paginas/EstiloDetalle"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
@@ -167,6 +168,8 @@ export default function App() {
           <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
         ) : vista === "estilos" ? (
           <Estilos proyecto={proyecto} onVolver={() => setVista("documentos")} onVerEstilo={setEstiloActivo} />
+        ) : vista === "tipos-documento" ? (
+          <TiposDocumento proyecto={proyecto} onVolver={() => setVista("documentos")} />
         ) : (
           <Documentos
             proyecto={proyecto}
@@ -188,6 +191,7 @@ export default function App() {
               setEstiloActivo(null)
               setVista("estilos")
             }}
+            onVerTiposDocumento={() => setVista("tipos-documento")}
           />
         )}
       </Container>

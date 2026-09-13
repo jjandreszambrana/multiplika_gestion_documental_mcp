@@ -103,6 +103,11 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               </Badge>
             )}
           </Group>
+          {documento.incumplimientos && (
+            <Alert color="red" mb="md" title="No cumple el formato/normativa de su tipo">
+              {documento.incumplimientos}
+            </Alert>
+          )}
           <Table withTableBorder mb="lg" w="fit-content">
             <Table.Tbody>
               <Table.Tr>

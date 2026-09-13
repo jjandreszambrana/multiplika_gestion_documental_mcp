@@ -188,6 +188,8 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/tipos-documento`, { nombre }),
   eliminarTipoDocumento: (idProyecto, idTipo) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/tipos-documento/${idTipo}`),
+  actualizarTipoDocumento: (idProyecto, idTipo, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/tipos-documento/${idTipo}`, datos),
 
   obtenerConfiguracionAvisos: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/configuracion/avisos`),

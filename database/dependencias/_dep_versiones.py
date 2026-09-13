@@ -47,6 +47,11 @@ CAMPOS_VERSIONES = [
             comentario="Cuándo se escribió por última vez 'tmp'. NULL si 'tmp' está vacío"),
     Columna(nombre="revisado_manualmente", tipo="BOOLEAN", not_null=True, default=False,
             comentario="True si markdown_actual fue corregido a mano tras la generación"),
+    Columna(nombre="incumplimientos", tipo="MEDIUMTEXT",
+            comentario="Qué no cumple este documento del formato_requerido/normativa_aplicable "
+                       "de su tipo (ver gd_tipos_documento), redactado por la IA al guardarlo. "
+                       "NULL si cumple o su tipo no tiene requisitos definidos. Se actualiza con "
+                       "actualizar_incumplimientos_gd — al resolverse, vuelve a NULL"),
     Columna(nombre="tsvector_actual", tipo="TSVECTOR",
             generado=f"to_tsvector('spanish_unaccent', regexp_replace(markdown_actual, "
                      f"'{PATRON_SIGLAS}', '', 'g'))",

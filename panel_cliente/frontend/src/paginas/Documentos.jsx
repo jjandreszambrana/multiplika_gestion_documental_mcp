@@ -11,6 +11,7 @@ export default function Documentos({
   onVerApiKeys,
   onVerCredenciales,
   onVerEstilos,
+  onVerTiposDocumento,
   onVerUsuarios,
   onVerAvisos,
   onVerCuentaEmail,
@@ -132,6 +133,11 @@ export default function Documentos({
             )}
           </Button>
           {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
+          {onVerTiposDocumento && (
+            <Button variant="light" onClick={onVerTiposDocumento}>
+              Tipos de documento
+            </Button>
+          )}
         </Group>
 
         {(onVerApiKeys || onVerCredenciales || onVerUsuarios || onVerAvisos || onVerCuentaEmail) && (

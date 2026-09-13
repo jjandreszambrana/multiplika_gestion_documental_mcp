@@ -17,6 +17,15 @@ CAMPOS_TIPOS_DOCUMENTO = [
             comentario="p.ej. \"factura\" — catálogo de sugerencias para el filtro del panel y "
                        "para que la IA reutilice tipos ya existentes, no una lista cerrada: "
                        "gd_documentos.tipo_documento no tiene FK a esta tabla"),
+    Columna(nombre="formato_requerido", tipo="MEDIUMTEXT",
+            comentario="Opcional — cómo debe estar estructurado un documento de este tipo "
+                       "(p.ej. qué campos tiene que llevar una factura). La IA lo lee antes de "
+                       "guardar un documento de este tipo para valorar si cumple, ver "
+                       "'Cumplimiento de formato/normativa' en docs/gestion-documental.md"),
+    Columna(nombre="normativa_aplicable", tipo="MEDIUMTEXT",
+            comentario="Opcional — normativa o reglamento que debe cumplir un documento de "
+                       "este tipo. Igual que formato_requerido, es una guía para la IA, no una "
+                       "validación estructurada"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP")),
 ]

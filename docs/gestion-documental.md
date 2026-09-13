@@ -46,7 +46,9 @@ gd_documentos
 
 gd_tipos_documento (catálogo abierto de sugerencias, no una lista cerrada — ver más abajo)
   - id
-  - nombre       VARCHAR(50) UNIQUE
+  - nombre               VARCHAR(50) UNIQUE
+  - formato_requerido    TEXT  -- opcional, ver "Cumplimiento de formato/normativa"
+  - normativa_aplicable  TEXT  -- opcional, ídem
   - fecha_alta
 
 gd_versiones
@@ -60,6 +62,7 @@ gd_versiones
   - tmp_id_usuario        INT       -- quién dejó ese borrador (→ mcpc_usuarios.id, sin FK real)
   - tmp_fecha             TIMESTAMP -- cuándo se escribió tmp por última vez
   - revisado_manualmente  BOOLEAN DEFAULT FALSE
+  - incumplimientos       TEXT  -- opcional, ver "Cumplimiento de formato/normativa"
   - tsvector_actual       (GENERATED ALWAYS AS to_tsvector(markdown_actual) STORED + índice GIN)
   - fecha_documento       -- la del propio documento, no la de subida
   - fecha_subida
@@ -135,10 +138,18 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 
 - **`listar_tipos_documento_gd()`** (tool MCP): devuelve el catálogo. La IA la consulta antes de preguntar el tipo al guardar un documento, y sugiere uno de los ya existentes si encaja.
 - **`guardar_documento_gd`**: si el tipo indicado no está en el catálogo (y es un documento nuevo, no una versión nueva de uno existente), se añade solo — sin que el cliente tenga que darlo de alta antes en el panel.
-- **Gestión desde el panel**: `GET/POST /v1/proyectos/{id}/tipos-documento` (cualquier usuario del proyecto) y `DELETE /v1/proyectos/{id}/tipos-documento/{id_tipo}` (solo admin) — un cliente puede curar su propio catálogo (añadir tipos por adelantado, borrar uno mal escrito) sin depender de nosotros. Borrar una entrada del catálogo no afecta a los documentos que ya usan ese texto como `tipo_documento` — son independientes, el catálogo es solo una ayuda de sugerencia.
+- **Gestión desde el panel**: `GET/POST /v1/proyectos/{id}/tipos-documento` (cualquier usuario del proyecto) y `PUT`/`DELETE /v1/proyectos/{id}/tipos-documento/{id_tipo}` (solo admin) — un cliente puede curar su propio catálogo (añadir tipos por adelantado, borrar uno mal escrito, definir formato/normativa — ver "Cumplimiento de formato/normativa") sin depender de nosotros. Borrar una entrada del catálogo no afecta a los documentos que ya usan ese texto como `tipo_documento` — son independientes, el catálogo es solo una ayuda de sugerencia.
 - Al aplicar el esquema (`update_db.py`) se siembran los 5 tipos por defecto **solo si la tabla está vacía** — así un cliente que ya haya editado su catálogo no los ve reaparecer en cada migración futura.
 
 **Gotcha de migración encontrado al probarlo (2026-09-10):** el proyecto ya provisionado (`desarrollo_interno_gestion_documental_dev`) tenía, además del tipo de columna, una restricción `CHECK` residual (`gd_documentos_tipo_documento_check`, `tipo_documento IN ('factura', ...)`) de una versión anterior del esquema. `ManagerDB.crear_todo()` de `mtpk_postgres` no la detectó ni la quitó (ni siquiera con `--permitir-drop`, que solo cubre índices/FKs huérfanos) — guardar un tipo nuevo fallaba con un error de Postgres hasta borrar la restricción a mano (`ALTER TABLE gd_documentos DROP CONSTRAINT gd_documentos_tipo_documento_check`). Si en el futuro hay más clientes con Postgres ya provisionados antes de este cambio, hay que revisar si tienen la misma restricción residual antes de darlos por migrados.
+
+### Cumplimiento de formato/normativa (2026-09-13)
+Un tipo de documento puede llevar, opcionalmente, `formato_requerido` (cómo debe estar estructurado, p.ej. qué campos lleva una factura) y/o `normativa_aplicable` (qué reglamento debe cumplir). Es texto libre en ambos casos, no una validación estructurada — sigue sin haber lista cerrada ni esquema por tipo, esto es una guía para que la IA la lea y la aplique con criterio, no una regla mecánica.
+
+- **Gestión**: `PUT /v1/proyectos/{id}/tipos-documento/{id_tipo}` (solo admin, página "Tipos de documento" del panel) para definir o borrar estos dos campos de un tipo. No afecta a documentos ya guardados.
+- **Al guardar**: antes de `guardar_documento_gd`, la IA consulta `listar_tipos_documento_gd()` — si el tipo del documento tiene requisitos, compara el contenido contra ellos y describe en `incumplimientos` (parámetro de `guardar_documento_gd`) lo que no cumpla, en sus propias palabras. Si cumple, o el tipo no tiene requisitos, lo deja vacío.
+- **Dónde queda**: `gd_versiones.incumplimientos` — por versión, no por documento (una versión corregida puede dejar de incumplir mientras otras versiones antiguas siguieran sin cumplir, aunque en la práctica solo importa la vigente). El panel lo muestra como aviso en rojo en la ficha del documento.
+- **Resolución**: no se limpia solo. Cuando el documento se corrige (`corregir_documento_gd`, `guardar_documento_gd` con una versión nueva, o edición desde el panel) y la IA valora que ya cumple, llama a la tool nueva `actualizar_incumplimientos_gd(id_documento, incumplimientos=None)` para vaciarlo. Si sigue sin cumplir pero por otro motivo, actualiza el texto en vez de vaciarlo.
 
 ### Credenciales (2026-09-09, ampliada 2026-09-10)
 Gestor genérico de credenciales del cliente para conectar con servicios externos — sin un servicio concreto todavía, así que se diseñó abierto: un nombre, para qué sirve, un usuario opcional y la contraseña/API key/token, cifrada.
