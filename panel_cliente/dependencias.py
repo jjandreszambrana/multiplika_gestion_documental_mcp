@@ -1,10 +1,13 @@
 """Quién hace la petición al panel del cliente de gestión documental —
 mismo JWT que el panel de administración del repo core (login
 compartido, ver lib/jwt_tokens.py) y su sistema de roles por proyecto
-(lib/roles_proyecto.py). Los documentos son de solo lectura (guardar/
-corregir sigue siendo por conversación con la IA); la única acción de
-administración real que vive aquí es gestionar las API keys del
-proyecto, restringida a admin_tenant (ver admin_gestion_documental_actual).
+(lib/roles_proyecto.py). Guardar un documento nuevo o corregir una
+lectura mal hecha de la IA sigue siendo solo por conversación con ella;
+editar el texto ya guardado sí se puede hacer desde aquí (ver
+puede_editar_documento_actual y docs/gestion-documental.md → "Edición
+desde el panel"). La única acción de administración real que vive aquí
+es gestionar las API keys del proyecto, restringida a admin_tenant (ver
+admin_gestion_documental_actual).
 
 Un superadmin también puede entrar (mismo token que usa en /panel, sin
 contraseña aparte — pensado para dar soporte a un cliente) pero SIEMPRE
@@ -23,7 +26,7 @@ from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_auditoria_soporte import TABLA_AUDITORIA_SOPORTE
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from lib.jwt_tokens import decodificar_token
-from lib.roles_proyecto import es_admin_de_proyecto, tiene_acceso_a_proyecto
+from lib.roles_proyecto import es_admin_de_proyecto, puede_editar_proyecto, tiene_acceso_a_proyecto
 
 _proyectos = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
 _auditoria = AsyncCrudBase(TABLA_AUDITORIA_SOPORTE, get_db_config("control"))
@@ -88,6 +91,21 @@ async def es_admin_actual(
     if identidad.tipo == "superadmin":
         return True
     return await es_admin_de_proyecto(identidad.id, proyecto["id"])
+
+
+async def puede_editar_documento_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> int:
+    """Dependencia para editar documentos desde el panel (ver
+    docs/gestion-documental.md → "Edición desde el panel"): cualquier
+    usuario de empresa salvo invitado (solo lectura); un superadmin no
+    puede, porque el registro de quién edita (gd_historial_ediciones)
+    referencia mcpc_usuarios, no mcpc_superadmins — para dar soporte
+    editando un documento de un cliente, que entre con un usuario real
+    de ese tenant. Devuelve el id_usuario a registrar en el historial."""
+    if identidad.tipo != "usuario" or not await puede_editar_proyecto(identidad.id, proyecto["id"]):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes permiso para editar documentos de este proyecto")
+    return identidad.id
 
 
 async def admin_gestion_documental_actual(

@@ -34,6 +34,17 @@ CAMPOS_VERSIONES = [
                        "salvo mientras la versión es un borrador (ver columna 'borrador')"),
     Columna(nombre="markdown_actual", tipo="MEDIUMTEXT", not_null=True,
             comentario="Markdown vigente: igual al original o corregido a mano"),
+    Columna(nombre="tmp", tipo="MEDIUMTEXT",
+            comentario="Borrador de edición desde el panel cliente, ver "
+                       "docs/gestion-documental.md → 'Edición desde el panel'. Se sobrescribe en "
+                       "cada guardado intermedio sin tocar markdown_actual ni el historial; al "
+                       "confirmar, este valor pasa a markdown_actual y vuelve a NULL. Si sigue con "
+                       "contenido al reabrir el editor, es que quedó sin confirmar la vez anterior"),
+    Columna(nombre="tmp_id_usuario", tipo="INT",
+            comentario="Quién dejó el borrador en 'tmp' — para avisar de quién es al reabrir. "
+                       "NULL si 'tmp' está vacío"),
+    Columna(nombre="tmp_fecha", tipo="TIMESTAMP",
+            comentario="Cuándo se escribió por última vez 'tmp'. NULL si 'tmp' está vacío"),
     Columna(nombre="revisado_manualmente", tipo="BOOLEAN", not_null=True, default=False,
             comentario="True si markdown_actual fue corregido a mano tras la generación"),
     Columna(nombre="tsvector_actual", tipo="TSVECTOR",

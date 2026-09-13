@@ -4,9 +4,11 @@ import { api } from "../api"
 
 const ID_ROL_ADMIN_TENANT = "2"
 const ID_ROL_OPERADOR = "3"
+const ID_ROL_INVITADO = "4"
 
 const OPCIONES_ROL = [
   { value: "", label: "Sin acceso" },
+  { value: ID_ROL_INVITADO, label: "Invitado (solo lectura)" },
   { value: ID_ROL_OPERADOR, label: "Operador" },
   { value: ID_ROL_ADMIN_TENANT, label: "Admin del proyecto" },
 ]

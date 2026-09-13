@@ -56,10 +56,20 @@ gd_versiones
   - borrador              BOOLEAN DEFAULT FALSE  -- ver "Borrador" más abajo
   - markdown_original     TEXT      -- lo que generó la IA
   - markdown_actual       TEXT      -- vigente (= original o corregido a mano)
+  - tmp                   TEXT      -- borrador de edición del panel sin confirmar, ver "Edición desde el panel"
+  - tmp_id_usuario        INT       -- quién dejó ese borrador (→ mcpc_usuarios.id, sin FK real)
+  - tmp_fecha             TIMESTAMP -- cuándo se escribió tmp por última vez
   - revisado_manualmente  BOOLEAN DEFAULT FALSE
   - tsvector_actual       (GENERATED ALWAYS AS to_tsvector(markdown_actual) STORED + índice GIN)
   - fecha_documento       -- la del propio documento, no la de subida
   - fecha_subida
+
+gd_historial_ediciones (ver "Edición desde el panel")
+  - id
+  - id_version         FK
+  - id_usuario         INT (→ mcpc_usuarios.id, sin FK real)
+  - markdown_anterior  TEXT      -- snapshot completo de markdown_actual justo antes de esta confirmación
+  - fecha
 
 gd_chunks (solo si el modo es/fue semántico, y solo de versiones buscables)
   - id
@@ -81,6 +91,17 @@ Problema: a veces llega un documento incompleto (le faltan páginas, el cliente 
 Solución: `gd_versiones.borrador` (BOOLEAN, default false). Mientras la versión vigente de un documento sea un borrador, `guardar_documento_gd(id_documento_existente=..., ...)` **sobrescribe esa misma fila** (incluido `markdown_original` — única excepción a "nunca se sobrescribe", justificada porque mientras es borrador no es un documento real todavía) en vez de crear una versión nueva. El cliente lo da por bueno de dos formas: llamando otra vez a `guardar_documento_gd` con `borrador=false` (guarda el contenido final y lo cierra en el mismo paso), o con `confirmar_documento_gd` si el contenido no cambia y solo hace falta la confirmación. A partir de ahí, `borrador=false` para siempre en esa versión: cualquier guardado posterior sobre ese documento vuelve a crear una versión nueva, como con cualquier documento normal — el flujo A de arriba no cambia.
 
 Por defecto `borrador=false`: un documento que llega completo se guarda igual que siempre, sin que el cliente tenga que saber que existe este mecanismo.
+
+### Edición desde el panel (2026-09-13)
+Hasta ahora el panel del cliente era de solo lectura: guardar o corregir un documento era siempre por conversación con la IA. Se añade edición directa del texto desde el panel, con un control de cambios (quién y cuándo) y la posibilidad de revertir.
+
+**Rol nuevo: invitado.** El catálogo de roles (`mcpc_roles` del core) gana un cuarto rol, `invitado` (id=4): acceso de solo lectura, no puede editar nada. `admin_tenant` y `operador` sí pueden editar. `lib/roles_proyecto.puede_editar_proyecto()` es la comprobación (cualquier rol salvo invitado); un superadmin NO puede editar documentos por este camino — el historial de ediciones referencia `mcpc_usuarios`, no `mcpc_superadmins`, así que para dar soporte editando algo hay que entrar con un usuario real de ese tenant.
+
+**Guardado sin ensuciar el historial: `gd_versiones.tmp`.** Mientras se edita, cada "guardar" del panel escribe en `tmp` (+ `tmp_id_usuario`, `tmp_fecha`) sin tocar `markdown_actual` ni generar ningún registro — exactamente igual que guardar un archivo no es un commit en git. Solo una acción explícita, "confirmar", cierra la edición: el `markdown_actual` de antes pasa a `gd_historial_ediciones` y `tmp` pasa a ser el nuevo `markdown_actual` (y se vacía). Si el editor se reabre con `tmp` todavía con contenido, es que quedó una edición sin confirmar (de quien sea, no hay bloqueo entre usuarios) — se carga ese texto en vez del confirmado, con un aviso visible de quién lo dejó y cuándo, para que quien lo retome sepa lo que está haciendo.
+
+**Historial: snapshot completo, no solo el diff.** `gd_historial_ediciones` guarda, en cada confirmación, el texto completo de `markdown_actual` de justo antes (columna `markdown_anterior`), no un diff — el coste en espacio es marginal (mismo razonamiento que ya justifica no purgar nunca `gd_versiones`). El diff que ve el cliente se calcula al vuelo (`difflib.unified_diff`, formato tipo `git diff`) comparando dos snapshots consecutivos, solo cuando alguien lo pide. Guardar el snapshot completo (y no solo el diff) es lo que hace trivial revertir: copiar `markdown_anterior` de vuelta a `markdown_actual` — y ese propio revertir queda registrado como una confirmación más, nunca se pierde el rastro de qué pasó.
+
+Esto es independiente del mecanismo de "Borrador" de más arriba (que evita versiones nuevas mientras un documento entero está sin cerrar, vía chat): la edición desde el panel corrige el texto de la versión vigente, sea o no un borrador.
 
 ### Pipeline de ingesta (2026-09-06)
 Sin interfaz: el cliente le dice a su Claude "guárdame esta factura" (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.

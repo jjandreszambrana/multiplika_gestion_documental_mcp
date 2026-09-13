@@ -2,12 +2,16 @@
 (documento nuevo vs. nueva versión de uno existente — ver
 docs/gestion-documental.md → "Pipeline de ingesta")."""
 
+from datetime import datetime, timezone
+
 from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_historial_ediciones import TABLA_HISTORIAL_EDICIONES
 from ..dependencias._dep_versiones import PATRON_SIGLAS, TABLA_VERSIONES
 from ._mod_documentos import DocumentosCRUD
+from ._mod_historial_ediciones import HistorialEdicionesCRUD
 from ._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -65,6 +69,20 @@ class VersionesCRUD(AsyncCrudBase):
             return None
         await self.update(version["id"], {"borrador": False})
         return await self.obtener(version["id"])
+
+    async def guardar_borrador(self, id_version: int, markdown: str, id_usuario: int) -> dict | None:
+        """Guardado intermedio desde el editor del panel (ver
+        docs/gestion-documental.md → "Edición desde el panel"): pisa
+        'tmp' sin tocar markdown_actual ni generar historial. Se puede
+        llamar tantas veces como se quiera mientras se edita."""
+        version = await self.obtener(id_version)
+        if not version:
+            return None
+        await self.update(
+            id_version,
+            {"tmp": markdown, "tmp_id_usuario": id_usuario, "tmp_fecha": datetime.now(timezone.utc)},
+        )
+        return await self.obtener(id_version)
 
     async def listar_buscables(self) -> list[dict]:
         """Todas las versiones actualmente buscables (vigentes, o todas
@@ -214,3 +232,75 @@ async def guardar_documento(
         )
 
     return {"id_documento": id_documento, "id_version": id_version}
+
+
+async def confirmar_edicion(config: dict, id_version: int, id_usuario: int) -> dict | None:
+    """Cierra la sesión de edición del panel (ver
+    docs/gestion-documental.md → "Edición desde el panel"): registra en
+    gd_historial_ediciones cómo estaba markdown_actual justo antes, lo
+    reemplaza por el contenido de 'tmp' y limpia 'tmp'. None si la
+    versión no existe o no tenía ningún borrador pendiente que confirmar."""
+    db = AsyncDatabase(**config)
+    db.add_tabla(TABLA_VERSIONES)
+    db.add_tabla(TABLA_HISTORIAL_EDICIONES)
+    versiones = VersionesCRUD(config)
+    historial = HistorialEdicionesCRUD(config)
+
+    async with db.transaccion() as cx:
+        version = await versiones.obtener(id_version, db=db, conexion=cx)
+        if not version or not version["tmp"]:
+            return None
+
+        await historial.insert(
+            {"id_version": id_version, "id_usuario": id_usuario, "markdown_anterior": version["markdown_actual"]},
+            db=db,
+            conexion=cx,
+        )
+        await versiones.update(
+            id_version,
+            {
+                "markdown_actual": version["tmp"],
+                "tmp": None,
+                "tmp_id_usuario": None,
+                "tmp_fecha": None,
+                "revisado_manualmente": True,
+            },
+            db=db,
+            conexion=cx,
+        )
+
+    return await versiones.obtener(id_version)
+
+
+async def revertir_edicion(config: dict, id_version: int, id_registro_historial: int, id_usuario: int) -> dict | None:
+    """Vuelve markdown_actual al estado guardado en un registro del
+    historial (ver confirmar_edicion). El propio revertir queda también
+    registrado en el historial, como cualquier otra confirmación — así
+    nunca se pierde nada, ni siquiera el estado justo antes de revertir.
+    None si la versión o el registro no existen, o el registro no
+    pertenece a esa versión."""
+    db = AsyncDatabase(**config)
+    db.add_tabla(TABLA_VERSIONES)
+    db.add_tabla(TABLA_HISTORIAL_EDICIONES)
+    versiones = VersionesCRUD(config)
+    historial = HistorialEdicionesCRUD(config)
+
+    async with db.transaccion() as cx:
+        version = await versiones.obtener(id_version, db=db, conexion=cx)
+        registro = await historial.obtener(id_registro_historial, db=db, conexion=cx)
+        if not version or not registro or registro["id_version"] != id_version:
+            return None
+
+        await historial.insert(
+            {"id_version": id_version, "id_usuario": id_usuario, "markdown_anterior": version["markdown_actual"]},
+            db=db,
+            conexion=cx,
+        )
+        await versiones.update(
+            id_version,
+            {"markdown_actual": registro["markdown_anterior"], "revisado_manualmente": True},
+            db=db,
+            conexion=cx,
+        )
+
+    return await versiones.obtener(id_version)

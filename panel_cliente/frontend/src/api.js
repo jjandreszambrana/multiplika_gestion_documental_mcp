@@ -133,6 +133,29 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
   desarchivarDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/desarchivar`),
+  guardarBorradorDocumento: (idProyecto, idDocumento, idVersion, markdown) =>
+    peticion(
+      BASE_CLIENTE, "PUT",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/borrador`,
+      { markdown },
+    ),
+  confirmarEdicionDocumento: (idProyecto, idDocumento, idVersion) =>
+    peticion(
+      BASE_CLIENTE, "POST",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/confirmar-edicion`,
+    ),
+  listarHistorialDocumento: (idProyecto, idDocumento, idVersion) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/historial`),
+  obtenerDiffHistorial: (idProyecto, idDocumento, idVersion, idRegistro) =>
+    peticion(
+      BASE_CLIENTE, "GET",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/historial/${idRegistro}/diff`,
+    ),
+  revertirDocumento: (idProyecto, idDocumento, idVersion, idRegistro) =>
+    peticion(
+      BASE_CLIENTE, "POST",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/revertir/${idRegistro}`,
+    ),
 
   listarApiKeys: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/api-keys`),
   emitirApiKey: (idProyecto, nombre) =>

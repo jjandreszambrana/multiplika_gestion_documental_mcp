@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
-"""Panel para que el cliente vea y busque sus propios documentos (ver
-docs/gestion-documental.md) — guardar/corregir sigue siendo solo por
-conversación con su IA, esto no lo sustituye. También deja a un
+"""Panel para que el cliente vea, busque y edite sus propios documentos
+(ver docs/gestion-documental.md) — guardar un documento nuevo o corregir
+una mala lectura de la IA sigue siendo solo por conversación con ella,
+esto no lo sustituye; editar el texto ya guardado sí se puede hacer
+desde aquí (ver "Edición desde el panel"). También deja a un
 admin_tenant gestionar las API keys de su proyecto (emitir, revocar,
 eliminar), para conectar sus propios clientes MCP sin depender del
 panel de administración.
@@ -38,7 +40,9 @@ from pydantic import BaseModel
 
 from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
+from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.api_keys import generar_api_key
+from lib.roles_proyecto import puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD
@@ -48,9 +52,18 @@ from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
+from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
-from ..database.modelos._mod_versiones import VersionesCRUD
-from .dependencias import admin_gestion_documental_actual, api_key_de_gestion_documental, es_admin_actual, proyecto_gestion_documental_actual
+from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, revertir_edicion
+from .dependencias import (
+    Identidad,
+    admin_gestion_documental_actual,
+    api_key_de_gestion_documental,
+    es_admin_actual,
+    identidad_actual,
+    proyecto_gestion_documental_actual,
+    puede_editar_documento_actual,
+)
 
 app = FastAPI(title="Gestión documental — Panel del cliente")
 
@@ -62,6 +75,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
+
+
+async def _nombre_usuario(id_usuario: int | None) -> str | None:
+    if id_usuario is None:
+        return None
+    usuario = await _usuarios.obtener(id_usuario)
+    return usuario["nombre"] if usuario else None
 
 
 @app.get("/v1/ayuda")
@@ -78,16 +100,20 @@ async def ver_proyecto(
     id_proyecto: int,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     es_admin: bool = Depends(es_admin_actual),
+    identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     """Datos básicos del proyecto (nombre) — lo usa el frontend cuando
     entra directo a un proyecto conocido (enlace del superadmin desde el
     panel de administración) sin pasar por el selector. `es_admin` le
     dice al frontend si mostrar la gestión de API keys y de usuarios;
-    `id_tenant` hace falta para gestionar los usuarios de la empresa
-    (viven por tenant, no por proyecto)."""
+    `puede_editar` si mostrar la edición de documentos (ver
+    puede_editar_documento_actual: ningún superadmin, ni un usuario con
+    rol invitado); `id_tenant` hace falta para gestionar los usuarios de
+    la empresa (viven por tenant, no por proyecto)."""
+    puede_editar = identidad.tipo == "usuario" and await puede_editar_proyecto(identidad.id, proyecto["id"])
     return {
         "id": proyecto["id"], "id_tenant": proyecto["id_tenant"], "nombre": proyecto["nombre"],
-        "es_admin": es_admin,
+        "es_admin": es_admin, "puede_editar": puede_editar,
     }
 
 
@@ -228,13 +254,127 @@ async def obtener_documento(
     version = await VersionesCRUD(config).obtener_completo(id_documento)
     return {
         **documento,
+        "id_version": version["id"] if version else None,
         "markdown": version["markdown_actual"] if version else None,
         "fecha_documento": version["fecha_documento"] if version else None,
         "fecha_caducidad": version["fecha_caducidad"] if version else None,
         "fecha_subida": version["fecha_subida"] if version else None,
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
         "url_origen": version["url_origen"] if version else None,
+        # Borrador de edición sin confirmar (ver docs/gestion-documental.md
+        # → "Edición desde el panel") — si "tmp" tiene contenido, el
+        # frontend debe cargarlo en el editor en vez de "markdown" y avisar
+        # de quién lo dejó a medias.
+        "tmp": version["tmp"] if version else None,
+        "tmp_usuario": await _nombre_usuario(version["tmp_id_usuario"]) if version else None,
+        "tmp_fecha": version["tmp_fecha"] if version else None,
     }
+
+
+# --- Edición desde el panel (ver docs/gestion-documental.md → "Edición
+# desde el panel"): cualquier usuario con permiso de edición (no
+# invitado). "borrador" guarda intermedios sin generar historial ni
+# tocar el texto confirmado; "confirmar-edicion" es la única acción que
+# de verdad cierra un cambio y lo dejar registrado, igual que un commit.
+
+
+class GuardarBorrador(BaseModel):
+    markdown: str
+
+
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/borrador")
+async def guardar_borrador_documento(
+    id_proyecto: int, id_documento: int, id_version: int, datos: GuardarBorrador,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    version = await VersionesCRUD(config).guardar_borrador(id_version, datos.markdown, id_usuario)
+    if not version or version["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    return {"id_version": version["id"], "tmp_fecha": version["tmp_fecha"]}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/confirmar-edicion")
+async def confirmar_edicion_documento(
+    id_proyecto: int, id_documento: int, id_version: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    version_previa = await VersionesCRUD(config).obtener(id_version)
+    if not version_previa or version_previa["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    version = await confirmar_edicion(config, id_version, id_usuario)
+    if not version:
+        raise HTTPException(400, "No hay ningún borrador pendiente que confirmar")
+    return {"id_version": version["id"], "markdown": version["markdown_actual"]}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/historial")
+async def listar_historial_edicion(
+    id_proyecto: int, id_documento: int, id_version: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """Más reciente primero. Cada entrada representa una confirmación:
+    quién, cuándo, y el estado de antes — el diff con el estado de
+    después se pide aparte (endpoint .../diff) para no calcularlo de
+    más si nadie lo mira."""
+    config = get_db_config(proyecto["id"])
+    version = await VersionesCRUD(config).obtener(id_version)
+    if not version or version["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    registros = await HistorialEdicionesCRUD(config).listar_de_version(id_version)
+    return [
+        {
+            "id": r["id"],
+            "fecha": r["fecha"],
+            "usuario": await _nombre_usuario(r["id_usuario"]),
+        }
+        for r in registros
+    ]
+
+
+@app.get(
+    "/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/historial/{id_registro}/diff"
+)
+async def obtener_diff_historial(
+    id_proyecto: int, id_documento: int, id_version: int, id_registro: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> dict:
+    """Diff entre el estado justo antes de esta confirmación
+    (markdown_anterior) y el siguiente (el markdown_anterior de la
+    confirmación posterior, o el markdown_actual vigente si esta es la
+    más reciente)."""
+    config = get_db_config(proyecto["id"])
+    version = await VersionesCRUD(config).obtener(id_version)
+    if not version or version["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    historial = HistorialEdicionesCRUD(config)
+    registro = await historial.obtener(id_registro)
+    if not registro or registro["id_version"] != id_version:
+        raise HTTPException(404, "Registro de historial no encontrado")
+
+    registros = await historial.listar_de_version(id_version)  # más reciente primero
+    posicion = next(i for i, r in enumerate(registros) if r["id"] == id_registro)
+    texto_despues = registros[posicion - 1]["markdown_anterior"] if posicion > 0 else version["markdown_actual"]
+    return {"id": id_registro, "diff": calcular_diff(registro["markdown_anterior"], texto_despues)}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/revertir/{id_registro}")
+async def revertir_documento(
+    id_proyecto: int, id_documento: int, id_version: int, id_registro: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    version_previa = await VersionesCRUD(config).obtener(id_version)
+    if not version_previa or version_previa["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    version = await revertir_edicion(config, id_version, id_registro, id_usuario)
+    if not version:
+        raise HTTPException(404, "Registro de historial no encontrado")
+    return {"id_version": version["id"], "markdown": version["markdown_actual"]}
 
 
 @app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/archivar")
