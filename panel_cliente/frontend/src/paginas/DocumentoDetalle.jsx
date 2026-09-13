@@ -183,7 +183,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
 
           {!editando && (
             <Paper withBorder radius="lg" p="20" mb="lg">
-              <SimpleGrid cols={2} spacing="0 32">
+              <SimpleGrid cols={2} spacing={48} verticalSpacing={0}>
                 <CampoMeta etiqueta="Tipo de documento" valor={documento.tipo_documento} />
                 <CampoMeta etiqueta="Ámbito" valor={documento.ambito || "—"} />
                 <CampoMeta etiqueta="Fecha del documento" valor={formatearFecha(documento.fecha_documento)} />
