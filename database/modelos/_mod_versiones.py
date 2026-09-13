@@ -15,13 +15,15 @@ class VersionesCRUD(AsyncCrudBase):
     def __init__(self, config: dict):
         super().__init__(TABLA_VERSIONES, config)
 
-    async def obtener_vigente(self, id_documento: int) -> dict | None:
+    async def obtener_vigente(self, id_documento: int, db=None, conexion=None) -> dict | None:
         filas, _ = await self.listar(
             filtros={
                 "id_documento": {"op": "=", "valor": id_documento},
                 "vigente": {"op": "=", "valor": True},
             },
             limit=1,
+            db=db,
+            conexion=conexion,
         )
         return filas[0] if filas else None
 
@@ -50,6 +52,18 @@ class VersionesCRUD(AsyncCrudBase):
         if not version:
             return None
         await self.update(version["id"], {"markdown_actual": markdown_corregido, "revisado_manualmente": True})
+        return await self.obtener(version["id"])
+
+    async def confirmar(self, id_documento: int, id_version: int | None = None) -> dict | None:
+        """Da por bueno un borrador (ver guardar_documento): pasa
+        `borrador` a false sin tocar el contenido. A partir de aquí queda
+        fijo en el histórico — un guardar_documento_gd posterior sobre
+        este documento ya crea una versión nueva de verdad, en vez de
+        seguir sobrescribiendo esta."""
+        version = await self.obtener_completo(id_documento, id_version)
+        if not version:
+            return None
+        await self.update(version["id"], {"borrador": False})
         return await self.obtener(version["id"])
 
     async def listar_buscables(self) -> list[dict]:
@@ -124,11 +138,18 @@ async def guardar_documento(
     fecha_caducidad: str | None = None,
     url_origen: str | None = None,
     ambito: str | None = None,
+    borrador: bool = False,
 ) -> dict:
     """Documento nuevo (crea `gd_documentos` + primera versión) o nueva
     versión de uno existente (desmarca la vigente anterior e inserta la
     nueva), en una única transacción — ver docs/gestion-documental.md →
-    "Correcciones, escenario A"."""
+    "Correcciones, escenario A".
+
+    Excepción: si la versión vigente de `id_documento_existente` sigue
+    siendo un borrador (ver "Borrador" en docs/gestion-documental.md), no
+    se crea una versión nueva — se sobrescribe esa misma fila (incluido
+    `markdown_original`) y se actualiza su `borrador` al valor recibido
+    aquí, para poder confirmarlo en el mismo guardado."""
     db = AsyncDatabase(**config)
     db.add_tabla(TABLA_DOCUMENTOS)
     db.add_tabla(TABLA_VERSIONES)
@@ -141,6 +162,25 @@ async def guardar_documento(
             if not documento:
                 raise ValueError(f"No existe ningún documento con id {id_documento_existente}")
             id_documento = id_documento_existente
+            vigente = await versiones.obtener_vigente(id_documento, db=db, conexion=cx)
+
+            if vigente is not None and vigente["borrador"]:
+                await versiones.update(
+                    vigente["id"],
+                    {
+                        "markdown_original": markdown,
+                        "markdown_actual": markdown,
+                        "fecha_documento": fecha_documento,
+                        "fecha_caducidad": fecha_caducidad,
+                        "url_origen": url_origen,
+                        "revisado_manualmente": False,
+                        "borrador": borrador,
+                    },
+                    db=db,
+                    conexion=cx,
+                )
+                return {"id_documento": id_documento, "id_version": vigente["id"]}
+
             await db.query(
                 f'UPDATE "{TABLA_VERSIONES.nombre}" SET vigente = false WHERE id_documento = %s',
                 (id_documento,),
@@ -167,6 +207,7 @@ async def guardar_documento(
                 "fecha_documento": fecha_documento,
                 "fecha_caducidad": fecha_caducidad,
                 "url_origen": url_origen,
+                "borrador": borrador,
             },
             db=db,
             conexion=cx,

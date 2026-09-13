@@ -125,6 +125,7 @@ async def guardar_documento_gd(
     fecha_caducidad: str | None = None,
     url_origen: str | None = None,
     ambito: str | None = None,
+    borrador: bool = False,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla,
     pregunta siempre al usuario: tipo de documento (consulta antes
@@ -139,6 +140,22 @@ async def guardar_documento_gd(
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente); si no, crea un
     documento nuevo.
+
+    `borrador`: pon `True` si el documento está incompleto o el cliente
+    todavía no lo da por bueno (p.ej. le faltan páginas, o dice "todavía
+    no es la definitiva, ya te la corrijo"). Mientras la versión vigente
+    de un documento siga en borrador, cada guardado posterior con el mismo
+    `id_documento_existente` SOBRESCRIBE esa misma versión en vez de crear
+    una nueva — así las idas y vueltas de un documento sin cerrar no
+    ensucian el histórico. Cuando el cliente confirme que ya es la buena,
+    o bien llama a esta misma tool una última vez con `borrador=False`
+    (guardando el contenido final y cerrándolo en el mismo paso), o bien
+    usa `confirmar_documento_gd` si el contenido no cambia y solo hace
+    falta darlo por bueno. Una vez confirmada (borrador=False), cualquier
+    guardado posterior sobre ese documento vuelve a crear una versión
+    nueva de verdad, como con cualquier documento normal. Por defecto
+    `False` — no actives esto si el documento ya llega completo y
+    correcto.
     Si este documento viene de la cola de pendientes (obtenido con
     obtener_documento_pendiente_gd), pasa su id en
     `id_documento_pendiente`: al guardar con éxito sale solo de la cola.
@@ -156,6 +173,7 @@ async def guardar_documento_gd(
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
             id_documento_existente, todas_versiones_buscables, fecha_caducidad, url_origen, ambito,
+            borrador,
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
@@ -163,6 +181,31 @@ async def guardar_documento_gd(
     if id_documento_pendiente is not None:
         await DocumentosPendientesCRUD(config).eliminar(id_documento_pendiente)
     return resultado
+
+
+@mcp_app.tool()
+async def confirmar_documento_gd(id_documento: int, id_version: int | None = None) -> dict:
+    """Da por bueno un documento guardado como borrador (ver `borrador`
+    en guardar_documento_gd), sin cambiar su contenido: a partir de aquí
+    queda fijo en el histórico y cualquier guardado posterior sobre este
+    documento crea una versión nueva en vez de seguir sobrescribiendo
+    esta. Úsala cuando el cliente confirme que el documento ya es
+    correcto y no hace falta volver a subir el contenido para decirlo.
+    Confirma la versión vigente por defecto, o `id_version` si se indica.
+    No hace nada si la versión ya no era un borrador."""
+    config, _ = await _contexto_actual()
+    version = await VersionesCRUD(config).confirmar(id_documento, id_version)
+    if not version:
+        raise ToolError(
+            f"No hay ninguna versión vigente para el documento {id_documento}"
+            if id_version is None
+            else f"La versión {id_version} no existe o no pertenece al documento {id_documento}"
+        )
+    return {
+        "id_documento": id_documento,
+        "id_version": version["id"],
+        "borrador": version["borrador"],
+    }
 
 
 @mcp_app.tool()
@@ -261,6 +304,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "ambito": documento["ambito"],
         "fecha_documento": version["fecha_documento"],
         "vigente": version["vigente"],
+        "borrador": version["borrador"],
         "revisado_manualmente": version["revisado_manualmente"],
         "url_origen": version["url_origen"],
         "markdown": version["markdown_actual"],
@@ -330,4 +374,5 @@ async def corregir_documento_gd(
         "id_version": version["id"],
         "markdown": version["markdown_actual"],
         "revisado_manualmente": version["revisado_manualmente"],
+        "borrador": version["borrador"],
     }

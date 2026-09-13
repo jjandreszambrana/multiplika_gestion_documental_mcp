@@ -23,8 +23,15 @@ CAMPOS_VERSIONES = [
             comentario="Documento al que pertenece esta versión"),
     Columna(nombre="vigente", tipo="BOOLEAN", not_null=True, default=True,
             comentario="True solo en la última versión de cada documento"),
+    Columna(nombre="borrador", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="True mientras el documento está incompleto/sin confirmar por el cliente: "
+                       "cada guardar_documento_gd sobre esta misma versión la sobrescribe en vez "
+                       "de crear una versión nueva (única excepción a 'markdown_original nunca se "
+                       "sobrescribe', ver docs/gestion-documental.md → 'Borrador'). Pasa a False "
+                       "con confirmar_documento_gd, o directamente al guardar con borrador=false"),
     Columna(nombre="markdown_original", tipo="MEDIUMTEXT", not_null=True,
-            comentario="Markdown tal como lo generó la IA la primera vez, nunca se sobrescribe"),
+            comentario="Markdown tal como lo generó la IA la primera vez, nunca se sobrescribe "
+                       "salvo mientras la versión es un borrador (ver columna 'borrador')"),
     Columna(nombre="markdown_actual", tipo="MEDIUMTEXT", not_null=True,
             comentario="Markdown vigente: igual al original o corregido a mano"),
     Columna(nombre="revisado_manualmente", tipo="BOOLEAN", not_null=True, default=False,

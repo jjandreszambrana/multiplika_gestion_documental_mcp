@@ -53,6 +53,7 @@ gd_versiones
   - id
   - id_documento          FK
   - vigente               BOOLEAN   -- true solo en la última
+  - borrador              BOOLEAN DEFAULT FALSE  -- ver "Borrador" más abajo
   - markdown_original     TEXT      -- lo que generó la IA
   - markdown_actual       TEXT      -- vigente (= original o corregido a mano)
   - revisado_manualmente  BOOLEAN DEFAULT FALSE
@@ -74,6 +75,13 @@ Búsqueda (full-text o semántica): siempre filtra por `vigente = true`, salvo q
 - **A) Nueva versión del documento** (el cliente sube una versión corregida/actualizada): nueva fila en `gd_versiones`, la anterior deja de ser `vigente`. Se guarda todo el histórico, sin límite de tiempo ni purga (decisión: el espacio que ocupa es marginal — texto y vectores pequeños; no se almacena el binario original).
 - **B) Corrección del markdown mal generado por la IA** (sin que haya documento nuevo del cliente): se edita `markdown_actual` de la versión existente, conservando `markdown_original` como lo que generó la IA la primera vez, y marcando `revisado_manualmente=true`. Mecanismo (decidido 2026-09-08): siempre vía tool MCP (`corregir_documento_gd`), a petición del propio cliente a su IA — sin revisión de nadie del equipo, porque no hay capacidad para tenerla. El riesgo asumido es que una corrección mal hecha por la IA del cliente quede guardada sin que nadie la verifique; se acepta porque `markdown_original` nunca se pierde.
 
+### Borrador (2026-09-13)
+Problema: a veces llega un documento incompleto (le faltan páginas, el cliente aún lo está revisando) y las idas y vueltas hasta cerrarlo no deberían ensuciar el histórico de `gd_versiones` con una versión por cada corrección intermedia.
+
+Solución: `gd_versiones.borrador` (BOOLEAN, default false). Mientras la versión vigente de un documento sea un borrador, `guardar_documento_gd(id_documento_existente=..., ...)` **sobrescribe esa misma fila** (incluido `markdown_original` — única excepción a "nunca se sobrescribe", justificada porque mientras es borrador no es un documento real todavía) en vez de crear una versión nueva. El cliente lo da por bueno de dos formas: llamando otra vez a `guardar_documento_gd` con `borrador=false` (guarda el contenido final y lo cierra en el mismo paso), o con `confirmar_documento_gd` si el contenido no cambia y solo hace falta la confirmación. A partir de ahí, `borrador=false` para siempre en esa versión: cualquier guardado posterior sobre ese documento vuelve a crear una versión nueva, como con cualquier documento normal — el flujo A de arriba no cambia.
+
+Por defecto `borrador=false`: un documento que llega completo se guarda igual que siempre, sin que el cliente tenga que saber que existe este mecanismo.
+
 ### Pipeline de ingesta (2026-09-06)
 Sin interfaz: el cliente le dice a su Claude "guárdame esta factura" (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.
 
@@ -94,6 +102,8 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 **`obtener_estado_proyecto_gd()`** (añadida 2026-09-09): total de documentos guardados y fecha de la última alta (documento o versión nueva) — es el dato de estado por proyecto planteado en `docs/decisiones.md` del repo core, apartado "Contexto compartido: separar negocio de preferencias" (paso 3). No refleja correcciones hechas con `corregir_documento_gd`, solo altas — para no necesitar tocar el esquema. Vive aquí porque es específico de este producto, no de la plataforma core.
 
 **`archivar_documento_gd(id_documento)` / `desarchivar_documento_gd(id_documento)`** (añadidas 2026-09-09): un documento que ya no aplica (anulado, subido por error) se marca `archivado` en vez de borrarse — desaparece de `buscar_documentos_gd` (salvo `incluir_archivados=True`) y de `consultar_documentos_gd` (fulltext y semántico), pero sigue accesible por id y se puede recuperar sin perder nada del histórico.
+
+**`confirmar_documento_gd(id_documento, id_version=None)`** (añadida 2026-09-13): cierra un borrador (ver "Borrador" más arriba) sin cambiar su contenido.
 
 **`listar_credenciales_gd()`** (añadida 2026-09-09): nombre, descripción y usuario (si lo lleva) de cada credencial del proyecto — nunca la contraseña/API key. Ver "Credenciales" más abajo.
 
