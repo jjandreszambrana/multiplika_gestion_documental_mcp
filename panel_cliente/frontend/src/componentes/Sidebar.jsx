@@ -13,6 +13,7 @@ import {
   IconLogout,
   IconHeadset,
 } from "@tabler/icons-react"
+import { formatearFecha } from "../formato"
 
 function Item({ icon: Icon, label, active, onClick, badge }) {
   return (
@@ -121,6 +122,11 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
             </ActionIcon>
           </Tooltip>
         </Group>
+        <Tooltip label={`Compilado el ${formatearFecha(__BUILD_DATE__)}`} position="top" openDelay={300}>
+          <Text size="11px" c="dimmed" ta="center" mt="6" style={{ cursor: "default" }}>
+            v{__APP_VERSION__} · rev. {__APP_REVISION__}
+          </Text>
+        </Tooltip>
       </AppShell.Section>
     </AppShell.Navbar>
   )
