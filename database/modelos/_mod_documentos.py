@@ -2,8 +2,10 @@
 → "Tools MCP", buscar_documentos)."""
 
 from mtpk_postgres import AsyncCrudBase
+from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_versiones import TABLA_VERSIONES
 
 
 class DocumentosCRUD(AsyncCrudBase):
@@ -21,22 +23,43 @@ class DocumentosCRUD(AsyncCrudBase):
     ) -> list[dict]:
         """Búsqueda por metadatos (nombre, tipo, fecha de alta), no por
         contenido — para exploración del cliente y para evitar duplicados
-        al ingerir. Por defecto no incluye documentos archivados."""
-        filtros = {}
+        al ingerir. Por defecto no incluye documentos archivados.
+
+        Incluye el estado de la versión vigente (borrador, incumplimientos,
+        revisado_manualmente) vía LEFT JOIN — el panel los muestra como
+        badges en el listado sin tener que pedir cada documento aparte."""
+        condiciones = []
+        params = []
         if referencia:
-            filtros["nombre"] = {"op": "like", "valor": f"%{referencia}%"}
+            condiciones.append("d.nombre LIKE %s")
+            params.append(f"%{referencia}%")
         if tipo_documento:
-            filtros["tipo_documento"] = {"op": "=", "valor": tipo_documento}
+            condiciones.append("d.tipo_documento = %s")
+            params.append(tipo_documento)
         if not incluir_archivados:
-            filtros["archivado"] = {"op": "=", "valor": False}
+            condiciones.append("d.archivado = false")
         if fecha_desde and fecha_hasta:
-            filtros["fecha_alta"] = {"op": "between", "valor": [fecha_desde, f"{fecha_hasta} 23:59:59"]}
+            condiciones.append("d.fecha_alta BETWEEN %s AND %s")
+            params += [fecha_desde, f"{fecha_hasta} 23:59:59"]
         elif fecha_desde:
-            filtros["fecha_alta"] = {"op": ">=", "valor": fecha_desde}
+            condiciones.append("d.fecha_alta >= %s")
+            params.append(fecha_desde)
         elif fecha_hasta:
-            filtros["fecha_alta"] = {"op": "<=", "valor": f"{fecha_hasta} 23:59:59"}
-        filas, _ = await self.listar(filtros=filtros, limit=limite, orden="fecha_alta DESC")
-        return filas
+            condiciones.append("d.fecha_alta <= %s")
+            params.append(f"{fecha_hasta} 23:59:59")
+        where = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
+
+        db = AsyncDatabase(**self.config)
+        sql = f"""
+            SELECT d.*, v.id AS id_version, v.borrador, v.incumplimientos, v.revisado_manualmente
+            FROM "{TABLA_DOCUMENTOS.nombre}" d
+            LEFT JOIN "{TABLA_VERSIONES.nombre}" v ON v.id_documento = d.id AND v.vigente = true
+            {where}
+            ORDER BY d.fecha_alta DESC
+            LIMIT %s
+        """
+        params.append(limite)
+        return await db.query(sql, tuple(params))
 
     async def archivar(self, id_documento: int) -> dict | None:
         """Marca un documento como archivado: sigue guardado, pero

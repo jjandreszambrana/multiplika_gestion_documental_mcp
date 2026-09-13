@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Alert, Button, Center, Paper, PasswordInput, Stack, TextInput, Title } from "@mantine/core"
+import { Alert, Button, Center, Group, Paper, PasswordInput, Stack, TextInput, ThemeIcon, Title } from "@mantine/core"
+import { IconFileText } from "@tabler/icons-react"
 import { api } from "../api"
 
 export default function Login({ onLogin }) {
@@ -23,12 +24,17 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <Center mih="100vh">
-      <Paper component="form" onSubmit={enviar} withBorder shadow="sm" p="xl" w={320}>
-        <Stack gap="md">
-          <Title order={2} size="h3">
-            Gestión documental
-          </Title>
+    <Center mih="100vh" bg="var(--mantine-color-default-hover)">
+      <Paper component="form" onSubmit={enviar} withBorder radius="lg" shadow="sm" p="xl" w={340}>
+        <Stack gap="lg">
+          <Group gap="10">
+            <ThemeIcon size={36} radius="md">
+              <IconFileText size={20} stroke={1.9} />
+            </ThemeIcon>
+            <Title order={2} size="h3">
+              Gestión documental
+            </Title>
+          </Group>
           <TextInput
             label="Usuario"
             value={email}

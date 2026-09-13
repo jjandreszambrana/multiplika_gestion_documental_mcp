@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Button, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core"
+import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 
 const ID_ROL_ADMIN_TENANT = "2"
@@ -111,8 +112,13 @@ export default function Usuarios({ proyecto, onVolver }) {
 
   return (
     <>
-      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
-        ← Volver
+      <Anchor
+        component="button" type="button" onClick={onVolver} mb="lg"
+        display="flex" style={{ alignItems: "center", gap: 6 }}
+        underline="hover" c="dimmed" fz="13.5px" fw={500}
+      >
+        <IconArrowLeft size={15} stroke={2} />
+        Documentos
       </Anchor>
       <Title order={2} mb="xs">
         Usuarios

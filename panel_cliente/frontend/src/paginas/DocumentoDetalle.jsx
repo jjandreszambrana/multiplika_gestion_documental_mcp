@@ -1,9 +1,33 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Table, Text, Textarea, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Text, Textarea, Title } from "@mantine/core"
+import {
+  IconAlertTriangle,
+  IconArchive,
+  IconArrowLeft,
+  IconCheck,
+  IconCircleCheck,
+  IconClockHour4,
+  IconDeviceFloppy,
+  IconEdit,
+  IconHistory,
+} from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import { formatearFecha } from "../formato"
 import HistorialEdicion from "../componentes/HistorialEdicion"
+
+function CampoMeta({ etiqueta, valor }) {
+  return (
+    <Group justify="space-between" py="7" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+      <Text size="12.5px" c="dimmed">
+        {etiqueta}
+      </Text>
+      <Text size="13px" fw={500} ta="right">
+        {valor}
+      </Text>
+    </Group>
+  )
+}
 
 export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [documento, setDocumento] = useState(null)
@@ -82,8 +106,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
 
   return (
     <>
-      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
-        ← Documentos
+      <Anchor component="button" type="button" onClick={onVolver} mb="lg" display="flex" style={{ alignItems: "center", gap: 6 }} underline="hover" c="dimmed" fz="13.5px" fw={500}>
+        <IconArrowLeft size={15} stroke={2} />
+        Documentos
       </Anchor>
 
       {error && (
@@ -95,110 +120,133 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
 
       {documento && (
         <>
-          <Group gap="sm" mb="xs">
-            <Title order={2}>{documento.nombre}</Title>
-            {documento.archivado && (
-              <Badge color="gray" variant="light">
-                🗄 Archivado
-              </Badge>
-            )}
-          </Group>
-          {documento.incumplimientos && (
-            <Alert color="red" mb="md" title="No cumple el formato/normativa de su tipo">
+          {!editando && (
+            <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
+              <div>
+                <Title order={2} ff="heading" fz="24px" mb="8">
+                  {documento.nombre}
+                </Title>
+                <Group gap="8">
+                  {documento.borrador && (
+                    <Badge color="yellow" variant="light" leftSection={<IconClockHour4 size={12} />}>
+                      Borrador
+                    </Badge>
+                  )}
+                  {documento.incumplimientos && (
+                    <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12} />}>
+                      No cumple normativa
+                    </Badge>
+                  )}
+                  {documento.revisado_manualmente && !documento.incumplimientos && (
+                    <Badge color="green" variant="light" leftSection={<IconCircleCheck size={12} />}>
+                      Revisado a mano
+                    </Badge>
+                  )}
+                  {documento.archivado && (
+                    <Badge color="gray" variant="light" leftSection={<IconArchive size={12} />}>
+                      Archivado
+                    </Badge>
+                  )}
+                </Group>
+              </div>
+              <Group gap="8" wrap="nowrap">
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconHistory size={15} stroke={1.8} />}
+                  onClick={() => setMostrarHistorial(!mostrarHistorial)}
+                >
+                  Historial
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={alternarArchivado}
+                  loading={cambiandoArchivo}
+                  leftSection={<IconArchive size={15} stroke={1.8} />}
+                >
+                  {documento.archivado ? "Desarchivar" : "Archivar"}
+                </Button>
+                {proyecto.puede_editar && (
+                  <Button onClick={empezarEdicion} leftSection={<IconEdit size={15} stroke={1.8} />}>
+                    Editar
+                  </Button>
+                )}
+              </Group>
+            </Group>
+          )}
+
+          {!editando && documento.incumplimientos && (
+            <Alert color="red" mb="lg" radius="lg" icon={<IconAlertTriangle size={19} />} title="No cumple el formato/normativa de su tipo">
               {documento.incumplimientos}
             </Alert>
           )}
-          <Table withTableBorder mb="lg" w="fit-content">
-            <Table.Tbody>
-              <Table.Tr>
-                <Table.Th>Tipo de documento</Table.Th>
-                <Table.Td>{documento.tipo_documento}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Ámbito</Table.Th>
-                <Table.Td>{documento.ambito || "—"}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Fecha del documento</Table.Th>
-                <Table.Td>{formatearFecha(documento.fecha_documento)}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Dado de alta el</Table.Th>
-                <Table.Td>{formatearFecha(documento.fecha_alta)}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Última versión subida el</Table.Th>
-                <Table.Td>{formatearFecha(documento.fecha_subida)}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Fecha de caducidad</Table.Th>
-                <Table.Td>{formatearFecha(documento.fecha_caducidad)}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Corregido a mano</Table.Th>
-                <Table.Td>{documento.revisado_manualmente ? "Sí" : "No"}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Histórico completo buscable</Table.Th>
-                <Table.Td>{documento.todas_versiones_buscables ? "Sí" : "No, solo la última versión"}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Th>Fuente</Table.Th>
-                <Table.Td>
-                  {documento.url_origen ? (
-                    <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer">
-                      {documento.url_origen}
-                    </Anchor>
-                  ) : (
-                    "—"
-                  )}
-                </Table.Td>
-              </Table.Tr>
-            </Table.Tbody>
-          </Table>
-          <Group mb="md">
-            <Button onClick={alternarArchivado} loading={cambiandoArchivo} variant="light">
-              {documento.archivado ? "Desarchivar" : "Archivar"}
-            </Button>
-            {proyecto.puede_editar && !editando && (
-              <Button onClick={empezarEdicion} variant="light">
-                Editar
-              </Button>
-            )}
-            <Button onClick={() => setMostrarHistorial(!mostrarHistorial)} variant="subtle">
-              {mostrarHistorial ? "Ocultar historial" : "Ver historial de cambios"}
-            </Button>
-          </Group>
+
+          {!editando && (
+            <Paper withBorder radius="lg" p="20" mb="lg">
+              <SimpleGrid cols={2} spacing="0 32">
+                <CampoMeta etiqueta="Tipo de documento" valor={documento.tipo_documento} />
+                <CampoMeta etiqueta="Ámbito" valor={documento.ambito || "—"} />
+                <CampoMeta etiqueta="Fecha del documento" valor={formatearFecha(documento.fecha_documento)} />
+                <CampoMeta etiqueta="Fecha de caducidad" valor={formatearFecha(documento.fecha_caducidad)} />
+                <CampoMeta etiqueta="Dado de alta el" valor={formatearFecha(documento.fecha_alta)} />
+                <CampoMeta etiqueta="Última versión el" valor={formatearFecha(documento.fecha_subida)} />
+                <CampoMeta etiqueta="Corregido a mano" valor={documento.revisado_manualmente ? "Sí" : "No"} />
+                <CampoMeta
+                  etiqueta="Histórico buscable"
+                  valor={documento.todas_versiones_buscables ? "Todas las versiones" : "Solo la última"}
+                />
+              </SimpleGrid>
+              {documento.url_origen && (
+                <Group mt="8" pt="8" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+                  <Text size="12.5px" c="dimmed">
+                    Fuente
+                  </Text>
+                  <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer" size="13px">
+                    {documento.url_origen}
+                  </Anchor>
+                </Group>
+              )}
+            </Paper>
+          )}
 
           {editando ? (
             <Stack>
               {documento.tmp && (
-                <Alert color="yellow">
-                  Hay un borrador sin confirmar
-                  {documento.tmp_usuario && ` de ${documento.tmp_usuario}`}
-                  {documento.tmp_fecha && ` (${formatearFecha(documento.tmp_fecha)})`} — se ha
-                  cargado aquí en vez del texto confirmado. Confirma o descarta antes de seguir.
+                <Alert color="yellow" radius="lg" icon={<IconClockHour4 size={19} />} title="Hay un borrador sin confirmar">
+                  {documento.tmp_usuario && `De ${documento.tmp_usuario}`}
+                  {documento.tmp_fecha && ` · ${formatearFecha(documento.tmp_fecha)}`} — se ha cargado aquí en vez del
+                  texto confirmado. Confirma o descarta antes de seguir.
                 </Alert>
               )}
-              <Textarea
-                value={textoEditado}
-                onChange={(e) => setTextoEditado(e.currentTarget.value)}
-                autosize minRows={15} styles={{ input: { fontFamily: "monospace" } }}
-              />
+              <Box>
+                <Textarea
+                  value={textoEditado}
+                  onChange={(e) => setTextoEditado(e.currentTarget.value)}
+                  autosize
+                  minRows={18}
+                  radius="lg"
+                  styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)", fontSize: "13px", lineHeight: 1.8, padding: "20px 22px" } }}
+                />
+              </Box>
               <Group>
-                <Button onClick={confirmarEdicion} loading={guardando}>
+                <Button onClick={confirmarEdicion} loading={guardando} leftSection={<IconCheck size={15} stroke={2.2} />}>
                   Confirmar cambios
                 </Button>
-                <Button onClick={guardarBorrador} loading={guardando} variant="light">
+                <Button onClick={guardarBorrador} loading={guardando} variant="light" leftSection={<IconDeviceFloppy size={15} stroke={1.8} />}>
                   Guardar borrador
                 </Button>
-                <Button onClick={() => setEditando(false)} variant="subtle">
+                <div style={{ flex: 1 }} />
+                <Button onClick={() => setEditando(false)} variant="subtle" color="gray">
                   Cerrar sin confirmar
                 </Button>
               </Group>
+              <Text size="12px" c="dimmed">
+                Guardar borrador no queda registrado en el historial — solo confirmar cierra la edición y deja constancia de
+                quién y cuándo.
+              </Text>
             </Stack>
           ) : (
-            <Paper withBorder p="lg">
+            <Paper withBorder radius="lg" p="40" className="contenido-documento">
               <Markdown>{documento.markdown}</Markdown>
             </Paper>
           )}

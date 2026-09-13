@@ -1,4 +1,48 @@
 body {
   margin: 0;
-  background: var(--mantine-color-gray-0);
+  background: var(--mantine-color-body);
+}
+
+/* Contenido markdown de un documento: títulos con la serif de cabeceras,
+   cuerpo con algo más de aire que el texto normal de la interfaz — se
+   lee como un documento, no como una pantalla de formulario. */
+.contenido-documento h1,
+.contenido-documento h2,
+.contenido-documento h3 {
+  font-family: var(--mantine-font-family-headings);
+  font-weight: 600;
+}
+.contenido-documento h1 {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+.contenido-documento h2 {
+  font-size: 17px;
+  margin: 28px 0 10px;
+}
+.contenido-documento p,
+.contenido-documento li {
+  color: var(--mantine-color-dimmed);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.contenido-documento table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 18px;
+  font-size: 13px;
+}
+.contenido-documento th {
+  text-align: left;
+  color: var(--mantine-color-dimmed);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.contenido-documento td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
 }

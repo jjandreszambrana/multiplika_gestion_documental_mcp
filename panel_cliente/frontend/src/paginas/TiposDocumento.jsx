@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Text, Textarea, TextInput, Title } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconShieldCheck } from "@tabler/icons-react"
 import { api } from "../api"
 
 function FilaTipo({ proyecto, tipo, onCambiado, onEliminar }) {
@@ -29,12 +30,14 @@ function FilaTipo({ proyecto, tipo, onCambiado, onEliminar }) {
   const tieneRequisitos = tipo.formato_requerido || tipo.normativa_aplicable
 
   return (
-    <Paper withBorder p="sm" mb="xs">
+    <Paper withBorder radius="lg" p="16" mb="10">
       <Group justify="space-between">
-        <Group gap="xs">
-          <Text fw={600}>{tipo.nombre}</Text>
+        <Group gap="10">
+          <Text fw={600} fz="14.5px">
+            {tipo.nombre}
+          </Text>
           {tieneRequisitos ? (
-            <Badge color="blue" variant="light">
+            <Badge color="acento" variant="light" leftSection={<IconShieldCheck size={12} />}>
               Con requisitos
             </Badge>
           ) : (
@@ -142,13 +145,25 @@ export default function TiposDocumento({ proyecto, onVolver }) {
 
   return (
     <>
-      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
-        ← Volver
+      <Anchor
+        component="button"
+        type="button"
+        onClick={onVolver}
+        mb="lg"
+        display="flex"
+        style={{ alignItems: "center", gap: 6 }}
+        underline="hover"
+        c="dimmed"
+        fz="13.5px"
+        fw={500}
+      >
+        <IconArrowLeft size={15} stroke={2} />
+        Documentos
       </Anchor>
-      <Title order={2} mb="xs">
-        Tipos de documento de {proyecto.nombre}
+      <Title order={2} mb="6">
+        Tipos de documento
       </Title>
-      <Text c="dimmed" mb="lg">
+      <Text c="dimmed" mb="lg" maw={620} fz="13.5px">
         Catálogo de sugerencias, no una lista cerrada: al guardar un documento se puede usar
         cualquier tipo, esté aquí o no. Si un tipo tiene formato o normativa definidos, la IA los
         tiene en cuenta y avisa en el documento si detecta que no los cumple.
@@ -163,7 +178,7 @@ export default function TiposDocumento({ proyecto, onVolver }) {
             required
             style={{ flex: 1 }}
           />
-          <Button type="submit" loading={creando}>
+          <Button type="submit" loading={creando} leftSection={<IconPlus size={15} stroke={2.2} />}>
             Añadir
           </Button>
         </Group>

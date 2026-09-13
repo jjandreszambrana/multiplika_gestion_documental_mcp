@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import { Anchor, Box, Container, Group, Text, Title } from "@mantine/core"
+import { AppShell, Container, Text } from "@mantine/core"
 import { api, cargarTokenGuardado, leerToken, setToken } from "./api"
+import Sidebar from "./componentes/Sidebar"
 
 // El id del proyecto activo se guarda aparte del token: hace falta para
 // recuperar la sesión de un superadmin que entró por el enlace directo
@@ -34,6 +35,7 @@ export default function App() {
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
+  const [pendientesCount, setPendientesCount] = useState(0)
 
   // Enlace directo del superadmin desde el panel de administración
   // (?token=...&id_proyecto=...): entra sin login ni selector — el
@@ -70,6 +72,14 @@ export default function App() {
       .catch((err) => setError(err.message))
   }
 
+  useEffect(() => {
+    if (!proyecto) return
+    api
+      .listarDocumentosPendientes(proyecto.id)
+      .then((filas) => setPendientesCount(filas.length))
+      .catch(() => setPendientesCount(0))
+  }, [proyecto, idDocumentoActivo, vista])
+
   function iniciarSesion(token) {
     setToken(token)
     setSesion(leerToken(token))
@@ -92,6 +102,12 @@ export default function App() {
     localStorage.removeItem(CLAVE_PROYECTO)
   }
 
+  function navegar(nuevaVista) {
+    setIdDocumentoActivo(null)
+    setEstiloActivo(null)
+    setVista(nuevaVista)
+  }
+
   if (comprobandoEnlace) {
     return (
       <Container size="md" py="xl">
@@ -108,93 +124,70 @@ export default function App() {
 
   if (!proyecto) {
     return (
-      <Box>
-        <Box component="header" bg="white" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
-          <Group justify="space-between" px="xl" py="md">
-            <Title order={3}>Gestión documental</Title>
-            <Anchor component="button" type="button" onClick={cerrarSesion}>
-              Cerrar sesión
-            </Anchor>
-          </Group>
-        </Box>
-        <Container size="md" py="xl">
-          {error && <Text c="red">{error}</Text>}
-          {esSuperadmin ? (
-            <Text>No se ha podido cargar el proyecto del enlace.</Text>
-          ) : (
-            <ElegirProyecto idTenant={sesion.id_tenant} onElegir={elegirProyecto} />
-          )}
-        </Container>
-      </Box>
+      <Container size="md" py="xl">
+        {error && <Text c="red">{error}</Text>}
+        {esSuperadmin ? (
+          <Text>No se ha podido cargar el proyecto del enlace.</Text>
+        ) : (
+          <ElegirProyecto idTenant={sesion.id_tenant} onElegir={elegirProyecto} />
+        )}
+      </Container>
     )
   }
 
   return (
-    <Box>
-      <Box component="header" bg="white" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
-        <Group justify="space-between" px="xl" py="md">
-          <Title order={3}>Gestión documental{esSuperadmin && " — modo soporte"}</Title>
-          <Group gap="lg">
-            <Anchor component="button" type="button" onClick={() => setVista("ayuda")}>
-              Ayuda
-            </Anchor>
-            <Anchor component="button" type="button" onClick={cerrarSesion}>
-              Cerrar sesión
-            </Anchor>
-          </Group>
-        </Group>
-      </Box>
-
-      <Container size="md" py="xl">
-        {idDocumentoActivo ? (
-          <DocumentoDetalle
-            proyecto={proyecto}
-            idDocumento={idDocumentoActivo}
-            onVolver={() => setIdDocumentoActivo(null)}
-          />
-        ) : vista === "api-keys" ? (
-          <ApiKeys proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : vista === "credenciales" ? (
-          <Credenciales proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : vista === "usuarios" ? (
-          <Usuarios proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : vista === "avisos" ? (
-          <Avisos proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : vista === "cuenta-email" ? (
-          <CuentaCorreo proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : vista === "ayuda" ? (
-          <Ayuda onVolver={() => setVista("documentos")} />
-        ) : vista === "estilos" && estiloActivo ? (
-          <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
-        ) : vista === "estilos" ? (
-          <Estilos proyecto={proyecto} onVolver={() => setVista("documentos")} onVerEstilo={setEstiloActivo} />
-        ) : vista === "tipos-documento" ? (
-          <TiposDocumento proyecto={proyecto} onVolver={() => setVista("documentos")} />
-        ) : (
-          <Documentos
-            proyecto={proyecto}
-            onCambiarProyecto={
-              esSuperadmin
-                ? null
-                : () => {
-                    setProyecto(null)
-                    localStorage.removeItem(CLAVE_PROYECTO)
-                  }
-            }
-            onVerDocumento={setIdDocumentoActivo}
-            onVerApiKeys={proyecto.es_admin ? () => setVista("api-keys") : null}
-            onVerCredenciales={proyecto.es_admin ? () => setVista("credenciales") : null}
-            onVerUsuarios={proyecto.es_admin ? () => setVista("usuarios") : null}
-            onVerAvisos={proyecto.es_admin ? () => setVista("avisos") : null}
-            onVerCuentaEmail={proyecto.es_admin ? () => setVista("cuenta-email") : null}
-            onVerEstilos={() => {
-              setEstiloActivo(null)
-              setVista("estilos")
-            }}
-            onVerTiposDocumento={() => setVista("tipos-documento")}
-          />
-        )}
-      </Container>
-    </Box>
+    <AppShell navbar={{ width: 252, breakpoint: 0 }} padding="xl">
+      <Sidebar
+        proyecto={proyecto}
+        esSuperadmin={esSuperadmin}
+        vista={idDocumentoActivo ? "documentos" : vista}
+        pendientesCount={pendientesCount}
+        onNavigate={navegar}
+        onCerrarSesion={cerrarSesion}
+      />
+      <AppShell.Main>
+        <Container size="lg" px={0}>
+          {idDocumentoActivo ? (
+            <DocumentoDetalle
+              proyecto={proyecto}
+              idDocumento={idDocumentoActivo}
+              onVolver={() => setIdDocumentoActivo(null)}
+            />
+          ) : vista === "api-keys" ? (
+            <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "credenciales" ? (
+            <Credenciales proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "usuarios" ? (
+            <Usuarios proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "avisos" ? (
+            <Avisos proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "cuenta-email" ? (
+            <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "ayuda" ? (
+            <Ayuda onVolver={() => navegar("documentos")} />
+          ) : vista === "estilos" && estiloActivo ? (
+            <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
+          ) : vista === "estilos" ? (
+            <Estilos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEstilo={setEstiloActivo} />
+          ) : vista === "tipos-documento" ? (
+            <TiposDocumento proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : (
+            <Documentos
+              proyecto={proyecto}
+              onCambiarProyecto={
+                esSuperadmin
+                  ? null
+                  : () => {
+                      setProyecto(null)
+                      localStorage.removeItem(CLAVE_PROYECTO)
+                    }
+              }
+              onVerDocumento={setIdDocumentoActivo}
+              onPendientesCambiaron={setPendientesCount}
+            />
+          )}
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   )
 }

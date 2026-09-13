@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Alert, Anchor, Button, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
+import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -45,8 +46,13 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
 
   return (
     <>
-      <Anchor component="button" type="button" onClick={onVolver} mb="md" display="block">
-        ← Volver
+      <Anchor
+        component="button" type="button" onClick={onVolver} mb="lg"
+        display="flex" style={{ alignItems: "center", gap: 6 }}
+        underline="hover" c="dimmed" fz="13.5px" fw={500}
+      >
+        <IconArrowLeft size={15} stroke={2} />
+        Documentos
       </Anchor>
       <Title order={2} mb="xs">
         Estilos de informe de {proyecto.nombre}

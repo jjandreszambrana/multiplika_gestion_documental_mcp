@@ -1,21 +1,38 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Menu, Select, Table, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Badge, Button, Group, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
 import { formatearFecha } from "../formato"
 
-export default function Documentos({
-  proyecto,
-  onCambiarProyecto,
-  onVerDocumento,
-  onVerApiKeys,
-  onVerCredenciales,
-  onVerEstilos,
-  onVerTiposDocumento,
-  onVerUsuarios,
-  onVerAvisos,
-  onVerCuentaEmail,
-}) {
+function BadgesEstado({ doc }) {
+  if (doc.borrador) {
+    return (
+      <Badge color="yellow" variant="light" leftSection={<IconClock size={12} />}>
+        Borrador
+      </Badge>
+    )
+  }
+  if (doc.incumplimientos) {
+    return (
+      <Tooltip label={doc.incumplimientos} multiline w={280}>
+        <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12} />}>
+          No cumple
+        </Badge>
+      </Tooltip>
+    )
+  }
+  if (doc.revisado_manualmente) {
+    return (
+      <Badge color="green" variant="light" leftSection={<IconCircleCheck size={12} />}>
+        Revisado a mano
+      </Badge>
+    )
+  }
+  return null
+}
+
+export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento, onPendientesCambiaron }) {
   const [q, setQ] = useState("")
   const [tipoDocumento, setTipoDocumento] = useState("")
   const [fechaDesde, setFechaDesde] = useState("")
@@ -37,7 +54,9 @@ export default function Documentos({
 
   async function cargarPendientes() {
     try {
-      setPendientes(await api.listarDocumentosPendientes(proyecto.id))
+      const filas = await api.listarDocumentosPendientes(proyecto.id)
+      setPendientes(filas)
+      onPendientesCambiaron?.(filas.length)
     } catch (err) {
       setErrorPendientes(err.message)
     }
@@ -96,10 +115,9 @@ export default function Documentos({
     cargar(q)
   }
 
-  function aplicarFiltros(evento) {
-    evento.preventDefault()
+  function aplicarFiltros(tipo, desde, hasta) {
     setQ("")
-    cargar("", { tipoDocumento, fechaDesde, fechaHasta })
+    cargar("", { tipoDocumento: tipo, fechaDesde: desde, fechaHasta: hasta })
   }
 
   function limpiarFiltros() {
@@ -113,48 +131,37 @@ export default function Documentos({
 
   return (
     <>
-      <Title order={2} mb="md">
-        {proyecto.nombre}
-      </Title>
-      {onCambiarProyecto && (
-        <Anchor component="button" type="button" onClick={onCambiarProyecto} mb="md" display="block">
-          ← Cambiar de proyecto
-        </Anchor>
-      )}
-
-      <Group mb="lg" justify="space-between" align="flex-start">
-        <Group>
-          <Button variant="light" onClick={() => setModalSubidaAbierto(true)}>
-            Subir documentos...
-            {pendientes.length > 0 && (
-              <Badge ml="xs" size="sm" circle>
-                {pendientes.length}
-              </Badge>
+      <Group justify="space-between" align="flex-start" mb="xl">
+        <div>
+          <Title order={2} mb={4}>
+            {proyecto.nombre}
+          </Title>
+          <Text size="13.5px" c="dimmed">
+            {resultados.length} documento{resultados.length === 1 ? "" : "s"}
+            {onCambiarProyecto && (
+              <>
+                {" · "}
+                <Text
+                  component="button"
+                  type="button"
+                  onClick={onCambiarProyecto}
+                  c="acento"
+                  style={{ cursor: "pointer", background: "none", border: 0, padding: 0, font: "inherit" }}
+                >
+                  cambiar de proyecto
+                </Text>
+              </>
             )}
-          </Button>
-          {onVerEstilos && <Button variant="light" onClick={onVerEstilos}>Estilos de informe</Button>}
-          {onVerTiposDocumento && (
-            <Button variant="light" onClick={onVerTiposDocumento}>
-              Tipos de documento
-            </Button>
+          </Text>
+        </div>
+        <Button leftSection={<IconUpload size={16} stroke={1.8} />} onClick={() => setModalSubidaAbierto(true)}>
+          Subir documentos
+          {pendientes.length > 0 && (
+            <Badge ml="8" size="sm" circle color="red">
+              {pendientes.length}
+            </Badge>
           )}
-        </Group>
-
-        {(onVerApiKeys || onVerCredenciales || onVerUsuarios || onVerAvisos || onVerCuentaEmail) && (
-          <Menu shadow="md" position="bottom-end">
-            <Menu.Target>
-              <Button variant="default">Configuración ⌄</Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {onVerCuentaEmail && <Menu.Item onClick={onVerCuentaEmail}>Cuenta de correo</Menu.Item>}
-              {onVerAvisos && <Menu.Item onClick={onVerAvisos}>Avisos de caducidad</Menu.Item>}
-              {onVerCredenciales && <Menu.Item onClick={onVerCredenciales}>Credenciales</Menu.Item>}
-              <Menu.Divider />
-              {onVerUsuarios && <Menu.Item onClick={onVerUsuarios}>Usuarios</Menu.Item>}
-              {onVerApiKeys && <Menu.Item onClick={onVerApiKeys}>API keys</Menu.Item>}
-            </Menu.Dropdown>
-          </Menu>
-        )}
+        </Button>
       </Group>
 
       <SubirDocumentosModal
@@ -168,46 +175,55 @@ export default function Documentos({
         onDescartar={descartarPendiente}
       />
 
-      <Group component="form" onSubmit={buscar} mb="sm">
+      <Group component="form" onSubmit={buscar} mb="md">
         <TextInput
           placeholder="Buscar por contenido (déjalo vacío para ver todos)"
+          leftSection={<IconSearch size={15} stroke={2} />}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 240, maxWidth: 420 }}
         />
-        <Button type="submit">Buscar</Button>
-      </Group>
-
-      <Group component="form" onSubmit={aplicarFiltros} mb="lg" align="flex-end">
         <Select
-          placeholder="Tipo de documento"
+          placeholder="Tipo: todos"
           data={tiposDocumento}
           value={tipoDocumento}
-          onChange={(valor) => setTipoDocumento(valor || "")}
+          onChange={(valor) => {
+            setTipoDocumento(valor || "")
+            aplicarFiltros(valor || "", fechaDesde, fechaHasta)
+          }}
           searchable
           clearable
-          w={180}
+          w={170}
         />
         <TextInput
-          label="Desde"
+          placeholder="Desde"
           type="date"
           value={fechaDesde}
-          onChange={(e) => setFechaDesde(e.target.value)}
+          onChange={(e) => {
+            setFechaDesde(e.target.value)
+            aplicarFiltros(tipoDocumento, e.target.value, fechaHasta)
+          }}
+          w={150}
         />
         <TextInput
-          label="Hasta"
+          placeholder="Hasta"
           type="date"
           value={fechaHasta}
-          onChange={(e) => setFechaHasta(e.target.value)}
+          onChange={(e) => {
+            setFechaHasta(e.target.value)
+            aplicarFiltros(tipoDocumento, fechaDesde, e.target.value)
+          }}
+          w={150}
         />
-        <Button type="submit" variant="light">
-          Filtrar
-        </Button>
+        <div style={{ flex: 1 }} />
         {hayFiltros && (
           <Button variant="subtle" onClick={limpiarFiltros}>
             Quitar filtros
           </Button>
         )}
+        <Button type="submit" variant="light">
+          Buscar
+        </Button>
       </Group>
 
       {error && (
@@ -218,51 +234,67 @@ export default function Documentos({
       {cargando ? (
         <Text>Cargando...</Text>
       ) : (
-        <Table striped highlightOnHover withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Nombre</Table.Th>
-              <Table.Th>Tipo</Table.Th>
-              <Table.Th>{q ? "Fragmento" : "Fecha de alta"}</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {resultados.map((r) => {
-              const idDocumento = r.id ?? r.id_documento
-              return (
-                <Table.Tr
-                  key={`${idDocumento}-${r.id_version ?? ""}`}
-                  onClick={() => onVerDocumento(idDocumento)}
-                  style={{ cursor: "pointer", opacity: r.archivado ? 0.6 : 1 }}
-                >
-                  <Table.Td>
-                    {r.nombre}
-                    {r.archivado && (
-                      <Badge ml="sm" color="gray" variant="light">
-                        🗄 Archivado
+        <Paper withBorder radius="lg" style={{ overflow: "hidden" }}>
+          <Table striped highlightOnHover verticalSpacing="sm">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Documento</Table.Th>
+                <Table.Th>Tipo</Table.Th>
+                <Table.Th>{q ? "Fragmento" : "Fecha de alta"}</Table.Th>
+                <Table.Th>Estado</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {resultados.map((r) => {
+                const idDocumento = r.id ?? r.id_documento
+                return (
+                  <Table.Tr
+                    key={`${idDocumento}-${r.id_version ?? ""}`}
+                    onClick={() => onVerDocumento(idDocumento)}
+                    style={{ cursor: "pointer", opacity: r.archivado ? 0.55 : 1 }}
+                  >
+                    <Table.Td fw={500}>{r.nombre}</Table.Td>
+                    <Table.Td>
+                      <Badge color="gray" variant="light" radius="sm" tt="none" fw={500}>
+                        {r.tipo_documento}
                       </Badge>
-                    )}
-                  </Table.Td>
-                  <Table.Td>{r.tipo_documento}</Table.Td>
-                  <Table.Td>
-                    {q ? (
-                      <Text c="dimmed" size="sm">
-                        {r.fragmento}
-                      </Text>
-                    ) : (
-                      formatearFecha(r.fecha_alta)
-                    )}
+                    </Table.Td>
+                    <Table.Td>
+                      {q ? (
+                        <Text c="dimmed" size="sm">
+                          {r.fragmento}
+                        </Text>
+                      ) : (
+                        <Text size="13px" c="dimmed">
+                          {formatearFecha(r.fecha_alta)}
+                        </Text>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="6" wrap="nowrap">
+                        <BadgesEstado doc={r} />
+                        {r.archivado && (
+                          <Badge color="gray" variant="light" leftSection={<IconArchive size={12} />}>
+                            Archivado
+                          </Badge>
+                        )}
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                )
+              })}
+              {resultados.length === 0 && (
+                <Table.Tr>
+                  <Table.Td colSpan={4}>
+                    <Text c="dimmed" py="md">
+                      {q ? "Sin resultados." : "No hay ningún documento todavía."}
+                    </Text>
                   </Table.Td>
                 </Table.Tr>
-              )
-            })}
-            {resultados.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={3}>{q ? "Sin resultados." : "No hay ningún documento todavía."}</Table.Td>
-              </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Paper>
       )}
     </>
   )
