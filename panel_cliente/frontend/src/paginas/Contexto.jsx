@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Box, Button, Group, Paper, Stack, Tabs, Text, Textarea, Title } from "@mantine/core"
-import { IconArrowLeft, IconEdit, IconEye } from "@tabler/icons-react"
+import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Text, Title, useComputedColorScheme } from "@mantine/core"
+import { IconArrowLeft } from "@tabler/icons-react"
+import MDEditor from "@uiw/react-md-editor"
+import "@uiw/react-md-editor/markdown-editor.css"
 import { api } from "../api"
-import Markdown from "../componentes/Markdown"
 
 function CampoContexto({ titulo, ayuda, valorInicial, onGuardar }) {
   const [texto, setTexto] = useState(valorInicial || "")
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState(null)
+  const esquemaColor = useComputedColorScheme("light")
 
   async function guardar(evento) {
     evento.preventDefault()
@@ -32,35 +34,17 @@ function CampoContexto({ titulo, ayuda, valorInicial, onGuardar }) {
         <Text c="dimmed" size="sm">
           {ayuda}
         </Text>
-        <Tabs defaultValue="editar" radius="lg">
-          <Tabs.List>
-            <Tabs.Tab value="editar" leftSection={<IconEdit size={14} stroke={1.8} />}>
-              Editar
-            </Tabs.Tab>
-            <Tabs.Tab value="preview" leftSection={<IconEye size={14} stroke={1.8} />}>
-              Vista previa
-            </Tabs.Tab>
-          </Tabs.List>
-          <Tabs.Panel value="editar" pt="sm">
-            <Textarea
-              rows={7}
-              value={texto}
-              onChange={(e) => {
-                setTexto(e.target.value)
-                setGuardado(false)
-              }}
-              styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)", fontSize: "13px", lineHeight: 1.7 } }}
-            />
-            <Text size="11px" c="dimmed" mt="4">
-              Admite formato markdown (negrita, listas, títulos...).
-            </Text>
-          </Tabs.Panel>
-          <Tabs.Panel value="preview" pt="sm">
-            <Box p="md" style={{ border: "1px solid var(--mantine-color-default-border)", borderRadius: "var(--mantine-radius-lg)", minHeight: 154 }}>
-              {texto ? <Markdown>{texto}</Markdown> : <Text c="dimmed" size="sm">Nada que previsualizar todavía.</Text>}
-            </Box>
-          </Tabs.Panel>
-        </Tabs>
+        <div data-color-mode={esquemaColor}>
+          <MDEditor
+            value={texto}
+            onChange={(valor) => {
+              setTexto(valor || "")
+              setGuardado(false)
+            }}
+            height={220}
+            preview="live"
+          />
+        </div>
         <Group gap="sm">
           <Button type="submit" loading={guardando}>
             Guardar
