@@ -157,6 +157,12 @@ export const api = {
       `/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/revertir/${idRegistro}`,
     ),
 
+  obtenerContextoNegocio: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contexto`),
+  actualizarContextoNegocio: (idProyecto, texto) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contexto`, { texto }),
+  actualizarPreferenciasNegocio: (idProyecto, texto) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/preferencias`, { texto }),
+
   listarApiKeys: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/api-keys`),
   emitirApiKey: (idProyecto, nombre) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre: nombre || null }),

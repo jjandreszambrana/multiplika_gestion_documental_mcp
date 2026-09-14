@@ -15,6 +15,7 @@ import ElegirProyecto from "./paginas/ElegirProyecto"
 import Documentos from "./paginas/Documentos"
 import DocumentoDetalle from "./paginas/DocumentoDetalle"
 import ApiKeys from "./paginas/ApiKeys"
+import Contexto from "./paginas/Contexto"
 import Credenciales from "./paginas/Credenciales"
 import Estilos from "./paginas/Estilos"
 import TiposDocumento from "./paginas/TiposDocumento"
@@ -155,6 +156,8 @@ export default function App() {
             />
           ) : vista === "api-keys" ? (
             <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "contexto" ? (
+            <Contexto proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "credenciales" ? (
             <Credenciales proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "usuarios" ? (

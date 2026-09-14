@@ -40,6 +40,7 @@ from pydantic import BaseModel
 
 from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
+from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.api_keys import generar_api_key
 from lib.roles_proyecto import puede_editar_proyecto
@@ -77,6 +78,7 @@ app.add_middleware(
 )
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
+_proyectos_control = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
 
 
 async def _nombre_usuario(id_usuario: int | None) -> str | None:
@@ -152,6 +154,47 @@ async def listar_o_buscar_documentos(
         raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
+
+
+# --- Contexto de negocio (mcpc_proyectos.descripcion/preferencias_trabajo,
+# ver docs/decisiones.md del repo core → "Contexto compartido: separar
+# negocio de preferencias"): es lo que la IA lee al conectar por MCP. Vivía
+# solo en el panel de soporte de superadmin; el admin_tenant del proyecto
+# lo edita también aquí, sin pasar por soporte.
+
+
+class ActualizarContextoNegocio(BaseModel):
+    texto: str
+
+
+class ActualizarPreferenciasNegocio(BaseModel):
+    texto: str
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contexto")
+async def obtener_contexto_negocio(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    return {
+        "descripcion": proyecto["descripcion"],
+        "preferencias_trabajo": proyecto["preferencias_trabajo"],
+    }
+
+
+@app.put("/v1/proyectos/{id_proyecto}/contexto")
+async def actualizar_contexto_negocio(
+    id_proyecto: int, datos: ActualizarContextoNegocio, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    await _proyectos_control.update(id_proyecto, {"descripcion": datos.texto})
+    return {"descripcion": datos.texto}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/preferencias")
+async def actualizar_preferencias_negocio(
+    id_proyecto: int, datos: ActualizarPreferenciasNegocio, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    await _proyectos_control.update(id_proyecto, {"preferencias_trabajo": datos.texto})
+    return {"preferencias_trabajo": datos.texto}
 
 
 # --- Documentos pendientes (subida masiva; más adelante también la

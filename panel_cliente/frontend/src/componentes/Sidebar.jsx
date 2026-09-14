@@ -3,6 +3,7 @@ import {
   IconFileText,
   IconCategory,
   IconPalette,
+  IconBriefcase,
   IconUsers,
   IconKey,
   IconLock,
@@ -76,6 +77,7 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
             <Text size="11px" fw={600} c="dimmed" tt="uppercase" mt="lg" mb="4" ml="8" style={{ letterSpacing: ".04em" }}>
               Administración
             </Text>
+            <Item icon={IconBriefcase} label="Contexto de negocio" active={vista === "contexto"} onClick={() => onNavigate("contexto")} />
             <Item icon={IconUsers} label="Usuarios" active={vista === "usuarios"} onClick={() => onNavigate("usuarios")} />
             <Item icon={IconKey} label="API keys" active={vista === "api-keys"} onClick={() => onNavigate("api-keys")} />
             <Item icon={IconLock} label="Credenciales" active={vista === "credenciales"} onClick={() => onNavigate("credenciales")} />
