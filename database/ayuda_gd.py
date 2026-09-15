@@ -11,16 +11,17 @@ TEXTO_AYUDA_GD = """\
 ## Qué es esto
 
 Un archivo de tus documentos que consultas hablando con tu IA (Claude \
-Desktop o Claude Code, conectado con tu clave de este proyecto). No hay \
-que rellenar formularios para guardar nada: se lo dices a tu IA por \
-conversación y ella hace el resto. El panel web es solo para consultar, \
-buscar y alguna gestión — guardar y corregir documentos siempre es por \
-conversación con tu IA.
+Desktop o Claude Code, conectado con tu clave de este proyecto). Todo se \
+lo dices a tu IA por conversación y ella hace el resto — al guardar un \
+documento o dar de alta una credencial, te enseña además un pequeño \
+formulario para los datos que solo tú puedes rellenar (si tu aplicación \
+lo soporta). El panel web es para consultar, buscar y alguna gestión \
+más — guardar y corregir documentos siempre es por conversación con tu IA.
 
 ## Guardar un documento
 
 Le dices a tu IA que guarde el documento (lo pegas o se lo adjuntas). \
-Antes de guardarlo, siempre te pregunta:
+Antes de guardarlo, siempre te enseña un formulario para rellenar:
 
 - **Tipo de documento** (factura, contrato, normativa...). Reutiliza uno \
   ya existente si encaja, o crea uno nuevo sin que tengas que darlo de \
@@ -112,14 +113,17 @@ Desde el panel (con tu usuario y contraseña de empresa) puedes:
   la fuente si la tiene, y el texto completo.
 - Archivar / desarchivar.
 - Subir documentos en bloque a la cola de pendientes.
-- Gestionar credenciales de otros servicios (usuario/contraseña), \
-  estilos de informe, tu cuenta de correo, avisos de caducidad, \
-  usuarios del proyecto y claves de API — todo eso sí es gestión desde \
-  el panel, no por conversación.
+- Editar o borrar credenciales de otros servicios ya creadas, estilos \
+  de informe, tu cuenta de correo, avisos de caducidad, usuarios del \
+  proyecto y claves de API — todo eso es gestión desde el panel, no por \
+  conversación. Dar de alta una credencial nueva también se lo puedes \
+  pedir a tu IA (te enseña el mismo formulario), si prefieres no salir \
+  de la conversación.
 
 ## Una cosa importante
 
 Guardar y corregir documentos es **siempre por conversación con tu IA**, \
 nunca desde el panel — así es tu IA quien decide cómo interpretar y \
-guardar cada documento, con las preguntas de siempre.
+guardar cada documento; el formulario solo pide los datos que tú debes \
+decidir, no cambia quién lleva la conversación.
 """

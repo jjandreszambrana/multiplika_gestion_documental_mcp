@@ -6,8 +6,10 @@ guia_nuevo_proyecto.md, paso 6)."""
 from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
+from fastmcp import Context
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
+from pydantic import BaseModel, Field
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
@@ -119,34 +121,50 @@ async def obtener_documento_pendiente_gd(id: int) -> list:
     return [f'Documento pendiente "{pendiente["nombre_original"]}" (origen: {pendiente["origen"]}):', archivo]
 
 
+class _DatosDocumento(BaseModel):
+    """Lo que se le pregunta siempre al cliente antes de guardar un
+    documento — nunca lo rellenes tú por tu cuenta ni lo adivines del
+    contenido, aunque el documento ya lo diga: es una decisión suya, no
+    una lectura del texto (ver guardar_documento_gd)."""
+
+    nombre: str = Field(description="Nombre o referencia corta del documento")
+    tipo_documento: str = Field(description='Tipo de documento, p.ej. "factura", "contrato"...')
+    fecha_documento: str = Field(description="Fecha del propio documento (no la de hoy), formato AAAA-MM-DD")
+    fecha_caducidad: str = Field(
+        default="", description="Fecha de caducidad, si aplica (contratos, certificados...) — vacío si no aplica"
+    )
+    ambito: str = Field(
+        default="",
+        description='Solo para tipos como normativas: "nacional", "autonómica", "privada"... — vacío si no aplica',
+    )
+    todas_versiones_buscables: bool = Field(
+        default=False, description="¿Debe quedar buscable todo el histórico de este documento, no solo la última versión?"
+    )
+
+
 @mcp_app.tool()
 async def guardar_documento_gd(
-    nombre: str,
-    tipo_documento: str,
     markdown: str,
-    fecha_documento: str,
+    ctx: Context,
     id_documento_existente: int | None = None,
-    todas_versiones_buscables: bool = False,
     id_documento_pendiente: int | None = None,
-    fecha_caducidad: str | None = None,
     url_origen: str | None = None,
-    ambito: str | None = None,
     borrador: bool = False,
     incumplimientos: str | None = None,
 ) -> dict:
-    """Guarda un documento convertido a markdown. Antes de llamarla,
-    pregunta siempre al usuario: tipo de documento (consulta antes
-    listar_tipos_documento_gd() y sugiere uno de los ya existentes si
-    encaja; si no, se puede usar uno nuevo sin darlo de alta antes), nombre
-    o referencia corta, si es una versión nueva de un documento ya guardado
-    (usa buscar_documentos_gd para confirmar cuál, no lo adivines) o uno
-    distinto, la fecha del propio documento (no la de hoy), si tiene fecha
-    de caducidad (contratos, certificados...; si no aplica, déjalo vacío),
-    y si todo su histórico debe quedar buscable o solo la última versión
-    (por defecto solo la última).
+    """Guarda un documento convertido a markdown. Antes de llamarla, si es
+    una versión nueva de un documento ya guardado, confírmalo con
+    buscar_documentos_gd (no lo adivines) y pasa su id en
+    `id_documento_existente` — si no, se crea un documento nuevo. El resto
+    de datos (tipo de documento, nombre, fecha, caducidad, ámbito, si el
+    histórico debe quedar buscable) no los decides tú: esta misma tool le
+    lanza un formulario al cliente para pedírselos directamente, así que
+    no se los preguntes antes por chat ni los rellenes con lo que diga el
+    propio documento. Si el cliente cierra el formulario sin rellenarlo,
+    la tool falla con un aviso — dile que no se ha guardado y pregúntale
+    si quiere reintentarlo.
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
-    documento (la versión anterior deja de ser la vigente); si no, crea un
-    documento nuevo.
+    documento (la versión anterior deja de ser la vigente).
 
     `borrador`: pon `True` si el documento está incompleto o el cliente
     todavía no lo da por bueno (p.ej. le faltan páginas, o dice "todavía
@@ -171,10 +189,6 @@ async def guardar_documento_gd(
     markdown, pasa esa URL en `url_origen` — queda guardada solo como
     referencia para poder volver a consultarla, no la vuelve a descargar
     esta tool.
-    `ambito` es opcional y solo aplica a algunos tipos de documento (p.ej.
-    una normativa: 'nacional', 'autonómica', 'privada'...) — déjalo vacío
-    si no aplica. Solo se guarda al crear el documento, no se puede
-    cambiar al subir una versión nueva de uno ya existente.
 
     `incumplimientos`: si el tipo de este documento tiene
     `formato_requerido` y/o `normativa_aplicable` (consulta
@@ -185,10 +199,21 @@ async def guardar_documento_gd(
     adelante se corrige y ya cumple, usa actualizar_incumplimientos_gd
     para dejarlo vacío — no se limpia solo."""
     config, id_proyecto = await _contexto_actual()
+
+    tipos_existentes = [t["nombre"] for t in await TiposDocumentoCRUD(config).listar_nombres()]
+    mensaje = "Datos del documento a guardar."
+    if tipos_existentes:
+        mensaje += f" Tipos ya usados en este proyecto: {', '.join(tipos_existentes)} (o escribe uno nuevo)."
+    resultado_form = await ctx.elicit(mensaje, response_type=_DatosDocumento)
+    if resultado_form.action != "accept":
+        raise ToolError("El cliente no ha rellenado los datos del documento — no se ha guardado nada.")
+    datos = resultado_form.data
+
     try:
         resultado = await guardar_documento(
-            config, nombre, tipo_documento, markdown, fecha_documento,
-            id_documento_existente, todas_versiones_buscables, fecha_caducidad, url_origen, ambito,
+            config, datos.nombre, datos.tipo_documento, markdown, datos.fecha_documento,
+            id_documento_existente, datos.todas_versiones_buscables,
+            datos.fecha_caducidad or None, url_origen, datos.ambito or None,
             borrador, incumplimientos,
         )
     except ValueError as e:

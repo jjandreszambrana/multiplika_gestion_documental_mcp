@@ -414,3 +414,16 @@ El cliente puede preguntarle a su IA "¿cómo funciona esto?" y también quiere 
 
 - Tool MCP **`obtener_ayuda_gd()`** (`mcp_server/herramientas/_herr_documentos.py`): devuelve el texto tal cual, para que la IA lo use en conversación.
 - Panel: **`GET /v1/ayuda`** (`panel_cliente/servidor.py`) — sin autenticación ni proyecto, es contenido estático igual para cualquier cliente. Pantalla nueva "Ayuda" (`Ayuda.jsx`), enlazada con un botón más en `Documentos.jsx`/`App.jsx`, mismo patrón de texto monoespaciado que ya usa `DocumentoDetalle.jsx` para el markdown de un documento (no hace falta una librería de renderizado de markdown para esto).
+
+### Formularios MCP (elicitation) para datos que da el cliente (2026-09-15)
+
+Hasta ahora, los datos que solo puede rellenar el cliente (nunca deducirlos del contenido) se le pedían en texto suelto por chat, uno detrás de otro. El protocolo MCP tiene un mecanismo pensado justo para esto — **elicitation**: la propia tool le pide a la aplicación (Claude Desktop/Code, ChatGPT en modo desarrollador...) que le muestre un formulario de verdad al cliente; la respuesta vuelve a la tool ya estructurada, sin que la IA tenga que transcribir ni interpretar nada. `fastmcp` (framework ya usado por el core) lo trae de serie: `ctx: Context` como parámetro de la tool (FastMCP lo inyecta solo, no aparece en el esquema que ve la IA) y `await ctx.elicit(mensaje, response_type=UnModeloPydantic)`.
+
+Dos tools migradas a este mecanismo:
+
+- **`guardar_documento_gd`**: los campos que "se preguntan siempre al cliente" (nombre, tipo de documento, fecha del documento, fecha de caducidad, ámbito, si el histórico debe quedar buscable) salen de la firma de la tool y se piden con un formulario (`_DatosDocumento`) en cuanto se llama. Lo que sigue siendo parámetro de la tool es lo que decide la propia IA a partir de la conversación o del contenido: `markdown`, `id_documento_existente` (tras confirmar con `buscar_documentos_gd`), `id_documento_pendiente`, `url_origen`, `borrador`, `incumplimientos`. El mensaje del formulario incluye los tipos de documento ya usados en el proyecto (consultando `gd_tipos_documento`), a modo de sugerencia.
+- **`crear_credencial_gd`** (tool nueva): antes solo se podía dar de alta una credencial desde el panel, precisamente para que su valor no quedara escrito en la conversación con la IA (ver "Credenciales" más arriba). Con elicitation esa razón deja de obligar a pasar por el panel: el formulario (`_DatosCredencialNueva`) recoge nombre/descripción/valor/usuario directamente del cliente, y el valor va del formulario al servidor sin que la IA lo vea ni lo escriba en ningún mensaje — igual de seguro que el panel, pero sin salir de la conversación. Editar o borrar una credencial ya creada sigue siendo solo desde el panel (no hay tool para eso).
+
+Si el cliente cierra el formulario sin rellenarlo (`action != "accept"`), la tool falla con `ToolError` y la propia IA debe avisar de que no se ha guardado nada, sin insistir ni pedir los datos por chat como alternativa.
+
+**Sin probar todavía contra un cliente MCP real** (ni Claude ni ChatGPT) — depende de que la aplicación que conecta soporte elicitation; en ChatGPT hace falta además su "Developer Mode". Antes de dar esto por bueno hay que verificarlo con una conexión real.
