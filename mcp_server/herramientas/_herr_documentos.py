@@ -11,6 +11,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
 from pydantic import BaseModel, Field
 
+from ._deteccion_cliente import es_cliente_ponnodo
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
@@ -151,6 +152,12 @@ async def guardar_documento_gd(
     url_origen: str | None = None,
     borrador: bool = False,
     incumplimientos: str | None = None,
+    nombre: str | None = None,
+    tipo_documento: str | None = None,
+    fecha_documento: str | None = None,
+    fecha_caducidad: str | None = None,
+    ambito: str | None = None,
+    todas_versiones_buscables: bool = False,
 ) -> dict:
     """Guarda un documento convertido a markdown. Antes de llamarla, si es
     una versión nueva de un documento ya guardado, confírmalo con
@@ -163,6 +170,14 @@ async def guardar_documento_gd(
     propio documento. Si el cliente cierra el formulario sin rellenarlo,
     la tool falla con un aviso — dile que no se ha guardado y pregúntale
     si quiere reintentarlo.
+
+    Excepción — cliente PonNodo (cabecera `X-Client-App: ponnodo`, sin
+    soporte de formularios): en vez de lanzar el formulario, esta tool
+    acepta esos mismos datos como los parámetros `nombre`, `tipo_documento`,
+    `fecha_documento`, `fecha_caducidad`, `ambito` y
+    `todas_versiones_buscables`. Si faltan los obligatorios (nombre, tipo,
+    fecha), la tool falla listando cuáles son — pregúntaselos tú al
+    cliente por chat y vuelve a llamarla con esos datos ya rellenos.
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente).
 
@@ -201,13 +216,33 @@ async def guardar_documento_gd(
     config, id_proyecto = await _contexto_actual()
 
     tipos_existentes = [t["nombre"] for t in await TiposDocumentoCRUD(config).listar_nombres()]
-    mensaje = "Datos del documento a guardar."
-    if tipos_existentes:
-        mensaje += f" Tipos ya usados en este proyecto: {', '.join(tipos_existentes)} (o escribe uno nuevo)."
-    resultado_form = await ctx.elicit(mensaje, response_type=_DatosDocumento)
-    if resultado_form.action != "accept":
-        raise ToolError("El cliente no ha rellenado los datos del documento — no se ha guardado nada.")
-    datos = resultado_form.data
+    pista_tipos = f" Tipos ya usados en este proyecto: {', '.join(tipos_existentes)} (o escribe uno nuevo)." if tipos_existentes else ""
+
+    if es_cliente_ponnodo():
+        faltan = [
+            campo for campo, valor in
+            [("nombre", nombre), ("tipo_documento", tipo_documento), ("fecha_documento", fecha_documento)]
+            if not valor
+        ]
+        if faltan:
+            raise ToolError(
+                f"Faltan datos del documento para guardarlo: {', '.join(faltan)}. Pregúntaselos al "
+                "usuario con un formulario en el chat (nombre o referencia corta, tipo de documento, "
+                "fecha del propio documento en formato AAAA-MM-DD, y si aplica fecha de caducidad y "
+                "ámbito) y vuelve a llamar a guardar_documento_gd con esos datos ya rellenos en sus "
+                f"parámetros.{pista_tipos}"
+            )
+        datos = _DatosDocumento(
+            nombre=nombre, tipo_documento=tipo_documento, fecha_documento=fecha_documento,
+            fecha_caducidad=fecha_caducidad or "", ambito=ambito or "",
+            todas_versiones_buscables=todas_versiones_buscables,
+        )
+    else:
+        mensaje = "Datos del documento a guardar." + pista_tipos
+        resultado_form = await ctx.elicit(mensaje, response_type=_DatosDocumento)
+        if resultado_form.action != "accept":
+            raise ToolError("El cliente no ha rellenado los datos del documento — no se ha guardado nada.")
+        datos = resultado_form.data
 
     try:
         resultado = await guardar_documento(

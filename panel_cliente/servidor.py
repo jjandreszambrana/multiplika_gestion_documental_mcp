@@ -27,13 +27,14 @@ Pensado para ejecutarse ya desplegado, vía
 absolutos a database.config_db / lib.*). Para probar en local antes de
 desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
 
+import html
 import os
 from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
 from pydantic import BaseModel
@@ -49,6 +50,7 @@ from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
+from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
@@ -602,6 +604,106 @@ async def eliminar_credencial(
 ) -> None:
     config = get_db_config(proyecto["id"])
     await CredencialesCRUD(config).eliminar(id_credencial)
+
+
+# --- Formulario de credencial (enlace de un solo uso) ---
+# Solo para clientes MCP sin soporte de elicitation (PonNodo, ver
+# mcp_server/herramientas/_herr_credenciales.py) — el resto sigue usando el
+# formulario nativo del cliente MCP, esto no se les muestra nunca. A
+# propósito público (sin JWT ni x-api-key): quien abre el enlace es la
+# persona del cliente en su propio navegador, no una sesión del panel — la
+# única protección es el token en sí (aleatorio, de un solo uso, caduca a
+# los 15 minutos). Va antes del `app.mount("/", ...)` del frontend para que
+# no se lo trague el fallback de la SPA.
+
+
+def _pagina_formulario_credencial(nombre: str, descripcion: str, error: str | None = None) -> str:
+    aviso = f'<p class="error">{html.escape(error)}</p>' if error else ""
+    return f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Credencial — {html.escape(nombre)}</title>
+<style>
+body {{ font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }}
+label {{ display: block; margin-top: 1rem; font-weight: 600; }}
+input {{ width: 100%; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; font-size: 1rem; }}
+button {{ margin-top: 1.5rem; padding: 0.6rem 1.2rem; font-size: 1rem; cursor: pointer; }}
+.error {{ color: #b00020; }}
+.ayuda {{ color: #555; font-size: 0.9rem; }}
+</style></head><body>
+<h1>Nueva credencial: {html.escape(nombre)}</h1>
+<p class="ayuda">{html.escape(descripcion)}</p>
+{aviso}
+<form method="post">
+<label for="valor">Contraseña o API key</label>
+<input type="password" id="valor" name="valor" required autofocus>
+<button type="submit">Guardar</button>
+</form>
+<p class="ayuda">Este valor se guarda cifrado en el servidor y no lo ve ni la IA ni nadie del equipo.</p>
+</body></html>"""
+
+
+def _pagina_mensaje_credencial(titulo: str, mensaje: str) -> str:
+    return f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>{html.escape(titulo)}</title>
+<style>body {{ font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 0 1rem; }}</style>
+</head><body><h1>{html.escape(titulo)}</h1><p>{html.escape(mensaje)}</p></body></html>"""
+
+
+_ENLACE_NO_VALIDO = _pagina_mensaje_credencial(
+    "Enlace no válido", "Este enlace ha caducado, ya se usó, o no existe. Pídele a tu IA que te dé uno nuevo.",
+)
+
+
+def _config_proyecto_o_none(id_proyecto: int) -> dict | None:
+    """None si el proyecto no existe o no está activo — nunca deja
+    escapar el ValueError de get_db_config() hacia esta ruta pública, que
+    no debe distinguirle de un token inválido de cara a quien abre el
+    enlace."""
+    try:
+        return get_db_config(id_proyecto)
+    except ValueError:
+        return None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/credenciales/solicitudes/{token}", response_class=HTMLResponse)
+async def ver_formulario_credencial(id_proyecto: int, token: str) -> HTMLResponse:
+    config = _config_proyecto_o_none(id_proyecto)
+    solicitud = await SolicitudesCredencialCRUD(config).obtener_vigente(token) if config else None
+    if not solicitud:
+        return HTMLResponse(_ENLACE_NO_VALIDO, status_code=status.HTTP_404_NOT_FOUND)
+    return HTMLResponse(_pagina_formulario_credencial(solicitud["nombre"], solicitud["descripcion"]))
+
+
+@app.post("/v1/proyectos/{id_proyecto}/credenciales/solicitudes/{token}", response_class=HTMLResponse)
+async def rellenar_formulario_credencial(id_proyecto: int, token: str, valor: str = Form(...)) -> HTMLResponse:
+    config = _config_proyecto_o_none(id_proyecto)
+    solicitudes = SolicitudesCredencialCRUD(config) if config else None
+    solicitud = await solicitudes.obtener_vigente(token) if solicitudes else None
+    if not solicitud:
+        return HTMLResponse(_ENLACE_NO_VALIDO, status_code=status.HTTP_404_NOT_FOUND)
+
+    credenciales = CredencialesCRUD(config)
+    if await credenciales.obtener_por_nombre(solicitud["nombre"]):
+        await solicitudes.marcar_usada(solicitud["id"])
+        return HTMLResponse(
+            _pagina_mensaje_credencial(
+                "Ya existe esa credencial",
+                f'Ya se creó una credencial llamada "{solicitud["nombre"]}" — este enlace ya no hace falta.',
+            ),
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    if not valor:
+        return HTMLResponse(_pagina_formulario_credencial(
+            solicitud["nombre"], solicitud["descripcion"], error="Escribe un valor antes de guardar.",
+        ))
+
+    await credenciales.crear(solicitud["nombre"], solicitud["descripcion"], valor, solicitud["usuario"])
+    await solicitudes.marcar_usada(solicitud["id"])
+    return HTMLResponse(_pagina_mensaje_credencial(
+        "Credencial guardada", f'Ya puedes cerrar esta ventana — "{solicitud["nombre"]}" está lista.',
+    ))
 
 
 # --- Tabla de estilos (ver docs/gestion-documental.md → "Tabla de estilos") ---

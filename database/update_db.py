@@ -38,6 +38,7 @@ from database.dependencias._dep_versiones import TABLA_VERSIONES
 from database.dependencias._dep_historial_ediciones import TABLA_HISTORIAL_EDICIONES
 from database.dependencias._dep_chunks import construir_tabla_chunks
 from database.dependencias._dep_credenciales import TABLA_CREDENCIALES
+from database.dependencias._dep_solicitudes_credencial import TABLA_SOLICITUDES_CREDENCIAL
 from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAGENES
 from database.dependencias._dep_tipos_documento import TABLA_TIPOS_DOCUMENTO, TIPOS_POR_DEFECTO
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
@@ -74,6 +75,7 @@ def main():
         TABLA_HISTORIAL_EDICIONES,
         construir_tabla_chunks(dimension),
         TABLA_CREDENCIALES,
+        TABLA_SOLICITUDES_CREDENCIAL,
         TABLA_ESTILOS,
         TABLA_ESTILOS_IMAGENES,
         TABLA_TIPOS_DOCUMENTO,
