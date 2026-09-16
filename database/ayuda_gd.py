@@ -11,12 +11,75 @@ TEXTO_AYUDA_GD = """\
 ## Qué es esto
 
 Un archivo de tus documentos que consultas hablando con tu IA (Claude \
-Desktop o Claude Code, conectado con tu clave de este proyecto). Todo se \
-lo dices a tu IA por conversación y ella hace el resto — al guardar un \
-documento o dar de alta una credencial, te enseña además un pequeño \
-formulario para los datos que solo tú puedes rellenar (si tu aplicación \
-lo soporta). El panel web es para consultar, buscar y alguna gestión \
-más — guardar y corregir documentos siempre es por conversación con tu IA.
+Desktop, Claude Code o ChatGPT, conectado con tu clave de este proyecto). \
+Todo se lo dices a tu IA por conversación y ella hace el resto — al \
+guardar un documento o dar de alta una credencial, te enseña además un \
+pequeño formulario para los datos que solo tú puedes rellenar (si tu \
+aplicación lo soporta). El panel web es para consultar, buscar y alguna \
+gestión más — guardar y corregir documentos siempre es por conversación \
+con tu IA.
+
+## Cómo conectar tu IA
+
+Necesitas dos cosas: la dirección del servidor, `https://mcp-d.multiplika.net/mcp`, \
+y tu clave de proyecto (te la ha dado quien te dio de alta — nunca la \
+compartas ni la pegues en un sitio público).
+
+### Claude Desktop
+
+1. `Configuración` → `Conectores` → `Añadir conector personalizado`.
+2. Pega la dirección del servidor en el campo de la URL.
+3. En "Autenticación", Claude suele marcar por defecto **"Iniciar sesión \
+   ahora"**. Cámbialo a mano a **"Sin inicio de sesión"** — si lo dejas \
+   en "Iniciar sesión ahora", Claude intenta un registro que este \
+   servidor no usa y falla con un error de "no se pudo registrar con el \
+   servicio de inicio de sesión", aunque hayas rellenado bien lo de abajo.
+4. Busca "cabecera personalizada" (custom header) — ya visible tras \
+   elegir "Sin inicio de sesión". El nombre de la cabecera es exactamente \
+   `x-api-key`, y el valor es tu clave.
+5. Guarda. Algunas versiones de Claude Desktop piden además encender el \
+   conector con un interruptor junto al mensaje, en cada conversación.
+
+### Claude Code (línea de comandos)
+
+Ejecuta, sustituyendo `TU_CLAVE`:
+
+```
+claude mcp add --transport http gestion-documental https://mcp-d.multiplika.net/mcp --header "x-api-key: TU_CLAVE"
+```
+
+### ChatGPT
+
+1. Hace falta activar el **modo desarrollador**: `Configuración` → \
+   `Conectores` (o `Apps y conectores`) → `Avanzado` → activa \
+   `Developer mode` / `Modo desarrollador`.
+2. `Conectores` → `Crear` (o `Añadir conector personalizado`).
+3. Pon un nombre reconocible, pega la dirección del servidor en la URL, \
+   y en autenticación elige la opción de clave de API o cabecera \
+   personalizada — el nombre exacto es `x-api-key` y el valor tu clave.
+4. Guarda y actívalo para la conversación donde quieras usarlo.
+
+Aviso: en ChatGPT, además de conectar, hace falta que el "modo \
+desarrollador" esté activo para que los formularios (nombre, tipo, \
+fecha...) al guardar un documento funcionen igual que en Claude — sin \
+él, puede que tengas que dictarle esos datos a la IA por chat en vez de \
+rellenar un formulario.
+
+### Si algo no encaja
+
+- **"API key inválida" o "unauthorized"**: revisa que no haya un espacio \
+  de más al copiar la clave, y que el nombre de la cabecera sea \
+  exactamente `x-api-key` (con guion, en minúsculas). Si sigue sin ir, \
+  puede que la clave esté revocada — pide una nueva a quien te dio de \
+  alta.
+- **Conecta pero no ve las herramientas**: comprueba que el conector \
+  está encendido para esa conversación en concreto — en varios clientes \
+  hay que activarlo cada vez, no queda encendido para siempre.
+- **Tienes más de un proyecto conectado a la vez**: puedes tener varios \
+  conectados juntos, cada uno con su propia clave. Ponle a cada uno un \
+  nombre que deje claro para qué es (no "Conector 1", "Conector 2") — \
+  las herramientas de los dos se llaman igual, y el nombre del conector \
+  es la única forma de distinguirlos a simple vista.
 
 ## Guardar un documento
 
