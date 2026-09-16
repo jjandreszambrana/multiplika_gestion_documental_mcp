@@ -189,6 +189,32 @@ export const api = {
   eliminarDocumentoPendiente: (idProyecto, idPendiente) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}`),
 
+  listarRegistrosDocumento: (idProyecto, idDocumento, tipo) =>
+    peticion(
+      BASE_CLIENTE, "GET",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros${tipo ? `?tipo=${tipo}` : ""}`,
+    ),
+  crearRegistroDocumento: (idProyecto, idDocumento, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/registros`, datos),
+  resolverIncidencia: (idProyecto, idDocumento, idRegistro, textoResolucion) =>
+    peticion(
+      BASE_CLIENTE, "POST",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/resolver`,
+      { texto_resolucion: textoResolucion },
+    ),
+  asignarResponsableRegistro: (idProyecto, idDocumento, idRegistro, responsable) =>
+    peticion(
+      BASE_CLIENTE, "PUT",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/responsable`,
+      { responsable: responsable || null },
+    ),
+  relacionarRegistros: (idProyecto, idDocumento, idOrigen, idDestino, tipoRelacion) =>
+    peticion(
+      BASE_CLIENTE, "POST",
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idOrigen}/relaciones`,
+      { id_destino: idDestino, tipo_relacion: tipoRelacion || null },
+    ),
+
   listarTiposDocumento: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/tipos-documento`),
   crearTipoDocumento: (idProyecto, nombre) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/tipos-documento`, { nombre }),

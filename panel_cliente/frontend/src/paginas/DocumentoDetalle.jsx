@@ -15,6 +15,7 @@ import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import { formatearFecha } from "../formato"
 import HistorialEdicion from "../componentes/HistorialEdicion"
+import RegistrosDocumento from "../componentes/RegistrosDocumento"
 
 function CampoMeta({ etiqueta, valor }) {
   return (
@@ -259,6 +260,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               idVersion={documento.id_version}
               onRevertido={cargarDocumento}
             />
+          )}
+
+          {!editando && (
+            <RegistrosDocumento proyecto={proyecto} idDocumento={idDocumento} idVersion={documento.id_version} />
           )}
         </>
       )}

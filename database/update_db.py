@@ -41,6 +41,7 @@ from database.dependencias._dep_credenciales import TABLA_CREDENCIALES
 from database.dependencias._dep_solicitudes_credencial import TABLA_SOLICITUDES_CREDENCIAL
 from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAGENES
 from database.dependencias._dep_tipos_documento import TABLA_TIPOS_DOCUMENTO, TIPOS_POR_DEFECTO
+from database.dependencias._dep_registros import TABLA_REGISTROS, TABLA_REGISTROS_RELACIONES
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -79,6 +80,8 @@ def main():
         TABLA_ESTILOS,
         TABLA_ESTILOS_IMAGENES,
         TABLA_TIPOS_DOCUMENTO,
+        TABLA_REGISTROS,
+        TABLA_REGISTROS_RELACIONES,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

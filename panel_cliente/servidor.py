@@ -56,6 +56,13 @@ from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCR
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
+from ..database.modelos._mod_registros import (
+    RegistrosCRUD,
+    RegistrosRelacionesCRUD,
+    crear_registro,
+    listar_registros_documento,
+    resolver_incidencia,
+)
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, revertir_edicion
 from .dependencias import (
@@ -469,6 +476,111 @@ async def desarchivar_documento(
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
     return documento
+
+
+# --- Registros de seguimiento (comentarios, anotaciones, observaciones,
+# incidencias y sus resoluciones) — ver docs/gestion-documental.md →
+# "Registros de seguimiento". Cuelgan del documento, no de una versión
+# concreta: siguen disponibles con cualquier versión nueva. Leer: cualquiera
+# con acceso al proyecto (incluido invitado, es consulta). Crear/resolver/
+# asignar: igual criterio que editar el documento (no invitado, no
+# superadmin) — de ahí sale además `creado_por`, el nombre real de quien
+# actúa, sin tener que pedírselo.
+
+
+class NuevoRegistro(BaseModel):
+    tipo: str
+    texto: str
+    responsable: str | None = None
+    id_version_origen: int | None = None
+    id_relacionado: int | None = None
+    tipo_relacion: str | None = None
+
+
+class ResolverIncidencia(BaseModel):
+    texto_resolucion: str
+
+
+class ActualizarResponsableRegistro(BaseModel):
+    responsable: str | None = None
+
+
+class NuevaRelacionRegistro(BaseModel):
+    id_destino: int
+    tipo_relacion: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros")
+async def listar_registros(
+    id_proyecto: int, id_documento: int, tipo: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    if not await DocumentosCRUD(config).obtener(id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    return await listar_registros_documento(config, id_documento, tipo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros")
+async def crear_registro_endpoint(
+    id_proyecto: int, id_documento: int, datos: NuevoRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if not await DocumentosCRUD(config).obtener(id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
+    try:
+        id_registro = await crear_registro(
+            config, id_documento, datos.tipo, datos.texto, creado_por,
+            id_version_origen=datos.id_version_origen, responsable=datos.responsable,
+            id_relacionado=datos.id_relacionado, tipo_relacion=datos.tipo_relacion,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+    return await RegistrosCRUD(config).obtener(id_registro)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/resolver")
+async def resolver_incidencia_endpoint(
+    id_proyecto: int, id_documento: int, id_registro: int, datos: ResolverIncidencia,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
+    try:
+        return await resolver_incidencia(config, id_registro, datos.texto_resolucion, creado_por)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/responsable")
+async def actualizar_responsable_registro(
+    id_proyecto: int, id_documento: int, id_registro: int, datos: ActualizarResponsableRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, datos.responsable)
+    if not registro:
+        raise HTTPException(404, "Registro no encontrado")
+    return registro
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/relaciones")
+async def crear_relacion_registro(
+    id_proyecto: int, id_documento: int, id_registro: int, datos: NuevaRelacionRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    registros = RegistrosCRUD(config)
+    if not await registros.obtener(id_registro) or not await registros.obtener(datos.id_destino):
+        raise HTTPException(404, "Registro no encontrado")
+    id_relacion = await RegistrosRelacionesCRUD(config).crear(id_registro, datos.id_destino, datos.tipo_relacion)
+    return await RegistrosRelacionesCRUD(config).obtener(id_relacion)
 
 
 # --- Aviso de caducidad por email (ver docs/gestion-documental.md →
