@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Text, Textarea, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, Textarea, Title } from "@mantine/core"
 import {
   IconAlertTriangle,
   IconArchive,
@@ -9,7 +9,9 @@ import {
   IconClockHour4,
   IconDeviceFloppy,
   IconEdit,
+  IconFileText,
   IconHistory,
+  IconMessageCircle,
 } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
@@ -39,6 +41,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [guardando, setGuardando] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [historialVersion, setHistorialVersion] = useState(0)
+  const [vista, setVista] = useState("documento")
+  const [registros, setRegistros] = useState(null)
+  const incidenciasAbiertas = registros?.filter((r) => r.tipo === "incidencia" && r.estado === "abierta").length || 0
 
   useEffect(() => {
     cargarDocumento()
@@ -75,6 +80,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     // del confirmado — el aviso ya se muestra en la propia pantalla.
     setTextoEditado(documento.tmp ?? documento.markdown)
     setEditando(true)
+    setVista("documento")
   }
 
   async function guardarBorrador() {
@@ -155,7 +161,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   variant="subtle"
                   color="gray"
                   leftSection={<IconHistory size={15} stroke={1.8} />}
-                  onClick={() => setMostrarHistorial(!mostrarHistorial)}
+                  onClick={() => {
+                    setMostrarHistorial(!mostrarHistorial)
+                    setVista("documento")
+                  }}
                 >
                   Historial
                 </Button>
@@ -180,34 +189,6 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
             <Alert color="red" mb="lg" radius="lg" icon={<IconAlertTriangle size={19} />} title="No cumple el formato/normativa de su tipo">
               {documento.incumplimientos}
             </Alert>
-          )}
-
-          {!editando && (
-            <Paper withBorder radius="lg" p="20" mb="lg">
-              <SimpleGrid cols={2} spacing={48} verticalSpacing={0}>
-                <CampoMeta etiqueta="Tipo de documento" valor={documento.tipo_documento} />
-                <CampoMeta etiqueta="Ámbito" valor={documento.ambito || "—"} />
-                <CampoMeta etiqueta="Fecha del documento" valor={formatearFecha(documento.fecha_documento)} />
-                <CampoMeta etiqueta="Fecha de caducidad" valor={formatearFecha(documento.fecha_caducidad)} />
-                <CampoMeta etiqueta="Dado de alta el" valor={formatearFecha(documento.fecha_alta)} />
-                <CampoMeta etiqueta="Última versión el" valor={formatearFecha(documento.fecha_subida)} />
-                <CampoMeta etiqueta="Corregido a mano" valor={documento.revisado_manualmente ? "Sí" : "No"} />
-                <CampoMeta
-                  etiqueta="Histórico buscable"
-                  valor={documento.todas_versiones_buscables ? "Todas las versiones" : "Solo la última"}
-                />
-              </SimpleGrid>
-              {documento.url_origen && (
-                <Group mt="8" pt="8" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
-                  <Text size="12.5px" c="dimmed">
-                    Fuente
-                  </Text>
-                  <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer" size="13px">
-                    {documento.url_origen}
-                  </Anchor>
-                </Group>
-              )}
-            </Paper>
           )}
 
           {editando ? (
@@ -247,23 +228,78 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               </Text>
             </Stack>
           ) : (
-            <Paper withBorder radius="lg" p="40" className="contenido-documento">
-              <Markdown>{documento.markdown}</Markdown>
-            </Paper>
-          )}
+            <Tabs value={vista} onChange={setVista}>
+              <Tabs.List>
+                <Tabs.Tab value="documento" leftSection={<IconFileText size={15} stroke={1.8} />}>
+                  Documento
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="registros"
+                  leftSection={<IconMessageCircle size={15} stroke={1.8} />}
+                  rightSection={
+                    registros?.length > 0 ? (
+                      <Badge size="sm" circle variant="light" color={incidenciasAbiertas > 0 ? "red" : "gray"}>
+                        {incidenciasAbiertas > 0 ? incidenciasAbiertas : registros.length}
+                      </Badge>
+                    ) : null
+                  }
+                >
+                  Comentarios e incidencias
+                </Tabs.Tab>
+              </Tabs.List>
 
-          {mostrarHistorial && (
-            <HistorialEdicion
-              key={historialVersion}
-              proyecto={proyecto}
-              idDocumento={idDocumento}
-              idVersion={documento.id_version}
-              onRevertido={cargarDocumento}
-            />
-          )}
+              <Tabs.Panel value="documento" pt="lg">
+                <Paper withBorder radius="lg" p="20" mb="lg">
+                  <SimpleGrid cols={2} spacing={48} verticalSpacing={0}>
+                    <CampoMeta etiqueta="Tipo de documento" valor={documento.tipo_documento} />
+                    <CampoMeta etiqueta="Ámbito" valor={documento.ambito || "—"} />
+                    <CampoMeta etiqueta="Fecha del documento" valor={formatearFecha(documento.fecha_documento)} />
+                    <CampoMeta etiqueta="Fecha de caducidad" valor={formatearFecha(documento.fecha_caducidad)} />
+                    <CampoMeta etiqueta="Dado de alta el" valor={formatearFecha(documento.fecha_alta)} />
+                    <CampoMeta etiqueta="Última versión el" valor={formatearFecha(documento.fecha_subida)} />
+                    <CampoMeta etiqueta="Corregido a mano" valor={documento.revisado_manualmente ? "Sí" : "No"} />
+                    <CampoMeta
+                      etiqueta="Histórico buscable"
+                      valor={documento.todas_versiones_buscables ? "Todas las versiones" : "Solo la última"}
+                    />
+                  </SimpleGrid>
+                  {documento.url_origen && (
+                    <Group mt="8" pt="8" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+                      <Text size="12.5px" c="dimmed">
+                        Fuente
+                      </Text>
+                      <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer" size="13px">
+                        {documento.url_origen}
+                      </Anchor>
+                    </Group>
+                  )}
+                </Paper>
 
-          {!editando && (
-            <RegistrosDocumento proyecto={proyecto} idDocumento={idDocumento} idVersion={documento.id_version} />
+                <Paper withBorder radius="lg" p="40" className="contenido-documento">
+                  <Markdown>{documento.markdown}</Markdown>
+                </Paper>
+
+                {mostrarHistorial && (
+                  <HistorialEdicion
+                    key={historialVersion}
+                    proyecto={proyecto}
+                    idDocumento={idDocumento}
+                    idVersion={documento.id_version}
+                    onRevertido={cargarDocumento}
+                  />
+                )}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="registros" pt="lg">
+                <RegistrosDocumento
+                  proyecto={proyecto}
+                  idDocumento={idDocumento}
+                  idVersion={documento.id_version}
+                  onCargado={setRegistros}
+                  mostrarTitulo={false}
+                />
+              </Tabs.Panel>
+            </Tabs>
           )}
         </>
       )}

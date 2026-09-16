@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { Alert, Badge, Button, Group, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
-import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconSearch, IconUpload } from "@tabler/icons-react"
+import { ActionIcon, Alert, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconMessageCircle, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
+import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
 import { formatearFecha } from "../formato"
 
@@ -45,6 +46,7 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
   const [subiendo, setSubiendo] = useState(false)
   const [errorPendientes, setErrorPendientes] = useState(null)
   const [modalSubidaAbierto, setModalSubidaAbierto] = useState(false)
+  const [docRegistros, setDocRegistros] = useState(null)
 
   useEffect(() => {
     api.listarTiposDocumento(proyecto.id)
@@ -242,6 +244,7 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
                 <Table.Th>Tipo</Table.Th>
                 <Table.Th>{q ? "Fragmento" : "Fecha de alta"}</Table.Th>
                 <Table.Th>Estado</Table.Th>
+                <Table.Th></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -280,12 +283,37 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
                         )}
                       </Group>
                     </Table.Td>
+                    <Table.Td onClick={(e) => e.stopPropagation()}>
+                      <Tooltip
+                        label={
+                          r.incidencias_abiertas > 0
+                            ? `${r.incidencias_abiertas} incidencia${r.incidencias_abiertas === 1 ? "" : "s"} abierta${r.incidencias_abiertas === 1 ? "" : "s"}`
+                            : r.total_registros > 0
+                              ? `${r.total_registros} comentario${r.total_registros === 1 ? "" : "s"}/incidencia${r.total_registros === 1 ? "" : "s"}`
+                              : "Comentarios e incidencias"
+                        }
+                      >
+                        <Group
+                          gap="4" wrap="nowrap" style={{ cursor: "pointer", display: "inline-flex" }}
+                          onClick={() => setDocRegistros({ id: idDocumento, idVersion: r.id_version, nombre: r.nombre })}
+                        >
+                          <ActionIcon variant="light" color={r.incidencias_abiertas > 0 ? "red" : "gray"}>
+                            <IconMessageCircle size={15} stroke={1.8} />
+                          </ActionIcon>
+                          {r.total_registros > 0 && (
+                            <Badge size="sm" circle variant="light" color={r.incidencias_abiertas > 0 ? "red" : "gray"}>
+                              {r.incidencias_abiertas > 0 ? r.incidencias_abiertas : r.total_registros}
+                            </Badge>
+                          )}
+                        </Group>
+                      </Tooltip>
+                    </Table.Td>
                   </Table.Tr>
                 )
               })}
               {resultados.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={4}>
+                  <Table.Td colSpan={5}>
                     <Text c="dimmed" py="md">
                       {q ? "Sin resultados." : "No hay ningún documento todavía."}
                     </Text>
@@ -296,6 +324,22 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
           </Table>
         </Paper>
       )}
+
+      <Modal
+        opened={!!docRegistros}
+        onClose={() => setDocRegistros(null)}
+        title={docRegistros?.nombre}
+        size="lg"
+      >
+        {docRegistros && (
+          <RegistrosDocumento
+            proyecto={proyecto}
+            idDocumento={docRegistros.id}
+            idVersion={docRegistros.idVersion}
+            mostrarTitulo={false}
+          />
+        )}
+      </Modal>
     </>
   )
 }

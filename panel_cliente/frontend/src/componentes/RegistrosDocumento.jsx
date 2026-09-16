@@ -206,7 +206,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
   )
 }
 
-export default function RegistrosDocumento({ proyecto, idDocumento, idVersion }) {
+export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, onCargado, mostrarTitulo = true }) {
   const [registros, setRegistros] = useState(null)
   const [error, setError] = useState(null)
   const [tipo, setTipo] = useState("comentario")
@@ -217,7 +217,10 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion })
   function cargar() {
     return api
       .listarRegistrosDocumento(proyecto.id, idDocumento)
-      .then(setRegistros)
+      .then((lista) => {
+        setRegistros(lista)
+        onCargado?.(lista)
+      })
       .catch((err) => setError(err.message))
   }
 
@@ -245,15 +248,17 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion })
   }
 
   return (
-    <Stack mt="xl" gap="10">
-      <div>
-        <Title order={4} fz="16px">
-          Comentarios e incidencias
-        </Title>
-        <Text size="12px" c="dimmed">
-          Se guardan sobre el documento, no sobre esta versión — siguen aquí aunque se suba una versión nueva.
-        </Text>
-      </div>
+    <Stack gap="10">
+      {mostrarTitulo && (
+        <div>
+          <Title order={4} fz="16px">
+            Comentarios e incidencias
+          </Title>
+          <Text size="12px" c="dimmed">
+            Se guardan sobre el documento, no sobre esta versión — siguen aquí aunque se suba una versión nueva.
+          </Text>
+        </div>
+      )}
 
       {proyecto.puede_editar && (
         <Paper withBorder radius="lg" p="14" component="form" onSubmit={crear}>
