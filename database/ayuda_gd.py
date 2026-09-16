@@ -148,6 +148,23 @@ se lo dices y lo corrige, sin tener que volver a subir el documento. El \
 texto original que generó la primera vez nunca se pierde, por si hiciera \
 falta compararlo.
 
+## Comentarios e incidencias
+
+Sobre cualquier documento puedes dejar comentarios, anotaciones, \
+observaciones o abrir una incidencia — pídeselo a tu IA o hazlo desde el \
+panel, en la ficha del documento. Cada uno queda con quién lo abrió y, si \
+quieres, a quién se le asigna (responsable en texto libre, no hace falta \
+que sea un usuario dado de alta).
+
+Una incidencia se puede resolver más adelante, indicando cómo se \
+solucionó — queda enlazada a ella, sin perder el rastro de qué la cerró. \
+Comentarios, anotaciones e incidencias también se pueden relacionar entre \
+sí (p.ej. "este comentario es sobre esa incidencia").
+
+Todo esto se guarda sobre el documento, no sobre una versión concreta: si \
+más adelante subes una versión nueva, comentarios e incidencias anteriores \
+siguen ahí, disponibles igual que antes.
+
 ## Archivar y desarchivar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

@@ -427,3 +427,25 @@ Dos tools migradas a este mecanismo:
 Si el cliente cierra el formulario sin rellenarlo (`action != "accept"`), la tool falla con `ToolError` y la propia IA debe avisar de que no se ha guardado nada, sin insistir ni pedir los datos por chat como alternativa.
 
 **Sin probar todavía contra un cliente MCP real** (ni Claude ni ChatGPT) — depende de que la aplicación que conecta soporte elicitation; en ChatGPT hace falta además su "Developer Mode". Antes de dar esto por bueno hay que verificarlo con una conexión real.
+
+### Registros de seguimiento: comentarios, anotaciones, observaciones, incidencias (2026-09-16)
+
+El cliente quiere poder dejar comentarios/anotaciones/observaciones sobre un documento, abrir incidencias con un responsable asignado, resolverlas dejando constancia de cómo, relacionar estos registros entre sí, y que todo eso siga disponible aunque el documento tenga una versión nueva.
+
+**Decisión clave — una sola tabla (`gd_registros`), no cinco.** Un campo `tipo` (`comentario` / `anotacion` / `observacion` / `incidencia` / `resolucion`) distingue cada caso. Ventaja principal: relacionar dos registros entre sí es la misma mecánica sea cual sea su tipo, y una resolución no deja de ser más que un registro de tipo `resolucion` enlazado a su incidencia — no hace falta un mecanismo aparte para "resolver".
+
+- **Cuelga de `gd_documentos`, no de `gd_versiones`** — a propósito, para que un registro siga apareciendo entero con cualquier versión nueva del documento sin copiarlo ni migrarlo nada. Lleva además `id_version_origen` (nullable, informativo): en qué versión estaba el documento cuando se creó, pero nunca decide en qué versiones se ve.
+- **`creado_por` es texto libre, no un id de usuario real.** Desde el panel se podría resolver de sobra (hay sesión, `puede_editar_documento_actual` ya da el `id_usuario`, ver "Edición desde el panel"), pero desde una tool MCP no hay una identidad de persona fiable — la API key identifica al proyecto, no a quién escribe en ese momento del chat. En vez de dos mecanismos distintos según el origen, un único campo de texto: el panel lo rellena solo con el nombre real de quien tiene la sesión, y por chat se le pregunta a la IA que lo pida si no lo sabe ya (nunca que lo invente).
+- **`responsable` es texto libre en cualquier tipo de registro, no solo en incidencias** — decisión explícita del cliente: no hace falta que sea un usuario real del sistema, y no vale la pena limitarlo a un tipo concreto.
+- **`estado` (`abierta`/`resuelta`) solo tiene sentido en incidencias** — estructuralmente disponible en cualquier registro (columna nullable en la misma tabla, no una tabla aparte) por simplicidad, pero NULL fuera de ese tipo.
+- **Relaciones en tabla aparte (`gd_registros_relaciones`)**, no una columna `id_registro_padre`: un registro puede relacionarse con más de uno, y en cualquier dirección. `tipo_relacion` es una etiqueta libre (p.ej. "relacionado", "duplica"); `"resuelve"` la pone siempre `resolver_incidencia()`, nunca a mano — así una incidencia resuelta tiene garantizado tener su resolución enlazada (misma transacción: crear el registro de resolución, crear la relación, marcar `estado='resuelta'`).
+- **Crear una `resolucion` directamente está bloqueado** (`crear_registro()` solo acepta los otros cuatro tipos) — la única vía es `resolver_incidencia_gd`/el endpoint de resolver, para que ese invariante (incidencia resuelta ⇒ resolución enlazada) no se pueda romper por otro camino.
+
+**Tools MCP** (`mcp_server/herramientas/_herr_registros.py`): `crear_registro_documento_gd`, `listar_registros_documento_gd`, `resolver_incidencia_gd`, `asignar_responsable_registro_gd`, `relacionar_registros_gd`. Sin elicitation aquí — a diferencia de `guardar_documento_gd`/`crear_credencial_gd`, `creado_por`/`responsable` son campos sueltos de bajo riesgo (no secretos, no un cluster de varios campos), así que van como parámetro normal de la tool con instrucción en el docstring de preguntarlos por chat en vez de inventarlos.
+
+**Panel**: sección nueva "Comentarios e incidencias" en `DocumentoDetalle.jsx` (`componentes/RegistrosDocumento.jsx`) — listar, crear, resolver, asignar responsable y relacionar, todo desde la ficha del documento. Mismo criterio de permisos que editar el documento (`puede_editar_documento_actual`): invitado puede leer, no crear.
+
+**Estado (2026-09-16): implementado y desplegado en los 4 servidores** (`mcp-d`, `maderascilpe`, `mgsasesores`, `adimelsl`), esquema aplicado sobre Postgres real en las 4 bases sin tocar datos existentes (verificado contando filas de `gd_documentos`/`gd_versiones` antes y después). Sin probar todavía con un cliente MCP real end-to-end (Claude Desktop/Code) ni desde el panel en producción — pendiente de una prueba real antes de darlo por cerrado del todo.
+
+Quién decidió: usuario (confirmado en conversación, incluida la decisión explícita de que `responsable` sea libre en todos los tipos).
+Reversible: sí — son dos tablas nuevas, sin tocar ninguna existente; quitar las tools/el endpoint/la sección del panel no afecta a nada más.
