@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Avatar, Badge, Group, NavLink, Text, ThemeIcon, Tooltip } from "@mantine/core"
+import { ActionIcon, AppShell, Avatar, Badge, Group, NavLink, Text, ThemeIcon, Tooltip, useMantineColorScheme } from "@mantine/core"
 import {
   IconFileText,
   IconCategory,
@@ -13,6 +13,8 @@ import {
   IconInbox,
   IconLogout,
   IconHeadset,
+  IconSun,
+  IconMoonStars,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -36,6 +38,14 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
 }
 
 export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount, onNavigate, onCerrarSesion }) {
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  // "auto" (el valor de partida, ver main.jsx) sigue el sistema operativo
+  // de cada dispositivo — de ahí que el mismo usuario viera el panel
+  // claro en un sitio y oscuro en otro. En cuanto elige aquí, Mantine
+  // guarda "light"/"dark" en localStorage y ya no vuelve a seguir al
+  // sistema en ese navegador.
+  const esOscuro = colorScheme === "dark"
+
   const rolEtiqueta = esSuperadmin
     ? "Modo soporte"
     : proyecto.es_admin
@@ -118,11 +128,21 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
               </Text>
             </div>
           </Group>
-          <Tooltip label="Cerrar sesión">
-            <ActionIcon variant="subtle" color="gray" size="lg" onClick={onCerrarSesion}>
-              <IconLogout size={17} stroke={1.75} />
-            </ActionIcon>
-          </Tooltip>
+          <Group gap="4" wrap="nowrap">
+            <Tooltip label={esOscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}>
+              <ActionIcon
+                variant="subtle" color="gray" size="lg"
+                onClick={() => setColorScheme(esOscuro ? "light" : "dark")}
+              >
+                {esOscuro ? <IconSun size={17} stroke={1.75} /> : <IconMoonStars size={17} stroke={1.75} />}
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Cerrar sesión">
+              <ActionIcon variant="subtle" color="gray" size="lg" onClick={onCerrarSesion}>
+                <IconLogout size={17} stroke={1.75} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         </Group>
         <Text size="11px" c="dimmed" ta="center" mt="6">
           v{__APP_VERSION__} · rev. {__APP_REVISION__}
