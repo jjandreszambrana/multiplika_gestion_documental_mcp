@@ -209,6 +209,45 @@ falle (por ejemplo, un buzón que rechaza el correo) se puede reintentar. \
 El correo se manda con el formato del documento (títulos, negritas...), \
 no como texto plano.
 
+### Cómo escribir la plantilla, con un ejemplo
+
+No hay que activar nada especial: coges un documento cualquiera (uno que \
+ya tuvieras, o uno nuevo que guardes solo para esto — el tipo de \
+documento da igual) y escribes las variables donde quieras, con dos \
+llaves alrededor del nombre, sin espacios ni tildes en ese nombre. Por \
+ejemplo, para un recordatorio de pago:
+
+**Nombre del documento**: `Recordatorio de pago pendiente`
+
+**Contenido**:
+
+```
+Estimado/a {{nombre}},
+
+Le recordamos que tiene pendiente el pago de **{{importe}}**, con
+fecha límite el {{fecha_limite}}.
+
+Puede realizar el ingreso en la cuenta que ya tiene, indicando su
+nombre como concepto.
+
+Un saludo.
+```
+
+Al abrir la pestaña "Enviar" de ese documento, `{{nombre}}` sale como \
+variable que se rellena sola (es un dato de la entidad); `{{importe}}` \
+y `{{fecha_limite}}` salen como variables que escribes tú, una vez para \
+todas las entidades que elijas en ese envío. Si tres clientes deben \
+importes distintos, hace falta un envío por cada importe distinto — de \
+momento no hay forma de poner un valor diferente por entidad dentro del \
+mismo envío.
+
+Las variables que se rellenan solas, si las usas, tienen que llamarse \
+exactamente así: `nombre`, `tipo`, `direccion`, `localidad`, \
+`provincia`, `codigo_postal`, `pais`, `telefono`, `email`, \
+`observaciones`, `codigo` — los mismos campos de la ficha de la \
+entidad. Cualquier otro nombre que uses (`importe`, `fecha_limite`, \
+`asunto_reunion`...) lo escribes tú al crear el envío.
+
 ### Qué hace falta tener configurado
 
 Dos cosas, las dos desde el panel (no por chat):
