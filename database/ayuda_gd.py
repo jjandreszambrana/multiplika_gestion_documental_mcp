@@ -207,8 +207,24 @@ Puedes mandarlo ya mismo, o programarlo para una fecha y hora concretas \
 programado se puede cancelar mientras no haya llegado su hora, y uno que \
 falle (por ejemplo, un buzón que rechaza el correo) se puede reintentar. \
 El correo se manda con el formato del documento (títulos, negritas...), \
-no como texto plano, y siempre desde tu propia cuenta de correo (la \
-misma que usas para los avisos de caducidad e incidencias).
+no como texto plano.
+
+### Qué hace falta tener configurado
+
+Dos cosas, las dos desde el panel (no por chat):
+
+- **Tu cuenta de correo**, pantalla "Cuenta de correo" (solo el \
+  administrador la ve) — es la misma que ya usas para los avisos de \
+  caducidad/incidencias y para recibir documentos por email, así que si \
+  ya la tenías puesta no hay que tocar nada. Si no, hace falta la \
+  dirección, la contraseña y el servidor SMTP (host, puerto y tipo de \
+  seguridad) — te lo da quien os gestione el correo. Sin esto, un envío \
+  se queda en "fallido" con el motivo "No hay cuenta de correo \
+  configurada".
+- **El email de cada entidad**, pantalla "Entidades" — un envío va \
+  siempre a la dirección que tenga guardada la entidad en ese momento. \
+  Una entidad sin email tampoco bloquea el envío a las demás: se queda \
+  en "fallido" con el motivo, y las demás salen igual.
 
 ## Archivar y desarchivar
 

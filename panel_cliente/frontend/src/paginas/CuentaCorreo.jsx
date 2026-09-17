@@ -81,8 +81,9 @@ export default function CuentaCorreo({ proyecto, onVolver }) {
       </Title>
       <Text c="dimmed" mb="lg">
         Vuestra propia cuenta de correo (no una compartida) — se usa para mandar los avisos de
-        caducidad y para recibir documentos que nos reenviéis por email. La contraseña se guarda
-        cifrada y no vuelve a mostrarse.
+        caducidad/incidencias, las comunicaciones que programéis a entidades, y para recibir
+        documentos que nos reenviéis por email. La contraseña se guarda cifrada y no vuelve a
+        mostrarse.
       </Text>
 
       {cargando ? (
