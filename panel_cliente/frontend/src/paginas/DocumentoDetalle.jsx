@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, Textarea, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, Title, useComputedColorScheme } from "@mantine/core"
+import MDEditor from "@uiw/react-md-editor"
+import "@uiw/react-md-editor/markdown-editor.css"
 import {
   IconAlertTriangle,
   IconArchive,
@@ -48,6 +50,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [vista, setVista] = useState("documento")
   const [registros, setRegistros] = useState(null)
   const incidenciasAbiertas = registros?.filter((r) => r.tipo === "incidencia" && r.estado === "abierta").length || 0
+  const esquemaColor = useComputedColorScheme("light")
 
   useEffect(() => {
     cargarDocumento()
@@ -207,14 +210,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   texto confirmado. Confirma o descarta antes de seguir.
                 </Alert>
               )}
-              <Box>
-                <Textarea
+              <Box data-color-mode={esquemaColor}>
+                <MDEditor
                   value={textoEditado}
-                  onChange={(e) => setTextoEditado(e.currentTarget.value)}
-                  autosize
-                  minRows={18}
-                  radius="lg"
-                  styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)", fontSize: "13px", lineHeight: 1.8, padding: "20px 22px" } }}
+                  onChange={(valor) => setTextoEditado(valor || "")}
+                  height={560}
+                  preview="live"
                 />
               </Box>
               <Group>
