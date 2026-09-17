@@ -284,6 +284,11 @@ Le puedes pedir a tu IA que te genere un informe (con el contenido que \
 ella misma redacte) como PDF, usando alguno de los estilos que tengas \
 dados de alta en el panel (con tu logo y tus imágenes fijas).
 
+Además, cualquier documento ya guardado se puede descargar tal cual en \
+PDF — botón "Descargar PDF" en la ficha del documento, en el panel — \
+con el mismo formato con el que se ve en pantalla (títulos, negritas, \
+tablas...), pensado para imprimir o mandarlo fuera de aquí.
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:

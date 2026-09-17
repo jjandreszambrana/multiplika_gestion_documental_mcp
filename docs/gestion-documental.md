@@ -539,3 +539,14 @@ El despacho manda comunicaciones a clientes y otras entidades con frecuencia, ca
 
 Quién decidió: usuario (la idea completa, y las tres decisiones de producto de arriba, cada una con dos opciones planteadas por el asistente).
 Reversible: sí — una tabla nueva, sin tocar ninguna existente; quitar el cron desactiva la parte automática sin afectar a los envíos manuales.
+
+### Editor y visor de documentos, y exportar a PDF (2026-09-17)
+
+Tres retoques seguidos sobre cómo se ve/edita un documento en el panel, a petición del usuario ("un poco cutre"):
+
+- **Editor**: el `Textarea` monoespaciado de "Editar" se sustituyó por `MDEditor` (`@uiw/react-md-editor`) — mismo componente que ya usaba "Contexto de negocio", así que no fue una dependencia nueva. Barra de formato + vista previa en vivo (`preview="live"`), más alto (560px) que en Contexto por tratarse de documentos completos, no dos párrafos.
+- **Visor** (`Markdown.jsx`): fallo real, no solo de estilo — `react-markdown` sin `remark-gfm` no interpreta tablas (ni tachado, ni listas de tareas): una tabla se veía como una línea de texto con barras verticales sueltas. El CSS de `.contenido-documento` para tablas ya existía desde antes pero nunca se llegaba a aplicar porque no se generaba ningún `<table>`. Añadido `remark-gfm` (ya lo trae `react-markdown` como dependencia opcional habitual, se instaló aparte) y completado el CSS que faltaba (h4-h6, blockquote, código/pre, hr).
+- **Exportar a PDF**: botón "Descargar PDF" en la ficha del documento — la versión vigente, con el mismo formato que se ve en pantalla. Reutiliza el mecanismo que ya existía para los informes que redacta la IA (`generar_informe_pdf_gd`: markdown → HTML → WeasyPrint en subproceso aparte, por el conflicto de `libffi` con el entorno conda compartido, ver comentario en el código). Ese render se sacó de `mcp_server/herramientas/_herr_pdf.py` a `database/modelos/_mod_pdf.py` — la única carpeta que llega a los dos árboles de despliegue (proyecto y panel) — para que el panel pudiera reutilizarlo sin duplicar el subproceso ni su gotcha de libffi; `_herr_pdf.py` quedó como una fachada fina sobre ese módulo. CSS de impresión aparte (`CSS_DOCUMENTO`, distinto de `CSS_INFORME`): en pantalla el cuerpo va en gris "dimmed" de baja intensidad, que en papel impreso se lee mal, así que el PDF usa texto oscuro/negro sólido.
+
+Quién decidió: usuario (los tres retoques); la extracción a `_mod_pdf.py` y el CSS de impresión aparte los decidió el asistente por las razones de arriba.
+Reversible: sí — ninguno toca el esquema; quitar el botón o revertir el import no afecta a nada más.

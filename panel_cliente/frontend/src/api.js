@@ -302,6 +302,24 @@ export const api = {
   // Devuelve un blob, no JSON: el <img> no puede mandar la cabecera
   // Authorization él solo, así que se trae aquí y se muestra con un
   // object URL (ver Estilos.jsx) en vez de poner el token en la URL.
+  // Igual que obtenerImagenEstiloBlob: la descarga necesita la cabecera
+  // Authorization, así que no puede ser un <a href> normal — se trae
+  // como blob y quien llama arma la descarga en el navegador.
+  descargarDocumentoPdfBlob: async (idProyecto, idDocumento) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/documentos/${idDocumento}/pdf`, { headers })
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    return res.blob()
+  },
   obtenerImagenEstiloBlob: async (idProyecto, idEstilo, idImagen) => {
     const headers = {}
     if (token) headers["Authorization"] = `Bearer ${token}`

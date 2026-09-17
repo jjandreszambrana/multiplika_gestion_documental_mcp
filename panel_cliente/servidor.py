@@ -31,7 +31,9 @@ import html
 import os
 from datetime import datetime, timezone
 from typing import Literal
+from urllib.parse import quote
 
+import markdown as md
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
@@ -52,6 +54,7 @@ from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
+from ..database.modelos._mod_pdf import CSS_DOCUMENTO, renderizar_pdf
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
@@ -355,6 +358,40 @@ async def obtener_documento(
         "tmp_usuario": await _nombre_usuario(version["tmp_id_usuario"]) if version else None,
         "tmp_fecha": version["tmp_fecha"] if version else None,
     }
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/pdf")
+async def exportar_documento_pdf(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> Response:
+    """Exporta la versión vigente del documento a PDF, con el mismo
+    formato (títulos, tablas, negritas...) que se ve en el panel — mismo
+    mecanismo (markdown -> HTML -> WeasyPrint) que ya usa la IA para
+    generar informes por chat, ver database/modelos/_mod_pdf.py."""
+    config = get_db_config(proyecto["id"])
+    documento = await DocumentosCRUD(config).obtener(id_documento)
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    version = await VersionesCRUD(config).obtener_vigente(id_documento)
+    if not version:
+        raise HTTPException(404, "Este documento no tiene ninguna versión vigente")
+
+    cuerpo_html = md.markdown(version["markdown_actual"], extensions=["tables"])
+    titulo_html = html.escape(documento["nombre"])
+    html_completo = (
+        f"<html><head><meta charset='utf-8'><title>{titulo_html}</title>"
+        f"<style>{CSS_DOCUMENTO}</style></head><body>{cuerpo_html}</body></html>"
+    )
+    try:
+        pdf_bytes = await renderizar_pdf(html_completo)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e)) from e
+
+    nombre_archivo = quote(f"{documento['nombre']}.pdf")
+    return Response(
+        content=pdf_bytes, media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre_archivo}"},
+    )
 
 
 # --- Edición desde el panel (ver docs/gestion-documental.md → "Edición

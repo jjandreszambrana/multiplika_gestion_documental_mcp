@@ -10,6 +10,7 @@ import {
   IconCircleCheck,
   IconClockHour4,
   IconDeviceFloppy,
+  IconDownload,
   IconEdit,
   IconFileText,
   IconHistory,
@@ -42,6 +43,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [documento, setDocumento] = useState(null)
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
+  const [descargandoPdf, setDescargandoPdf] = useState(false)
   const [editando, setEditando] = useState(false)
   const [textoEditado, setTextoEditado] = useState("")
   const [guardando, setGuardando] = useState(false)
@@ -78,6 +80,24 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
       setError(err.message)
     } finally {
       setCambiandoArchivo(false)
+    }
+  }
+
+  async function descargarPdf() {
+    setDescargandoPdf(true)
+    setError(null)
+    try {
+      const blob = await api.descargarDocumentoPdfBlob(proyecto.id, idDocumento)
+      const url = URL.createObjectURL(blob)
+      const enlace = document.createElement("a")
+      enlace.href = url
+      enlace.download = `${documento.nombre}.pdf`
+      enlace.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDescargandoPdf(false)
     }
   }
 
@@ -164,6 +184,15 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 </Group>
               </div>
               <Group gap="8" wrap="nowrap">
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  loading={descargandoPdf}
+                  leftSection={<IconDownload size={15} stroke={1.8} />}
+                  onClick={descargarPdf}
+                >
+                  Descargar PDF
+                </Button>
                 <Button
                   variant="subtle"
                   color="gray"
