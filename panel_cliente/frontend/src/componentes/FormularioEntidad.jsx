@@ -1,6 +1,10 @@
 import { Autocomplete, SimpleGrid, Textarea, TextInput } from "@mantine/core"
 
-const TIPOS_SUGERIDOS = ["cliente", "proveedor", "empleado"]
+const TIPOS_SUGERIDOS = [
+  "cliente", "proveedor", "empleado", "acreedor", "deudor", "socio",
+  "asociación", "comunidad", "hermandad", "administración", "organismo público",
+  "entidad financiera", "aseguradora",
+]
 
 // Formulario compartido entre "crear entidad" (Entidades.jsx) y "editar
 // entidad" (EntidadDetalle.jsx) — mismos 11 campos en los dos sitios.
