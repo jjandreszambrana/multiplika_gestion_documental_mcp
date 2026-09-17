@@ -2,6 +2,7 @@ import { ActionIcon, AppShell, Avatar, Badge, Group, NavLink, Text, ThemeIcon, T
 import {
   IconFileText,
   IconCategory,
+  IconFolders,
   IconPalette,
   IconBriefcase,
   IconUsers,
@@ -81,6 +82,7 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
           onClick={() => onNavigate("tipos-documento")}
         />
         <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
+        <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
 
         {proyecto.es_admin && (
           <>

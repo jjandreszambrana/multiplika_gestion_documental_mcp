@@ -20,6 +20,8 @@ import Credenciales from "./paginas/Credenciales"
 import Estilos from "./paginas/Estilos"
 import TiposDocumento from "./paginas/TiposDocumento"
 import EstiloDetalle from "./paginas/EstiloDetalle"
+import Grupos from "./paginas/Grupos"
+import GrupoDetalle from "./paginas/GrupoDetalle"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
@@ -33,6 +35,7 @@ export default function App() {
   const [proyecto, setProyecto] = useState(null)
   const [idDocumentoActivo, setIdDocumentoActivo] = useState(null)
   const [estiloActivo, setEstiloActivo] = useState(null)
+  const [grupoActivo, setGrupoActivo] = useState(null)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
@@ -99,6 +102,7 @@ export default function App() {
     setProyecto(null)
     setIdDocumentoActivo(null)
     setEstiloActivo(null)
+    setGrupoActivo(null)
     setVista("documentos")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -106,6 +110,7 @@ export default function App() {
   function navegar(nuevaVista) {
     setIdDocumentoActivo(null)
     setEstiloActivo(null)
+    setGrupoActivo(null)
     setVista(nuevaVista)
   }
 
@@ -174,6 +179,15 @@ export default function App() {
             <Estilos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEstilo={setEstiloActivo} />
           ) : vista === "tipos-documento" ? (
             <TiposDocumento proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "grupos" && grupoActivo ? (
+            <GrupoDetalle
+              proyecto={proyecto}
+              grupo={grupoActivo}
+              onVolver={() => setGrupoActivo(null)}
+              onEliminado={() => setGrupoActivo(null)}
+            />
+          ) : vista === "grupos" ? (
+            <Grupos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerGrupo={setGrupoActivo} />
           ) : (
             <Documentos
               proyecto={proyecto}

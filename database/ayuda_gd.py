@@ -172,6 +172,14 @@ caducidad", más abajo), te avisa a ti — un aviso por asignación, no todos \
 los días mientras siga abierta. Si más adelante se la reasignas a otra \
 persona (o le añades el email que le faltaba), vuelve a avisar.
 
+## Grupos de documentos
+
+Puedes crear grupos para juntar documentos que sirven a un mismo fin (una \
+auditoría, un expediente...) — pídeselo a tu IA o hazlo desde el panel, \
+pantalla "Grupos". Un grupo lleva un nombre y una descripción de para qué \
+sirve. No hace falta que todos los documentos estén en un grupo, y un \
+mismo documento puede estar en varios a la vez.
+
 ## Archivar y desarchivar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

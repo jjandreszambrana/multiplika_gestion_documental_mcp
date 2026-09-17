@@ -55,6 +55,7 @@ from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
+from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
 from ..database.modelos._mod_registros import (
     RegistrosCRUD,
@@ -584,6 +585,121 @@ async def crear_relacion_registro(
         raise HTTPException(404, "Registro no encontrado")
     id_relacion = await RegistrosRelacionesCRUD(config).crear(id_registro, datos.id_destino, datos.tipo_relacion)
     return await RegistrosRelacionesCRUD(config).obtener(id_relacion)
+
+
+# --- Grupos de documentos (ver docs/gestion-documental.md → "Grupos de
+# documentos"): un grupo agrupa documentos para un fin concreto; no todos
+# los documentos están en uno, y uno mismo puede estar en varios. Mismo
+# criterio de permisos que registros/archivar: día a día con documentos,
+# no administración — cualquiera con acceso puede leer, puede_editar hace
+# falta para crear/asignar/quitar.
+
+
+class NuevoGrupo(BaseModel):
+    nombre: str
+    proposito: str
+
+
+class ActualizarGrupo(BaseModel):
+    nombre: str | None = None
+    proposito: str | None = None
+
+
+class AsignarDocumentoGrupo(BaseModel):
+    id_documento: int
+
+
+@app.get("/v1/proyectos/{id_proyecto}/grupos")
+async def listar_grupos(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    grupos = await GruposCRUD(config).listar_todos()
+    recuento = await DocumentosGruposCRUD(config).contar_por_grupo()
+    return [{**g, "total_documentos": recuento.get(g["id"], 0)} for g in grupos]
+
+
+@app.post("/v1/proyectos/{id_proyecto}/grupos")
+async def crear_grupo(
+    id_proyecto: int, datos: NuevoGrupo,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    grupos = GruposCRUD(config)
+    if await grupos.obtener_por_nombre(datos.nombre):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe un grupo llamado "{datos.nombre}"')
+    id_grupo = await grupos.crear(datos.nombre, datos.proposito)
+    return await grupos.obtener(id_grupo)
+
+
+@app.put("/v1/proyectos/{id_proyecto}/grupos/{id_grupo}")
+async def actualizar_grupo(
+    id_proyecto: int, id_grupo: int, datos: ActualizarGrupo,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    grupo = await GruposCRUD(config).actualizar(id_grupo, datos.nombre, datos.proposito)
+    if not grupo:
+        raise HTTPException(404, "Grupo no encontrado")
+    return grupo
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/grupos/{id_grupo}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_grupo(
+    id_proyecto: int, id_grupo: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await GruposCRUD(config).eliminar(id_grupo)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/grupos/{id_grupo}/documentos")
+async def listar_documentos_grupo(
+    id_proyecto: int, id_grupo: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    if not await GruposCRUD(config).obtener(id_grupo):
+        raise HTTPException(404, "Grupo no encontrado")
+    return await DocumentosGruposCRUD(config).listar_documentos_de_grupo(id_grupo, incluir_archivados=True)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/grupos/{id_grupo}/documentos")
+async def asignar_documento_grupo(
+    id_proyecto: int, id_grupo: int, datos: AsignarDocumentoGrupo,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if not await GruposCRUD(config).obtener(id_grupo):
+        raise HTTPException(404, "Grupo no encontrado")
+    if not await DocumentosCRUD(config).obtener(datos.id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    await DocumentosGruposCRUD(config).asignar(datos.id_documento, id_grupo)
+    return {"id_documento": datos.id_documento, "id_grupo": id_grupo}
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/grupos/{id_grupo}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def quitar_documento_grupo(
+    id_proyecto: int, id_grupo: int, id_documento: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await DocumentosGruposCRUD(config).quitar(id_documento, id_grupo)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/grupos")
+async def listar_grupos_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await DocumentosGruposCRUD(config).listar_grupos_de_documento(id_documento)
 
 
 # --- Aviso de caducidad por email (ver docs/gestion-documental.md →

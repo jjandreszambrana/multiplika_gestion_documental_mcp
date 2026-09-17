@@ -475,3 +475,22 @@ Tools/API: `crear_registro_documento_gd`, `asignar_responsable_registro_gd` y su
 
 Quién decidió: usuario.
 Reversible: sí — columna nullable, no rompe nada existente; sin `responsable_email` en ningún registro, el comportamiento es idéntico al de antes de este cambio.
+
+### Grupos de documentos (2026-09-17)
+
+El cliente quiere poder agrupar documentos "para un fin concreto" (una auditoría, un expediente) sin que eso implique que todo documento tenga que estar en un grupo.
+
+**Decisión: muchos-a-muchos, no un `id_grupo` en `gd_documentos`** — confirmado con el usuario: un mismo documento puede estar en varios grupos a la vez (p.ej. una factura relevante tanto para "Auditoría 2026" como para "Proyecto X"). De ahí `gd_documentos_grupos`, tabla de relación pura, mismo patrón que `gd_registros_relaciones` — índice único `(id_documento, id_grupo)` para que asignar dos veces no duplique fila, `ON DELETE CASCADE` en ambos lados (borrar un documento o un grupo limpia sus relaciones solas).
+
+**`gd_grupos` deliberadamente mínima: solo `nombre` (único) y `proposito`** — el usuario descartó explícitamente añadir responsable/estado al grupo en esta primera versión; se puede ampliar después si hace falta, sin migrar nada existente.
+
+**Borrar un grupo no toca los documentos** — solo desaparecen sus filas de `gd_documentos_grupos` (cascada), los documentos en sí quedan intactos. Sin "archivar" (a diferencia de documentos/versiones): un grupo es metadato organizativo sin historial que conservar, borrar sin más es suficiente.
+
+**Tools MCP** (`mcp_server/herramientas/_herr_grupos.py`): `crear_grupo_gd`, `listar_grupos_gd`, `asignar_documento_grupo_gd`, `quitar_documento_grupo_gd`, `listar_documentos_grupo_gd`, `eliminar_grupo_gd`.
+
+**Panel**: pantalla nueva "Grupos" (`Grupos.jsx` → lista y crea; `GrupoDetalle.jsx` → edita, borra, añade/quita documentos), enlazada en la barra lateral igual que Tipos de documento/Estilos (no gated a admin — es día a día, no configuración). En la ficha de cada documento, `componentes/GruposDocumento.jsx` muestra sus grupos como chips (con su propósito en el tooltip) y deja añadir/quitar sin salir de ahí. Mismo criterio de permisos que registros: cualquiera con acceso lee, `puede_editar` para crear/asignar/quitar/borrar.
+
+Fuera de alcance por ahora: filtrar el listado principal de documentos por grupo (se puede añadir después, es solo una columna más en `DocumentosCRUD.buscar()` y un `Select` más en `Documentos.jsx`, pero no se pidió y no hacía falta para lo de asignar).
+
+Quién decidió: usuario (nombre del feature, y las dos preguntas de diseño — muchos-a-muchos, y grupo mínimo sin responsable/estado).
+Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.

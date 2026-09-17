@@ -215,6 +215,21 @@ export const api = {
       { id_destino: idDestino, tipo_relacion: tipoRelacion || null },
     ),
 
+  listarGrupos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/grupos`),
+  crearGrupo: (idProyecto, nombre, proposito) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/grupos`, { nombre, proposito }),
+  actualizarGrupo: (idProyecto, idGrupo, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/grupos/${idGrupo}`, datos),
+  eliminarGrupo: (idProyecto, idGrupo) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/grupos/${idGrupo}`),
+  listarDocumentosGrupo: (idProyecto, idGrupo) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/grupos/${idGrupo}/documentos`),
+  asignarDocumentoGrupo: (idProyecto, idGrupo, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/grupos/${idGrupo}/documentos`, { id_documento: idDocumento }),
+  quitarDocumentoGrupo: (idProyecto, idGrupo, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/grupos/${idGrupo}/documentos/${idDocumento}`),
+  listarGruposDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/grupos`),
+
   listarTiposDocumento: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/tipos-documento`),
   crearTipoDocumento: (idProyecto, nombre) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/tipos-documento`, { nombre }),
