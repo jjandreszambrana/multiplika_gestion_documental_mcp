@@ -8,9 +8,15 @@ body {
    lee como un documento, no como una pantalla de formulario. */
 .contenido-documento h1,
 .contenido-documento h2,
-.contenido-documento h3 {
+.contenido-documento h3,
+.contenido-documento h4,
+.contenido-documento h5,
+.contenido-documento h6 {
   font-family: var(--mantine-font-family-headings);
   font-weight: 600;
+}
+.contenido-documento > *:first-child {
+  margin-top: 0;
 }
 .contenido-documento h1 {
   font-size: 22px;
@@ -20,11 +26,54 @@ body {
   font-size: 17px;
   margin: 28px 0 10px;
 }
+.contenido-documento h3 {
+  font-size: 15px;
+  margin: 22px 0 8px;
+}
+.contenido-documento h4,
+.contenido-documento h5,
+.contenido-documento h6 {
+  font-size: 13.5px;
+  margin: 18px 0 6px;
+}
 .contenido-documento p,
 .contenido-documento li {
   color: var(--mantine-color-dimmed);
   font-size: 13.5px;
   line-height: 1.7;
+}
+.contenido-documento strong {
+  color: var(--mantine-color-text);
+  font-weight: 600;
+}
+.contenido-documento hr {
+  border: none;
+  border-top: 1px solid var(--mantine-color-default-border);
+  margin: 24px 0;
+}
+.contenido-documento blockquote {
+  margin: 14px 0;
+  padding: 2px 16px;
+  border-left: 3px solid var(--mantine-color-acento-5);
+  color: var(--mantine-color-dimmed);
+  font-style: italic;
+}
+.contenido-documento code {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.92em;
+  background: var(--mantine-color-default-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.contenido-documento pre {
+  background: var(--mantine-color-default-hover);
+  padding: 12px 14px;
+  border-radius: var(--mantine-radius-md);
+  overflow-x: auto;
+}
+.contenido-documento pre code {
+  background: none;
+  padding: 0;
 }
 .contenido-documento table {
   width: 100%;
