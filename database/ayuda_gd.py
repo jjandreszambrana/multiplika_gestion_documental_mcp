@@ -165,6 +165,12 @@ Todo esto se guarda sobre el documento, no sobre una versión concreta: si \
 más adelante subes una versión nueva, comentarios e incidencias anteriores \
 siguen ahí, disponibles igual que antes.
 
+Si configuras en el panel un correo de aviso (el mismo de "Fechas de \
+caducidad", más abajo), te avisa también cuando una incidencia se abre \
+con un responsable asignado — un aviso por asignación, no todos los días \
+mientras siga abierta. Si más adelante se la reasignas a otra persona, \
+vuelve a avisar.
+
 ## Archivar y desarchivar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

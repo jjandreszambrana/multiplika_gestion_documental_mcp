@@ -449,3 +449,16 @@ El cliente quiere poder dejar comentarios/anotaciones/observaciones sobre un doc
 
 Quién decidió: usuario (confirmado en conversación, incluida la decisión explícita de que `responsable` sea libre en todos los tipos).
 Reversible: sí — son dos tablas nuevas, sin tocar ninguna existente; quitar las tools/el endpoint/la sección del panel no afecta a nada más.
+
+### Aviso de incidencias abiertas por email (2026-09-17)
+
+Mismo problema que resolvió "Fechas de caducidad y avisos proactivos por email" (más arriba), aplicado a incidencias: si nadie entra al panel ni le pregunta a la IA, abrir una incidencia y asignarle un responsable no avisa a nadie de que existe.
+
+**Decisión: un aviso por asignación, no un recordatorio diario mientras siga abierta.** Se valoró mandar un resumen diario con todo lo abierto (como hace `avisar_caducidades.py` cada día hasta que caduca), pero una incidencia puede tardar semanas en resolverse — recibir el mismo aviso cada día durante ese tiempo es ruido, no ayuda a que se resuelva antes. En vez de eso: columna `gd_registros.aviso_responsable_enviado` (mismo patrón que `gd_versiones.aviso_caducidad_enviado`), y `RegistrosCRUD.actualizar_responsable()` la reinicia a `false` cada vez que cambia el responsable — así reasignarla sí vuelve a avisar (a quien corresponda ahora), pero dejarla como está no genera más correos.
+
+**El correo va a `email_avisos`, no al responsable directamente** — `responsable` es texto libre (ver decisión de arriba), no necesariamente un email real ni un usuario del sistema, así que no hay a quién escribirle de forma fiable. El cuerpo del correo menciona el nombre del responsable en cada línea para que quien lo reciba (normalmente un admin, la misma persona que ya recibe los avisos de caducidad) sepa a quién avisar.
+
+**`scripts/avisar_incidencias.py`** — autocontenido, mismo patrón exacto que `avisar_caducidades.py` (SQL en línea, no importa `database/modelos`, recorre `mcpc_proyectos` con `motor='postgres'` y `tipo_producto='gestion_documental'`, manda desde la cuenta de correo propia del cliente, un fallo de un proyecto no tumba a los demás). Cron `mcp_gd_avisos_incidencias`, 07:20 (justo después del de caducidad, 07:15, para no competir por la misma conexión SMTP del cliente al mismo tiempo).
+
+Quién decidió: usuario pidió "programar esos avisos" tras una recomendación del asistente; el diseño concreto (una vez por asignación, destinatario `email_avisos`) lo decidió el asistente por las razones de arriba — a revisar si no encaja con lo que el cliente esperaba.
+Reversible: sí — una columna nueva (`aviso_responsable_enviado`, `NOT NULL DEFAULT false`, no rompe nada existente) y un script/cron independiente; quitar el cron basta para desactivarlo del todo.

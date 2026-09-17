@@ -25,9 +25,14 @@ class RegistrosCRUD(AsyncCrudBase):
         return filas
 
     async def actualizar_responsable(self, id_registro: int, responsable: str | None) -> dict | None:
+        """Cambiar el responsable reinicia `aviso_responsable_enviado` a
+        false — así el nuevo responsable (o el mismo, si se reconfirma)
+        vuelve a entrar en la próxima pasada de avisar_incidencias.py, en
+        vez de quedar silenciado para siempre por un aviso mandado a
+        otra persona."""
         if not await self.obtener(id_registro):
             return None
-        await self.update(id_registro, {"responsable": responsable})
+        await self.update(id_registro, {"responsable": responsable, "aviso_responsable_enviado": False})
         return await self.obtener(id_registro)
 
 

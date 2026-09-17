@@ -52,6 +52,11 @@ CAMPOS_REGISTROS = [
     Columna(nombre="estado", tipo="VARCHAR", longitud=20, enum_opciones=ESTADOS_INCIDENCIA,
             comentario="Solo tiene sentido para tipo='incidencia' (abierta/resuelta); NULL en el "
                        "resto de tipos"),
+    Columna(nombre="aviso_responsable_enviado", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="Si ya se avisó por email al asignar el responsable actual de esta "
+                       "incidencia (ver scripts/avisar_incidencias.py) — un aviso por asignación, "
+                       "no uno diario mientras siga abierta; se reinicia a false cada vez que "
+                       "actualizar_responsable() cambia el responsable"),
     Columna(nombre="fecha_creacion", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
             protegido_actualizar=True, comentario="Cuándo se abrió el registro"),
 ]
