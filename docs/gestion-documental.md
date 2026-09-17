@@ -513,3 +513,29 @@ El cliente quiere una tabla de clientes/proveedores/empleados relacionable con d
 
 Quién decidió: usuario (los 11 campos, la relación muchos-a-muchos con documentos); el nombre de columna `tipo` (en vez de repetir `entidad`) lo decidió el asistente por claridad, ver arriba.
 Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.
+
+### Comunicaciones y envíos (2026-09-17)
+
+El despacho manda comunicaciones a clientes y otras entidades con frecuencia, cada una con contenido distinto (nombre, importe, fecha...). Se pidió: el documento hace de plantilla con variables dentro del texto, y desde ahí se programan envíos por email a las entidades que se elijan, a mano o en automático.
+
+**Decisión: la plantilla es un documento normal, no una tabla aparte** — cualquier `gd_documentos` puede usarse para esto, sin marcarlo de ninguna forma especial. Las variables son `{{asi}}` (regex `\{\{\s*(\w+)\s*\}\}`) dentro de `nombre` (asunto) y del markdown (cuerpo); no hace falta declararlas en ningún sitio aparte, se detectan solas leyendo el texto. Se aprovecha todo lo que ya existe para documentos (versiones, comentarios/incidencias, grupos, entidades relacionadas) sin construir nada nuevo para "plantillas".
+
+**Tres decisiones de producto, confirmadas con el usuario antes de construir esto**:
+1. **Variables compartidas por lote, no una tabla por entidad.** Al mandar el mismo documento a varias entidades a la vez, las variables que NO coinciden con un campo de la entidad (ver abajo) se escriben una sola vez y valen para todas — no hay una cuadrícula de "un valor por entidad y variable". Más simple, cubre circulares y avisos generales; no vale para "cada cliente debe un importe distinto" en el mismo lote (eso necesitaría una entrada de datos por fila, descartado por complejidad para esta primera versión).
+2. **Solo envíos programados para una fecha/hora concreta, no recurrentes.** Programar "cada mes" habría exigido que las variables se recalculen solas en cada repetición (fechas relativas, importes que cambian) — no encaja con variables de valor fijo escritas una vez. Para repetir, se crea un envío nuevo cada vez.
+3. **El correo se manda con formato (HTML), no texto plano** — a diferencia de los avisos de caducidad/incidencias (que son avisos internos), una comunicación a un cliente cuida más la imagen. Se reaprovecha la misma conversión que ya usa `generar_informe_pdf_gd` (librería `markdown`, ya en `requirements.txt`) — el correo va como `multipart/alternative`, con una parte de texto plano (el markdown sin convertir, para clientes que no muestran HTML) y una parte HTML.
+
+**El contenido se resuelve y se guarda YA HECHO al crear el envío, no al mandarlo** (`gd_envios.asunto`/`contenido_html`/`contenido_texto`) — así un envío programado manda exactamente lo que se aprobó, aunque el documento se edite después; y el cron que manda los programados (`scripts/procesar_envios.py`) no necesita la librería `markdown` ni la lógica de variables, solo lee esas columnas y las manda tal cual — mismo patrón autocontenido que `avisar_caducidades.py`/`avisar_incidencias.py`, y más simple que esos dos porque no hay nada que calcular en el momento de mandar.
+
+**Variables "auto" vs "personalizadas`**: auto = coincide con una columna de `gd_entidades` (`nombre`, `tipo`, `direccion`, `localidad`, `provincia`, `codigo_postal`, `pais`, `telefono`, `email`, `observaciones`, `codigo`) y se resuelve sola por entidad; cualquier otra (`importe`, `fecha_limite`...) es personalizada. Una variable sin valor se deja tal cual en el texto (`{{asi}}` literal) en vez de desaparecer en blanco — para que se note en la vista previa que falta rellenarla.
+
+**`gd_envios`**: un registro por entidad destinataria (aunque el "lote" cree varios a la vez) — cada uno necesita su propio `email_destino` y sus propias variables auto. `estado` (`programado`/`enviado`/`fallido`/`cancelado`); `fecha_programada` NULL significa "ya" — se manda en el mismo paso de crear el envío, sin esperar al cron. Sin email en la entidad → se crea igual, en `fallido` con el motivo, en vez de omitirse en silencio.
+
+**Tools MCP** (`mcp_server/herramientas/_herr_envios.py`): `detectar_variables_documento_gd`, `crear_envios_gd` (crea el lote; si no se programa, el propio flujo de chat llama después a `enviar_envio_gd` por cada uno), `enviar_envio_gd`, `listar_envios_documento_gd`, `listar_envios_entidad_gd`, `cancelar_envio_gd`, `reintentar_envio_gd`.
+
+**Panel**: pestaña nueva "Enviar" en `DocumentoDetalle.jsx` (`componentes/EnviosDocumento.jsx`) — detecta variables, elige entidades (`MultiSelect`), pide las personalizadas, fecha opcional, vista previa (con sustitución hecha en el propio JS, reutilizando `Markdown.jsx` — no hace falta ida y vuelta al servidor solo para previsualizar) y la lista de envíos de ese documento con cancelar/reintentar.
+
+**Cron `mcp_gd_procesar_envios`, cada 5 minutos** (`scripts/procesar_envios.py`) — más frecuente que los avisos diarios porque aquí la hora programada importa de verdad, no es un resumen del día.
+
+Quién decidió: usuario (la idea completa, y las tres decisiones de producto de arriba, cada una con dos opciones planteadas por el asistente).
+Reversible: sí — una tabla nueva, sin tocar ninguna existente; quitar el cron desactiva la parte automática sin afectar a los envíos manuales.

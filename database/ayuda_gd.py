@@ -191,6 +191,25 @@ ejemplo, el cliente de una factura), y puede estar relacionada con varios \
 documentos a la vez, igual que un documento puede tener varias entidades \
 relacionadas.
 
+## Comunicaciones y envíos por email
+
+Cualquier documento puede usarse como plantilla de una comunicación: \
+escribe variables dentro del texto con dos llaves, por ejemplo \
+`{{nombre}}` o `{{importe}}`, y desde la pestaña "Enviar" de ese \
+documento eliges a qué entidades mandárselo. Las variables que coincidan \
+con un dato de la entidad (nombre, email, dirección, teléfono...) se \
+rellenan solas; el resto las escribes tú una vez, con el mismo valor \
+para todas las entidades de ese envío. Antes de mandarlo ves una vista \
+previa con las variables ya sustituidas.
+
+Puedes mandarlo ya mismo, o programarlo para una fecha y hora concretas \
+— en ese caso se manda solo, sin que tengas que estar delante. Un envío \
+programado se puede cancelar mientras no haya llegado su hora, y uno que \
+falle (por ejemplo, un buzón que rechaza el correo) se puede reintentar. \
+El correo se manda con el formato del documento (títulos, negritas...), \
+no como texto plano, y siempre desde tu propia cuenta de correo (la \
+misma que usas para los avisos de caducidad e incidencias).
+
 ## Archivar y desarchivar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

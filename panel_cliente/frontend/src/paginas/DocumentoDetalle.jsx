@@ -12,6 +12,7 @@ import {
   IconFileText,
   IconHistory,
   IconMessageCircle,
+  IconSend,
 } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
@@ -20,6 +21,7 @@ import HistorialEdicion from "../componentes/HistorialEdicion"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import GruposDocumento from "../componentes/GruposDocumento"
 import EntidadesDocumento from "../componentes/EntidadesDocumento"
+import EnviosDocumento from "../componentes/EnviosDocumento"
 
 function CampoMeta({ etiqueta, valor }) {
   return (
@@ -251,6 +253,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 >
                   Comentarios e incidencias
                 </Tabs.Tab>
+                <Tabs.Tab value="enviar" leftSection={<IconSend size={15} stroke={1.8} />}>
+                  Enviar
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="documento" pt="lg">
@@ -303,6 +308,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   onCargado={setRegistros}
                   mostrarTitulo={false}
                 />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="enviar" pt="lg">
+                <EnviosDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
               </Tabs.Panel>
             </Tabs>
           )}

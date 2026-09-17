@@ -55,6 +55,14 @@ from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
+from ..database.modelos._mod_envios import (
+    EnviosCRUD,
+    cancelar_envio,
+    crear_envios,
+    detectar_variables_documento,
+    enviar_envio,
+    reintentar_envio,
+)
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
@@ -847,6 +855,97 @@ async def listar_entidades_documento(
 ) -> list[dict]:
     config = get_db_config(proyecto["id"])
     return await DocumentosEntidadesCRUD(config).listar_entidades_de_documento(id_documento)
+
+
+# --- Comunicaciones y envíos (ver docs/gestion-documental.md →
+# "Comunicaciones y envíos"): un documento usado como plantilla, con
+# variables `{{asi}}`, se manda por email a una o varias entidades. Mismo
+# criterio de permisos que registros/grupos/entidades: cualquiera con
+# acceso lee, puede_editar hace falta para crear/mandar/cancelar/reintentar.
+
+
+class NuevosEnvios(BaseModel):
+    ids_entidad: list[int]
+    variables_personalizadas: dict = {}
+    fecha_programada: str | None = None
+    enviar_ya: bool = False
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/variables")
+async def detectar_variables_documento_endpoint(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await detectar_variables_documento(config, id_documento)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/envios")
+async def listar_envios_documento_endpoint(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await EnviosCRUD(config).listar_de_documento(id_documento)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/envios")
+async def crear_envios_endpoint(
+    id_proyecto: int, id_documento: int, datos: NuevosEnvios,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
+    fecha = datetime.fromisoformat(datos.fecha_programada) if datos.fecha_programada else None
+    try:
+        creados = await crear_envios(
+            config, id_documento, datos.ids_entidad, datos.variables_personalizadas, creado_por, fecha,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+    if datos.enviar_ya:
+        creados = [
+            await enviar_envio(config, e["id"]) if e["estado"] == "programado" else e
+            for e in creados
+        ]
+    return creados
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/envios")
+async def listar_envios_entidad_endpoint(
+    id_proyecto: int, id_entidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await EnviosCRUD(config).listar_de_entidad(id_entidad)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/envios/{id_envio}/cancelar")
+async def cancelar_envio_endpoint(
+    id_proyecto: int, id_envio: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await cancelar_envio(config, id_envio)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/envios/{id_envio}/reintentar")
+async def reintentar_envio_endpoint(
+    id_proyecto: int, id_envio: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await reintentar_envio(config, id_envio)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
 
 # --- Aviso de caducidad por email (ver docs/gestion-documental.md →

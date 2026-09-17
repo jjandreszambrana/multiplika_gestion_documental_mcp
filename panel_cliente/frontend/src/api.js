@@ -237,6 +237,19 @@ export const api = {
   listarEntidadesDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/entidades`),
 
+  detectarVariablesDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/variables`),
+  listarEnviosDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/envios`),
+  crearEnvios: (idProyecto, idDocumento, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/envios`, datos),
+  listarEnviosEntidad: (idProyecto, idEntidad) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/envios`),
+  cancelarEnvio: (idProyecto, idEnvio) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/envios/${idEnvio}/cancelar`),
+  reintentarEnvio: (idProyecto, idEnvio) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/envios/${idEnvio}/reintentar`),
+
   listarGrupos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/grupos`),
   crearGrupo: (idProyecto, nombre, proposito) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/grupos`, { nombre, proposito }),
