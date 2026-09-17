@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   Alert, Badge, Button, Group, MultiSelect, Paper, Select, Stack, Table, Text, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconSend } from "@tabler/icons-react"
+import { IconSend, IconUsers } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 import Markdown from "./Markdown"
@@ -99,6 +99,7 @@ function FilaEnvio({ proyecto, envio, onCambiado }) {
 export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
   const [variables, setVariables] = useState(null)
   const [entidades, setEntidades] = useState([])
+  const [entidadesVinculadas, setEntidadesVinculadas] = useState([])
   const [envios, setEnvios] = useState(null)
   const [error, setError] = useState(null)
 
@@ -115,6 +116,7 @@ export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
   useEffect(() => {
     api.detectarVariablesDocumento(proyecto.id, idDocumento).then(setVariables).catch((err) => setError(err.message))
     api.listarEntidades(proyecto.id).then(setEntidades).catch(() => setEntidades([]))
+    api.listarEntidadesDocumento(proyecto.id, idDocumento).then(setEntidadesVinculadas).catch(() => setEntidadesVinculadas([]))
     recargarEnvios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, idDocumento])
@@ -132,6 +134,13 @@ export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
   const valoresPreview = { ...(entidadPreview || {}), ...valoresPersonalizados }
   const asuntoPreview = documento ? resolverVariables(documento.nombre, valoresPreview) : ""
   const cuerpoPreview = documento ? resolverVariables(documento.markdown || "", valoresPreview) : ""
+
+  function anadirVinculadas() {
+    const idsVinculadas = entidadesVinculadas.map((e) => String(e.id))
+    setIdsSeleccionadas([...new Set([...idsSeleccionadas, ...idsVinculadas])])
+  }
+
+  const faltanVinculadasPorAnadir = entidadesVinculadas.some((e) => !idsSeleccionadas.includes(String(e.id)))
 
   async function enviar(evento) {
     evento.preventDefault()
@@ -190,6 +199,15 @@ export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
             value={idsSeleccionadas} onChange={setIdsSeleccionadas}
             searchable required
           />
+
+          {entidadesVinculadas.length > 0 && faltanVinculadasPorAnadir && (
+            <Button
+              variant="light" size="xs" leftSection={<IconUsers size={13} />}
+              onClick={anadirVinculadas} style={{ alignSelf: "flex-start" }}
+            >
+              Añadir {entidadesVinculadas.length === 1 ? "la entidad vinculada" : `las ${entidadesVinculadas.length} entidades vinculadas`} a este documento
+            </Button>
+          )}
 
           {variables.personalizadas.map((v) => (
             <TextInput

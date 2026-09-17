@@ -55,6 +55,12 @@ async def crear_envios_gd(
     detectar_variables_documento_gd), pero las mismas
     `variables_personalizadas` para todas.
 
+    `ids_entidad` puede venir de una lista que te dé el cliente, o de las
+    entidades ya vinculadas a este documento (consulta antes
+    listar_entidades_documento_gd si te pide "mándaselo a los de
+    siempre" o algo parecido) — las dos vías valen igual, esta tool no
+    distingue de dónde salen los ids.
+
     `fecha_programada`: fecha y hora ISO (p.ej. "2026-10-03T09:00:00")
     para mandarlo más adelante — el cron se encarga solo. Si la dejas
     vacía, los envíos quedan listos para mandar YA: llama a

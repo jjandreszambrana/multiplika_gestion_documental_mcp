@@ -196,7 +196,9 @@ relacionadas.
 Cualquier documento puede usarse como plantilla de una comunicación: \
 escribe variables dentro del texto con dos llaves, por ejemplo \
 `{{nombre}}` o `{{importe}}`, y desde la pestaña "Enviar" de ese \
-documento eliges a qué entidades mandárselo. Las variables que coincidan \
+documento eliges a qué entidades mandárselo — buscándolas una a una, o \
+de golpe con el botón para añadir las que ya tengas vinculadas a ese \
+documento (ver "Entidades", más arriba). Las variables que coincidan \
 con un dato de la entidad (nombre, email, dirección, teléfono...) se \
 rellenan solas; el resto las escribes tú una vez, con el mismo valor \
 para todas las entidades de ese envío. Antes de mandarlo ves una vista \
