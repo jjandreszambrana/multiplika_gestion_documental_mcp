@@ -28,6 +28,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
   const [tipoRelacion, setTipoRelacion] = useState("")
   const [editandoResponsable, setEditandoResponsable] = useState(false)
   const [nuevoResponsable, setNuevoResponsable] = useState(registro.responsable || "")
+  const [nuevoResponsableEmail, setNuevoResponsableEmail] = useState(registro.responsable_email || "")
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
 
@@ -69,7 +70,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
     setGuardando(true)
     setError(null)
     try {
-      await api.asignarResponsableRegistro(proyecto.id, idDocumento, registro.id, nuevoResponsable)
+      await api.asignarResponsableRegistro(proyecto.id, idDocumento, registro.id, nuevoResponsable, nuevoResponsableEmail)
       setEditandoResponsable(false)
       await onCambiado()
     } catch (err) {
@@ -108,7 +109,9 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
       {!editandoResponsable ? (
         <Group gap="6" mt="8">
           <Text size="12px" c="dimmed">
-            {registro.responsable ? `Responsable: ${registro.responsable}` : "Sin responsable asignado"}
+            {registro.responsable
+              ? `Responsable: ${registro.responsable}${registro.responsable_email ? ` (${registro.responsable_email})` : ""}`
+              : "Sin responsable asignado"}
           </Text>
           <Text
             component="button" type="button" size="12px" c="acento"
@@ -123,6 +126,11 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
           <TextInput
             size="xs" value={nuevoResponsable} placeholder="Nombre del responsable"
             onChange={(e) => setNuevoResponsable(e.currentTarget.value)}
+            style={{ width: 180 }}
+          />
+          <TextInput
+            size="xs" type="email" value={nuevoResponsableEmail} placeholder="Email (opcional)"
+            onChange={(e) => setNuevoResponsableEmail(e.currentTarget.value)}
             style={{ width: 200 }}
           />
           <Button size="xs" onClick={guardarResponsable} loading={guardando}>
@@ -212,6 +220,7 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
   const [tipo, setTipo] = useState("comentario")
   const [texto, setTexto] = useState("")
   const [responsable, setResponsable] = useState("")
+  const [responsableEmail, setResponsableEmail] = useState("")
   const [creando, setCreando] = useState(false)
 
   function cargar() {
@@ -235,10 +244,12 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
     setError(null)
     try {
       await api.crearRegistroDocumento(proyecto.id, idDocumento, {
-        tipo, texto, responsable: responsable || null, id_version_origen: idVersion,
+        tipo, texto, responsable: responsable || null, responsable_email: responsableEmail || null,
+        id_version_origen: idVersion,
       })
       setTexto("")
       setResponsable("")
+      setResponsableEmail("")
       await cargar()
     } catch (err) {
       setError(err.message)
@@ -270,6 +281,11 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
             <TextInput
               label="Responsable (opcional)" value={responsable}
               onChange={(e) => setResponsable(e.currentTarget.value)}
+              style={{ width: 180 }}
+            />
+            <TextInput
+              label="Email (opcional)" type="email" value={responsableEmail}
+              onChange={(e) => setResponsableEmail(e.currentTarget.value)}
               style={{ width: 200 }}
             />
           </Group>

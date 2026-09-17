@@ -492,6 +492,7 @@ class NuevoRegistro(BaseModel):
     tipo: str
     texto: str
     responsable: str | None = None
+    responsable_email: str | None = None
     id_version_origen: int | None = None
     id_relacionado: int | None = None
     tipo_relacion: str | None = None
@@ -503,6 +504,7 @@ class ResolverIncidencia(BaseModel):
 
 class ActualizarResponsableRegistro(BaseModel):
     responsable: str | None = None
+    responsable_email: str | None = None
 
 
 class NuevaRelacionRegistro(BaseModel):
@@ -535,6 +537,7 @@ async def crear_registro_endpoint(
         id_registro = await crear_registro(
             config, id_documento, datos.tipo, datos.texto, creado_por,
             id_version_origen=datos.id_version_origen, responsable=datos.responsable,
+            responsable_email=datos.responsable_email,
             id_relacionado=datos.id_relacionado, tipo_relacion=datos.tipo_relacion,
         )
     except ValueError as e:
@@ -563,7 +566,7 @@ async def actualizar_responsable_registro(
     id_usuario: int = Depends(puede_editar_documento_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
-    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, datos.responsable)
+    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, datos.responsable, datos.responsable_email)
     if not registro:
         raise HTTPException(404, "Registro no encontrado")
     return registro

@@ -202,11 +202,11 @@ export const api = {
       `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/resolver`,
       { texto_resolucion: textoResolucion },
     ),
-  asignarResponsableRegistro: (idProyecto, idDocumento, idRegistro, responsable) =>
+  asignarResponsableRegistro: (idProyecto, idDocumento, idRegistro, responsable, responsableEmail) =>
     peticion(
       BASE_CLIENTE, "PUT",
       `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/responsable`,
-      { responsable: responsable || null },
+      { responsable: responsable || null, responsable_email: responsableEmail || null },
     ),
   relacionarRegistros: (idProyecto, idDocumento, idOrigen, idDestino, tipoRelacion) =>
     peticion(

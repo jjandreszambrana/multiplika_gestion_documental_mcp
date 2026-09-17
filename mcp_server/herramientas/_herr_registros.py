@@ -32,6 +32,7 @@ async def crear_registro_documento_gd(
     texto: str,
     creado_por: str,
     responsable: str | None = None,
+    responsable_email: str | None = None,
     id_relacionado: int | None = None,
     tipo_relacion: str | None = None,
 ) -> dict:
@@ -44,9 +45,13 @@ async def crear_registro_documento_gd(
     cliente por chat si no lo sabes ya por la conversación — no lo
     inventes ni pongas tu propio nombre.
 
-    `responsable`: a quién se le asigna, si aplica — texto libre (no
-    tiene por qué ser un usuario real del sistema), puedes dejarlo vacío
-    y asignarlo luego con asignar_responsable_registro_gd.
+    `responsable`/`responsable_email`: a quién se le asigna, si aplica —
+    texto libre, no tiene por qué ser un usuario real del sistema. Si le
+    pasas un email, el aviso automático de incidencias abiertas
+    (avisar_incidencias.py) le escribe directo a él en vez de al correo
+    general del proyecto — pregúntaselo solo si el cliente lo da, no lo
+    inventes ni asumas uno a partir del nombre. Puedes dejar los dos
+    vacíos y asignarlos luego con asignar_responsable_registro_gd.
 
     `id_relacionado`/`tipo_relacion`: si este registro está relacionado
     con otro ya existente de este mismo documento (p.ej. un comentario
@@ -63,7 +68,8 @@ async def crear_registro_documento_gd(
     try:
         id_registro = await crear_registro(
             config, id_documento, tipo, texto, creado_por,
-            responsable=responsable, id_relacionado=id_relacionado, tipo_relacion=tipo_relacion,
+            responsable=responsable, responsable_email=responsable_email,
+            id_relacionado=id_relacionado, tipo_relacion=tipo_relacion,
         )
     except ValueError as e:
         raise ToolError(str(e)) from e
@@ -99,12 +105,17 @@ async def resolver_incidencia_gd(id_incidencia: int, texto_resolucion: str, crea
 
 
 @mcp_app.tool()
-async def asignar_responsable_registro_gd(id_registro: int, responsable: str | None) -> dict:
+async def asignar_responsable_registro_gd(
+    id_registro: int, responsable: str | None, responsable_email: str | None = None
+) -> dict:
     """Asigna (o quita, pasando `responsable=None`) a quién se le
     encarga un registro ya existente — comentario, anotación,
-    observación o incidencia. Texto libre, no un usuario del sistema."""
+    observación o incidencia. Texto libre, no un usuario del sistema. Si
+    le pasas `responsable_email`, el aviso automático de incidencias
+    abiertas le escribe directo a él — no lo inventes, solo si el
+    cliente te lo da."""
     config = await _contexto_actual()
-    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, responsable)
+    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, responsable, responsable_email)
     if not registro:
         raise ToolError(f"No existe ningún registro con id {id_registro}")
     return registro

@@ -49,6 +49,11 @@ CAMPOS_REGISTROS = [
             comentario="A quién se le asigna — texto libre en cualquier tipo de registro, no solo "
                        "incidencias (decisión de producto: no hace falta que sea un usuario real del "
                        "sistema), NULL si no se ha asignado"),
+    Columna(nombre="responsable_email", tipo="VARCHAR", longitud=255,
+            comentario="Email del responsable, opcional — si está, avisar_incidencias.py le escribe "
+                       "directo a él en vez de (además de) al email_avisos general. NULL si no se "
+                       "conoce; no se valida el formato, es un campo de contacto, no una cuenta del "
+                       "sistema"),
     Columna(nombre="estado", tipo="VARCHAR", longitud=20, enum_opciones=ESTADOS_INCIDENCIA,
             comentario="Solo tiene sentido para tipo='incidencia' (abierta/resuelta); NULL en el "
                        "resto de tipos"),

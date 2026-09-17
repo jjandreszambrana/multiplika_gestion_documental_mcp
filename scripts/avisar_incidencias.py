@@ -12,13 +12,12 @@ reasignarla vuelve a avisar. Un aviso por asignación, no un recordatorio
 diario mientras siga abierta — mismo motivo que `avisar_caducidades.py`:
 evitar saturar de correos por algo que puede tardar en resolverse.
 
-El correo va siempre a `gd_configuracion.email_avisos`, no directamente al
-responsable: `responsable` es texto libre (ver
-docs/gestion-documental.md → "Registros de seguimiento", decisión de
-producto de que no tiene por qué ser un usuario real ni una dirección de
-correo), así que no hay a quién escribirle de forma fiable — el correo
-menciona el nombre del responsable en cada línea para que quien lo reciba
-sepa a quién avisar o reenviárselo.
+Si la incidencia tiene `responsable_email` (opcional — `responsable` en sí
+sigue siendo texto libre, no siempre hay un email), el aviso va DIRECTO a
+esa dirección, agrupando si una misma persona tiene varias. Las que no
+tienen email de responsable caen, como antes, en un único correo a
+`gd_configuracion.email_avisos` mencionando el nombre de cada uno — para
+esas no hay a quién escribirle de forma fiable.
 
 Autocontenido a propósito, mismo motivo que avisar_caducidades.py: no
 importa la capa `database/modelos` de este repo (imports relativos
@@ -75,7 +74,7 @@ async def _proyectos_gestion_documental_activos() -> list[dict]:
 async def _incidencias_pendientes_aviso(config: dict) -> list[dict]:
     db = AsyncDatabase(**config)
     sql = """
-        SELECT r.id, r.texto, r.responsable, d.nombre AS documento
+        SELECT r.id, r.texto, r.responsable, r.responsable_email, d.nombre AS documento
         FROM gd_registros r
         JOIN gd_documentos d ON d.id = r.id_documento
         WHERE r.tipo = 'incidencia' AND r.estado = 'abierta'
@@ -134,13 +133,22 @@ def _conectar_smtp(cuenta: dict) -> smtplib.SMTP:
     return smtp
 
 
-def _enviar_email(cuenta: dict, destinatario: str, proyecto_nombre: str, incidencias: list[dict]) -> None:
-    lineas = [f'- "{i["documento"]}" — responsable: {i["responsable"]} — {i["texto"]}' for i in incidencias]
-    cuerpo = (
-        f"Incidencias abiertas de {proyecto_nombre} con responsable asignado:\n\n" + "\n".join(lineas) +
-        "\n\nEste es un aviso único por asignación — si se reasigna a otra persona, se vuelve a avisar; "
-        "mientras siga con el mismo responsable, no se repite."
-    )
+def _enviar_email(
+    cuenta: dict, destinatario: str, proyecto_nombre: str, incidencias: list[dict], para_responsable: bool
+) -> None:
+    if para_responsable:
+        lineas = [f'- "{i["documento"]}" — {i["texto"]}' for i in incidencias]
+        intro = f"Tienes {len(incidencias)} incidencia(s) abierta(s) asignada(s) en {proyecto_nombre}:"
+        cierre = "\n\nEste es un aviso único por asignación — no se repite mientras siga contigo."
+    else:
+        lineas = [f'- "{i["documento"]}" — responsable: {i["responsable"]} — {i["texto"]}' for i in incidencias]
+        intro = f"Incidencias abiertas de {proyecto_nombre} con responsable asignado (sin email propio):"
+        cierre = (
+            "\n\nEste es un aviso único por asignación — si se reasigna a otra persona, se vuelve a avisar; "
+            "mientras siga con el mismo responsable, no se repite."
+        )
+    cuerpo = intro + "\n\n" + "\n".join(lineas) + cierre
+
     mensaje = MIMEText(cuerpo, _charset="utf-8")
     mensaje["Subject"] = f"[{proyecto_nombre}] Incidencias abiertas asignadas ({len(incidencias)})"
     mensaje["From"] = cuenta["direccion"]
@@ -156,33 +164,61 @@ async def _procesar_proyecto(proyecto: dict, simular: bool) -> None:
     if not incidencias:
         return
 
-    destinatario = await _email_avisos(config)
     cuenta = await _cuenta_email(config)
-    if not destinatario or not cuenta:
+    if not cuenta:
+        print(f"{proyecto['nombre']}: {len(incidencias)} incidencia(s) por avisar, pero falta la cuenta de correo — se omite.")
+        return
+
+    avisadas: list[int] = []
+
+    # Con email propio de responsable: directo a él, agrupando si tiene varias.
+    por_responsable: dict[str, list[dict]] = {}
+    for i in incidencias:
+        if i["responsable_email"]:
+            por_responsable.setdefault(i["responsable_email"], []).append(i)
+
+    for email_responsable, lista in por_responsable.items():
         print(
-            f"{proyecto['nombre']}: {len(incidencias)} incidencia(s) por avisar, pero falta "
-            f"{'email_avisos' if not destinatario else 'la cuenta de correo'} — se omite."
+            f"{proyecto['nombre']}: avisando de {len(lista)} incidencia(s) a {email_responsable} "
+            f"(responsable) desde {cuenta['direccion']}."
         )
-        return
+        if simular:
+            continue
+        try:
+            _enviar_email(cuenta, email_responsable, proyecto["nombre"], lista, para_responsable=True)
+        except (smtplib.SMTPException, OSError) as e:
+            # Mismo motivo que avisar_caducidades.py: un destinatario mal
+            # configurado no debe tumbar el aviso de los demás. No se
+            # marca aviso_responsable_enviado: se reintenta en la
+            # siguiente ejecución, nada se pierde.
+            print(f"{proyecto['nombre']}: fallo mandando el aviso a {email_responsable}: {e}")
+            continue
+        avisadas += [i["id"] for i in lista]
 
-    print(
-        f"{proyecto['nombre']}: avisando de {len(incidencias)} incidencia(s) a {destinatario} "
-        f"desde {cuenta['direccion']}."
-    )
-    if simular:
-        return
+    # Sin email propio: un único correo a email_avisos, como antes.
+    sin_email = [i for i in incidencias if not i["responsable_email"]]
+    if sin_email:
+        destinatario = await _email_avisos(config)
+        if not destinatario:
+            print(
+                f"{proyecto['nombre']}: {len(sin_email)} incidencia(s) sin email de responsable y sin "
+                "email_avisos configurado — se omiten."
+            )
+        else:
+            print(
+                f"{proyecto['nombre']}: avisando de {len(sin_email)} incidencia(s) a {destinatario} "
+                f"desde {cuenta['direccion']}."
+            )
+            if not simular:
+                try:
+                    _enviar_email(cuenta, destinatario, proyecto["nombre"], sin_email, para_responsable=False)
+                except (smtplib.SMTPException, OSError) as e:
+                    print(f"{proyecto['nombre']}: fallo mandando el aviso a {destinatario}: {e}")
+                else:
+                    avisadas += [i["id"] for i in sin_email]
 
-    try:
-        _enviar_email(cuenta, destinatario, proyecto["nombre"], incidencias)
-    except (smtplib.SMTPException, OSError) as e:
-        # Mismo motivo que avisar_caducidades.py: un email_avisos mal
-        # configurado de un cliente no debe tumbar el aviso de los demás.
-        # No se marca aviso_responsable_enviado: se reintenta en la
-        # siguiente ejecución, nada se pierde.
-        print(f"{proyecto['nombre']}: fallo mandando el aviso a {destinatario}: {e}")
-        return
-
-    await _marcar_avisadas(config, [i["id"] for i in incidencias])
+    if avisadas and not simular:
+        await _marcar_avisadas(config, avisadas)
 
 
 async def main() -> None:

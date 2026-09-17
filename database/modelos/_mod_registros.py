@@ -24,15 +24,20 @@ class RegistrosCRUD(AsyncCrudBase):
         filas, _ = await self.listar(filtros=filtros, limit=1000, orden="fecha_creacion ASC")
         return filas
 
-    async def actualizar_responsable(self, id_registro: int, responsable: str | None) -> dict | None:
-        """Cambiar el responsable reinicia `aviso_responsable_enviado` a
-        false — así el nuevo responsable (o el mismo, si se reconfirma)
-        vuelve a entrar en la próxima pasada de avisar_incidencias.py, en
-        vez de quedar silenciado para siempre por un aviso mandado a
-        otra persona."""
+    async def actualizar_responsable(
+        self, id_registro: int, responsable: str | None, responsable_email: str | None = None
+    ) -> dict | None:
+        """Cambiar el responsable (o su email) reinicia
+        `aviso_responsable_enviado` a false — así el nuevo responsable (o
+        el mismo, si se reconfirma) vuelve a entrar en la próxima pasada
+        de avisar_incidencias.py, en vez de quedar silenciado para
+        siempre por un aviso mandado a otra persona."""
         if not await self.obtener(id_registro):
             return None
-        await self.update(id_registro, {"responsable": responsable, "aviso_responsable_enviado": False})
+        await self.update(
+            id_registro,
+            {"responsable": responsable, "responsable_email": responsable_email, "aviso_responsable_enviado": False},
+        )
         return await self.obtener(id_registro)
 
 
@@ -69,6 +74,7 @@ async def crear_registro(
     creado_por: str,
     id_version_origen: int | None = None,
     responsable: str | None = None,
+    responsable_email: str | None = None,
     id_relacionado: int | None = None,
     tipo_relacion: str | None = None,
 ) -> int:
@@ -88,6 +94,7 @@ async def crear_registro(
         "creado_por": creado_por,
         "id_version_origen": id_version_origen,
         "responsable": responsable,
+        "responsable_email": responsable_email,
         "estado": "abierta" if tipo == "incidencia" else None,
     })
     if id_relacionado is not None:

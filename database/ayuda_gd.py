@@ -154,7 +154,8 @@ Sobre cualquier documento puedes dejar comentarios, anotaciones, \
 observaciones o abrir una incidencia — pídeselo a tu IA o hazlo desde el \
 panel, en la ficha del documento. Cada uno queda con quién lo abrió y, si \
 quieres, a quién se le asigna (responsable en texto libre, no hace falta \
-que sea un usuario dado de alta).
+que sea un usuario dado de alta) y, opcionalmente, su email — si lo \
+pones, el aviso de incidencias (más abajo) le escribe a él directamente.
 
 Una incidencia se puede resolver más adelante, indicando cómo se \
 solucionó — queda enlazada a ella, sin perder el rastro de qué la cerró. \
@@ -165,11 +166,11 @@ Todo esto se guarda sobre el documento, no sobre una versión concreta: si \
 más adelante subes una versión nueva, comentarios e incidencias anteriores \
 siguen ahí, disponibles igual que antes.
 
-Si configuras en el panel un correo de aviso (el mismo de "Fechas de \
-caducidad", más abajo), te avisa también cuando una incidencia se abre \
-con un responsable asignado — un aviso por asignación, no todos los días \
-mientras siga abierta. Si más adelante se la reasignas a otra persona, \
-vuelve a avisar.
+Si el responsable tiene email, el aviso le llega directo a él. Si no, y \
+configuras en el panel un correo de aviso (el mismo de "Fechas de \
+caducidad", más abajo), te avisa a ti — un aviso por asignación, no todos \
+los días mientras siga abierta. Si más adelante se la reasignas a otra \
+persona (o le añades el email que le faltaba), vuelve a avisar.
 
 ## Archivar y desarchivar
 

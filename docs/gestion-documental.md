@@ -462,3 +462,16 @@ Mismo problema que resolvió "Fechas de caducidad y avisos proactivos por email"
 
 Quién decidió: usuario pidió "programar esos avisos" tras una recomendación del asistente; el diseño concreto (una vez por asignación, destinatario `email_avisos`) lo decidió el asistente por las razones de arriba — a revisar si no encaja con lo que el cliente esperaba.
 Reversible: sí — una columna nueva (`aviso_responsable_enviado`, `NOT NULL DEFAULT false`, no rompe nada existente) y un script/cron independiente; quitar el cron basta para desactivarlo del todo.
+
+### El responsable puede llevar su propio email (2026-09-17)
+
+A los pocos minutos de cerrar lo de arriba, pregunta obvia en retrospectiva: si `responsable` es texto libre, ¿por qué no dejar apuntar también su email, para escribirle a él en vez de al `email_avisos` genérico?
+
+**`gd_registros.responsable_email`**, columna nueva, opcional — no se valida el formato (es un dato de contacto, no una cuenta del sistema; ver la misma filosofía de `responsable` en sí). `RegistrosCRUD.actualizar_responsable()` la actualiza junto con `responsable` y sigue reiniciando `aviso_responsable_enviado` si cualquiera de los dos cambia (así añadir el email que faltaba también dispara un aviso nuevo, no solo cambiar de persona).
+
+`avisar_incidencias.py` ahora separa las incidencias pendientes de aviso en dos grupos: las que tienen `responsable_email` van agrupadas por dirección (una persona con varias incidencias recibe un solo correo con todas) directo a esa persona; las que no, siguen cayendo en el correo a `email_avisos` de siempre, mencionando el nombre. Un proyecto sin `email_avisos` configurado ya no bloquea los avisos a responsables que sí tienen email — cada grupo se manda con independencia del otro.
+
+Tools/API: `crear_registro_documento_gd`, `asignar_responsable_registro_gd` y sus endpoints/formulario del panel llevan `responsable_email` opcional junto a `responsable`. Mismo criterio que el nombre: si viene por chat, la IA lo pasa solo si el cliente lo da, nunca lo inventa.
+
+Quién decidió: usuario.
+Reversible: sí — columna nullable, no rompe nada existente; sin `responsable_email` en ningún registro, el comportamiento es idéntico al de antes de este cambio.
