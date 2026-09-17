@@ -108,7 +108,7 @@ export default function GruposDocumento({ proyecto, idDocumento }) {
             {opciones.length > 0 && (
               <Select
                 placeholder="Añadir a un grupo..." data={opciones} value={idGrupoNuevo}
-                onChange={anadir} searchable size="xs" w={200}
+                onChange={anadir} searchable size="sm" w={340}
               />
             )}
             <Button
