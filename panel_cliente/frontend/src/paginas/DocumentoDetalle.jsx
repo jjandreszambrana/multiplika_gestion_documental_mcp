@@ -19,6 +19,7 @@ import { formatearFecha } from "../formato"
 import HistorialEdicion from "../componentes/HistorialEdicion"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import GruposDocumento from "../componentes/GruposDocumento"
+import EntidadesDocumento from "../componentes/EntidadesDocumento"
 
 function CampoMeta({ etiqueta, valor }) {
   return (
@@ -187,6 +188,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
           )}
 
           {!editando && <GruposDocumento proyecto={proyecto} idDocumento={idDocumento} />}
+          {!editando && <EntidadesDocumento proyecto={proyecto} idDocumento={idDocumento} />}
 
           {!editando && documento.incumplimientos && (
             <Alert color="red" mb="lg" radius="lg" icon={<IconAlertTriangle size={19} />} title="No cumple el formato/normativa de su tipo">

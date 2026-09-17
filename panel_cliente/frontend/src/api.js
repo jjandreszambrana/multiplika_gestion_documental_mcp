@@ -215,6 +215,28 @@ export const api = {
       { id_destino: idDestino, tipo_relacion: tipoRelacion || null },
     ),
 
+  listarEntidades: (idProyecto, q, tipo) => {
+    const parametros = new URLSearchParams()
+    if (q) parametros.set("q", q)
+    if (tipo) parametros.set("tipo", tipo)
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades${query ? `?${query}` : ""}`)
+  },
+  crearEntidad: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/entidades`, datos),
+  obtenerEntidad: (idProyecto, idEntidad) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}`),
+  actualizarEntidad: (idProyecto, idEntidad, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/entidades/${idEntidad}`, datos),
+  eliminarEntidad: (idProyecto, idEntidad) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/entidades/${idEntidad}`),
+  listarDocumentosEntidad: (idProyecto, idEntidad) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/documentos`),
+  relacionarDocumentoEntidad: (idProyecto, idEntidad, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/entidades/${idEntidad}/documentos`, { id_documento: idDocumento }),
+  quitarRelacionDocumentoEntidad: (idProyecto, idEntidad, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/entidades/${idEntidad}/documentos/${idDocumento}`),
+  listarEntidadesDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/entidades`),
+
   listarGrupos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/grupos`),
   crearGrupo: (idProyecto, nombre, proposito) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/grupos`, { nombre, proposito }),

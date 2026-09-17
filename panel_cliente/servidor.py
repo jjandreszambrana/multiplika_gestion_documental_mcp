@@ -54,6 +54,7 @@ from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencial
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
@@ -700,6 +701,152 @@ async def listar_grupos_documento(
 ) -> list[dict]:
     config = get_db_config(proyecto["id"])
     return await DocumentosGruposCRUD(config).listar_grupos_de_documento(id_documento)
+
+
+# --- Entidades (ver docs/gestion-documental.md → "Entidades"): clientes,
+# proveedores, empleados... relacionables con documentos. Mismo criterio de
+# permisos que grupos/registros: cualquiera con acceso lee, puede_editar
+# hace falta para crear/editar/borrar/relacionar.
+
+
+class DatosEntidad(BaseModel):
+    nombre: str
+    tipo: str
+    direccion: str | None = None
+    localidad: str | None = None
+    provincia: str | None = None
+    codigo_postal: str | None = None
+    pais: str | None = None
+    telefono: str | None = None
+    email: str | None = None
+    observaciones: str | None = None
+    codigo: str | None = None
+
+
+class ActualizarEntidad(BaseModel):
+    nombre: str | None = None
+    tipo: str | None = None
+    direccion: str | None = None
+    localidad: str | None = None
+    provincia: str | None = None
+    codigo_postal: str | None = None
+    pais: str | None = None
+    telefono: str | None = None
+    email: str | None = None
+    observaciones: str | None = None
+    codigo: str | None = None
+
+
+class RelacionarDocumentoEntidad(BaseModel):
+    id_documento: int
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades")
+async def listar_entidades(
+    id_proyecto: int, q: str | None = None, tipo: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await EntidadesCRUD(config).buscar(q, tipo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/entidades")
+async def crear_entidad(
+    id_proyecto: int, datos: DatosEntidad,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    entidades = EntidadesCRUD(config)
+    if datos.codigo and await entidades.obtener_por_codigo(datos.codigo):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una entidad con el código "{datos.codigo}"')
+    id_entidad = await entidades.crear(datos.model_dump())
+    return await entidades.obtener(id_entidad)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}")
+async def obtener_entidad(
+    id_proyecto: int, id_entidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    entidad = await EntidadesCRUD(config).obtener(id_entidad)
+    if not entidad:
+        raise HTTPException(404, "Entidad no encontrada")
+    return entidad
+
+
+@app.put("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}")
+async def actualizar_entidad(
+    id_proyecto: int, id_entidad: int, datos: ActualizarEntidad,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    entidades = EntidadesCRUD(config)
+    if datos.codigo:
+        existente = await entidades.obtener_por_codigo(datos.codigo)
+        if existente and existente["id"] != id_entidad:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una entidad con el código "{datos.codigo}"')
+    entidad = await entidades.actualizar_campos(id_entidad, datos.model_dump())
+    if not entidad:
+        raise HTTPException(404, "Entidad no encontrada")
+    return entidad
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_entidad(
+    id_proyecto: int, id_entidad: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await EntidadesCRUD(config).eliminar(id_entidad)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/documentos")
+async def listar_documentos_entidad(
+    id_proyecto: int, id_entidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    if not await EntidadesCRUD(config).obtener(id_entidad):
+        raise HTTPException(404, "Entidad no encontrada")
+    return await DocumentosEntidadesCRUD(config).listar_documentos_de_entidad(id_entidad, incluir_archivados=True)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/documentos")
+async def relacionar_documento_entidad(
+    id_proyecto: int, id_entidad: int, datos: RelacionarDocumentoEntidad,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if not await EntidadesCRUD(config).obtener(id_entidad):
+        raise HTTPException(404, "Entidad no encontrada")
+    if not await DocumentosCRUD(config).obtener(datos.id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    await DocumentosEntidadesCRUD(config).asignar(datos.id_documento, id_entidad)
+    return {"id_documento": datos.id_documento, "id_entidad": id_entidad}
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def quitar_relacion_documento_entidad(
+    id_proyecto: int, id_entidad: int, id_documento: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await DocumentosEntidadesCRUD(config).quitar(id_documento, id_entidad)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/entidades")
+async def listar_entidades_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await DocumentosEntidadesCRUD(config).listar_entidades_de_documento(id_documento)
 
 
 # --- Aviso de caducidad por email (ver docs/gestion-documental.md →

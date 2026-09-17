@@ -43,6 +43,7 @@ from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAG
 from database.dependencias._dep_tipos_documento import TABLA_TIPOS_DOCUMENTO, TIPOS_POR_DEFECTO
 from database.dependencias._dep_registros import TABLA_REGISTROS, TABLA_REGISTROS_RELACIONES
 from database.dependencias._dep_grupos import TABLA_DOCUMENTOS_GRUPOS, TABLA_GRUPOS
+from database.dependencias._dep_entidades import TABLA_DOCUMENTOS_ENTIDADES, TABLA_ENTIDADES
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -85,6 +86,8 @@ def main():
         TABLA_REGISTROS_RELACIONES,
         TABLA_GRUPOS,
         TABLA_DOCUMENTOS_GRUPOS,
+        TABLA_ENTIDADES,
+        TABLA_DOCUMENTOS_ENTIDADES,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

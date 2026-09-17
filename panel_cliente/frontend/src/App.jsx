@@ -22,6 +22,8 @@ import TiposDocumento from "./paginas/TiposDocumento"
 import EstiloDetalle from "./paginas/EstiloDetalle"
 import Grupos from "./paginas/Grupos"
 import GrupoDetalle from "./paginas/GrupoDetalle"
+import Entidades from "./paginas/Entidades"
+import EntidadDetalle from "./paginas/EntidadDetalle"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
@@ -36,6 +38,7 @@ export default function App() {
   const [idDocumentoActivo, setIdDocumentoActivo] = useState(null)
   const [estiloActivo, setEstiloActivo] = useState(null)
   const [grupoActivo, setGrupoActivo] = useState(null)
+  const [entidadActiva, setEntidadActiva] = useState(null)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
@@ -103,6 +106,7 @@ export default function App() {
     setIdDocumentoActivo(null)
     setEstiloActivo(null)
     setGrupoActivo(null)
+    setEntidadActiva(null)
     setVista("documentos")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -111,6 +115,7 @@ export default function App() {
     setIdDocumentoActivo(null)
     setEstiloActivo(null)
     setGrupoActivo(null)
+    setEntidadActiva(null)
     setVista(nuevaVista)
   }
 
@@ -188,6 +193,15 @@ export default function App() {
             />
           ) : vista === "grupos" ? (
             <Grupos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerGrupo={setGrupoActivo} />
+          ) : vista === "entidades" && entidadActiva ? (
+            <EntidadDetalle
+              proyecto={proyecto}
+              entidad={entidadActiva}
+              onVolver={() => setEntidadActiva(null)}
+              onEliminada={() => setEntidadActiva(null)}
+            />
+          ) : vista === "entidades" ? (
+            <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
           ) : (
             <Documentos
               proyecto={proyecto}

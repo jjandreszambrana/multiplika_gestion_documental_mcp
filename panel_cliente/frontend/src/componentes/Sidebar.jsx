@@ -83,6 +83,7 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
         />
         <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
         <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
+        <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
 
         {proyecto.es_admin && (
           <>

@@ -180,6 +180,17 @@ pantalla "Grupos". Un grupo lleva un nombre y una descripción de para qué \
 sirve. No hace falta que todos los documentos estén en un grupo, y un \
 mismo documento puede estar en varios a la vez.
 
+## Entidades
+
+Puedes dar de alta clientes, proveedores, empleados... con una ficha \
+mínima (nombre, tipo, dirección, localidad, provincia, código postal, \
+país, teléfono, email, observaciones y un código propio si lo quieres \
+vincular con tu ERP) — pídeselo a tu IA o hazlo desde el panel, pantalla \
+"Entidades". Una entidad se puede relacionar con cualquier documento (por \
+ejemplo, el cliente de una factura), y puede estar relacionada con varios \
+documentos a la vez, igual que un documento puede tener varias entidades \
+relacionadas.
+
 ## Archivar y desarchivar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

@@ -494,3 +494,20 @@ Fuera de alcance por ahora: filtrar el listado principal de documentos por grupo
 
 Quién decidió: usuario (nombre del feature, y las dos preguntas de diseño — muchos-a-muchos, y grupo mínimo sin responsable/estado).
 Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.
+
+### Entidades (2026-09-17)
+
+El cliente quiere una tabla de clientes/proveedores/empleados relacionable con documentos, con solo los campos básicos de contacto.
+
+**`gd_entidades`**: `nombre`, `tipo`, `direccion`, `localidad`, `provincia`, `codigo_postal`, `pais`, `telefono`, `email`, `observaciones`, `codigo` (para vincular con el ERP del cliente, único si se rellena). `tipo` es el campo que el cliente llamó "entidad" en la petición original ("id, nombre, entidad, dirección...") — aclarado en conversación: es el qué-es-esto (cliente/proveedor/empleado), no un segundo nombre. Se renombró a `tipo` para no repetir "entidad" dentro de la propia tabla `gd_entidades` y para seguir el mismo patrón que `gd_documentos.tipo_documento` — catálogo abierto, texto libre, sin tabla de catálogo aparte (el cliente pidió expresamente "solo los campos básicos").
+
+**Relación con documentos: muchos-a-muchos**, mismo patrón que grupos — `gd_documentos_entidades`, sin campo de "rol" en la relación (a diferencia de `gd_registros_relaciones`, aquí no se pidió distinguir "cliente" de "proveedor" en una factura con dos entidades; si hiciera falta más adelante, se añade un `rol` a esta tabla sin tocar el resto).
+
+`codigo_postal` es texto, no número (hay formatos con letras fuera de España, y `pais` ya es un campo aparte). Sin "archivar" en entidades — a diferencia de documentos: no se pidió, y borrar sin más ya dijo el cliente que no debía tocar los documentos relacionados (limpieza en cascada solo de la fila de relación, `ON DELETE CASCADE` en `gd_documentos_entidades`, nunca en `gd_documentos` ni en `gd_entidades` entre sí).
+
+**Tools MCP** (`mcp_server/herramientas/_herr_entidades.py`): `crear_entidad_gd`, `listar_entidades_gd` (por nombre y/o tipo), `actualizar_entidad_gd` (solo toca los campos que se pasen, no borra los que se omiten), `eliminar_entidad_gd`, `relacionar_documento_entidad_gd`, `quitar_relacion_documento_entidad_gd`, `listar_documentos_entidad_gd`, `listar_entidades_documento_gd`.
+
+**Panel**: pantalla "Entidades" (lista + buscador por nombre/tipo + modal de alta) y `EntidadDetalle.jsx` (editar todos los campos, borrar, relacionar/quitar documentos) — mismo componente de formulario (`FormularioEntidad.jsx`) en los dos sitios, para no mantener 11 campos duplicados. En la ficha de cada documento, `EntidadesDocumento.jsx` (mismo patrón que `GruposDocumento.jsx`) muestra sus entidades como chips y deja añadir/quitar sin salir de ahí. `tipo` se rellena con un `Autocomplete` (texto libre con sugerencias de los tipos ya usados), no un `Select` cerrado.
+
+Quién decidió: usuario (los 11 campos, la relación muchos-a-muchos con documentos); el nombre de columna `tipo` (en vez de repetir `entidad`) lo decidió el asistente por claridad, ver arriba.
+Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.
