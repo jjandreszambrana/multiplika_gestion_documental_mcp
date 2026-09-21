@@ -44,9 +44,10 @@ from pydantic import BaseModel
 from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
+from database.control.dependencias._dep_roles import ID_ROL_OPERADOR
 from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.api_keys import generar_api_key
-from lib.roles_proyecto import puede_editar_proyecto
+from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD
@@ -83,6 +84,7 @@ from .dependencias import (
     Identidad,
     admin_gestion_documental_actual,
     api_key_de_gestion_documental,
+    escritor_gestion_documental_actual,
     es_admin_actual,
     identidad_actual,
     proyecto_gestion_documental_actual,
@@ -1266,8 +1268,7 @@ async def rellenar_formulario_credencial(id_proyecto: int, token: str, valor: st
 
 # --- Tabla de estilos (ver docs/gestion-documental.md → "Tabla de estilos") ---
 # Lectura: cualquiera con acceso al proyecto. Alta/edición/borrado (incluidas
-# las imágenes): admin_tenant/superadmin, igual que las API keys — es
-# configuración de fondo, no el día a día con documentos.
+# las imágenes): cualquiera salvo invitado, igual que los documentos.
 
 
 class NuevoEstilo(BaseModel):
@@ -1289,7 +1290,7 @@ async def listar_estilos(
 
 @app.post("/v1/proyectos/{id_proyecto}/estilos")
 async def crear_estilo(
-    id_proyecto: int, datos: NuevoEstilo, proyecto: dict = Depends(admin_gestion_documental_actual)
+    id_proyecto: int, datos: NuevoEstilo, proyecto: dict = Depends(escritor_gestion_documental_actual)
 ) -> dict:
     config = get_db_config(proyecto["id"])
     estilos = EstilosCRUD(config)
@@ -1302,7 +1303,7 @@ async def crear_estilo(
 @app.put("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}")
 async def actualizar_estilo(
     id_proyecto: int, id_estilo: int, datos: ActualizarEstilo,
-    proyecto: dict = Depends(admin_gestion_documental_actual),
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
     estilos = EstilosCRUD(config)
@@ -1314,7 +1315,7 @@ async def actualizar_estilo(
 
 @app.delete("/v1/proyectos/{id_proyecto}/estilos/{id_estilo}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_estilo(
-    id_proyecto: int, id_estilo: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+    id_proyecto: int, id_estilo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
 ) -> None:
     config = get_db_config(proyecto["id"])
     await EstilosCRUD(config).eliminar(id_estilo)
@@ -1335,7 +1336,7 @@ async def subir_imagen_estilo(
     nombre: str = Form(...),
     descripcion_uso: str = Form(...),
     archivo: UploadFile = File(...),
-    proyecto: dict = Depends(admin_gestion_documental_actual),
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
     if not await EstilosCRUD(config).obtener(id_estilo):
@@ -1372,7 +1373,7 @@ async def ver_imagen_estilo(
 )
 async def eliminar_imagen_estilo(
     id_proyecto: int, id_estilo: int, id_imagen: int,
-    proyecto: dict = Depends(admin_gestion_documental_actual),
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
 ) -> None:
     config = get_db_config(proyecto["id"])
     await EstilosImagenesCRUD(config).eliminar(id_imagen)
@@ -1383,6 +1384,7 @@ _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
 
 class NuevaApiKey(BaseModel):
     nombre: str | None = None
+    id_rol: int = ID_ROL_OPERADOR
 
 
 @app.get("/v1/proyectos/{id_proyecto}/api-keys")
@@ -1397,14 +1399,20 @@ async def listar_api_keys(id_proyecto: int, proyecto: dict = Depends(admin_gesti
 async def emitir_api_key(
     id_proyecto: int, datos: NuevaApiKey, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
+    if datos.id_rol not in ROLES_API_KEY:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una API key solo puede ser operador o invitado")
     key = generar_api_key()
     id_api_key = await _api_keys.insert({
         "id_proyecto": id_proyecto,
         "nombre": datos.nombre,
+        "id_rol": datos.id_rol,
         "prefijo": key["prefijo"],
         "api_key_cifrada": key["api_key_cifrada"],
     })
-    return {"id": id_api_key, "nombre": datos.nombre, "prefijo": key["prefijo"], "api_key": key["api_key"]}
+    return {
+        "id": id_api_key, "nombre": datos.nombre, "id_rol": datos.id_rol,
+        "prefijo": key["prefijo"], "api_key": key["api_key"],
+    }
 
 
 @app.post("/v1/api-keys/{id_api_key}/revocar")

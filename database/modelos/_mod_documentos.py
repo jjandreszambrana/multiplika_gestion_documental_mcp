@@ -100,3 +100,21 @@ class DocumentosCRUD(AsyncCrudBase):
             return None
         await self.update(id_documento, {"tipo_documento": tipo_documento, "ambito": ambito})
         return await self.obtener(id_documento)
+
+    async def asignar_estilo(self, id_documento: int, id_estilo: int | None) -> dict | None:
+        """Vincula el documento a un estilo de informe (None quita el vínculo)."""
+        if not await self.obtener(id_documento):
+            return None
+        await self.update(id_documento, {"id_estilo": id_estilo})
+        return await self.obtener(id_documento)
+
+    async def listar_guia_de_estilo(self, id_estilo: int) -> list[dict]:
+        """Documentos no archivados vinculados a un estilo de informe."""
+        filas, _ = await self.listar(
+            filtros={
+                "id_estilo": {"op": "=", "valor": id_estilo},
+                "archivado": {"op": "=", "valor": False},
+            },
+            limit=50, orden="nombre ASC",
+        )
+        return filas

@@ -15,11 +15,12 @@ from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 
+from ._anotaciones import SOLO_LECTURA
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_pdf import CSS_INFORME, renderizar_pdf
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def generar_informe_pdf_gd(
     markdown: str, nombre_archivo: str, nombre_tipo_estilo: str | None = None
 ) -> list:

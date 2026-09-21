@@ -9,6 +9,7 @@ from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
+from ._anotaciones import SOLO_LECTURA
 from ..database.modelos._mod_envios import (
     EnviosCRUD,
     cancelar_envio,
@@ -24,7 +25,7 @@ async def _contexto_actual() -> dict:
     return get_db_config(proyecto["id"])
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def detectar_variables_documento_gd(id_documento: int) -> dict:
     """Variables `{{asi}}` que aparecen en el nombre y en el contenido
     (versión vigente) de un documento usado como plantilla de
@@ -98,7 +99,7 @@ async def enviar_envio_gd(id_envio: int) -> dict:
         raise ToolError(str(e)) from e
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_envios_documento_gd(id_documento: int) -> list[dict]:
     """Envíos (programados, enviados, fallidos o cancelados) de un
     documento usado como plantilla, más recientes primero."""
@@ -106,7 +107,7 @@ async def listar_envios_documento_gd(id_documento: int) -> list[dict]:
     return await EnviosCRUD(config).listar_de_documento(id_documento)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_envios_entidad_gd(id_entidad: int) -> list[dict]:
     """Envíos recibidos (o pendientes de recibir) por una entidad, más
     recientes primero."""

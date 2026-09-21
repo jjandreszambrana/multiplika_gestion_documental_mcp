@@ -72,6 +72,9 @@ rellenar un formulario.
   exactamente `x-api-key` (con guion, en minúsculas). Si sigue sin ir, \
   puede que la clave esté revocada — pide una nueva a quien te dio de \
   alta.
+- **Tu IA lee pero no puede guardar ni cambiar nada**: tu clave es \
+  de solo lectura. Quien te dio de alta te puede emitir otra con \
+  permiso de lectura y escritura.
 - **Conecta pero no ve las herramientas**: comprueba que el conector \
   está encendido para esa conversación en concreto — en varios clientes \
   hay que activarlo cada vez, no queda encendido para siempre.
@@ -286,6 +289,13 @@ Le puedes pedir a tu IA que te genere un informe (con el contenido que \
 ella misma redacte) como PDF, usando alguno de los estilos que tengas \
 dados de alta en el panel (con tu logo y tus imágenes fijas).
 
+También puedes pedirle a tu IA que cree un estilo nuevo o cambie sus \
+instrucciones, y subirle imágenes fijas (logo, plantilla) si las tiene \
+en una dirección web o en un archivo al alcance de tu IA. Y si tienes \
+un documento que explica cómo se elabora un tipo de informe, le puedes \
+decir a tu IA que lo asigne a ese estilo: cuando vaya a redactar un \
+informe de ese tipo, lo leerá como guía.
+
 Además, cualquier documento ya guardado se puede descargar tal cual en \
 PDF — botón "Descargar PDF" en la ficha del documento, en el panel — \
 con el mismo formato con el que se ve en pantalla (títulos, negritas, \
@@ -300,9 +310,8 @@ Desde el panel (con tu usuario y contraseña de empresa) puedes:
   la fuente si la tiene, y el texto completo.
 - Archivar / desarchivar.
 - Subir documentos en bloque a la cola de pendientes.
-- Editar o borrar credenciales de otros servicios ya creadas, estilos \
-  de informe, tu cuenta de correo, avisos de caducidad, usuarios del \
-  proyecto y claves de API — todo eso es gestión desde el panel, no por \
+- Editar o borrar credenciales de otros servicios ya creadas, tu cuenta \
+  de correo, avisos de caducidad, usuarios del proyecto y claves de API — todo eso es gestión desde el panel, no por \
   conversación. Dar de alta una credencial nueva también se lo puedes \
   pedir a tu IA (te enseña el mismo formulario), si prefieres no salir \
   de la conversación.

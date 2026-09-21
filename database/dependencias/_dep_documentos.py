@@ -1,6 +1,8 @@
 from database.config_db import get_db_name
-from mtpk_postgres import Columna, Index, Tabla
+from mtpk_postgres import Columna, ForeignKey, Index, Tabla
 from mtpk_postgres.core_sync import SQLLiteral
+
+from ._dep_estilos import NOMBRE_TABLA_ESTILOS
 
 NOMBRE_TABLA_DOCUMENTOS = "gd_documentos"
 __DB_NAME__ = get_db_name("gestion_documental")
@@ -24,6 +26,10 @@ CAMPOS_DOCUMENTOS = [
     Columna(nombre="archivado", tipo="BOOLEAN", not_null=True, default=False,
             comentario="True si el documento ya no aplica (anulado, subido por error...): sigue "
                        "guardado pero desaparece de las búsquedas hasta desarchivarlo"),
+    Columna(nombre="id_estilo", tipo="INT",
+            comentario="Opcional — estilo de informe (→ gd_estilos.id) al que este documento "
+                       "sirve de guía: si define cómo elaborar un informe de ese tipo. NULL si no "
+                       "aplica"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"), protegido_actualizar=True,
             comentario="Fecha de alta del documento en el sistema"),
@@ -33,8 +39,14 @@ INDICES_DOCUMENTOS = [
     Index(columnas=["nombre"]),
 ]
 
+FKS_DOCUMENTOS = [
+    ForeignKey(columna="id_estilo", referencia_tabla=NOMBRE_TABLA_ESTILOS,
+               referencia_columna="id", on_delete="SET NULL"),
+]
+
 TABLA_DOCUMENTOS = Tabla(
     nombre=NOMBRE_TABLA_DOCUMENTOS, columnas=CAMPOS_DOCUMENTOS, indices=INDICES_DOCUMENTOS,
+    foreign_keys=FKS_DOCUMENTOS,
     comentario="Documentos del cliente (cada uno con 1+ versiones en gd_versiones)", db_name=__DB_NAME__,
 )
 

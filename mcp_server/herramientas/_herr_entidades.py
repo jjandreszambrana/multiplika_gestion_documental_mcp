@@ -8,6 +8,7 @@ from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
+from ._anotaciones import SOLO_LECTURA
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
 
@@ -52,7 +53,7 @@ async def crear_entidad_gd(
     return await entidades.obtener(id_entidad)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_entidades_gd(q: str | None = None, tipo: str | None = None) -> list[dict]:
     """Entidades del proyecto. `q` busca por nombre (parcial); `tipo`
     filtra por tipo exacto (p.ej. "cliente"). Sin ninguno de los dos,
@@ -124,7 +125,7 @@ async def quitar_relacion_documento_entidad_gd(id_documento: int, id_entidad: in
     return {"id_documento": id_documento, "id_entidad": id_entidad, "estaba_relacionado": quitado}
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_documentos_entidad_gd(id_entidad: int, incluir_archivados: bool = False) -> list[dict]:
     """Documentos relacionados con una entidad. Por defecto no incluye
     documentos archivados."""
@@ -134,7 +135,7 @@ async def listar_documentos_entidad_gd(id_entidad: int, incluir_archivados: bool
     return await DocumentosEntidadesCRUD(config).listar_documentos_de_entidad(id_entidad, incluir_archivados)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_entidades_documento_gd(id_documento: int) -> list[dict]:
     """Entidades relacionadas con un documento (p.ej. el cliente y el
     proveedor de una factura)."""

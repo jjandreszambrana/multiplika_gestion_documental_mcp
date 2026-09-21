@@ -11,6 +11,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
 from pydantic import BaseModel, Field
 
+from ._anotaciones import SOLO_LECTURA
 from ._deteccion_cliente import es_cliente_ponnodo
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
@@ -18,6 +19,7 @@ from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.modelos._mod_estilos import EstilosCRUD
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
 
@@ -59,7 +61,7 @@ async def _reindexar_si_semantico(
     await limpiar_chunks_no_buscables(config, id_documento)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_ayuda_gd() -> str:
     """Explicación en lenguaje sencillo de cómo funciona la Gestión
     Documental (guardar, buscar, corregir, archivar, caducidades,
@@ -69,7 +71,7 @@ async def obtener_ayuda_gd() -> str:
     return TEXTO_AYUDA_GD
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_tipos_documento_gd() -> list[dict]:
     """Tipos de documento ya usados en este proyecto (p.ej. "factura",
     "contrato"...) — no es una lista cerrada, es solo para reutilizar un
@@ -87,7 +89,7 @@ async def listar_tipos_documento_gd() -> list[dict]:
     return await TiposDocumentoCRUD(config).listar_nombres()
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_documentos_pendientes_gd() -> list[dict]:
     """Documentos que llegaron sin que nadie estuviera delante (subida
     masiva desde el panel, o un correo recibido) y siguen sin procesar —
@@ -99,7 +101,7 @@ async def listar_documentos_pendientes_gd() -> list[dict]:
     return await DocumentosPendientesCRUD(config).listar_metadatos()
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_documento_pendiente_gd(id: int) -> list:
     """Devuelve el fichero de un documento pendiente (como imagen o
     archivo nativo de la respuesta) para que puedas leerlo de verdad antes
@@ -310,7 +312,7 @@ async def actualizar_incumplimientos_gd(
     }
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_documentos_por_caducar_gd(dias: int = 30) -> list[dict]:
     """Documentos (versión vigente, no archivados) con fecha de caducidad
     dentro de los próximos `dias` días, incluidas las ya vencidas —
@@ -321,7 +323,7 @@ async def listar_documentos_por_caducar_gd(dias: int = 30) -> list[dict]:
     return await VersionesCRUD(config).listar_por_caducar(dias)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def buscar_documentos_gd(
     referencia: str | None = None,
     tipo_documento: str | None = None,
@@ -337,7 +339,7 @@ async def buscar_documentos_gd(
     return await DocumentosCRUD(config).buscar(referencia, tipo_documento, limite, incluir_archivados)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def consultar_documentos_gd(pregunta: str, limite: int = 5) -> list[dict]:
     """Responde preguntas del cliente buscando en el contenido de sus
     documentos. Devuelve los fragmentos más relevantes con su documento,
@@ -381,7 +383,7 @@ async def activar_busqueda_semantica_gd() -> dict:
     }
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_documento_completo_gd(id_documento: int, id_version: int | None = None) -> dict:
     """Devuelve el markdown completo de un documento (la versión vigente,
     o `id_version` si se indica), para cuando un fragmento de
@@ -391,6 +393,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
     documento = await DocumentosCRUD(config).obtener(id_documento)
     if not documento:
         raise ToolError(f"No existe ningún documento con id {id_documento}")
+    estilo = await EstilosCRUD(config).obtener(documento["id_estilo"]) if documento["id_estilo"] else None
     version = await VersionesCRUD(config).obtener_completo(id_documento, id_version)
     if not version:
         raise ToolError(
@@ -404,6 +407,7 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "nombre": documento["nombre"],
         "tipo_documento": documento["tipo_documento"],
         "ambito": documento["ambito"],
+        "estilo_informe": estilo["nombre_tipo"] if estilo else None,
         "fecha_documento": version["fecha_documento"],
         "vigente": version["vigente"],
         "borrador": version["borrador"],
@@ -437,7 +441,7 @@ async def desarchivar_documento_gd(id_documento: int) -> dict:
     return documento
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_estado_proyecto_gd() -> dict:
     """Estado actual de este proyecto: cuántos documentos hay guardados y
     cuándo se subió el más reciente (alta de documento o de versión nueva

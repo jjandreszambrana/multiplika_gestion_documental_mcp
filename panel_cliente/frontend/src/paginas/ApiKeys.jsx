@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Code, CopyButton, Group, List, Table, Tabs, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, Code, CopyButton, Group, List, Select, Table, Tabs, Text, TextInput, Title } from "@mantine/core"
 import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
+
+// ids de mcpc_roles que puede tener una key (ver lib/roles_proyecto.py::ROLES_API_KEY del core)
+const ID_ROL_OPERADOR = "3"
+const ROLES_API_KEY = [
+  { value: ID_ROL_OPERADOR, label: "Lectura y escritura" },
+  { value: "4", label: "Solo lectura" },
+]
 
 export default function ApiKeys({ proyecto, onVolver }) {
   const [keys, setKeys] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [nombreNueva, setNombreNueva] = useState("")
+  const [idRolNueva, setIdRolNueva] = useState(ID_ROL_OPERADOR)
   const [emitiendo, setEmitiendo] = useState(false)
   const [keyRecienEmitida, setKeyRecienEmitida] = useState(null)
 
@@ -33,7 +41,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
     setEmitiendo(true)
     setError(null)
     try {
-      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva)
+      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva, Number(idRolNueva))
       setKeyRecienEmitida(nueva.api_key)
       setNombreNueva("")
       await recargar()
@@ -88,6 +96,13 @@ export default function ApiKeys({ proyecto, onVolver }) {
           value={nombreNueva}
           onChange={(e) => setNombreNueva(e.target.value)}
           style={{ flex: 1 }}
+        />
+        <Select
+          aria-label="Permisos de la key"
+          data={ROLES_API_KEY}
+          value={idRolNueva}
+          onChange={setIdRolNueva}
+          allowDeselect={false}
         />
         <Button type="submit" loading={emitiendo}>
           Emitir API key nueva
@@ -187,6 +202,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
             <Table.Tr>
               <Table.Th>Nombre</Table.Th>
               <Table.Th>Prefijo</Table.Th>
+              <Table.Th>Permisos</Table.Th>
               <Table.Th>Estado</Table.Th>
               <Table.Th>Emitida</Table.Th>
               <Table.Th></Table.Th>
@@ -198,6 +214,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
               <Table.Tr key={k.id}>
                 <Table.Td>{k.nombre || "—"}</Table.Td>
                 <Table.Td>{k.prefijo}</Table.Td>
+                <Table.Td>{ROLES_API_KEY.find((r) => r.value === String(k.id_rol))?.label}</Table.Td>
                 <Table.Td>
                   <Badge color={k.estado ? "green" : "gray"} variant="light">
                     {k.estado ? "activa" : "revocada"}
@@ -220,7 +237,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
             ))}
             {keys.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={6}>Este proyecto no tiene ninguna API key todavía.</Table.Td>
+                <Table.Td colSpan={7}>Este proyecto no tiene ninguna API key todavía.</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>

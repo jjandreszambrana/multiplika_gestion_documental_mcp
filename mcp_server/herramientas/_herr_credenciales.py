@@ -24,12 +24,13 @@ from fastmcp import Context
 from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, Field
 
+from ._anotaciones import SOLO_LECTURA
 from ._deteccion_cliente import es_cliente_ponnodo
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD, generar_token
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_credenciales_gd() -> list[dict]:
     """Credenciales disponibles para este proyecto: nombre, para qué sirve
     y el usuario (si esta credencial lo lleva) — nunca la contraseña/API

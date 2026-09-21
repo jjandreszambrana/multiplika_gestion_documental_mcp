@@ -4,6 +4,7 @@ import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 
 function ImagenEstilo({ proyecto, estilo, imagen, onEliminar }) {
+  const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [url, setUrl] = useState(null)
 
   useEffect(() => {
@@ -27,7 +28,7 @@ function ImagenEstilo({ proyecto, estilo, imagen, onEliminar }) {
       <Text c="dimmed" size="sm" mb="sm">
         {imagen.descripcion_uso}
       </Text>
-      {proyecto.es_admin && (
+      {puedeEscribir && (
         <Button size="xs" variant="light" color="red" onClick={() => onEliminar(imagen.id)}>
           Eliminar
         </Button>
@@ -37,6 +38,7 @@ function ImagenEstilo({ proyecto, estilo, imagen, onEliminar }) {
 }
 
 export default function EstiloDetalle({ proyecto, estilo, onVolver }) {
+  const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [instrucciones, setInstrucciones] = useState(estilo.instrucciones)
   const [guardandoInstrucciones, setGuardandoInstrucciones] = useState(false)
   const [imagenes, setImagenes] = useState([])
@@ -133,10 +135,10 @@ export default function EstiloDetalle({ proyecto, estilo, onVolver }) {
           maxRows={40}
           value={instrucciones}
           onChange={(e) => setInstrucciones(e.target.value)}
-          disabled={!proyecto.es_admin}
+          disabled={!puedeEscribir}
           styles={{ input: { fontFamily: "monospace" } }}
         />
-        {proyecto.es_admin && (
+        {puedeEscribir && (
           <Button type="submit" loading={guardandoInstrucciones} w="fit-content">
             Guardar instrucciones
           </Button>
@@ -157,7 +159,7 @@ export default function EstiloDetalle({ proyecto, estilo, onVolver }) {
         </Group>
       )}
 
-      {proyecto.es_admin && (
+      {puedeEscribir && (
         <Stack component="form" onSubmit={subirImagen} maw={480}>
           <TextInput
             placeholder='Nombre (ej. "logo_cabecera")'

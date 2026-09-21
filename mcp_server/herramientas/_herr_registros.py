@@ -9,6 +9,7 @@ from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
+from ._anotaciones import SOLO_LECTURA
 from ..database.dependencias._dep_registros import TIPOS_REGISTRO_CREABLES
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_registros import (
@@ -76,7 +77,7 @@ async def crear_registro_documento_gd(
     return await RegistrosCRUD(config).obtener(id_registro)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_registros_documento_gd(id_documento: int, tipo: str | None = None) -> list[dict]:
     """Comentarios, anotaciones, observaciones, incidencias y
     resoluciones de un documento (todas sus versiones, no solo la

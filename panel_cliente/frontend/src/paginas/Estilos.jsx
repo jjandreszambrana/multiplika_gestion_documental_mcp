@@ -5,6 +5,7 @@ import { api } from "../api"
 import { formatearFecha } from "../formato"
 
 export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
+  const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [estilos, setEstilos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -61,7 +62,7 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
         Cómo debe construir la IA cada tipo de informe, y qué imágenes fijas debe usar.
       </Text>
 
-      {proyecto.es_admin && (
+      {puedeEscribir && (
         <Stack component="form" onSubmit={crear} maw={640} mb="xl">
           <TextInput
             placeholder='Tipo de informe (ej. "informe_mensual")'

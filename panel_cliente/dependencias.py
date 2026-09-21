@@ -108,6 +108,18 @@ async def puede_editar_documento_actual(
     return identidad.id
 
 
+async def escritor_gestion_documental_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> dict:
+    """Como proyecto_gestion_documental_actual, pero para escribir: cualquier
+    usuario de empresa salvo invitado (solo lectura). A diferencia de
+    puede_editar_documento_actual, un superadmin sí pasa (da soporte) y no
+    devuelve id_usuario, porque no se registra quién escribe."""
+    if identidad.tipo == "usuario" and not await puede_editar_proyecto(identidad.id, proyecto["id"]):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Tu rol es de solo lectura en este proyecto")
+    return proyecto
+
+
 async def admin_gestion_documental_actual(
     proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
 ) -> dict:

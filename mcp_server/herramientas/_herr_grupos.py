@@ -7,6 +7,7 @@ from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
+from ._anotaciones import SOLO_LECTURA
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 
@@ -30,7 +31,7 @@ async def crear_grupo_gd(nombre: str, proposito: str) -> dict:
     return await grupos.obtener(id_grupo)
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_grupos_gd() -> list[dict]:
     """Todos los grupos de documentos del proyecto, con su propósito.
     Consúltala antes de asignar un documento a un grupo por nombre, para
@@ -62,7 +63,7 @@ async def quitar_documento_grupo_gd(id_documento: int, id_grupo: int) -> dict:
     return {"id_documento": id_documento, "id_grupo": id_grupo, "estaba_asignado": quitado}
 
 
-@mcp_app.tool()
+@mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_documentos_grupo_gd(id_grupo: int, incluir_archivados: bool = False) -> list[dict]:
     """Documentos asignados a un grupo. Por defecto no incluye
     documentos archivados."""
