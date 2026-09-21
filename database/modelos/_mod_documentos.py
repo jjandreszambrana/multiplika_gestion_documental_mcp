@@ -87,3 +87,16 @@ class DocumentosCRUD(AsyncCrudBase):
             return None
         await self.update(id_documento, {"archivado": False})
         return await self.obtener(id_documento)
+
+    async def actualizar_metadatos(
+        self, id_documento: int, tipo_documento: str, ambito: str | None
+    ) -> dict | None:
+        """Edición manual desde el panel (ver docs/gestion-documental.md →
+        "Edición desde el panel") — tipo_documento y ambito viven en el
+        documento, no en la versión, así que no generan historial de
+        edición (eso es solo para el texto)."""
+        documento = await self.obtener(id_documento)
+        if not documento:
+            return None
+        await self.update(id_documento, {"tipo_documento": tipo_documento, "ambito": ambito})
+        return await self.obtener(id_documento)

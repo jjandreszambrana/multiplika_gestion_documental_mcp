@@ -53,6 +53,7 @@ from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
+from ..database.modelos._mod_credenciales_campos import CredencialesCamposCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_pdf import CSS_DOCUMENTO, renderizar_pdf
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
@@ -399,6 +400,33 @@ async def exportar_documento_pdf(
 # invitado). "borrador" guarda intermedios sin generar historial ni
 # tocar el texto confirmado; "confirmar-edicion" es la única acción que
 # de verdad cierra un cambio y lo dejar registrado, igual que un commit.
+
+
+class ActualizarMetadatos(BaseModel):
+    tipo_documento: str
+    ambito: str | None = None
+    fecha_caducidad: str | None = None
+
+
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/metadatos")
+async def actualizar_metadatos_documento(
+    id_proyecto: int, id_documento: int, datos: ActualizarMetadatos,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    """Tipo de documento y ámbito viven en gd_documentos; fecha de
+    caducidad vive en la versión vigente (ver gd_versiones) — mismos
+    metadatos que se piden al guardar por conversación, editables aquí
+    a mano si hace falta corregirlos."""
+    config = get_db_config(proyecto["id"])
+    await TiposDocumentoCRUD(config).asegurar_existe(datos.tipo_documento)
+    documento = await DocumentosCRUD(config).actualizar_metadatos(
+        id_documento, datos.tipo_documento, datos.ambito
+    )
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    version = await VersionesCRUD(config).actualizar_fecha_caducidad(id_documento, datos.fecha_caducidad)
+    return {**documento, "fecha_caducidad": version["fecha_caducidad"] if version else None}
 
 
 class GuardarBorrador(BaseModel):
@@ -1064,17 +1092,29 @@ async def actualizar_cuenta_email(
 # de este panel, a diferencia de documentos o estilos.
 
 
+class CampoExtraCredencial(BaseModel):
+    nombre: str
+    valor: str
+
+
 class NuevaCredencial(BaseModel):
     nombre: str
     descripcion: str
     valor: str
     usuario: str | None = None
+    campos_extra: list[CampoExtraCredencial] = []
 
 
 class ActualizarCredencial(BaseModel):
     descripcion: str | None = None
     valor: str | None = None
     usuario: str | None = None
+    campos_extra: list[CampoExtraCredencial] | None = None
+
+
+async def _con_campos_extra(config: dict, fila: dict) -> dict:
+    nombres = await CredencialesCamposCRUD(config).listar_nombres(fila["id"])
+    return {**{k: v for k, v in fila.items() if k != "valor_cifrado"}, "campos_extra": nombres}
 
 
 @app.get("/v1/proyectos/{id_proyecto}/credenciales")
@@ -1093,9 +1133,12 @@ async def crear_credencial(
     credenciales = CredencialesCRUD(config)
     if await credenciales.obtener_por_nombre(datos.nombre):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una credencial llamada "{datos.nombre}"')
-    id_credencial = await credenciales.crear(datos.nombre, datos.descripcion, datos.valor, datos.usuario)
+    id_credencial = await credenciales.crear(
+        datos.nombre, datos.descripcion, datos.valor, datos.usuario,
+        campos_extra=[c.model_dump() for c in datos.campos_extra],
+    )
     fila = await credenciales.obtener(id_credencial)
-    return {k: v for k, v in fila.items() if k != "valor_cifrado"}
+    return await _con_campos_extra(config, fila)
 
 
 @app.put("/v1/proyectos/{id_proyecto}/credenciales/{id_credencial}")
@@ -1107,9 +1150,10 @@ async def actualizar_credencial(
     credenciales = CredencialesCRUD(config)
     if not await credenciales.obtener(id_credencial):
         raise HTTPException(404, "Credencial no encontrada")
-    await credenciales.actualizar(id_credencial, datos.descripcion, datos.valor, datos.usuario)
+    campos_extra = [c.model_dump() for c in datos.campos_extra] if datos.campos_extra is not None else None
+    await credenciales.actualizar(id_credencial, datos.descripcion, datos.valor, datos.usuario, campos_extra)
     fila = await credenciales.obtener(id_credencial)
-    return {k: v for k, v in fila.items() if k != "valor_cifrado"}
+    return await _con_campos_extra(config, fila)
 
 
 @app.delete("/v1/proyectos/{id_proyecto}/credenciales/{id_credencial}", status_code=status.HTTP_204_NO_CONTENT)

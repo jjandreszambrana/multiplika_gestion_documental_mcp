@@ -131,6 +131,20 @@ class VersionesCRUD(AsyncCrudBase):
     async def marcar_aviso_caducidad_enviado(self, id_version: int) -> None:
         await self.update(id_version, {"aviso_caducidad_enviado": True})
 
+    async def actualizar_fecha_caducidad(
+        self, id_documento: int, fecha_caducidad: str | None, id_version: int | None = None
+    ) -> dict | None:
+        """Edición manual desde el panel. Resetea aviso_caducidad_enviado a
+        False: si ya se había avisado de la fecha vieja, un cambio de fecha
+        debe poder volver a disparar el aviso (scripts/avisar_caducidades.py)."""
+        version = await self.obtener_completo(id_documento, id_version)
+        if not version:
+            return None
+        await self.update(
+            version["id"], {"fecha_caducidad": fecha_caducidad, "aviso_caducidad_enviado": False}
+        )
+        return await self.obtener(version["id"])
+
     async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con

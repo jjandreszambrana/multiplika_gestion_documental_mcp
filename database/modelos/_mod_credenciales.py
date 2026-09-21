@@ -7,6 +7,7 @@ from mtpk_postgres import AsyncCrudBase
 from lib.cifrado import cifrar, descifrar
 
 from ..dependencias._dep_credenciales import TABLA_CREDENCIALES
+from ._mod_credenciales_campos import CredencialesCamposCRUD
 
 
 class CredencialesCRUD(AsyncCrudBase):
@@ -14,24 +15,37 @@ class CredencialesCRUD(AsyncCrudBase):
         super().__init__(TABLA_CREDENCIALES, config)
 
     async def listar_metadatos(self) -> list[dict]:
-        """nombre + descripción + fecha de cada credencial — nunca el valor."""
+        """nombre + descripción + fecha de cada credencial — nunca el valor.
+        `campos_extra` trae solo los NOMBRES de sus campos avanzados
+        (Application Key, Consumer Secret...), nunca sus valores."""
         filas, _ = await self.listar(limit=200, orden="nombre ASC")
-        return [{k: v for k, v in fila.items() if k != "valor_cifrado"} for fila in filas]
+        campos = CredencialesCamposCRUD(self.config)
+        return [
+            {**{k: v for k, v in fila.items() if k != "valor_cifrado"}, "campos_extra": await campos.listar_nombres(fila["id"])}
+            for fila in filas
+        ]
 
     async def obtener_por_nombre(self, nombre: str) -> dict | None:
         filas, _ = await self.listar(filtros={"nombre": {"op": "=", "valor": nombre}}, limit=1)
         return filas[0] if filas else None
 
-    async def crear(self, nombre: str, descripcion: str, valor: str, usuario: str | None = None) -> int:
-        return await self.insert({
+    async def crear(
+        self, nombre: str, descripcion: str, valor: str, usuario: str | None = None,
+        campos_extra: list[dict] | None = None,
+    ) -> int:
+        id_credencial = await self.insert({
             "nombre": nombre,
             "descripcion": descripcion,
             "usuario": usuario,
             "valor_cifrado": cifrar(valor),
         })
+        if campos_extra:
+            await CredencialesCamposCRUD(self.config).reemplazar(id_credencial, campos_extra)
+        return id_credencial
 
     async def actualizar(
-        self, id_credencial: int, descripcion: str | None, valor: str | None, usuario: str | None = None
+        self, id_credencial: int, descripcion: str | None, valor: str | None, usuario: str | None = None,
+        campos_extra: list[dict] | None = None,
     ) -> None:
         cambios = {}
         if descripcion is not None:
@@ -42,6 +56,8 @@ class CredencialesCRUD(AsyncCrudBase):
             cambios["valor_cifrado"] = cifrar(valor)
         if cambios:
             await self.update(id_credencial, cambios)
+        if campos_extra is not None:
+            await CredencialesCamposCRUD(self.config).reemplazar(id_credencial, campos_extra)
 
     async def valor_descifrado(self, id_credencial: int) -> str | None:
         """Solo para uso interno del backend (p.ej. una futura herramienta

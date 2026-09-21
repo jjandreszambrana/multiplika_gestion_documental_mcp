@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Button, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core"
+import { Alert, Anchor, Button, Group, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core"
 import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 
@@ -14,9 +14,14 @@ const OPCIONES_ROL = [
   { value: ID_ROL_ADMIN_TENANT, label: "Admin del proyecto" },
 ]
 
-function FilaUsuario({ usuario, idRolActual, onCambiarRol }) {
+function FilaUsuario({ usuario, idRolActual, onCambiarRol, onGuardarUsuario }) {
   const [cambiando, setCambiando] = useState(false)
   const [error, setError] = useState(null)
+  const [editando, setEditando] = useState(false)
+  const [nombre, setNombre] = useState(usuario.nombre)
+  const [email, setEmail] = useState(usuario.email)
+  const [password, setPassword] = useState("")
+  const [guardando, setGuardando] = useState(false)
 
   async function cambiar(valor) {
     setCambiando(true)
@@ -28,6 +33,63 @@ function FilaUsuario({ usuario, idRolActual, onCambiarRol }) {
     } finally {
       setCambiando(false)
     }
+  }
+
+  function empezarEdicion() {
+    setNombre(usuario.nombre)
+    setEmail(usuario.email)
+    setPassword("")
+    setError(null)
+    setEditando(true)
+  }
+
+  async function guardar() {
+    setGuardando(true)
+    setError(null)
+    try {
+      await onGuardarUsuario(usuario.id, nombre, email, password)
+      setEditando(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  if (editando) {
+    return (
+      <Table.Tr>
+        <Table.Td>
+          <TextInput value={nombre} onChange={(e) => setNombre(e.target.value)} size="xs" required />
+        </Table.Td>
+        <Table.Td>
+          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} size="xs" required />
+        </Table.Td>
+        <Table.Td colSpan={2}>
+          <Group gap="xs" wrap="nowrap">
+            <PasswordInput
+              placeholder="Nueva contraseña (opcional)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              size="xs"
+              style={{ flex: 1 }}
+            />
+            <Button onClick={guardar} loading={guardando} size="xs">
+              Guardar
+            </Button>
+            <Button onClick={() => setEditando(false)} variant="subtle" color="gray" size="xs">
+              Cancelar
+            </Button>
+          </Group>
+          {error && (
+            <Text c="red" size="sm">
+              {error}
+            </Text>
+          )}
+        </Table.Td>
+      </Table.Tr>
+    )
   }
 
   return (
@@ -48,6 +110,11 @@ function FilaUsuario({ usuario, idRolActual, onCambiarRol }) {
             {error}
           </Text>
         )}
+      </Table.Td>
+      <Table.Td>
+        <Anchor component="button" type="button" size="sm" onClick={empezarEdicion}>
+          Editar
+        </Anchor>
       </Table.Td>
     </Table.Tr>
   )
@@ -110,6 +177,11 @@ export default function Usuarios({ proyecto, onVolver }) {
     await recargar()
   }
 
+  async function guardarUsuario(idUsuario, nombreNuevo, emailNuevo, passwordNueva) {
+    await api.actualizarUsuario(proyecto.id_tenant, proyecto.id, idUsuario, nombreNuevo, emailNuevo, passwordNueva)
+    await recargar()
+  }
+
   return (
     <>
       <Anchor
@@ -168,6 +240,7 @@ export default function Usuarios({ proyecto, onVolver }) {
               <Table.Th>Nombre</Table.Th>
               <Table.Th>Email</Table.Th>
               <Table.Th>Rol en {proyecto.nombre}</Table.Th>
+              <Table.Th />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -179,12 +252,13 @@ export default function Usuarios({ proyecto, onVolver }) {
                   usuario={u}
                   idRolActual={asignacion ? String(asignacion.id_rol) : ""}
                   onCambiarRol={cambiarRol}
+                  onGuardarUsuario={guardarUsuario}
                 />
               )
             })}
             {usuarios.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={3}>Tu empresa no tiene ningún usuario todavía.</Table.Td>
+                <Table.Td colSpan={4}>Tu empresa no tiene ningún usuario todavía.</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>

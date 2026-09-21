@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Button, PasswordInput, Stack, Table, Text, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Button, Collapse, Group, PasswordInput, Stack, Table, Text, TextInput, Title } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
+
+const CAMPOS_EXTRA_INICIALES = () => [{ nombre: "", valor: "" }, { nombre: "", valor: "" }, { nombre: "", valor: "" }]
 
 export default function Credenciales({ proyecto, onVolver }) {
   const [credenciales, setCredenciales] = useState([])
@@ -13,6 +15,16 @@ export default function Credenciales({ proyecto, onVolver }) {
   const [usuario, setUsuario] = useState("")
   const [valor, setValor] = useState("")
   const [creando, setCreando] = useState(false)
+  const [avanzadoAbierto, setAvanzadoAbierto] = useState(false)
+  const [camposExtra, setCamposExtra] = useState(CAMPOS_EXTRA_INICIALES)
+
+  function cambiarCampoExtra(indice, clave, valorCampo) {
+    setCamposExtra(camposExtra.map((c, i) => (i === indice ? { ...c, [clave]: valorCampo } : c)))
+  }
+
+  function quitarCampoExtra(indice) {
+    setCamposExtra(camposExtra.filter((_, i) => i !== indice))
+  }
 
   async function recargar() {
     setCargando(true)
@@ -35,11 +47,14 @@ export default function Credenciales({ proyecto, onVolver }) {
     setCreando(true)
     setError(null)
     try {
-      await api.crearCredencial(proyecto.id, nombre, descripcion, valor, usuario)
+      const camposValidos = camposExtra.filter((c) => c.nombre.trim() && c.valor.trim())
+      await api.crearCredencial(proyecto.id, nombre, descripcion, valor, usuario, camposValidos)
       setNombre("")
       setDescripcion("")
       setUsuario("")
       setValor("")
+      setCamposExtra(CAMPOS_EXTRA_INICIALES())
+      setAvanzadoAbierto(false)
       await recargar()
     } catch (err) {
       setError(err.message)
@@ -116,6 +131,49 @@ export default function Credenciales({ proyecto, onVolver }) {
           data-lpignore="true"
           required
         />
+        <Anchor component="button" type="button" size="sm" onClick={() => setAvanzadoAbierto(!avanzadoAbierto)}>
+          {avanzadoAbierto ? "Ocultar avanzado" : "Avanzado — varios secretos a la vez (OAuth...)"}
+        </Anchor>
+        <Collapse in={avanzadoAbierto}>
+          <Stack gap="xs">
+            <Text size="12.5px" c="dimmed">
+              Para servicios con más de un secreto (p.ej. Application Key, Application Secret,
+              Consumer Key) — pon el nombre que quieras a cada uno.
+            </Text>
+            {camposExtra.map((campo, i) => (
+              <Group key={i} gap="xs" wrap="nowrap">
+                <TextInput
+                  placeholder="Nombre del campo (ej. Application Key)"
+                  value={campo.nombre}
+                  onChange={(e) => cambiarCampoExtra(i, "nombre", e.target.value)}
+                  autoComplete="off"
+                  style={{ flex: 1 }}
+                />
+                <PasswordInput
+                  placeholder="Valor"
+                  value={campo.valor}
+                  onChange={(e) => cambiarCampoExtra(i, "valor", e.target.value)}
+                  autoComplete="new-password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  style={{ flex: 1 }}
+                />
+                <ActionIcon color="red" variant="subtle" onClick={() => quitarCampoExtra(i)}>
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Group>
+            ))}
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={<IconPlus size={14} />}
+              onClick={() => setCamposExtra([...camposExtra, { nombre: "", valor: "" }])}
+              style={{ alignSelf: "flex-start" }}
+            >
+              Añadir otro campo
+            </Button>
+          </Stack>
+        </Collapse>
         <Button type="submit" loading={creando}>
           Guardar credencial
         </Button>
@@ -135,6 +193,7 @@ export default function Credenciales({ proyecto, onVolver }) {
               <Table.Th>Nombre</Table.Th>
               <Table.Th>Para qué sirve</Table.Th>
               <Table.Th>Usuario</Table.Th>
+              <Table.Th>Campos avanzados</Table.Th>
               <Table.Th>Actualizada</Table.Th>
               <Table.Th></Table.Th>
             </Table.Tr>
@@ -145,6 +204,7 @@ export default function Credenciales({ proyecto, onVolver }) {
                 <Table.Td>{c.nombre}</Table.Td>
                 <Table.Td>{c.descripcion}</Table.Td>
                 <Table.Td>{c.usuario || "—"}</Table.Td>
+                <Table.Td>{c.campos_extra?.length > 0 ? c.campos_extra.join(", ") : "—"}</Table.Td>
                 <Table.Td>{formatearFecha(c.fecha_actualizacion)}</Table.Td>
                 <Table.Td>
                   <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
@@ -155,7 +215,7 @@ export default function Credenciales({ proyecto, onVolver }) {
             ))}
             {credenciales.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={5}>Este proyecto no tiene ninguna credencial todavía.</Table.Td>
+                <Table.Td colSpan={6}>Este proyecto no tiene ninguna credencial todavía.</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>

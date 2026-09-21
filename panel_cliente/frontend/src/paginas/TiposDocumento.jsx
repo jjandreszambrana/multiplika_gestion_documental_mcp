@@ -9,6 +9,7 @@ function FilaTipo({ proyecto, tipo, onCambiado, onEliminar }) {
   const [normativa, setNormativa] = useState(tipo.normativa_aplicable || "")
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
+  const [verRequisitos, setVerRequisitos] = useState(false)
 
   async function guardar() {
     setGuardando(true)
@@ -59,6 +60,12 @@ function FilaTipo({ proyecto, tipo, onCambiado, onEliminar }) {
       </Group>
 
       {!editando && tieneRequisitos && (
+        <Anchor component="button" type="button" size="sm" mt="xs" onClick={() => setVerRequisitos(!verRequisitos)}>
+          {verRequisitos ? "Ocultar requisitos" : "Ver requisitos"}
+        </Anchor>
+      )}
+
+      {!editando && tieneRequisitos && verRequisitos && (
         <Stack gap={4} mt="xs">
           {tipo.formato_requerido && (
             <Text size="sm">

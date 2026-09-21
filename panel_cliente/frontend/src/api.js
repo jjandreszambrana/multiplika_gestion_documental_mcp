@@ -112,6 +112,10 @@ export const api = {
     peticion(BASE_ADMIN, "POST", `/tenants/${idTenant}/usuarios?id_proyecto=${idProyecto}`, {
       nombre, email, password,
     }),
+  actualizarUsuario: (idTenant, idProyecto, idUsuario, nombre, email, password) =>
+    peticion(BASE_ADMIN, "PUT", `/tenants/${idTenant}/usuarios/${idUsuario}?id_proyecto=${idProyecto}`, {
+      nombre, email, password: password || null,
+    }),
   listarRolesProyecto: (idProyecto) => peticion(BASE_ADMIN, "GET", `/proyectos/${idProyecto}/usuarios`),
   asignarRol: (idProyecto, idUsuario, idRol) =>
     peticion(BASE_ADMIN, "POST", `/proyectos/${idProyecto}/usuarios/${idUsuario}/rol`, { id_rol: idRol }),
@@ -133,6 +137,8 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
   desarchivarDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/desarchivar`),
+  actualizarMetadatosDocumento: (idProyecto, idDocumento, metadatos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/documentos/${idDocumento}/metadatos`, metadatos),
   guardarBorradorDocumento: (idProyecto, idDocumento, idVersion, markdown) =>
     peticion(
       BASE_CLIENTE, "PUT",
@@ -170,9 +176,9 @@ export const api = {
   eliminarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "DELETE", `/api-keys/${idApiKey}`),
 
   listarCredenciales: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/credenciales`),
-  crearCredencial: (idProyecto, nombre, descripcion, valor, usuario) =>
+  crearCredencial: (idProyecto, nombre, descripcion, valor, usuario, camposExtra = []) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/credenciales`, {
-      nombre, descripcion, valor, usuario: usuario || null,
+      nombre, descripcion, valor, usuario: usuario || null, campos_extra: camposExtra,
     }),
   actualizarCredencial: (idProyecto, idCredencial, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/credenciales/${idCredencial}`, datos),

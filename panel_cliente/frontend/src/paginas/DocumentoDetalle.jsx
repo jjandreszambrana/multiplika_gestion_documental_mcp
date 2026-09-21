@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, Title, useComputedColorScheme } from "@mantine/core"
+import { Alert, Anchor, Autocomplete, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -46,6 +46,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [descargandoPdf, setDescargandoPdf] = useState(false)
   const [editando, setEditando] = useState(false)
   const [textoEditado, setTextoEditado] = useState("")
+  const [tipoDocumentoEditado, setTipoDocumentoEditado] = useState("")
+  const [ambitoEditado, setAmbitoEditado] = useState("")
+  const [fechaCaducidadEditada, setFechaCaducidadEditada] = useState("")
+  const [tiposDocumento, setTiposDocumento] = useState([])
   const [guardando, setGuardando] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [historialVersion, setHistorialVersion] = useState(0)
@@ -57,6 +61,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   useEffect(() => {
     cargarDocumento()
   }, [proyecto.id, idDocumento])
+
+  useEffect(() => {
+    api.listarTiposDocumento(proyecto.id)
+      .then((tipos) => setTiposDocumento(tipos.map((t) => t.nombre)))
+      .catch(() => setTiposDocumento([]))
+  }, [proyecto.id])
 
   function cargarDocumento() {
     return api
@@ -106,6 +116,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     // anterior, propia o de otro usuario), se retoma ese texto en vez
     // del confirmado — el aviso ya se muestra en la propia pantalla.
     setTextoEditado(documento.tmp ?? documento.markdown)
+    setTipoDocumentoEditado(documento.tipo_documento || "")
+    setAmbitoEditado(documento.ambito || "")
+    setFechaCaducidadEditada(documento.fecha_caducidad || "")
     setEditando(true)
     setVista("documento")
   }
@@ -129,6 +142,11 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     try {
       await api.guardarBorradorDocumento(proyecto.id, idDocumento, documento.id_version, textoEditado)
       await api.confirmarEdicionDocumento(proyecto.id, idDocumento, documento.id_version)
+      await api.actualizarMetadatosDocumento(proyecto.id, idDocumento, {
+        tipo_documento: tipoDocumentoEditado,
+        ambito: ambitoEditado || null,
+        fecha_caducidad: fechaCaducidadEditada || null,
+      })
       setEditando(false)
       await cargarDocumento()
     } catch (err) {
@@ -239,6 +257,26 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   texto confirmado. Confirma o descarta antes de seguir.
                 </Alert>
               )}
+              <SimpleGrid cols={3} spacing="md">
+                <Autocomplete
+                  label="Tipo de documento"
+                  data={tiposDocumento}
+                  value={tipoDocumentoEditado}
+                  onChange={setTipoDocumentoEditado}
+                />
+                <TextInput
+                  label="Ámbito"
+                  placeholder="p.ej. nacional, autonómica..."
+                  value={ambitoEditado}
+                  onChange={(e) => setAmbitoEditado(e.currentTarget.value)}
+                />
+                <TextInput
+                  type="date"
+                  label="Fecha de caducidad"
+                  value={fechaCaducidadEditada}
+                  onChange={(e) => setFechaCaducidadEditada(e.currentTarget.value)}
+                />
+              </SimpleGrid>
               <Box data-color-mode={esquemaColor}>
                 <MDEditor
                   value={textoEditado}
