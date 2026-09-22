@@ -227,6 +227,13 @@ A petición del usuario: tabla nueva `gd_certificados` para certificados digital
 - Renovar un certificado caducado = subir uno nuevo (fila nueva), no se sobrescribe el archivo de uno existente — igual que credenciales tampoco permite cambiar el secreto ya guardado, mantiene histórico.
 - Sin tools MCP por ahora (como en credenciales, la IA nunca ve el secreto) — todo desde el panel: pantalla nueva `Certificados.jsx` (listar, subir con archivo + contraseña opcional + entidad opcional, descargar original, sin edición del archivo ya subido).
 
+**Trazabilidad de uso — añadido al plan (2026-09-22, aún sin codificar)**: al ser datos delicados, cada vez que alguien pida una copia del archivo o use el certificado para cualquier operación, queda un registro de quién y cuándo:
+- Tabla `gd_certificados_log`: `id`, `id_certificado`, `id_usuario`, `accion` (texto libre corto, p.ej. "descarga" — abierto a que en el futuro haya otras acciones además de descargar, p.ej. "firma"), `detalle` (MEDIUMTEXT nullable, contexto opcional de la operación), `fecha` (TIMESTAMP default now).
+- **FK `id_certificado` con `ON DELETE SET NULL`, no CASCADE** — un registro de auditoría no puede desaparecer solo porque se borre el certificado al que apuntaba; para que el log siga siendo legible aunque eso pase, se guarda también una copia del nombre del certificado en el propio log (`certificado_nombre`, denormalizado a propósito, no es antipatrón aquí — es la única forma de que el registro sobreviva al borrado del padre).
+- Log de solo escritura desde el backend: nunca se edita ni se borra una fila (ni un endpoint DELETE ni UPDATE para esta tabla) — es una decisión explícita, un registro de auditoría que se pudiera manipular no vale para nada.
+- Como mínimo se registra al llamar al endpoint de descarga del archivo original (`GET .../certificados/{id}/archivo`) — la función que escribe el log (`registrar_uso_certificado(id_certificado, id_usuario, accion, detalle=None)`) se hace genérica desde el principio para que cualquier operación futura que use el certificado (más allá de "descargar") pase por el mismo sitio.
+- El panel muestra este log en el detalle del certificado (tabla de solo lectura: usuario, acción, fecha) — visible para quien pueda ver el certificado, no solo para quien administra.
+
 ### Estructura del repo: igual que cualquier proyecto de cliente de Multiplika MCP (2026-09-06)
 Este proyecto no inventa una estructura propia — sigue exactamente la misma que ya usa cualquier proyecto de cliente sobre Multiplika MCP, documentada en `guia_nuevo_proyecto.md` del repo core:
 
