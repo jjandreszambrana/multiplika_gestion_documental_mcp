@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Paper, Select, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
+import { Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, Paper, Select, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -26,6 +26,8 @@ import GruposDocumento from "../componentes/GruposDocumento"
 import EntidadesDocumento from "../componentes/EntidadesDocumento"
 import EnviosDocumento from "../componentes/EnviosDocumento"
 
+const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
+
 function CampoMeta({ etiqueta, valor }) {
   return (
     <Group justify="space-between" py="7" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
@@ -44,7 +46,8 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
   const [descargandoPdf, setDescargandoPdf] = useState(false)
-  const [incluirMetadatosPdf, setIncluirMetadatosPdf] = useState(false)
+  const [modalPdfAbierto, setModalPdfAbierto] = useState(false)
+  const [incluirMetadatosPdf, setIncluirMetadatosPdf] = useState(() => localStorage.getItem(CLAVE_PDF_METADATOS) === "1")
   const [editando, setEditando] = useState(false)
   const [textoEditado, setTextoEditado] = useState("")
   const [tipoDocumentoEditado, setTipoDocumentoEditado] = useState("")
@@ -99,6 +102,11 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     }
   }
 
+  function cambiarIncluirMetadatosPdf(valor) {
+    setIncluirMetadatosPdf(valor)
+    localStorage.setItem(CLAVE_PDF_METADATOS, valor ? "1" : "0")
+  }
+
   async function descargarPdf() {
     setDescargandoPdf(true)
     setError(null)
@@ -110,6 +118,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
       enlace.download = `${documento.nombre}.pdf`
       enlace.click()
       URL.revokeObjectURL(url)
+      setModalPdfAbierto(false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -210,20 +219,13 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 </Group>
               </div>
               <Group gap="8" wrap="nowrap">
-                <Checkbox
-                  label="Con metadatos en el pie"
-                  size="xs"
-                  checked={incluirMetadatosPdf}
-                  onChange={(e) => setIncluirMetadatosPdf(e.currentTarget.checked)}
-                />
                 <Button
                   variant="subtle"
                   color="gray"
-                  loading={descargandoPdf}
                   leftSection={<IconDownload size={15} stroke={1.8} />}
-                  onClick={descargarPdf}
+                  onClick={() => setModalPdfAbierto(true)}
                 >
-                  Descargar PDF
+                  PDF...
                 </Button>
                 <Button
                   variant="subtle"
@@ -409,6 +411,26 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               </Tabs.Panel>
             </Tabs>
           )}
+
+          <Modal opened={modalPdfAbierto} onClose={() => setModalPdfAbierto(false)} title="Descargar PDF" size="sm">
+            <Stack>
+              <Checkbox
+                label="Incluir los metadatos del documento en el pie de página"
+                description="Nombre, tipo, ámbito y fecha, repetidos en cada hoja"
+                checked={incluirMetadatosPdf}
+                onChange={(e) => cambiarIncluirMetadatosPdf(e.currentTarget.checked)}
+              />
+              <Group justify="flex-end">
+                <Button
+                  loading={descargandoPdf}
+                  leftSection={<IconDownload size={15} stroke={1.8} />}
+                  onClick={descargarPdf}
+                >
+                  Descargar
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
         </>
       )}
     </>
