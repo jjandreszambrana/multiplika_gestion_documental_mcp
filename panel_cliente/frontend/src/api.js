@@ -290,6 +290,8 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/configuracion/cuenta-email`, datos),
 
   listarEstilos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/estilos`),
+  asignarEstiloDocumento: (idProyecto, idDocumento, idEstilo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/documentos/${idDocumento}/estilo`, { id_estilo: idEstilo }),
   crearEstilo: (idProyecto, nombreTipo, instrucciones) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/estilos`, { nombre_tipo: nombreTipo, instrucciones }),
   actualizarEstilo: (idProyecto, idEstilo, instrucciones) =>
@@ -311,10 +313,11 @@ export const api = {
   // Igual que obtenerImagenEstiloBlob: la descarga necesita la cabecera
   // Authorization, así que no puede ser un <a href> normal — se trae
   // como blob y quien llama arma la descarga en el navegador.
-  descargarDocumentoPdfBlob: async (idProyecto, idDocumento) => {
+  descargarDocumentoPdfBlob: async (idProyecto, idDocumento, incluirMetadatos = false) => {
     const headers = {}
     if (token) headers["Authorization"] = `Bearer ${token}`
-    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/documentos/${idDocumento}/pdf`, { headers })
+    const query = incluirMetadatos ? "?incluir_metadatos=true" : ""
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/documentos/${idDocumento}/pdf${query}`, { headers })
     if (!res.ok) {
       let detalle = res.statusText
       try {

@@ -365,12 +365,16 @@ async def obtener_documento(
 
 @app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/pdf")
 async def exportar_documento_pdf(
-    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+    id_proyecto: int, id_documento: int, incluir_metadatos: bool = False,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> Response:
     """Exporta la versión vigente del documento a PDF, con el mismo
     formato (títulos, tablas, negritas...) que se ve en el panel — mismo
     mecanismo (markdown -> HTML -> WeasyPrint) que ya usa la IA para
-    generar informes por chat, ver database/modelos/_mod_pdf.py."""
+    generar informes por chat, ver database/modelos/_mod_pdf.py. Con
+    incluir_metadatos=true añade un pie de página (tipo, ámbito, fecha)
+    repetido en cada hoja, vía el mecanismo "running element" de CSS que
+    entiende WeasyPrint."""
     config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).obtener(id_documento)
     if not documento:
@@ -383,11 +387,28 @@ async def exportar_documento_pdf(
     if documento["id_estilo"]:
         imagenes_html = await imagenes_estilo_html(config, documento["id_estilo"])
 
+    pie_html = ""
+    css_pie = ""
+    if incluir_metadatos:
+        partes = [documento["nombre"], documento["tipo_documento"]]
+        if documento["ambito"]:
+            partes.append(documento["ambito"])
+        fecha = version["fecha_documento"] or documento["fecha_alta"]
+        if fecha:
+            partes.append(fecha.strftime("%d/%m/%Y") if hasattr(fecha, "strftime") else str(fecha))
+        texto_pie = html.escape(" · ".join(str(p) for p in partes))
+        pie_html = f'<div class="pie-documento">{texto_pie}</div>'
+        css_pie = """
+            .pie-documento { position: running(pie-documento); font-size: 8pt; color: #888; }
+            @page { @bottom-center { content: element(pie-documento); } }
+        """
+
     cuerpo_html = md.markdown(version["markdown_actual"], extensions=["tables"])
     titulo_html = html.escape(documento["nombre"])
     html_completo = (
         f"<html><head><meta charset='utf-8'><title>{titulo_html}</title>"
-        f"<style>{CSS_DOCUMENTO}</style></head><body>{imagenes_html}{cuerpo_html}</body></html>"
+        f"<style>{CSS_DOCUMENTO}{css_pie}</style></head>"
+        f"<body>{pie_html}{imagenes_html}{cuerpo_html}</body></html>"
     )
     try:
         pdf_bytes = await renderizar_pdf(html_completo)
@@ -433,6 +454,26 @@ async def actualizar_metadatos_documento(
         raise HTTPException(404, "Documento no encontrado")
     version = await VersionesCRUD(config).actualizar_fecha_caducidad(id_documento, datos.fecha_caducidad)
     return {**documento, "fecha_caducidad": version["fecha_caducidad"] if version else None}
+
+
+class AsignarEstilo(BaseModel):
+    id_estilo: int | None = None
+
+
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/estilo")
+async def asignar_estilo_documento(
+    id_proyecto: int, id_documento: int, datos: AsignarEstilo,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    """Vincula (o desvincula, con id_estilo=null) el documento a un estilo
+    de informe — mismo vínculo que ya podía cambiar la IA con
+    asignar_estilo_documento_gd, expuesto aquí también para el panel."""
+    config = get_db_config(proyecto["id"])
+    documento = await DocumentosCRUD(config).asignar_estilo(id_documento, datos.id_estilo)
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    return documento
 
 
 class GuardarBorrador(BaseModel):

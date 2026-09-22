@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Autocomplete, Badge, Box, Button, Group, Paper, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
+import { Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Paper, Select, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -44,12 +44,15 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
   const [descargandoPdf, setDescargandoPdf] = useState(false)
+  const [incluirMetadatosPdf, setIncluirMetadatosPdf] = useState(false)
   const [editando, setEditando] = useState(false)
   const [textoEditado, setTextoEditado] = useState("")
   const [tipoDocumentoEditado, setTipoDocumentoEditado] = useState("")
   const [ambitoEditado, setAmbitoEditado] = useState("")
   const [fechaCaducidadEditada, setFechaCaducidadEditada] = useState("")
+  const [idEstiloEditado, setIdEstiloEditado] = useState(null)
   const [tiposDocumento, setTiposDocumento] = useState([])
+  const [estilos, setEstilos] = useState([])
   const [guardando, setGuardando] = useState(false)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [historialVersion, setHistorialVersion] = useState(0)
@@ -66,6 +69,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     api.listarTiposDocumento(proyecto.id)
       .then((tipos) => setTiposDocumento(tipos.map((t) => t.nombre)))
       .catch(() => setTiposDocumento([]))
+    api.listarEstilos(proyecto.id)
+      .then(setEstilos)
+      .catch(() => setEstilos([]))
   }, [proyecto.id])
 
   function cargarDocumento() {
@@ -97,7 +103,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     setDescargandoPdf(true)
     setError(null)
     try {
-      const blob = await api.descargarDocumentoPdfBlob(proyecto.id, idDocumento)
+      const blob = await api.descargarDocumentoPdfBlob(proyecto.id, idDocumento, incluirMetadatosPdf)
       const url = URL.createObjectURL(blob)
       const enlace = document.createElement("a")
       enlace.href = url
@@ -119,6 +125,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
     setTipoDocumentoEditado(documento.tipo_documento || "")
     setAmbitoEditado(documento.ambito || "")
     setFechaCaducidadEditada(documento.fecha_caducidad || "")
+    setIdEstiloEditado(documento.id_estilo ? String(documento.id_estilo) : null)
     setEditando(true)
     setVista("documento")
   }
@@ -147,6 +154,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
         ambito: ambitoEditado || null,
         fecha_caducidad: fechaCaducidadEditada || null,
       })
+      await api.asignarEstiloDocumento(proyecto.id, idDocumento, idEstiloEditado ? Number(idEstiloEditado) : null)
       setEditando(false)
       await cargarDocumento()
     } catch (err) {
@@ -202,6 +210,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 </Group>
               </div>
               <Group gap="8" wrap="nowrap">
+                <Checkbox
+                  label="Con metadatos en el pie"
+                  size="xs"
+                  checked={incluirMetadatosPdf}
+                  onChange={(e) => setIncluirMetadatosPdf(e.currentTarget.checked)}
+                />
                 <Button
                   variant="subtle"
                   color="gray"
@@ -257,7 +271,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   texto confirmado. Confirma o descarta antes de seguir.
                 </Alert>
               )}
-              <SimpleGrid cols={3} spacing="md">
+              <SimpleGrid cols={4} spacing="md">
                 <Autocomplete
                   label="Tipo de documento"
                   data={tiposDocumento}
@@ -275,6 +289,14 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   label="Fecha de caducidad"
                   value={fechaCaducidadEditada}
                   onChange={(e) => setFechaCaducidadEditada(e.currentTarget.value)}
+                />
+                <Select
+                  label="Estilo de informe"
+                  placeholder="Sin estilo"
+                  clearable
+                  data={estilos.map((e) => ({ value: String(e.id), label: e.nombre_tipo }))}
+                  value={idEstiloEditado}
+                  onChange={setIdEstiloEditado}
                 />
               </SimpleGrid>
               <Box data-color-mode={esquemaColor}>
@@ -339,6 +361,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                     <CampoMeta
                       etiqueta="Histórico buscable"
                       valor={documento.todas_versiones_buscables ? "Todas las versiones" : "Solo la última"}
+                    />
+                    <CampoMeta
+                      etiqueta="Estilo de informe"
+                      valor={estilos.find((e) => e.id === documento.id_estilo)?.nombre_tipo || "—"}
                     />
                   </SimpleGrid>
                   {documento.url_origen && (
