@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, Table, Text, Textarea, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 
 export default function Grupos({ proyecto, onVolver, onVerGrupo }) {
@@ -9,12 +9,15 @@ export default function Grupos({ proyecto, onVolver, onVerGrupo }) {
   const [nombre, setNombre] = useState("")
   const [proposito, setProposito] = useState("")
   const [creando, setCreando] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
 
   function recargar() {
+    setRefrescando(true)
     return api
       .listarGrupos(proyecto.id)
       .then(setGrupos)
       .catch((err) => setError(err.message))
+      .finally(() => setRefrescando(false))
   }
 
   useEffect(() => {
@@ -47,13 +50,22 @@ export default function Grupos({ proyecto, onVolver, onVerGrupo }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="6">
-        Grupos de documentos
-      </Title>
-      <Text c="dimmed" mb="lg" maw={620} fz="13.5px">
-        Un grupo agrupa documentos para un fin concreto (una auditoría, un expediente...). No hace
-        falta que todos los documentos estén en uno, y uno mismo puede estar en varios grupos a la vez.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="6">
+            Grupos de documentos
+          </Title>
+          <Text c="dimmed" maw={620} fz="13.5px">
+            Un grupo agrupa documentos para un fin concreto (una auditoría, un expediente...). No hace
+            falta que todos los documentos estén en uno, y uno mismo puede estar en varios grupos a la vez.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       {proyecto.puede_editar && (
         <Paper withBorder radius="lg" p="16" mb="lg" component="form" onSubmit={crear} maw={560}>

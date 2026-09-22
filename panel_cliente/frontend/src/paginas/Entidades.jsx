@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconSearch } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import FormularioEntidad from "../componentes/FormularioEntidad"
 
@@ -13,12 +13,15 @@ export default function Entidades({ proyecto, onVolver, onVerEntidad }) {
   const [nueva, setNueva] = useState({})
   const [creando, setCreando] = useState(false)
   const [errorModal, setErrorModal] = useState(null)
+  const [refrescando, setRefrescando] = useState(false)
 
   function cargar(consultaQ = q, consultaTipo = tipo) {
+    setRefrescando(true)
     return api
       .listarEntidades(proyecto.id, consultaQ, consultaTipo)
       .then(setEntidades)
       .catch((err) => setError(err.message))
+      .finally(() => setRefrescando(false))
   }
 
   useEffect(() => {
@@ -90,6 +93,11 @@ export default function Entidades({ proyecto, onVolver, onVerEntidad }) {
         <Button type="submit" variant="light">
           Buscar
         </Button>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={() => cargar()} loading={refrescando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
       </Group>
 
       {error && (

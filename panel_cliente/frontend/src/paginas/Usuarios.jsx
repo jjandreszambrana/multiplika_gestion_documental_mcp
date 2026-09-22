@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Button, Group, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Button, Group, PasswordInput, Select, Stack, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 
 const ID_ROL_ADMIN_TENANT = "2"
@@ -192,13 +192,22 @@ export default function Usuarios({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="xs">
-        Usuarios
-      </Title>
-      <Text c="dimmed" mb="lg">
-        El rol que elijas aquí aplica solo a "{proyecto.nombre}" — un usuario puede tener un rol
-        distinto en cada proyecto de tu empresa.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="xs">
+            Usuarios
+          </Title>
+          <Text c="dimmed">
+            El rol que elijas aquí aplica solo a "{proyecto.nombre}" — un usuario puede tener un rol
+            distinto en cada proyecto de tu empresa.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={cargando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       <Stack component="form" onSubmit={crear} maw={480} mb="xl">
         <TextInput

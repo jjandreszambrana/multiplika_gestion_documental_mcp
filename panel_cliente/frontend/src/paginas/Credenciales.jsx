@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { ActionIcon, Alert, Anchor, Button, Collapse, Group, PasswordInput, Stack, Table, Text, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Button, Collapse, Group, PasswordInput, Stack, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -84,14 +84,23 @@ export default function Credenciales({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="xs">
-        Credenciales de {proyecto.nombre}
-      </Title>
-      <Text c="dimmed" mb="lg">
-        Para que la IA pueda conectar con servicios externos. La contraseña/API key se guarda
-        cifrada y no vuelve a mostrarse — la IA ve el nombre, para qué sirve y el usuario (si
-        lleva), pero nunca la contraseña.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="xs">
+            Credenciales de {proyecto.nombre}
+          </Title>
+          <Text c="dimmed">
+            Para que la IA pueda conectar con servicios externos. La contraseña/API key se guarda
+            cifrada y no vuelve a mostrarse — la IA ve el nombre, para qué sirve y el usuario (si
+            lleva), pero nunca la contraseña.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={cargando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       <Stack component="form" onSubmit={crear} maw={480} mb="xl" autoComplete="off">
         <TextInput

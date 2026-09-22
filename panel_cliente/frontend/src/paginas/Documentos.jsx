@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
-import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconMessageCircle, IconSearch, IconUpload } from "@tabler/icons-react"
+import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconMessageCircle, IconRefresh, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
@@ -129,6 +129,10 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
     cargar("")
   }
 
+  function recargar() {
+    cargar(q, { tipoDocumento, fechaDesde, fechaHasta })
+  }
+
   const hayFiltros = tipoDocumento || fechaDesde || fechaHasta
 
   return (
@@ -226,6 +230,11 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
         <Button type="submit" variant="light">
           Buscar
         </Button>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={cargando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
       </Group>
 
       {error && (

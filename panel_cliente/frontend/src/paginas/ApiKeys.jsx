@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Code, CopyButton, Group, List, Select, Table, Tabs, Text, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Code, CopyButton, Group, List, Select, Table, Tabs, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -83,12 +83,21 @@ export default function ApiKeys({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="xs">
-        API keys de {proyecto.nombre}
-      </Title>
-      <Text c="dimmed" mb="lg">
-        Cada key conecta un cliente MCP (por ejemplo, Claude Desktop) a este proyecto.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="xs">
+            API keys de {proyecto.nombre}
+          </Title>
+          <Text c="dimmed">
+            Cada key conecta un cliente MCP (por ejemplo, Claude Desktop) a este proyecto.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={cargando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       <Group component="form" onSubmit={emitir} align="flex-end" mb="xl">
         <TextInput
