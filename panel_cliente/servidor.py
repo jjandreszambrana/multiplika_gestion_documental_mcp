@@ -56,7 +56,7 @@ from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._mod_credenciales_campos import CredencialesCamposCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
-from ..database.modelos._mod_pdf import CSS_DOCUMENTO, renderizar_pdf
+from ..database.modelos._mod_pdf import CSS_DOCUMENTO, imagenes_estilo_html, renderizar_pdf
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
@@ -379,11 +379,15 @@ async def exportar_documento_pdf(
     if not version:
         raise HTTPException(404, "Este documento no tiene ninguna versión vigente")
 
+    imagenes_html = ""
+    if documento["id_estilo"]:
+        imagenes_html = await imagenes_estilo_html(config, documento["id_estilo"])
+
     cuerpo_html = md.markdown(version["markdown_actual"], extensions=["tables"])
     titulo_html = html.escape(documento["nombre"])
     html_completo = (
         f"<html><head><meta charset='utf-8'><title>{titulo_html}</title>"
-        f"<style>{CSS_DOCUMENTO}</style></head><body>{cuerpo_html}</body></html>"
+        f"<style>{CSS_DOCUMENTO}</style></head><body>{imagenes_html}{cuerpo_html}</body></html>"
     )
     try:
         pdf_bytes = await renderizar_pdf(html_completo)

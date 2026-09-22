@@ -17,8 +17,11 @@ por todas las herramientas de todos los proyectos) solo por esta
 dependencia."""
 
 import asyncio
+import base64
 import os
 import sys
+
+from ._mod_estilos import EstilosImagenesCRUD
 
 _LIBFFI_SISTEMA = "/usr/lib/x86_64-linux-gnu/libffi.so.7"
 
@@ -54,7 +57,21 @@ CSS_DOCUMENTO = """
     table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
     th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; }
     th { background: #f5f5f5; font-weight: 700; }
+    img.imagen-informe { max-height: 80px; margin-bottom: 1em; display: block; }
 """
+
+
+async def imagenes_estilo_html(config: dict, id_estilo: int) -> str:
+    """HTML con las imágenes fijas de un estilo (logo...) listas para
+    incrustar al principio de un PDF — compartido entre
+    generar_informe_pdf_gd y la exportación a PDF de un documento desde
+    el panel."""
+    imagenes = await EstilosImagenesCRUD(config).listar_de_estilo(id_estilo)
+    html = ""
+    for img in imagenes:
+        b64 = base64.b64encode(bytes(img["imagen"])).decode()
+        html += f'<img class="imagen-informe" src="data:{img["tipo_mime"]};base64,{b64}">'
+    return html
 
 
 async def renderizar_pdf(html_completo: str) -> bytes:

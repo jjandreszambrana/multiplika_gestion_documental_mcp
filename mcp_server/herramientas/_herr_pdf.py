@@ -5,8 +5,6 @@ sin maquetación compleja. El render en sí (subproceso con el LD_PRELOAD
 de libffi) vive en `database/modelos/_mod_pdf.py`, compartido con el
 botón "Descargar PDF" del panel — ver ese módulo para el motivo."""
 
-import base64
-
 import markdown as md
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File
@@ -16,8 +14,8 @@ from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 
 from ._anotaciones import SOLO_LECTURA
-from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
-from ..database.modelos._mod_pdf import CSS_INFORME, renderizar_pdf
+from ..database.modelos._mod_estilos import EstilosCRUD
+from ..database.modelos._mod_pdf import CSS_INFORME, imagenes_estilo_html, renderizar_pdf
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)
@@ -37,10 +35,7 @@ async def generar_informe_pdf_gd(
     if nombre_tipo_estilo:
         estilo = await EstilosCRUD(config).obtener_por_tipo(nombre_tipo_estilo)
         if estilo:
-            imagenes = await EstilosImagenesCRUD(config).listar_de_estilo(estilo["id"])
-            for img in imagenes:
-                b64 = base64.b64encode(bytes(img["imagen"])).decode()
-                imagenes_html += f'<img class="imagen-informe" src="data:{img["tipo_mime"]};base64,{b64}">'
+            imagenes_html = await imagenes_estilo_html(config, estilo["id"])
 
     cuerpo_html = md.markdown(markdown, extensions=["tables"])
     html_completo = f"<html><head><style>{CSS_INFORME}</style></head><body>{imagenes_html}{cuerpo_html}</body></html>"
