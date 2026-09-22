@@ -1,7 +1,11 @@
 """Certificados digitales de entidades (.p12/.pfx con contraseña, o
 .cer/.pem sin ella) — ver docs/gestion-documental.md → "Certificados de
-entidades". El archivo y la contraseña van cifrados (mismo Fernet que
-gd_credenciales); los datos que ya son públicos en el propio certificado
+entidades". Al subir un archivo se separa en sus piezas: el certificado
+y la clave privada (si la hay) se guardan cada uno en su propio campo
+cifrado (mismo Fernet que gd_credenciales) — nunca se guarda el archivo
+original tal cual. Una copia descargable (el .p12) se reconstruye al
+vuelo uniendo certificado+clave en el momento de pedirla, no se guarda
+ya montada. Los datos que ya son públicos en el propio certificado
 (titular, emisor, fechas...) se guardan en claro, igual que credenciales
 guarda "usuario" sin cifrar."""
 
@@ -43,14 +47,18 @@ CAMPOS_CERTIFICADOS = [
             comentario="Fin de validez, extraído del certificado — para el aviso de caducidad"),
     Columna(nombre="aviso_caducidad_enviado", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Mismo mecanismo que gd_versiones: un solo aviso, nunca repetido"),
-    Columna(nombre="nombre_fichero", tipo="VARCHAR", longitud=255,
-            comentario="Nombre del archivo tal como se subió, para la descarga"),
-    Columna(nombre="archivo_cifrado", tipo="MEDIUMTEXT", not_null=True,
-            comentario="El archivo original completo, en base64 y cifrado con Fernet — puede "
-                       "llevar la clave privada dentro (.p12), se trata siempre como secreto"),
+    Columna(nombre="certificado_cifrado", tipo="MEDIUMTEXT", not_null=True,
+            comentario="El certificado en sí (PEM), cifrado con Fernet — es la parte pública, "
+                       "pero se cifra igualmente por coherencia y porque ya viaja junto a datos "
+                       "sensibles del cliente"),
+    Columna(nombre="clave_cifrada", tipo="MEDIUMTEXT",
+            comentario="La clave privada (PEM, sin proteger con contraseña propia — ya la "
+                       "protege el cifrado Fernet), cifrada — NULL si el certificado subido era "
+                       "solo la parte pública (.cer/.pem, formato='cer')"),
     Columna(nombre="contrasena_cifrada", tipo="VARCHAR", longitud=500,
-            comentario="Solo si el archivo es .p12/.pfx protegido — cifrada con Fernet, NULL si "
-                       "el certificado no llevaba contraseña"),
+            comentario="Contraseña con la que se protegía el .p12/.pfx original — cifrada, se "
+                       "reutiliza para proteger la copia que se genera al descargar. NULL si el "
+                       "certificado no llevaba contraseña o es formato='cer'"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"), protegido_actualizar=True),
 ]

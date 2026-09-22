@@ -1247,9 +1247,7 @@ async def crear_certificado(
     config = get_db_config(proyecto["id"])
     contenido = await archivo.read()
     try:
-        return await CertificadosCRUD(config).crear(
-            nombre, descripcion, id_entidad, contenido, archivo.filename, contrasena or None,
-        )
+        return await CertificadosCRUD(config).crear(nombre, descripcion, id_entidad, contenido, contrasena or None)
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
@@ -1282,15 +1280,16 @@ async def descargar_certificado(
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     id_usuario: int = Depends(admin_certificados_actual),
 ) -> Response:
-    """Sirve el archivo original descifrado — cada descarga queda
-    registrada en gd_certificados_log (quién y cuándo), es el motivo por
-    el que esto es delicado y no un simple estático."""
+    """Reconstruye el archivo al vuelo (nunca hay un .p12 ya montado
+    guardado) y lo sirve — cada descarga queda registrada en
+    gd_certificados_log (quién y cuándo), es el motivo por el que esto
+    es delicado y no un simple estático."""
     config = get_db_config(proyecto["id"])
     certificados = CertificadosCRUD(config)
     certificado = await certificados.obtener(id_certificado)
     if not certificado:
         raise HTTPException(404, "Certificado no encontrado")
-    resultado = await certificados.archivo_descifrado(id_certificado)
+    resultado = await certificados.generar_copia(id_certificado)
     if not resultado:
         raise HTTPException(404, "Certificado no encontrado")
     contenido, nombre_fichero = resultado
