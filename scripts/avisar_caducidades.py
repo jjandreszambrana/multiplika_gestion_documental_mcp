@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
-"""Aviso proactivo por email de documentos por caducar — ver
-docs/gestion-documental.md → "Fechas de caducidad y avisos proactivos por
-email". Recorre cada proyecto de gestión documental activo (Postgres,
-`tipo_producto='gestion_documental'` en la base de control) y manda UN
-correo si tiene documentos con `fecha_caducidad` dentro de la ventana de
-aviso — un solo aviso por documento (`aviso_caducidad_enviado`), no un
-recordatorio diario (decisión de producto, 2026-09-10).
+"""Aviso proactivo por email de documentos y certificados por caducar —
+ver docs/gestion-documental.md → "Fechas de caducidad y avisos proactivos
+por email" y "Certificados de entidades". Recorre cada proyecto de
+gestión documental activo (Postgres, `tipo_producto='gestion_documental'`
+en la base de control) y manda UN correo combinado si tiene documentos
+y/o certificados con `fecha_caducidad` dentro de la ventana de aviso —
+un solo aviso por fila (`aviso_caducidad_enviado`), no un recordatorio
+diario (decisión de producto, 2026-09-10).
 
 Autocontenido a propósito: no importa la capa `database/modelos` de este
 repo (evita el lío de que `database.modelos._mod_versiones` use imports
@@ -83,6 +84,19 @@ async def _documentos_por_caducar(config: dict, dias: int) -> list[dict]:
     return await db.query(sql, (dias,))
 
 
+async def _certificados_por_caducar(config: dict, dias: int) -> list[dict]:
+    db = AsyncDatabase(**config)
+    sql = """
+        SELECT id, nombre, titular, fecha_caducidad
+        FROM gd_certificados
+        WHERE fecha_caducidad IS NOT NULL
+          AND fecha_caducidad <= CURRENT_DATE + %s::int
+          AND aviso_caducidad_enviado = false
+        ORDER BY fecha_caducidad ASC
+    """
+    return await db.query(sql, (dias,))
+
+
 async def _email_avisos(config: dict) -> str | None:
     db = AsyncDatabase(**config)
     filas = await db.query("SELECT email_avisos FROM gd_configuracion WHERE id = 1")
@@ -116,6 +130,13 @@ async def _marcar_avisados(config: dict, ids_version: list[int]) -> None:
     await db.query("UPDATE gd_versiones SET aviso_caducidad_enviado = true WHERE id = ANY(%s)", (ids_version,))
 
 
+async def _marcar_avisados_certificados(config: dict, ids_certificado: list[int]) -> None:
+    db = AsyncDatabase(**config)
+    await db.query(
+        "UPDATE gd_certificados SET aviso_caducidad_enviado = true WHERE id = ANY(%s)", (ids_certificado,)
+    )
+
+
 def _conectar_smtp(cuenta: dict) -> smtplib.SMTP:
     """`smtp_seguridad` es explícito, elegido por el cliente en el panel —
     antes se adivinaba por el puerto (465 = SSL, cualquier otro =
@@ -130,14 +151,27 @@ def _conectar_smtp(cuenta: dict) -> smtplib.SMTP:
     return smtp
 
 
-def _enviar_email(cuenta: dict, destinatario: str, proyecto_nombre: str, documentos: list[dict]) -> None:
-    lineas = [f'- "{d["nombre"]}" ({d["tipo_documento"]}) — caduca el {d["fecha_caducidad"]}' for d in documentos]
+def _enviar_email(
+    cuenta: dict, destinatario: str, proyecto_nombre: str, documentos: list[dict], certificados: list[dict],
+) -> None:
+    bloques = []
+    if documentos:
+        lineas = [f'- "{d["nombre"]}" ({d["tipo_documento"]}) — caduca el {d["fecha_caducidad"]}' for d in documentos]
+        bloques.append("Documentos por caducar:\n\n" + "\n".join(lineas))
+    if certificados:
+        lineas = [
+            f'- "{c["nombre"]}" ({c["titular"] or "sin titular"}) — caduca el {c["fecha_caducidad"]}'
+            for c in certificados
+        ]
+        bloques.append("Certificados por caducar:\n\n" + "\n".join(lineas))
+
     cuerpo = (
-        f"Documentos de {proyecto_nombre} por caducar:\n\n" + "\n".join(lineas) +
-        "\n\nEste es un aviso único por documento — no se repetirá."
+        f"Avisos de {proyecto_nombre}:\n\n" + "\n\n".join(bloques) +
+        "\n\nEste es un aviso único por documento/certificado — no se repetirá."
     )
+    total = len(documentos) + len(certificados)
     mensaje = MIMEText(cuerpo, _charset="utf-8")
-    mensaje["Subject"] = f"[{proyecto_nombre}] Documentos por caducar ({len(documentos)})"
+    mensaje["Subject"] = f"[{proyecto_nombre}] Por caducar ({total})"
     mensaje["From"] = cuenta["direccion"]
     mensaje["To"] = destinatario
 
@@ -148,24 +182,28 @@ def _enviar_email(cuenta: dict, destinatario: str, proyecto_nombre: str, documen
 async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
     config = get_db_config(proyecto["id"])
     documentos = await _documentos_por_caducar(config, dias)
-    if not documentos:
+    certificados = await _certificados_por_caducar(config, dias)
+    if not documentos and not certificados:
         return
 
     destinatario = await _email_avisos(config)
     cuenta = await _cuenta_email(config)
     if not destinatario or not cuenta:
         print(
-            f"{proyecto['nombre']}: {len(documentos)} documento(s) por caducar, pero falta "
-            f"{'email_avisos' if not destinatario else 'la cuenta de correo'} — se omite."
+            f"{proyecto['nombre']}: {len(documentos)} documento(s) y {len(certificados)} certificado(s) "
+            f"por caducar, pero falta {'email_avisos' if not destinatario else 'la cuenta de correo'} — se omite."
         )
         return
 
-    print(f"{proyecto['nombre']}: avisando de {len(documentos)} documento(s) a {destinatario} desde {cuenta['direccion']}.")
+    print(
+        f"{proyecto['nombre']}: avisando de {len(documentos)} documento(s) y {len(certificados)} "
+        f"certificado(s) a {destinatario} desde {cuenta['direccion']}."
+    )
     if simular:
         return
 
     try:
-        _enviar_email(cuenta, destinatario, proyecto["nombre"], documentos)
+        _enviar_email(cuenta, destinatario, proyecto["nombre"], documentos, certificados)
     except (smtplib.SMTPException, OSError) as e:
         # Un email_avisos mal configurado (buzón inexistente, dominio caído...)
         # de UN cliente no debe tumbar el aviso de todos los demás — sin este
@@ -176,7 +214,10 @@ async def _procesar_proyecto(proyecto: dict, dias: int, simular: bool) -> None:
         print(f"{proyecto['nombre']}: fallo mandando el aviso a {destinatario}: {e}")
         return
 
-    await _marcar_avisados(config, [d["id_version"] for d in documentos])
+    if documentos:
+        await _marcar_avisados(config, [d["id_version"] for d in documentos])
+    if certificados:
+        await _marcar_avisados_certificados(config, [c["id"] for c in certificados])
 
 
 async def main() -> None:

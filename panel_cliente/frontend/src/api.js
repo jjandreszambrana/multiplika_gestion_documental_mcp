@@ -185,6 +185,44 @@ export const api = {
   eliminarCredencial: (idProyecto, idCredencial) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/credenciales/${idCredencial}`),
 
+  listarCertificados: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/certificados`),
+  subirCertificado: (idProyecto, { nombre, descripcion, idEntidad, contrasena, archivo }) => {
+    const formData = new FormData()
+    formData.append("nombre", nombre)
+    if (descripcion) formData.append("descripcion", descripcion)
+    if (idEntidad) formData.append("id_entidad", idEntidad)
+    if (contrasena) formData.append("contrasena", contrasena)
+    formData.append("archivo", archivo)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/certificados`, formData)
+  },
+  actualizarCertificado: (idProyecto, idCertificado, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/certificados/${idCertificado}`, datos),
+  eliminarCertificado: (idProyecto, idCertificado) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/certificados/${idCertificado}`),
+  listarLogCertificado: (idProyecto, idCertificado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/certificados/${idCertificado}/log`),
+  // Igual que descargarDocumentoPdfBlob: la descarga necesita la cabecera
+  // Authorization (y aquí además queda registrada en el log de uso), así
+  // que no puede ser un <a href> normal.
+  descargarCertificadoBlob: async (idProyecto, idCertificado) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/certificados/${idCertificado}/archivo`, { headers })
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    const disposicion = res.headers.get("Content-Disposition") || ""
+    const coincidencia = disposicion.match(/filename\*=UTF-8''(.+)$/)
+    const nombreFichero = coincidencia ? decodeURIComponent(coincidencia[1]) : "certificado"
+    return { blob: await res.blob(), nombreFichero }
+  },
+
   listarDocumentosPendientes: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos-pendientes`),
   subirDocumentosPendientes: (idProyecto, archivos) => {

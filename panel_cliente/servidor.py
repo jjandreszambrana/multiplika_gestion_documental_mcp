@@ -50,6 +50,7 @@ from lib.api_keys import generar_api_key
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
+from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
 from ..database.modelos._mod_chunks import ChunksCRUD
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
@@ -82,6 +83,7 @@ from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, revertir_edicion
 from .dependencias import (
     Identidad,
+    admin_certificados_actual,
     admin_gestion_documental_actual,
     api_key_de_gestion_documental,
     escritor_gestion_documental_actual,
@@ -1209,6 +1211,108 @@ async def eliminar_credencial(
 ) -> None:
     config = get_db_config(proyecto["id"])
     await CredencialesCRUD(config).eliminar(id_credencial)
+
+
+# --- Certificados de entidades (ver docs/gestion-documental.md →
+# "Certificados de entidades") --- Igual de sensible que las
+# credenciales: solo admin_tenant. La descarga, además, exige un
+# usuario real (no superadmin) porque queda registrada en
+# gd_certificados_log con su id.
+
+
+class ActualizarCertificado(BaseModel):
+    nombre: str
+    descripcion: str | None = None
+    id_entidad: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/certificados")
+async def listar_certificados(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await CertificadosCRUD(config).listar_metadatos()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/certificados")
+async def crear_certificado(
+    id_proyecto: int,
+    nombre: str = Form(...),
+    descripcion: str | None = Form(None),
+    id_entidad: int | None = Form(None),
+    contrasena: str | None = Form(None),
+    archivo: UploadFile = File(...),
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    contenido = await archivo.read()
+    try:
+        return await CertificadosCRUD(config).crear(
+            nombre, descripcion, id_entidad, contenido, archivo.filename, contrasena or None,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/certificados/{id_certificado}")
+async def actualizar_certificado(
+    id_proyecto: int, id_certificado: int, datos: ActualizarCertificado,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    certificado = await CertificadosCRUD(config).actualizar_metadatos(
+        id_certificado, datos.nombre, datos.descripcion, datos.id_entidad
+    )
+    if not certificado:
+        raise HTTPException(404, "Certificado no encontrado")
+    return certificado
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/certificados/{id_certificado}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_certificado(
+    id_proyecto: int, id_certificado: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await CertificadosCRUD(config).eliminar(id_certificado)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/certificados/{id_certificado}/archivo")
+async def descargar_certificado(
+    id_proyecto: int, id_certificado: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(admin_certificados_actual),
+) -> Response:
+    """Sirve el archivo original descifrado — cada descarga queda
+    registrada en gd_certificados_log (quién y cuándo), es el motivo por
+    el que esto es delicado y no un simple estático."""
+    config = get_db_config(proyecto["id"])
+    certificados = CertificadosCRUD(config)
+    certificado = await certificados.obtener(id_certificado)
+    if not certificado:
+        raise HTTPException(404, "Certificado no encontrado")
+    resultado = await certificados.archivo_descifrado(id_certificado)
+    if not resultado:
+        raise HTTPException(404, "Certificado no encontrado")
+    contenido, nombre_fichero = resultado
+    await CertificadosLogCRUD(config).registrar(id_certificado, certificado["nombre"], id_usuario, "descarga")
+    nombre_codificado = quote(nombre_fichero)
+    return Response(
+        content=contenido, media_type="application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre_codificado}"},
+    )
+
+
+@app.get("/v1/proyectos/{id_proyecto}/certificados/{id_certificado}/log")
+async def listar_log_certificado(
+    id_proyecto: int, id_certificado: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    registros = await CertificadosLogCRUD(config).listar_de_certificado(id_certificado)
+    return [
+        {"id": r["id"], "accion": r["accion"], "detalle": r["detalle"], "fecha": r["fecha"],
+         "usuario": await _nombre_usuario(r["id_usuario"])}
+        for r in registros
+    ]
 
 
 # --- Formulario de credencial (enlace de un solo uso) ---

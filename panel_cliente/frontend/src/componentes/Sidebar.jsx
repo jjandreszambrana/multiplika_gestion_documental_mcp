@@ -8,6 +8,7 @@ import {
   IconUsers,
   IconKey,
   IconLock,
+  IconCertificate,
   IconBellRinging,
   IconMail,
   IconHelpCircle,
@@ -94,6 +95,7 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
             <Item icon={IconUsers} label="Usuarios" active={vista === "usuarios"} onClick={() => onNavigate("usuarios")} />
             <Item icon={IconKey} label="API keys" active={vista === "api-keys"} onClick={() => onNavigate("api-keys")} />
             <Item icon={IconLock} label="Credenciales" active={vista === "credenciales"} onClick={() => onNavigate("credenciales")} />
+            <Item icon={IconCertificate} label="Certificados" active={vista === "certificados"} onClick={() => onNavigate("certificados")} />
             <Item
               icon={IconBellRinging}
               label="Avisos de caducidad"

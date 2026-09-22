@@ -132,6 +132,21 @@ async def admin_gestion_documental_actual(
     return proyecto
 
 
+async def admin_certificados_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> int:
+    """Como admin_gestion_documental_actual, pero para certificados: exige
+    admin_tenant igual que credenciales, y además — a diferencia de esas —
+    no deja entrar a un superadmin, porque gd_certificados_log.id_usuario
+    referencia mcpc_usuarios (mismo motivo que puede_editar_documento_actual
+    con gd_historial_ediciones): para dar soporte con un certificado, que
+    entre con un usuario real del tenant. Devuelve el id_usuario a
+    registrar en el log de uso."""
+    if identidad.tipo != "usuario" or not await es_admin_de_proyecto(identidad.id, proyecto["id"]):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Requiere ser admin de este proyecto")
+    return identidad.id
+
+
 async def api_key_de_gestion_documental(id_api_key: int, identidad: Identidad = Depends(identidad_actual)) -> dict:
     """Para revocar/eliminar, que solo llevan id_api_key en el path (no
     id_proyecto en la URL): resuelve el proyecto dueño de la key y aplica
