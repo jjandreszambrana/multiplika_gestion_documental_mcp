@@ -75,6 +75,16 @@ CAMPOS_VERSIONES = [
                        "una normativa publicada en el BOE). Solo referencia para poder volver "
                        "a consultar la fuente; el markdown guardado sigue siendo lo que manda, "
                        "no se depende de que la URL siga viva"),
+    Columna(nombre="archivo_original", tipo="BLOB",
+            comentario="Opcional — PDF original adjuntado al crear el documento a mano desde el "
+                       "panel (ver 'Alta manual desde el panel'), guardado tal cual, sin "
+                       "convertir: solo de referencia/descarga, markdown_actual sigue siendo lo "
+                       "que manda y lo que se busca. NULL si no se adjuntó ninguno"),
+    Columna(nombre="archivo_original_nombre", tipo="VARCHAR", longitud=255,
+            comentario="Nombre de fichero de archivo_original. NULL si no hay archivo adjunto"),
+    Columna(nombre="archivo_original_tipo_mime", tipo="VARCHAR", longitud=100,
+            comentario="Tipo MIME de archivo_original (p.ej. 'application/pdf'). NULL si no hay "
+                       "archivo adjunto"),
     Columna(nombre="aviso_caducidad_enviado", tipo="BOOLEAN", not_null=True, default=False,
             comentario="Un solo aviso por email al entrar en la ventana de aviso, no uno "
                        "diario (decisión de producto, 2026-09-10) — este flag evita repetirlo"),

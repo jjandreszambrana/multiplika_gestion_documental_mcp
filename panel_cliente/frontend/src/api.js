@@ -133,6 +133,45 @@ export const api = {
   },
   obtenerDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}`),
+  // Alta manual desde el panel (sin pasar por la IA, ver docs/gestion-documental.md
+  // → "Alta manual desde el panel"): el markdown ya viene escrito/pegado por
+  // quien lo crea; el archivo original (si lo hay) es solo referencia, no se
+  // convierte.
+  crearDocumento: (idProyecto, datos) => {
+    const formData = new FormData()
+    formData.append("nombre", datos.nombre)
+    formData.append("tipo_documento", datos.tipoDocumento)
+    formData.append("markdown", datos.markdown)
+    formData.append("fecha_documento", datos.fechaDocumento)
+    if (datos.fechaCaducidad) formData.append("fecha_caducidad", datos.fechaCaducidad)
+    if (datos.ambito) formData.append("ambito", datos.ambito)
+    formData.append("todas_versiones_buscables", datos.todasVersionesBuscables ? "true" : "false")
+    if (datos.archivoOriginal) formData.append("archivo_original", datos.archivoOriginal)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/documentos`, formData)
+  },
+  // Igual que descargarDocumentoPdfBlob: necesita la cabecera Authorization,
+  // así que no puede ser un <a href> normal.
+  descargarArchivoOriginalBlob: async (idProyecto, idDocumento, idVersion) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(
+      `${BASE_CLIENTE}/proyectos/${idProyecto}/documentos/${idDocumento}/versiones/${idVersion}/archivo-original`,
+      { headers },
+    )
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    const disposicion = res.headers.get("Content-Disposition") || ""
+    const coincidencia = disposicion.match(/filename\*=UTF-8''(.+)$/)
+    const nombreFichero = coincidencia ? decodeURIComponent(coincidencia[1]) : "documento"
+    return { blob: await res.blob(), nombreFichero }
+  },
   archivarDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
   desarchivarDocumento: (idProyecto, idDocumento) =>

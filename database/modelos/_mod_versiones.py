@@ -96,6 +96,17 @@ class VersionesCRUD(AsyncCrudBase):
         )
         return await self.obtener(id_version)
 
+    async def guardar_archivo_original(
+        self, id_version: int, contenido: bytes, tipo_mime: str, nombre: str
+    ) -> None:
+        """Adjunta el PDF original subido al crear el documento a mano
+        desde el panel (ver 'Alta manual desde el panel') — se guarda tal
+        cual, sin convertir, solo como referencia/descarga."""
+        await self.update(
+            id_version,
+            {"archivo_original": contenido, "archivo_original_tipo_mime": tipo_mime, "archivo_original_nombre": nombre},
+        )
+
     async def listar_buscables(self) -> list[dict]:
         """Todas las versiones actualmente buscables (vigentes, o todas
         las de un documento con todas_versiones_buscables=true, y el

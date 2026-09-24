@@ -51,7 +51,7 @@ from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
-from ..database.modelos._mod_chunks import ChunksCRUD
+from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
@@ -80,7 +80,7 @@ from ..database.modelos._mod_registros import (
     resolver_incidencia,
 )
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
-from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, revertir_edicion
+from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, guardar_documento, revertir_edicion
 from .dependencias import (
     Identidad,
     admin_certificados_actual,
@@ -113,6 +113,28 @@ async def _nombre_usuario(id_usuario: int | None) -> str | None:
         return None
     usuario = await _usuarios.obtener(id_usuario)
     return usuario["nombre"] if usuario else None
+
+
+async def _reindexar_si_semantico(config: dict, id_proyecto: int, id_documento: int, id_version: int, markdown: str) -> None:
+    """Igual que su equivalente de mcp_server/herramientas/_herr_documentos.py
+    (no se reutiliza tal cual porque esa versión lanza ToolError, propio de
+    fastmcp, en vez de HTTPException) — tras crear un documento a mano desde
+    el panel, si el modo de búsqueda es semántico hay que indexarlo igual
+    que si lo hubiera guardado la IA."""
+    configuracion = ConfiguracionCRUD(config)
+    modo = await configuracion.obtener_modo_busqueda()
+    if modo != "semantico":
+        return
+    proveedor_embedding = await configuracion.obtener_proveedor_embedding()
+    api_key = await obtener_api_key(proveedor_embedding, id_proyecto)
+    if not api_key:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "El modo de búsqueda es 'semantico' pero no hay ninguna clave de API de embeddings "
+            "configurada para esta empresa",
+        )
+    await reindexar_version(config, proveedor_embedding, api_key, id_version, markdown)
+    await limpiar_chunks_no_buscables(config, id_documento)
 
 
 @app.get("/v1/ayuda")
@@ -181,6 +203,70 @@ async def listar_o_buscar_documentos(
         raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
     return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
+
+
+# --- Alta manual desde el panel: a diferencia de guardar_documento_gd
+# (conversación con la IA, que hace la conversión a markdown), aquí el
+# propio usuario pega o escribe el markdown ya convertido — pensado para
+# cuando no hace falta pasar por la IA (texto que ya se tiene, o una
+# corrección rápida). Puede adjuntar además el PDF original tal cual, sin
+# convertirlo (no hay OCR en el panel): queda guardado solo como
+# referencia descargable, el markdown pegado sigue siendo lo que manda y
+# lo que se busca. Mismo criterio de permisos que editar un documento.
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos", status_code=status.HTTP_201_CREATED)
+async def crear_documento_manual(
+    id_proyecto: int,
+    nombre: str = Form(...),
+    tipo_documento: str = Form(...),
+    markdown: str = Form(...),
+    fecha_documento: str = Form(...),
+    fecha_caducidad: str | None = Form(default=None),
+    ambito: str | None = Form(default=None),
+    todas_versiones_buscables: bool = Form(default=False),
+    archivo_original: UploadFile | None = File(default=None),
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        resultado = await guardar_documento(
+            config, nombre, tipo_documento, markdown, fecha_documento,
+            todas_versiones_buscables=todas_versiones_buscables,
+            fecha_caducidad=fecha_caducidad or None, ambito=ambito or None,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+    if archivo_original is not None:
+        contenido = await archivo_original.read()
+        await VersionesCRUD(config).guardar_archivo_original(
+            resultado["id_version"], contenido,
+            archivo_original.content_type or "application/octet-stream",
+            archivo_original.filename or "documento.pdf",
+        )
+
+    await _reindexar_si_semantico(config, proyecto["id"], resultado["id_documento"], resultado["id_version"], markdown)
+    return resultado
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/versiones/{id_version}/archivo-original")
+async def descargar_archivo_original_documento(
+    id_proyecto: int, id_documento: int, id_version: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> Response:
+    config = get_db_config(proyecto["id"])
+    version = await VersionesCRUD(config).obtener(id_version)
+    if not version or version["id_documento"] != id_documento:
+        raise HTTPException(404, "Versión no encontrada")
+    if not version["archivo_original"]:
+        raise HTTPException(404, "Esta versión no tiene ningún archivo original adjunto")
+    nombre_codificado = quote(version["archivo_original_nombre"])
+    return Response(
+        content=version["archivo_original"], media_type=version["archivo_original_tipo_mime"],
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre_codificado}"},
+    )
 
 
 # --- Contexto de negocio (mcpc_proyectos.descripcion/preferencias_trabajo,
@@ -355,6 +441,7 @@ async def obtener_documento(
         "revisado_manualmente": version["revisado_manualmente"] if version else None,
         "incumplimientos": version["incumplimientos"] if version else None,
         "url_origen": version["url_origen"] if version else None,
+        "archivo_original_nombre": version["archivo_original_nombre"] if version else None,
         # Borrador de edición sin confirmar (ver docs/gestion-documental.md
         # → "Edición desde el panel") — si "tmp" tiene contenido, el
         # frontend debe cargarlo en el editor en vez de "markdown" y avisar

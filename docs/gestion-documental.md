@@ -106,6 +106,11 @@ Hasta ahora el panel del cliente era de solo lectura: guardar o corregir un docu
 
 Esto es independiente del mecanismo de "Borrador" de más arriba (que evita versiones nuevas mientras un documento entero está sin cerrar, vía chat): la edición desde el panel corrige el texto de la versión vigente, sea o no un borrador.
 
+### Alta manual desde el panel (2026-09-24)
+Hasta ahora el panel solo dejaba editar un documento ya existente (ver arriba) o encolar un fichero crudo en `gd_documentos_pendientes` a la espera de que la IA lo procesara en conversación — no había forma de dar de alta un documento nuevo sin pasar por la IA. Se añade `POST /v1/proyectos/{id}/documentos`: el propio usuario pega o escribe el markdown ya convertido (mismos metadatos que pide `guardar_documento_gd`: nombre, tipo, fecha, ámbito, caducidad, histórico buscable) y el panel llama directamente a `guardar_documento()` — mismo camino de guardado que usa la tool MCP, sin duplicar lógica de negocio.
+
+Decisión de alcance (2026-09-24): sin OCR/conversión automática en el panel — convertir un PDF o una foto a markdown lo sigue haciendo solo la IA en conversación (es su punto fuerte, y montar un pipeline de extracción propio en el panel sería peor calidad y mucho más código). Lo que sí se añade es poder **adjuntar el PDF original tal cual** al crear a mano (`gd_versiones.archivo_original` + `_nombre` + `_tipo_mime`, BLOB opcional): queda guardado solo como referencia descargable junto al documento — `markdown_actual` sigue siendo lo único que se busca y lo que manda. Mismo permiso que editar (`puede_editar_documento_actual`, ver "Edición desde el panel"); si el modo de búsqueda del proyecto es semántico, se reindexa igual que si lo hubiera guardado la IA.
+
 ### Pipeline de ingesta (2026-09-06)
 Sin interfaz: el cliente le dice a su Claude "guárdame esta factura" (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.
 

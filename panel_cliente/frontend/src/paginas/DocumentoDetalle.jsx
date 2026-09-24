@@ -46,6 +46,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
   const [descargandoPdf, setDescargandoPdf] = useState(false)
+  const [descargandoOriginal, setDescargandoOriginal] = useState(false)
   const [modalPdfAbierto, setModalPdfAbierto] = useState(false)
   const [incluirMetadatosPdf, setIncluirMetadatosPdf] = useState(() => localStorage.getItem(CLAVE_PDF_METADATOS) === "1")
   const [editando, setEditando] = useState(false)
@@ -123,6 +124,24 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
       setError(err.message)
     } finally {
       setDescargandoPdf(false)
+    }
+  }
+
+  async function descargarOriginal() {
+    setDescargandoOriginal(true)
+    setError(null)
+    try {
+      const { blob, nombreFichero } = await api.descargarArchivoOriginalBlob(proyecto.id, idDocumento, documento.id_version)
+      const url = URL.createObjectURL(blob)
+      const enlace = document.createElement("a")
+      enlace.href = url
+      enlace.download = nombreFichero
+      enlace.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDescargandoOriginal(false)
     }
   }
 
@@ -376,6 +395,22 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                       </Text>
                       <Anchor href={documento.url_origen} target="_blank" rel="noopener noreferrer" size="13px">
                         {documento.url_origen}
+                      </Anchor>
+                    </Group>
+                  )}
+                  {documento.archivo_original_nombre && (
+                    <Group mt="8" pt="8" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+                      <Text size="12.5px" c="dimmed">
+                        Archivo original
+                      </Text>
+                      <Anchor
+                        component="button"
+                        type="button"
+                        size="13px"
+                        onClick={descargarOriginal}
+                        disabled={descargandoOriginal}
+                      >
+                        {documento.archivo_original_nombre}
                       </Anchor>
                     </Group>
                   )}

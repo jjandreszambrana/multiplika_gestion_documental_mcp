@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
-import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconMessageCircle, IconRefresh, IconSearch, IconUpload } from "@tabler/icons-react"
+import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconFilePlus, IconMessageCircle, IconRefresh, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
+import NuevoDocumentoModal from "../componentes/NuevoDocumentoModal"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
 import { formatearFecha } from "../formato"
@@ -46,6 +47,7 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
   const [subiendo, setSubiendo] = useState(false)
   const [errorPendientes, setErrorPendientes] = useState(null)
   const [modalSubidaAbierto, setModalSubidaAbierto] = useState(false)
+  const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false)
   const [docRegistros, setDocRegistros] = useState(null)
 
   useEffect(() => {
@@ -80,6 +82,11 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
     } finally {
       setSubiendo(false)
     }
+  }
+
+  async function crearDocumento(datos) {
+    const resultado = await api.crearDocumento(proyecto.id, datos)
+    onVerDocumento(resultado.id_documento)
   }
 
   async function descartarPendiente(idPendiente) {
@@ -160,15 +167,33 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
             )}
           </Text>
         </div>
-        <Button leftSection={<IconUpload size={16} stroke={1.8} />} onClick={() => setModalSubidaAbierto(true)}>
-          Subir documentos
-          {pendientes.length > 0 && (
-            <Badge ml="8" size="sm" circle color="red">
-              {pendientes.length}
-            </Badge>
+        <Group gap="8">
+          {proyecto.puede_editar && (
+            <Button
+              variant="default"
+              leftSection={<IconFilePlus size={16} stroke={1.8} />}
+              onClick={() => setModalNuevoAbierto(true)}
+            >
+              Nuevo documento
+            </Button>
           )}
-        </Button>
+          <Button leftSection={<IconUpload size={16} stroke={1.8} />} onClick={() => setModalSubidaAbierto(true)}>
+            Subir documentos
+            {pendientes.length > 0 && (
+              <Badge ml="8" size="sm" circle color="red">
+                {pendientes.length}
+              </Badge>
+            )}
+          </Button>
+        </Group>
       </Group>
+
+      <NuevoDocumentoModal
+        opened={modalNuevoAbierto}
+        onClose={() => setModalNuevoAbierto(false)}
+        tiposDocumento={tiposDocumento.map((t) => t.value)}
+        onCrear={crearDocumento}
+      />
 
       <SubirDocumentosModal
         opened={modalSubidaAbierto}
