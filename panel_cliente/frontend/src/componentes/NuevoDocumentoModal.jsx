@@ -88,6 +88,7 @@ export default function NuevoDocumentoModal({ opened, onClose, tiposDocumento, o
           />
           <FileInput
             label="PDF original (opcional, sin convertir)"
+            description="No se lee ni se procesa: queda solo como archivo descargable. Lo que se guarda y se busca es el texto de abajo."
             placeholder="Adjuntar PDF"
             accept="application/pdf"
             clearable
