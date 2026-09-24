@@ -13,6 +13,7 @@ import {
   IconMail,
   IconHelpCircle,
   IconInbox,
+  IconMessageCircle,
   IconLogout,
   IconHeadset,
   IconSun,
@@ -85,6 +86,12 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
         <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
         <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
         <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
+        {/* El chat solo existe para usuarios de la empresa (el historial
+            referencia mcpc_usuarios) — un superadmin en modo soporte no
+            puede usarlo, ver usuario_chat_gd_actual en dependencias.py */}
+        {!esSuperadmin && (
+          <Item icon={IconMessageCircle} label="Chat con la IA" active={vista === "chat"} onClick={() => onNavigate("chat")} />
+        )}
 
         {proyecto.es_admin && (
           <>

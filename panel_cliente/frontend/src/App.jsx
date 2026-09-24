@@ -25,6 +25,7 @@ import Grupos from "./paginas/Grupos"
 import GrupoDetalle from "./paginas/GrupoDetalle"
 import Entidades from "./paginas/Entidades"
 import EntidadDetalle from "./paginas/EntidadDetalle"
+import Chat from "./paginas/Chat"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
@@ -205,6 +206,8 @@ export default function App() {
             />
           ) : vista === "entidades" ? (
             <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
+          ) : vista === "chat" ? (
+            <Chat proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : (
             <Documentos
               proyecto={proyecto}

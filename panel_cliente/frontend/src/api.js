@@ -418,4 +418,12 @@ export const api = {
   },
   eliminarImagenEstilo: (idProyecto, idEstilo, idImagen) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes/${idImagen}`),
+
+  obtenerHistorialChat: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat`),
+  enviarMensajeChat: (idProyecto, mensaje) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat`, { mensaje }),
+  confirmarAccionChat: (idProyecto, confirmacionId, aceptar) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/confirmar`, {
+      confirmacion_id: confirmacionId, aceptar,
+    }),
 }

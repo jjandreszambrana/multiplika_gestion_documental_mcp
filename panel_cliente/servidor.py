@@ -51,6 +51,7 @@ from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
+from ..database.modelos._mod_chat import ChatConversacionesCRUD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
@@ -81,6 +82,7 @@ from ..database.modelos._mod_registros import (
 )
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, guardar_documento, revertir_edicion
+from . import chat_ia
 from .dependencias import (
     Identidad,
     admin_certificados_actual,
@@ -91,6 +93,7 @@ from .dependencias import (
     identidad_actual,
     proyecto_gestion_documental_actual,
     puede_editar_documento_actual,
+    usuario_chat_gd_actual,
 )
 
 app = FastAPI(title="Gestión documental — Panel del cliente")
@@ -1660,6 +1663,37 @@ async def revocar_api_key(id_api_key: int, fila: dict = Depends(api_key_de_gesti
 @app.delete("/v1/api-keys/{id_api_key}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_api_key(id_api_key: int, fila: dict = Depends(api_key_de_gestion_documental)) -> None:
     await _api_keys.eliminar(id_api_key)
+
+
+class MensajeChat(BaseModel):
+    mensaje: str
+
+
+class ConfirmacionChat(BaseModel):
+    confirmacion_id: str
+    aceptar: bool
+
+
+@app.get("/v1/proyectos/{id_proyecto}/chat")
+async def historial_chat(id_proyecto: int, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
+    id_usuario, _ = usuario
+    mensajes = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener_mensajes(id_usuario)
+    return {"mensajes": mensajes}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/chat")
+async def enviar_mensaje_chat(id_proyecto: int, datos: MensajeChat, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
+    id_usuario, es_editor = usuario
+    try:
+        return await chat_ia.enviar_mensaje(id_proyecto, id_usuario, es_editor, datos.mensaje)
+    except ValueError as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error))
+
+
+@app.post("/v1/proyectos/{id_proyecto}/chat/confirmar")
+async def confirmar_chat(id_proyecto: int, datos: ConfirmacionChat, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
+    id_usuario, _ = usuario
+    return await chat_ia.confirmar(id_usuario, datos.confirmacion_id, datos.aceptar)
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

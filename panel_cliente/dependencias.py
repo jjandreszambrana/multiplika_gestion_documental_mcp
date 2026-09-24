@@ -147,6 +147,21 @@ async def admin_certificados_actual(
     return identidad.id
 
 
+async def usuario_chat_gd_actual(
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual)
+) -> tuple[int, bool]:
+    """Quién puede usar el chat de IA: cualquier usuario de empresa con
+    acceso a este proyecto (proyecto_gestion_documental_actual ya lo
+    comprobó), operador o invitado. Un superadmin no puede — igual que
+    puede_editar_documento_actual, el historial del chat referencia
+    mcpc_usuarios, no mcpc_superadmins. Devuelve (id_usuario, es_editor):
+    es_editor decide con qué rol de API key interna se conecta al MCP
+    (ver panel_cliente/chat_ia.py)."""
+    if identidad.tipo != "usuario":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El chat de IA no está disponible para soporte")
+    return identidad.id, await puede_editar_proyecto(identidad.id, proyecto["id"])
+
+
 async def api_key_de_gestion_documental(id_api_key: int, identidad: Identidad = Depends(identidad_actual)) -> dict:
     """Para revocar/eliminar, que solo llevan id_api_key en el path (no
     id_proyecto en la URL): resuelve el proyecto dueño de la key y aplica
