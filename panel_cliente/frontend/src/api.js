@@ -419,6 +419,22 @@ export const api = {
   eliminarImagenEstilo: (idProyecto, idEstilo, idImagen) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/estilos/${idEstilo}/imagenes/${idImagen}`),
 
+  listarScripts: (idProyecto, q, lenguaje, incluirArchivados = false) => {
+    const parametros = new URLSearchParams()
+    if (q) parametros.set("q", q)
+    if (lenguaje) parametros.set("lenguaje", lenguaje)
+    if (incluirArchivados) parametros.set("incluir_archivados", "true")
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/scripts${query ? `?${query}` : ""}`)
+  },
+  obtenerScript: (idProyecto, idScript) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/scripts/${idScript}`),
+  actualizarScript: (idProyecto, idScript, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/scripts/${idScript}`, datos),
+  archivarScript: (idProyecto, idScript) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/scripts/${idScript}/archivar`),
+  desarchivarScript: (idProyecto, idScript) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/scripts/${idScript}/desarchivar`),
+
   obtenerHistorialChat: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat`),
   enviarMensajeChat: (idProyecto, mensaje) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat`, { mensaje }),

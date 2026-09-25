@@ -301,6 +301,18 @@ PDF — botón "Descargar PDF" en la ficha del documento, en el panel — \
 con el mismo formato con el que se ve en pantalla (títulos, negritas, \
 tablas...), pensado para imprimir o mandarlo fuera de aquí.
 
+## Scripts reutilizables
+
+Cuando tu IA escribe un script para una tarea puntual (un backup, un \
+informe hecho a medida, una migración de datos...), puede guardarlo \
+para no tener que escribirlo de cero la próxima vez que le pidas algo \
+parecido. Tú no tienes que hacer nada para esto — lo gestiona tu IA \
+sola, buscando primero si ya tiene algo parecido antes de escribir uno \
+nuevo. Desde el panel, pantalla "Scripts", puedes ver el código (con \
+colores según el lenguaje) y editar el título, la descripción, el \
+lenguaje y las etiquetas — el código en sí solo lo cambia tu IA, no se \
+puede tocar desde el panel.
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:
@@ -310,6 +322,8 @@ Desde el panel (con tu usuario y contraseña de empresa) puedes:
   la fuente si la tiene, y el texto completo.
 - Archivar / desarchivar.
 - Subir documentos en bloque a la cola de pendientes.
+- Ver los scripts que tu IA ha guardado y editar su título, descripción, \
+  lenguaje y etiquetas (el código no se puede editar desde aquí).
 - Editar o borrar credenciales de otros servicios ya creadas, tu cuenta \
   de correo, avisos de caducidad, usuarios del proyecto y claves de API — todo eso es gestión desde el panel, no por \
   conversación. Dar de alta una credencial nueva también se lo puedes \

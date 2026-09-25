@@ -73,6 +73,7 @@ from ..database.modelos._mod_envios import (
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
+from ..database.modelos._mod_scripts import ScriptsCRUD
 from ..database.modelos._mod_registros import (
     RegistrosCRUD,
     RegistrosRelacionesCRUD,
@@ -1694,6 +1695,77 @@ async def enviar_mensaje_chat(id_proyecto: int, datos: MensajeChat, usuario: tup
 async def confirmar_chat(id_proyecto: int, datos: ConfirmacionChat, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
     id_usuario, _ = usuario
     return await chat_ia.confirmar(id_usuario, datos.confirmacion_id, datos.aceptar)
+
+
+# --- Scripts reutilizables (ver docs/gestion-documental.md → "Scripts
+# reutilizables") --- Los crea/actualiza la IA por MCP; el panel es solo
+# para consultarlos y curar sus metadatos — el código NO se puede editar
+# desde aquí a propósito (ActualizarScript no tiene ese campo), solo
+# desde la conversación con la IA.
+class ActualizarScript(BaseModel):
+    titulo: str | None = None
+    descripcion: str | None = None
+    lenguaje: str | None = None
+    etiquetas: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/scripts")
+async def listar_scripts(
+    id_proyecto: int, q: str | None = None, lenguaje: str | None = None, incluir_archivados: bool = False,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await ScriptsCRUD(config).buscar(q, lenguaje, incluir_archivados)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/scripts/{id_script}")
+async def obtener_script(
+    id_proyecto: int, id_script: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    script = await ScriptsCRUD(config).obtener(id_script)
+    if not script:
+        raise HTTPException(404, "Script no encontrado")
+    return script
+
+
+@app.put("/v1/proyectos/{id_proyecto}/scripts/{id_script}")
+async def actualizar_script(
+    id_proyecto: int, id_script: int, datos: ActualizarScript,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    script = await ScriptsCRUD(config).actualizar_campos(id_script, datos.model_dump())
+    if not script:
+        raise HTTPException(404, "Script no encontrado")
+    return script
+
+
+@app.post("/v1/proyectos/{id_proyecto}/scripts/{id_script}/archivar")
+async def archivar_script(
+    id_proyecto: int, id_script: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    script = await ScriptsCRUD(config).archivar(id_script)
+    if not script:
+        raise HTTPException(404, "Script no encontrado")
+    return script
+
+
+@app.post("/v1/proyectos/{id_proyecto}/scripts/{id_script}/desarchivar")
+async def desarchivar_script(
+    id_proyecto: int, id_script: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    script = await ScriptsCRUD(config).desarchivar(id_script)
+    if not script:
+        raise HTTPException(404, "Script no encontrado")
+    return script
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

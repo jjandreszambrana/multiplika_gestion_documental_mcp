@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mantine/code-highlight": "^8.3.18",
     "@mantine/core": "^8.3.18",
     "@mantine/dropzone": "^8.3.18",
     "@mantine/hooks": "^8.3.18",
     "@mantine/notifications": "^8.3.18",
     "@tabler/icons-react": "^3.46.0",
     "@uiw/react-md-editor": "^4.1.2",
+    "highlight.js": "^11.12.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",

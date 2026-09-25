@@ -25,6 +25,8 @@ import Grupos from "./paginas/Grupos"
 import GrupoDetalle from "./paginas/GrupoDetalle"
 import Entidades from "./paginas/Entidades"
 import EntidadDetalle from "./paginas/EntidadDetalle"
+import Scripts from "./paginas/Scripts"
+import ScriptDetalle from "./paginas/ScriptDetalle"
 import Chat from "./paginas/Chat"
 import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
@@ -41,6 +43,7 @@ export default function App() {
   const [estiloActivo, setEstiloActivo] = useState(null)
   const [grupoActivo, setGrupoActivo] = useState(null)
   const [entidadActiva, setEntidadActiva] = useState(null)
+  const [scriptActivo, setScriptActivo] = useState(null)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
@@ -109,6 +112,7 @@ export default function App() {
     setEstiloActivo(null)
     setGrupoActivo(null)
     setEntidadActiva(null)
+    setScriptActivo(null)
     setVista("documentos")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -118,6 +122,7 @@ export default function App() {
     setEstiloActivo(null)
     setGrupoActivo(null)
     setEntidadActiva(null)
+    setScriptActivo(null)
     setVista(nuevaVista)
   }
 
@@ -206,6 +211,15 @@ export default function App() {
             />
           ) : vista === "entidades" ? (
             <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
+          ) : vista === "scripts" && scriptActivo ? (
+            <ScriptDetalle
+              proyecto={proyecto}
+              script={scriptActivo}
+              onVolver={() => setScriptActivo(null)}
+              onCambiado={setScriptActivo}
+            />
+          ) : vista === "scripts" ? (
+            <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
           ) : vista === "chat" ? (
             <Chat proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : (

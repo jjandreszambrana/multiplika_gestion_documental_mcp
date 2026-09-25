@@ -47,6 +47,7 @@ from database.dependencias._dep_grupos import TABLA_DOCUMENTOS_GRUPOS, TABLA_GRU
 from database.dependencias._dep_entidades import TABLA_DOCUMENTOS_ENTIDADES, TABLA_ENTIDADES
 from database.dependencias._dep_envios import TABLA_ENVIOS
 from database.dependencias._dep_chat import TABLA_CHAT_CONVERSACIONES
+from database.dependencias._dep_scripts import TABLA_SCRIPTS
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -94,6 +95,7 @@ def main():
         TABLA_DOCUMENTOS_ENTIDADES,
         TABLA_ENVIOS,
         TABLA_CHAT_CONVERSACIONES,
+        TABLA_SCRIPTS,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))
