@@ -4,7 +4,8 @@ reutilizables"."""
 from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
-from ..dependencias._dep_scripts import TABLA_SCRIPTS
+from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_scripts import TABLA_DOCUMENTOS_SCRIPTS, TABLA_SCRIPTS
 
 _CAMPOS_EDITABLES = ["titulo", "descripcion", "lenguaje", "codigo", "etiquetas"]
 _CAMPOS_CREABLES = _CAMPOS_EDITABLES + ["creado_por"]
@@ -76,3 +77,55 @@ class ScriptsCRUD(AsyncCrudBase):
             return None
         await self.update(id_script, {"archivado": False})
         return await self.obtener(id_script)
+
+
+class DocumentosScriptsCRUD(AsyncCrudBase):
+    def __init__(self, config: dict):
+        super().__init__(TABLA_DOCUMENTOS_SCRIPTS, config)
+
+    async def asignar(self, id_documento: int, id_script: int) -> int:
+        """No falla si ya estaba asignado (índice único (id_documento, id_script))."""
+        existente = await self._obtener_relacion(id_documento, id_script)
+        if existente:
+            return existente["id"]
+        return await self.insert({"id_documento": id_documento, "id_script": id_script})
+
+    async def quitar(self, id_documento: int, id_script: int) -> bool:
+        existente = await self._obtener_relacion(id_documento, id_script)
+        if not existente:
+            return False
+        await self.eliminar(existente["id"])
+        return True
+
+    async def _obtener_relacion(self, id_documento: int, id_script: int) -> dict | None:
+        filas, _ = await self.listar(
+            filtros={
+                "id_documento": {"op": "=", "valor": id_documento},
+                "id_script": {"op": "=", "valor": id_script},
+            },
+            limit=1,
+        )
+        return filas[0] if filas else None
+
+    async def listar_scripts_de_documento(self, id_documento: int) -> list[dict]:
+        db = AsyncDatabase(**self.config)
+        sql = f"""
+            SELECT s.*
+            FROM "{TABLA_SCRIPTS.nombre}" s
+            JOIN "{TABLA_DOCUMENTOS_SCRIPTS.nombre}" ds ON ds.id_script = s.id
+            WHERE ds.id_documento = %s
+            ORDER BY s.titulo ASC
+        """
+        return await db.query(sql, (id_documento,))
+
+    async def listar_documentos_de_script(self, id_script: int, incluir_archivados: bool = False) -> list[dict]:
+        db = AsyncDatabase(**self.config)
+        condicion_archivado = "" if incluir_archivados else "AND d.archivado = false"
+        sql = f"""
+            SELECT d.id, d.nombre, d.tipo_documento, d.archivado, ds.fecha_asignacion
+            FROM "{TABLA_DOCUMENTOS.nombre}" d
+            JOIN "{TABLA_DOCUMENTOS_SCRIPTS.nombre}" ds ON ds.id_documento = d.id
+            WHERE ds.id_script = %s {condicion_archivado}
+            ORDER BY ds.fecha_asignacion DESC
+        """
+        return await db.query(sql, (id_script,))

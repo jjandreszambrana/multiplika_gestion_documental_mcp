@@ -9,7 +9,8 @@ from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
 from ._anotaciones import SOLO_LECTURA
-from ..database.modelos._mod_scripts import ScriptsCRUD
+from ..database.modelos._mod_documentos import DocumentosCRUD
+from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 
 
 async def _contexto_actual() -> dict:
@@ -118,3 +119,46 @@ async def desarchivar_script_gd(id_script: int) -> dict:
     if not script:
         raise ToolError(f"No existe ningún script con id {id_script}")
     return script
+
+
+@mcp_app.tool()
+async def relacionar_documento_script_gd(id_documento: int, id_script: int) -> dict:
+    """Relaciona un script con el documento en el que se usó o para el
+    que se escribió — un documento puede tener varios scripts asociados,
+    y un mismo script puede reaprovecharse en varios documentos. No falla
+    si ya estaban relacionados."""
+    config = await _contexto_actual()
+    if not await DocumentosCRUD(config).obtener(id_documento):
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    if not await ScriptsCRUD(config).obtener(id_script):
+        raise ToolError(f"No existe ningún script con id {id_script}")
+    await DocumentosScriptsCRUD(config).asignar(id_documento, id_script)
+    return {"id_documento": id_documento, "id_script": id_script}
+
+
+@mcp_app.tool()
+async def quitar_relacion_documento_script_gd(id_documento: int, id_script: int) -> dict:
+    """Quita la relación entre un documento y un script — ninguno de los
+    dos se borra, solo dejan de estar relacionados."""
+    config = await _contexto_actual()
+    quitado = await DocumentosScriptsCRUD(config).quitar(id_documento, id_script)
+    return {"id_documento": id_documento, "id_script": id_script, "estaba_relacionado": quitado}
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA)
+async def listar_scripts_documento_gd(id_documento: int) -> list[dict]:
+    """Scripts relacionados con un documento."""
+    config = await _contexto_actual()
+    if not await DocumentosCRUD(config).obtener(id_documento):
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    return await DocumentosScriptsCRUD(config).listar_scripts_de_documento(id_documento)
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA)
+async def listar_documentos_script_gd(id_script: int, incluir_archivados: bool = False) -> list[dict]:
+    """Documentos relacionados con un script. Por defecto no incluye
+    documentos archivados."""
+    config = await _contexto_actual()
+    if not await ScriptsCRUD(config).obtener(id_script):
+        raise ToolError(f"No existe ningún script con id {id_script}")
+    return await DocumentosScriptsCRUD(config).listar_documentos_de_script(id_script, incluir_archivados)

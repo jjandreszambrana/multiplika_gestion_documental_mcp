@@ -313,6 +313,11 @@ colores según el lenguaje) y editar el título, la descripción, el \
 lenguaje y las etiquetas — el código en sí solo lo cambia tu IA, no se \
 puede tocar desde el panel.
 
+Un script se puede relacionar con el documento para el que se escribió \
+o en el que se usó, igual que las entidades — desde la ficha del \
+documento o desde la ficha del script, y un mismo script puede estar \
+relacionado con varios documentos a la vez.
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:

@@ -6,10 +6,13 @@ cada vez. Nada que ver con scripts/ del repo (esos son de
 mantenimiento de la plataforma, no del cliente)."""
 
 from database.config_db import get_db_name
-from mtpk_postgres import Columna, Index, Tabla
+from mtpk_postgres import Columna, ForeignKey, Index, Tabla
 from mtpk_postgres.core_sync import SQLLiteral
 
+from ._dep_documentos import NOMBRE_TABLA_DOCUMENTOS
+
 NOMBRE_TABLA_SCRIPTS = "gd_scripts"
+NOMBRE_TABLA_DOCUMENTOS_SCRIPTS = "gd_documentos_scripts"
 __DB_NAME__ = get_db_name("gestion_documental")
 
 CAMPOS_SCRIPTS = [
@@ -55,4 +58,38 @@ TABLA_SCRIPTS = Tabla(
     db_name=__DB_NAME__,
 )
 
-__TABLAS__ = [TABLA_SCRIPTS]
+
+# Relación muchos-a-muchos con documentos (un script puede haberse usado en
+# varios documentos, y un documento puede tener varios scripts asociados)
+# — mismo patrón que gd_documentos_entidades.
+CAMPOS_DOCUMENTOS_SCRIPTS = [
+    Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
+            comentario="Identificador interno de la relación"),
+    Columna(nombre="id_documento", tipo="INT", not_null=True,
+            comentario="Documento relacionado (→ gd_documentos.id)"),
+    Columna(nombre="id_script", tipo="INT", not_null=True,
+            comentario="Script relacionado (→ gd_scripts.id)"),
+    Columna(nombre="fecha_asignacion", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
+            protegido_actualizar=True),
+]
+
+INDICES_DOCUMENTOS_SCRIPTS = [
+    Index(columnas=["id_documento", "id_script"], unico=True),
+    Index(columnas=["id_script"]),
+]
+
+FKS_DOCUMENTOS_SCRIPTS = [
+    ForeignKey(columna="id_documento", referencia_tabla=NOMBRE_TABLA_DOCUMENTOS,
+               referencia_columna="id", on_delete="CASCADE"),
+    ForeignKey(columna="id_script", referencia_tabla=NOMBRE_TABLA_SCRIPTS,
+               referencia_columna="id", on_delete="CASCADE"),
+]
+
+TABLA_DOCUMENTOS_SCRIPTS = Tabla(
+    nombre=NOMBRE_TABLA_DOCUMENTOS_SCRIPTS, columnas=CAMPOS_DOCUMENTOS_SCRIPTS,
+    indices=INDICES_DOCUMENTOS_SCRIPTS, foreign_keys=FKS_DOCUMENTOS_SCRIPTS,
+    comentario="Relación muchos-a-muchos entre documentos y scripts",
+    db_name=__DB_NAME__,
+)
+
+__TABLAS__ = [TABLA_SCRIPTS, TABLA_DOCUMENTOS_SCRIPTS]

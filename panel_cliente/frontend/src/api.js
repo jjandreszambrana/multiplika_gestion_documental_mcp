@@ -434,6 +434,14 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/scripts/${idScript}/archivar`),
   desarchivarScript: (idProyecto, idScript) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/scripts/${idScript}/desarchivar`),
+  listarScriptsDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/scripts`),
+  listarDocumentosScript: (idProyecto, idScript) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/scripts/${idScript}/documentos`),
+  relacionarDocumentoScript: (idProyecto, idScript, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/scripts/${idScript}/documentos`, { id_documento: idDocumento }),
+  quitarRelacionDocumentoScript: (idProyecto, idScript, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/scripts/${idScript}/documentos/${idDocumento}`),
 
   obtenerHistorialChat: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat`),
   enviarMensajeChat: (idProyecto, mensaje) =>

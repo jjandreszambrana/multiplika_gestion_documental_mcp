@@ -73,7 +73,7 @@ from ..database.modelos._mod_envios import (
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
-from ..database.modelos._mod_scripts import ScriptsCRUD
+from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 from ..database.modelos._mod_registros import (
     RegistrosCRUD,
     RegistrosRelacionesCRUD,
@@ -1766,6 +1766,56 @@ async def desarchivar_script(
     if not script:
         raise HTTPException(404, "Script no encontrado")
     return script
+
+
+class RelacionarDocumentoScript(BaseModel):
+    id_documento: int
+
+
+@app.get("/v1/proyectos/{id_proyecto}/scripts/{id_script}/documentos")
+async def listar_documentos_script(
+    id_proyecto: int, id_script: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    if not await ScriptsCRUD(config).obtener(id_script):
+        raise HTTPException(404, "Script no encontrado")
+    return await DocumentosScriptsCRUD(config).listar_documentos_de_script(id_script, incluir_archivados=True)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/scripts/{id_script}/documentos")
+async def relacionar_documento_script(
+    id_proyecto: int, id_script: int, datos: RelacionarDocumentoScript,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if not await ScriptsCRUD(config).obtener(id_script):
+        raise HTTPException(404, "Script no encontrado")
+    if not await DocumentosCRUD(config).obtener(datos.id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    await DocumentosScriptsCRUD(config).asignar(datos.id_documento, id_script)
+    return {"id_documento": datos.id_documento, "id_script": id_script}
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/scripts/{id_script}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def quitar_relacion_documento_script(
+    id_proyecto: int, id_script: int, id_documento: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await DocumentosScriptsCRUD(config).quitar(id_documento, id_script)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/scripts")
+async def listar_scripts_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    return await DocumentosScriptsCRUD(config).listar_scripts_de_documento(id_documento)
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre
