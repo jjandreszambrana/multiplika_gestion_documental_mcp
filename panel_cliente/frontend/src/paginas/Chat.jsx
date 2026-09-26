@@ -87,7 +87,7 @@ function ListaConversaciones({ conversaciones, idActual, cargando, onSeleccionar
           </ActionIcon>
         </Tooltip>
       </Group>
-      <ScrollArea h={420}>
+      <ScrollArea h="calc(100vh - 300px)">
         <Stack gap={2}>
           {conversaciones.map((c) => (
             <NavLink
@@ -320,7 +320,7 @@ export default function Chat({ proyecto, onVolver }) {
         />
 
         <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
-          <ScrollArea h={420} mb="md">
+          <ScrollArea h="calc(100vh - 300px)" mb="md">
             {cargandoLista || cargando ? (
               <Loader size="sm" />
             ) : (
