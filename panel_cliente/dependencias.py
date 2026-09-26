@@ -18,14 +18,14 @@ cuanto se resuelve el proyecto, en cualquier endpoint de este backend."""
 
 from dataclasses import dataclass
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Response, status
 from mtpk_mariadb import AsyncCrudBase
 
 from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_auditoria_soporte import TABLA_AUDITORIA_SOPORTE
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
-from lib.jwt_tokens import decodificar_token
+from lib.jwt_tokens import decodificar_token, renovar_si_hace_falta
 from lib.roles_proyecto import es_admin_de_proyecto, puede_editar_proyecto, tiene_acceso_a_proyecto
 
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
@@ -48,10 +48,13 @@ def _token_crudo(authorization: str = Header(default="")) -> str:
     return authorization.removeprefix("Bearer ").strip()
 
 
-def identidad_actual(token: str = Depends(_token_crudo)) -> Identidad:
+def identidad_actual(token: str = Depends(_token_crudo), response: Response = None) -> Identidad:
     payload = decodificar_token(token)
     if payload is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido o caducado")
+    nuevo_token = renovar_si_hace_falta(payload)
+    if nuevo_token and response is not None:
+        response.headers["X-Nuevo-Token"] = nuevo_token
     if payload.get("tipo") == "superadmin":
         return Identidad(tipo="superadmin", id=payload["id_superadmin"])
     if payload.get("tipo") == "usuario":
