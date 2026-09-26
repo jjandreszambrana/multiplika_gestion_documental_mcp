@@ -244,7 +244,7 @@ async def guardar_documento(
                 conexion=cx,
             )
         else:
-            await TiposDocumentoCRUD(config).asegurar_existe(tipo_documento)
+            tipo_documento = await TiposDocumentoCRUD(config).resolver_o_crear(tipo_documento)
             id_documento = await documentos.insert(
                 {
                     "nombre": nombre,

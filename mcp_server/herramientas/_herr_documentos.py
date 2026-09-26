@@ -9,10 +9,11 @@ from database.config_db import get_db_config
 from fastmcp import Context
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
-from pydantic import BaseModel, Field
+from mcp.shared.exceptions import MCPError
+from pydantic import BaseModel, Field, create_model
 
 from ._anotaciones import SOLO_LECTURA
-from ._deteccion_cliente import es_cliente_ponnodo
+from ._capacidades_elicitacion import puede_elicitar_formulario
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
@@ -125,10 +126,10 @@ async def obtener_documento_pendiente_gd(id: int) -> list:
 
 
 class _DatosDocumento(BaseModel):
-    """Lo que se le pregunta siempre al cliente antes de guardar un
-    documento — nunca lo rellenes tú por tu cuenta ni lo adivines del
-    contenido, aunque el documento ya lo diga: es una decisión suya, no
-    una lectura del texto (ver guardar_documento_gd)."""
+    """Datos que decide el cliente al guardar un documento — la IA se los
+    pregunta por chat si no los tiene y los pasa como parámetros de
+    guardar_documento_gd; el formulario de esta tool solo entra en juego,
+    cuando el cliente MCP lo soporta, para completar lo que falte."""
 
     nombre: str = Field(description="Nombre o referencia corta del documento")
     tipo_documento: str = Field(description='Tipo de documento, p.ej. "factura", "contrato"...')
@@ -142,6 +143,35 @@ class _DatosDocumento(BaseModel):
     )
     todas_versiones_buscables: bool = Field(
         default=False, description="¿Debe quedar buscable todo el histórico de este documento, no solo la última versión?"
+    )
+
+
+def _modelo_documento_a_completar(
+    nombre: str | None, tipo_documento: str | None, fecha_documento: str | None,
+    fecha_caducidad: str | None, ambito: str | None, todas_versiones_buscables: bool,
+) -> type[_DatosDocumento]:
+    """Mismo formulario que _DatosDocumento, pero con los datos ya
+    conocidos puestos como valor por defecto: así el formulario solo
+    exige de verdad los que faltan, y los que ya llegaron como parámetro
+    no se pierden si el cliente los deja tal cual al enviarlo."""
+    conocidos = {
+        "nombre": nombre, "tipo_documento": tipo_documento, "fecha_documento": fecha_documento,
+        "fecha_caducidad": fecha_caducidad, "ambito": ambito,
+        "todas_versiones_buscables": todas_versiones_buscables or None,
+    }
+    overrides = {
+        campo: (_DatosDocumento.model_fields[campo].annotation, valor)
+        for campo, valor in conocidos.items() if valor
+    }
+    return create_model("_DatosDocumentoCompletar", __base__=_DatosDocumento, **overrides)
+
+
+def _error_faltan_datos_documento(faltan: list[str], pista_tipos: str) -> ToolError:
+    return ToolError(
+        f"Faltan datos del documento para guardarlo: {', '.join(faltan)}. Pregúntaselos al usuario "
+        "por chat (nombre o referencia corta, tipo de documento, fecha del propio documento en "
+        "formato AAAA-MM-DD, y si aplica fecha de caducidad y ámbito) y vuelve a llamar a "
+        f"guardar_documento_gd con esos datos ya rellenos en sus parámetros.{pista_tipos}"
     )
 
 
@@ -164,22 +194,25 @@ async def guardar_documento_gd(
     """Guarda un documento convertido a markdown. Antes de llamarla, si es
     una versión nueva de un documento ya guardado, confírmalo con
     buscar_documentos_gd (no lo adivines) y pasa su id en
-    `id_documento_existente` — si no, se crea un documento nuevo. El resto
-    de datos (tipo de documento, nombre, fecha, caducidad, ámbito, si el
-    histórico debe quedar buscable) no los decides tú: esta misma tool le
-    lanza un formulario al cliente para pedírselos directamente, así que
-    no se los preguntes antes por chat ni los rellenes con lo que diga el
-    propio documento. Si el cliente cierra el formulario sin rellenarlo,
-    la tool falla con un aviso — dile que no se ha guardado y pregúntale
-    si quiere reintentarlo.
+    `id_documento_existente` — si no, se crea un documento nuevo.
 
-    Excepción — cliente PonNodo (cabecera `X-Client-App: ponnodo`, sin
-    soporte de formularios): en vez de lanzar el formulario, esta tool
-    acepta esos mismos datos como los parámetros `nombre`, `tipo_documento`,
-    `fecha_documento`, `fecha_caducidad`, `ambito` y
-    `todas_versiones_buscables`. Si faltan los obligatorios (nombre, tipo,
-    fecha), la tool falla listando cuáles son — pregúntaselos tú al
-    cliente por chat y vuelve a llamarla con esos datos ya rellenos.
+    Pásale `nombre`, `tipo_documento` y `fecha_documento` (obligatorios) y,
+    si los conoces, `fecha_caducidad`, `ambito` y
+    `todas_versiones_buscables` — pregúntaselos al usuario por chat si no
+    los tienes. `tipo_documento` debe reutilizar uno ya existente en este
+    proyecto (consulta listar_tipos_documento_gd) siempre que el documento
+    encaje en alguno; solo escribe uno nuevo si de verdad no hay ninguno
+    parecido — no hace falta que coincida letra por letra, mayúsculas,
+    tildes o singular/plural no cuentan como un tipo distinto.
+
+    Si al llamarla falta algún obligatorio y el cliente MCP soporta
+    formularios (elicitation), esta misma tool le lanza uno para pedir
+    solo lo que falte — no hace falta que se lo preguntes tú antes por
+    eso. Si el cliente no los soporta, o el formulario falla o el usuario
+    lo cierra sin rellenarlo, la tool falla con un aviso listando qué
+    falta: pregúntaselo al usuario por chat y vuelve a llamarla con esos
+    datos ya en sus parámetros.
+
     Si `id_documento_existente` se indica, esto es una nueva versión de ese
     documento (la versión anterior deja de ser la vigente).
 
@@ -220,31 +253,31 @@ async def guardar_documento_gd(
     tipos_existentes = [t["nombre"] for t in await TiposDocumentoCRUD(config).listar_nombres()]
     pista_tipos = f" Tipos ya usados en este proyecto: {', '.join(tipos_existentes)} (o escribe uno nuevo)." if tipos_existentes else ""
 
-    if es_cliente_ponnodo():
-        faltan = [
-            campo for campo, valor in
-            [("nombre", nombre), ("tipo_documento", tipo_documento), ("fecha_documento", fecha_documento)]
-            if not valor
-        ]
-        if faltan:
-            raise ToolError(
-                f"Faltan datos del documento para guardarlo: {', '.join(faltan)}. Pregúntaselos al "
-                "usuario con un formulario en el chat (nombre o referencia corta, tipo de documento, "
-                "fecha del propio documento en formato AAAA-MM-DD, y si aplica fecha de caducidad y "
-                "ámbito) y vuelve a llamar a guardar_documento_gd con esos datos ya rellenos en sus "
-                f"parámetros.{pista_tipos}"
-            )
+    faltan = [
+        campo for campo, valor in
+        [("nombre", nombre), ("tipo_documento", tipo_documento), ("fecha_documento", fecha_documento)]
+        if not valor
+    ]
+
+    if not faltan:
         datos = _DatosDocumento(
             nombre=nombre, tipo_documento=tipo_documento, fecha_documento=fecha_documento,
             fecha_caducidad=fecha_caducidad or "", ambito=ambito or "",
             todas_versiones_buscables=todas_versiones_buscables,
         )
-    else:
-        mensaje = "Datos del documento a guardar." + pista_tipos
-        resultado_form = await ctx.elicit(mensaje, response_type=_DatosDocumento)
+    elif puede_elicitar_formulario(ctx):
+        modelo = _modelo_documento_a_completar(
+            nombre, tipo_documento, fecha_documento, fecha_caducidad, ambito, todas_versiones_buscables
+        )
+        try:
+            resultado_form = await ctx.elicit("Faltan datos del documento a guardar." + pista_tipos, response_type=modelo)
+        except (ToolError, MCPError) as e:
+            raise _error_faltan_datos_documento(faltan, pista_tipos) from e
         if resultado_form.action != "accept":
             raise ToolError("El cliente no ha rellenado los datos del documento — no se ha guardado nada.")
         datos = resultado_form.data
+    else:
+        raise _error_faltan_datos_documento(faltan, pista_tipos)
 
     try:
         resultado = await guardar_documento(
