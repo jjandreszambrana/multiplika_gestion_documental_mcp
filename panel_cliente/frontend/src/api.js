@@ -107,7 +107,9 @@ export function leerToken(token) {
 }
 
 export const api = {
-  login: (email, password) => peticion(BASE_ADMIN, "POST", "/auth/login", { email, password }),
+  login: (email, password, idTenant) =>
+    peticion(BASE_ADMIN, "POST", "/auth/login", { email, password, id_tenant: idTenant ?? null }),
+  empresasDeEmail: (email) => peticion(BASE_ADMIN, "GET", `/auth/empresas?email=${encodeURIComponent(email)}`),
 
   listarProyectosDeLaEmpresa: (idTenant) => peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/proyectos`),
   verProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}`),

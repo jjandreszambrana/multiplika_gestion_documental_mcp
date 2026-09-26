@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Alert, Button, Center, Group, Paper, PasswordInput, Stack, TextInput, ThemeIcon, Title } from "@mantine/core"
+import { Alert, Button, Center, Group, Paper, PasswordInput, Select, Stack, TextInput, ThemeIcon, Title } from "@mantine/core"
 import { IconFileText } from "@tabler/icons-react"
 import { api } from "../api"
 
@@ -9,12 +9,32 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState(null)
   const [enviando, setEnviando] = useState(false)
 
+  // Si el email tiene cuenta en varias empresas (misma persona, distinto
+  // tenant), empresas queda con más de un elemento y hay que elegir una
+  // antes de poder entrar — ver /auth/empresas en el core.
+  const [empresas, setEmpresas] = useState(null)
+  const [idTenant, setIdTenant] = useState(null)
+
+  function cambiarEmail(valor) {
+    setEmail(valor)
+    setEmpresas(null)
+    setIdTenant(null)
+  }
+
   async function enviar(evento) {
     evento.preventDefault()
     setError(null)
     setEnviando(true)
     try {
-      const { token } = await api.login(email, password)
+      if (empresas === null) {
+        const lista = await api.empresasDeEmail(email)
+        setEmpresas(lista)
+        if (lista.length > 1) {
+          setIdTenant(lista[0].id_tenant)
+          return
+        }
+      }
+      const { token } = await api.login(email, password, idTenant)
       onLogin(token)
     } catch (err) {
       setError(err.message)
@@ -38,7 +58,7 @@ export default function Login({ onLogin }) {
           <TextInput
             label="Usuario"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => cambiarEmail(e.target.value)}
             required
             autoFocus
           />
@@ -48,6 +68,16 @@ export default function Login({ onLogin }) {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          {empresas !== null && empresas.length > 1 && (
+            <Select
+              label="Empresa"
+              description="Este usuario tiene cuenta en varias empresas"
+              data={empresas.map((e) => ({ value: String(e.id_tenant), label: e.nombre }))}
+              value={String(idTenant)}
+              onChange={(valor) => setIdTenant(Number(valor))}
+              allowDeselect={false}
+            />
+          )}
           {error && <Alert color="red">{error}</Alert>}
           <Button type="submit" loading={enviando}>
             Entrar
