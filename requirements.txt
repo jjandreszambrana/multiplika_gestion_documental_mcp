@@ -7,3 +7,5 @@ python-multipart
 markdown
 weasyprint
 cryptography
+pdfplumber
+pytesseract

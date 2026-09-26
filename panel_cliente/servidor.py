@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import quote
 
+import anthropic
 import markdown as md
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +43,7 @@ from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
 from pydantic import BaseModel
 
-from database.config_db import get_db_config
+from database.config_db import get_anthropic_api_key, get_anthropic_modelo, get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from database.control.dependencias._dep_roles import ID_ROL_OPERADOR
@@ -86,6 +87,7 @@ from ..database.modelos._mod_registros import (
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, guardar_documento, revertir_edicion
 from . import chat_ia
+from .extraccion_pdf import extraer_texto, texto_unido
 from .dependencias import (
     Identidad,
     admin_certificados_actual,
@@ -109,6 +111,11 @@ app.add_middleware(
     allow_origins=["http://localhost:5174", "http://127.0.0.1:5174"],
     allow_methods=["*"],
     allow_headers=["*"],
+    # X-Nuevo-Token: el frontend necesita poder LEER esta cabecera de la
+    # respuesta (no solo mandarla el servidor) para renovar la sesión sola
+    # — sin esto el navegador la oculta a JS en peticiones entre orígenes
+    # (ver identidad_actual en dependencias.py).
+    expose_headers=["X-Nuevo-Token"],
 )
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
@@ -363,6 +370,84 @@ async def eliminar_documento_pendiente(
     """Descarta un pendiente sin procesarlo (p.ej. una subida por error)."""
     config = get_db_config(proyecto["id"])
     await DocumentosPendientesCRUD(config).eliminar(id_pendiente)
+
+
+async def _obtener_pendiente_o_404(config: dict, id_pendiente: int) -> dict:
+    fila = await DocumentosPendientesCRUD(config).obtener(id_pendiente)
+    if not fila:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Documento pendiente no encontrado")
+    return fila
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos-pendientes/{id_pendiente}/vista-previa")
+async def vista_previa_documento_pendiente(
+    id_proyecto: int, id_pendiente: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> dict:
+    """Extracción de texto instantánea y sin IA (pdfplumber + OCR de
+    respaldo con Tesseract, ver panel_cliente/extraccion_pdf.py) — v1,
+    "puede verse un poco desestructurado" a propósito: es solo una vista
+    previa rápida, no persiste nada, se puede pedir las veces que haga
+    falta."""
+    config = get_db_config(proyecto["id"])
+    fila = await _obtener_pendiente_o_404(config, id_pendiente)
+    try:
+        paginas = extraer_texto(fila["archivo"], fila["tipo_mime"])
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+    return {"paginas": paginas, "texto": texto_unido(paginas)}
+
+
+MAX_TOKENS_ESTRUCTURAR_PENDIENTE = 8000  # borrador de markdown, no debería doblar el texto original
+
+
+class EstructurarDocumentoPendiente(BaseModel):
+    texto: str | None = None  # si el frontend ya llamó a vista-previa, se lo pasa para no re-extraerlo
+
+
+PROMPT_ESTRUCTURAR_PENDIENTE = (
+    "El siguiente texto se extrajo automáticamente de un documento, página a página "
+    "(directo o por OCR de un escaneo) — puede venir con saltos de línea sueltos o "
+    "algún error de OCR. Conviértelo en markdown limpio y bien estructurado (títulos, "
+    "tablas, listas donde corresponda). Sé fiel al original: no inventes datos que no "
+    "estén, no resumas ni omitas contenido. Devuelve solo el markdown, sin ningún "
+    "comentario tuyo antes o después.\n\n---\n\n{texto}"
+)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos-pendientes/{id_pendiente}/estructurar")
+async def estructurar_documento_pendiente(
+    id_proyecto: int,
+    id_pendiente: int,
+    datos: EstructurarDocumentoPendiente,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> dict:
+    """Manda el texto ya extraído (sin IA) a Claude para que lo convierta
+    en markdown limpio — mucho más barato que mandarle el PDF o las
+    imágenes directamente. Solo un borrador para que el cliente lo revise:
+    NO guarda nada como documento definitivo (eso sigue siendo, en esta
+    v1, exclusivamente por conversación con la IA — ver
+    docs/gestion-documental.md → "Documentos pendientes")."""
+    config = get_db_config(proyecto["id"])
+    texto = datos.texto
+    if not texto:
+        fila = await _obtener_pendiente_o_404(config, id_pendiente)
+        try:
+            texto = texto_unido(extraer_texto(fila["archivo"], fila["tipo_mime"]))
+        except ValueError as e:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+    clave = await get_anthropic_api_key(proyecto["id"])
+    if not clave:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Esta empresa no tiene configurada una clave de API de Claude")
+    modelo = await get_anthropic_modelo(proyecto["id"])
+    cliente = anthropic.AsyncAnthropic(api_key=clave)
+    respuesta = await cliente.messages.create(
+        model=modelo,
+        max_tokens=MAX_TOKENS_ESTRUCTURAR_PENDIENTE,
+        messages=[{"role": "user", "content": PROMPT_ESTRUCTURAR_PENDIENTE.format(texto=texto)}],
+    )
+    markdown = "\n".join(b.text for b in respuesta.content if b.type == "text")
+    return {"markdown": markdown}
 
 
 # --- Tipos de documento (catálogo abierto, no una lista cerrada) ---

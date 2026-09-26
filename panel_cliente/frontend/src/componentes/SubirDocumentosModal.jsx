@@ -1,11 +1,14 @@
 import { useState } from "react"
-import { Alert, Badge, Button, Group, List, Modal, Table, Text, Title } from "@mantine/core"
+import { ActionIcon, Alert, Badge, Button, Group, List, Modal, Table, Text, Title, Tooltip } from "@mantine/core"
 import { Dropzone, IMAGE_MIME_TYPE, PDF_MIME_TYPE } from "@mantine/dropzone"
+import { IconEye } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
+import VistaPreviaPendienteModal from "./VistaPreviaPendienteModal"
 
 export default function SubirDocumentosModal({
   opened,
   onClose,
+  proyecto,
   pendientes,
   subiendo,
   error,
@@ -14,6 +17,7 @@ export default function SubirDocumentosModal({
   onDescartar,
 }) {
   const [archivosElegidos, setArchivosElegidos] = useState([])
+  const [pendienteVistaPrevia, setPendienteVistaPrevia] = useState(null)
 
   function agregarArchivos(nuevos) {
     setArchivosElegidos((actuales) => [...actuales, ...nuevos])
@@ -100,9 +104,16 @@ export default function SubirDocumentosModal({
                 </Table.Td>
                 <Table.Td>{formatearFecha(p.fecha_alta)}</Table.Td>
                 <Table.Td>
-                  <Button variant="subtle" color="red" size="xs" onClick={() => onDescartar(p.id)}>
-                    Descartar
-                  </Button>
+                  <Group gap="4" wrap="nowrap" justify="flex-end">
+                    <Tooltip label="Vista previa del texto">
+                      <ActionIcon variant="subtle" color="gray" onClick={() => setPendienteVistaPrevia(p)}>
+                        <IconEye size={16} stroke={1.8} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Button variant="subtle" color="red" size="xs" onClick={() => onDescartar(p.id)}>
+                      Descartar
+                    </Button>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
@@ -113,6 +124,13 @@ export default function SubirDocumentosModal({
           No tienes ningún documento pendiente ahora mismo.
         </Text>
       )}
+
+      <VistaPreviaPendienteModal
+        opened={!!pendienteVistaPrevia}
+        onClose={() => setPendienteVistaPrevia(null)}
+        proyecto={proyecto}
+        pendiente={pendienteVistaPrevia}
+      />
     </Modal>
   )
 }

@@ -43,6 +43,15 @@ export function setToken(nuevoToken) {
   }
 }
 
+// El backend renueva el token solo (sesión caducada hace menos de 48h,
+// ver lib/jwt_tokens.py del núcleo) devolviéndolo en esta cabecera — así
+// no hace falta volver a iniciar sesión mientras se siga usando el panel
+// de vez en cuando, aunque hayan pasado los 30 días de vigencia normal.
+function _capturarTokenRenovado(res) {
+  const nuevo = res.headers.get("X-Nuevo-Token")
+  if (nuevo) setToken(nuevo)
+}
+
 async function peticion(base, metodo, ruta, cuerpo) {
   const headers = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
@@ -52,6 +61,7 @@ async function peticion(base, metodo, ruta, cuerpo) {
     headers,
     body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
   })
+  _capturarTokenRenovado(res)
 
   if (!res.ok) {
     let detalle = res.statusText
@@ -74,6 +84,7 @@ async function peticionConFichero(base, ruta, formData) {
   if (token) headers["Authorization"] = `Bearer ${token}`
 
   const res = await fetch(`${base}${ruta}`, { method: "POST", headers, body: formData })
+  _capturarTokenRenovado(res)
 
   if (!res.ok) {
     let detalle = res.statusText
@@ -271,6 +282,13 @@ export const api = {
   },
   eliminarDocumentoPendiente: (idProyecto, idPendiente) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}`),
+  vistaPreviaDocumentoPendiente: (idProyecto, idPendiente) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}/vista-previa`),
+  estructurarDocumentoPendiente: (idProyecto, idPendiente, texto) =>
+    peticion(
+      BASE_CLIENTE, "POST",
+      `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}/estructurar`, { texto },
+    ),
 
   listarRegistrosDocumento: (idProyecto, idDocumento, tipo) =>
     peticion(

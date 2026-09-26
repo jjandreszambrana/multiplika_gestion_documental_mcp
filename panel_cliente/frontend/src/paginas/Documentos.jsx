@@ -198,6 +198,7 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
       <SubirDocumentosModal
         opened={modalSubidaAbierto}
         onClose={() => setModalSubidaAbierto(false)}
+        proyecto={proyecto}
         pendientes={pendientes}
         subiendo={subiendo}
         error={errorPendientes}
