@@ -28,6 +28,8 @@ from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from lib.jwt_tokens import decodificar_token
 from lib.roles_proyecto import es_admin_de_proyecto, puede_editar_proyecto, tiene_acceso_a_proyecto
 
+from ..database.modelos._mod_chat import ChatConversacionesCRUD
+
 _proyectos = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
 _auditoria = AsyncCrudBase(TABLA_AUDITORIA_SOPORTE, get_db_config("control"))
 _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
@@ -160,6 +162,24 @@ async def usuario_chat_gd_actual(
     if identidad.tipo != "usuario":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El chat de IA no está disponible para soporte")
     return identidad.id, await puede_editar_proyecto(identidad.id, proyecto["id"])
+
+
+async def conversacion_chat_gd_actual(
+    id_proyecto: int, id_conversacion: int, usuario: tuple[int, bool] = Depends(usuario_chat_gd_actual)
+) -> tuple[dict, int, bool]:
+    """Dependencia para cualquier endpoint del chat que reciba
+    id_conversacion en la URL (obtener/renombrar/borrar/mandar mensaje):
+    comprueba que esa conversación es de verdad del usuario que hace la
+    petición. Antes no hacía falta — solo existía una conversación por
+    usuario, siempre la suya; ahora que id_conversacion viaja en la URL,
+    un usuario podría intentar mirar/borrar la de otro usuario de su
+    misma empresa si no se comprobara aquí. 404 en vez de 403, para no
+    revelar que existe pero es de otro. Devuelve (fila, id_usuario, es_editor)."""
+    id_usuario, es_editor = usuario
+    fila = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener(id_conversacion)
+    if not fila or fila["id_usuario"] != id_usuario:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversación no encontrada")
+    return fila, id_usuario, es_editor
 
 
 async def api_key_de_gestion_documental(id_api_key: int, identidad: Identidad = Depends(identidad_actual)) -> dict:

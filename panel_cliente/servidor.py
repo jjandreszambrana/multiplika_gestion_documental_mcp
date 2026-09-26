@@ -28,6 +28,7 @@ absolutos a database.config_db / lib.*). Para probar en local antes de
 desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
 
 import html
+import json
 import os
 from datetime import datetime, timezone
 from typing import Literal
@@ -52,6 +53,7 @@ from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
+from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestra_chat
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
@@ -89,6 +91,7 @@ from .dependencias import (
     admin_certificados_actual,
     admin_gestion_documental_actual,
     api_key_de_gestion_documental,
+    conversacion_chat_gd_actual,
     escritor_gestion_documental_actual,
     es_admin_actual,
     identidad_actual,
@@ -1675,18 +1678,62 @@ class ConfirmacionChat(BaseModel):
     aceptar: bool
 
 
-@app.get("/v1/proyectos/{id_proyecto}/chat")
-async def historial_chat(id_proyecto: int, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
+class NuevaConversacionChat(BaseModel):
+    titulo: str | None = None
+
+
+class RenombrarConversacionChat(BaseModel):
+    titulo: str
+
+
+@app.get("/v1/proyectos/{id_proyecto}/chat/conversaciones")
+async def listar_conversaciones_chat(id_proyecto: int, usuario: tuple = Depends(usuario_chat_gd_actual)) -> list[dict]:
     id_usuario, _ = usuario
-    mensajes = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener_mensajes(id_usuario)
-    return {"mensajes": mensajes}
+    return await ChatConversacionesCRUD(get_db_config(id_proyecto)).listar_conversaciones(id_usuario)
 
 
-@app.post("/v1/proyectos/{id_proyecto}/chat")
-async def enviar_mensaje_chat(id_proyecto: int, datos: MensajeChat, usuario: tuple = Depends(usuario_chat_gd_actual)) -> dict:
-    id_usuario, es_editor = usuario
+@app.post("/v1/proyectos/{id_proyecto}/chat/conversaciones")
+async def crear_conversacion_chat(
+    id_proyecto: int, datos: NuevaConversacionChat, usuario: tuple = Depends(usuario_chat_gd_actual)
+) -> dict:
+    id_usuario, _ = usuario
+    return await ChatConversacionesCRUD(get_db_config(id_proyecto)).crear_conversacion(id_usuario, datos.titulo)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/chat/conversaciones/{id_conversacion}")
+async def obtener_conversacion_chat(
+    id_proyecto: int, id_conversacion: int, conversacion: tuple = Depends(conversacion_chat_gd_actual)
+) -> dict:
+    fila, _, _ = conversacion
+    mensajes = json.loads(fila["mensajes_json"])
+    titulo = fila["titulo"] or _titulo_de_muestra_chat(mensajes)
+    return {"id": fila["id"], "titulo": titulo, "mensajes": mensajes}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/chat/conversaciones/{id_conversacion}")
+async def renombrar_conversacion_chat(
+    id_proyecto: int, id_conversacion: int, datos: RenombrarConversacionChat,
+    conversacion: tuple = Depends(conversacion_chat_gd_actual),
+) -> dict:
+    await ChatConversacionesCRUD(get_db_config(id_proyecto)).renombrar(id_conversacion, datos.titulo)
+    return {"id": id_conversacion, "titulo": datos.titulo}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/chat/conversaciones/{id_conversacion}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_conversacion_chat(
+    id_proyecto: int, id_conversacion: int, conversacion: tuple = Depends(conversacion_chat_gd_actual)
+) -> None:
+    await ChatConversacionesCRUD(get_db_config(id_proyecto)).eliminar(id_conversacion)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/chat/conversaciones/{id_conversacion}/mensajes")
+async def enviar_mensaje_chat(
+    id_proyecto: int, id_conversacion: int, datos: MensajeChat,
+    conversacion: tuple = Depends(conversacion_chat_gd_actual),
+) -> dict:
+    _, id_usuario, es_editor = conversacion
     try:
-        return await chat_ia.enviar_mensaje(id_proyecto, id_usuario, es_editor, datos.mensaje)
+        return await chat_ia.enviar_mensaje(id_proyecto, id_conversacion, id_usuario, es_editor, datos.mensaje)
     except ValueError as error:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error))
 

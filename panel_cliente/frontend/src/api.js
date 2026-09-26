@@ -443,9 +443,18 @@ export const api = {
   quitarRelacionDocumentoScript: (idProyecto, idScript, idDocumento) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/scripts/${idScript}/documentos/${idDocumento}`),
 
-  obtenerHistorialChat: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat`),
-  enviarMensajeChat: (idProyecto, mensaje) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat`, { mensaje }),
+  listarConversacionesChat: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat/conversaciones`),
+  crearConversacionChat: (idProyecto, titulo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/conversaciones`, { titulo: titulo || null }),
+  obtenerConversacionChat: (idProyecto, idConversacion) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}`),
+  renombrarConversacionChat: (idProyecto, idConversacion, titulo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}`, { titulo }),
+  eliminarConversacionChat: (idProyecto, idConversacion) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}`),
+  enviarMensajeChat: (idProyecto, idConversacion, mensaje) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}/mensajes`, { mensaje }),
   confirmarAccionChat: (idProyecto, confirmacionId, aceptar) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/confirmar`, {
       confirmacion_id: confirmacionId, aceptar,

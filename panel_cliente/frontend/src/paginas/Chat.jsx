@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import {
   ActionIcon, Alert, Anchor, Badge, Button, Card, Code, Group,
-  Loader, Paper, ScrollArea, Stack, Text, Textarea, Title,
+  Loader, Modal, NavLink, Paper, ScrollArea, Stack, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconSend } from "@tabler/icons-react"
+import { IconArrowLeft, IconPencil, IconPlus, IconSend, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
+import { formatearFecha } from "../formato"
 import Markdown from "../componentes/Markdown"
 
 // El historial llega en el formato bruto de la Messages API de
@@ -73,39 +74,130 @@ function AccionesPendientes({ acciones, confirmando, onResolver }) {
   )
 }
 
+function ListaConversaciones({ conversaciones, idActual, cargando, onSeleccionar, onNueva, onRenombrar, onEliminar }) {
+  return (
+    <Paper withBorder p="xs" radius="md" w={260} style={{ flexShrink: 0 }}>
+      <Group justify="space-between" mb="xs" px="xs">
+        <Text fw={600} size="sm">
+          Conversaciones
+        </Text>
+        <Tooltip label="Nueva conversación">
+          <ActionIcon variant="light" onClick={onNueva}>
+            <IconPlus size={16} stroke={1.9} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+      <ScrollArea h={420}>
+        <Stack gap={2}>
+          {conversaciones.map((c) => (
+            <NavLink
+              key={c.id}
+              label={c.titulo || "Sin título"}
+              description={formatearFecha(c.fecha_actualizacion)}
+              active={c.id === idActual}
+              onClick={() => onSeleccionar(c.id)}
+              styles={{ root: { borderRadius: "var(--mantine-radius-md)" } }}
+              rightSection={
+                <Group gap={2} wrap="nowrap">
+                  <ActionIcon
+                    size="sm" variant="subtle" color="gray"
+                    onClick={(evento) => { evento.stopPropagation(); onRenombrar(c) }}
+                  >
+                    <IconPencil size={14} stroke={1.8} />
+                  </ActionIcon>
+                  <ActionIcon
+                    size="sm" variant="subtle" color="red"
+                    onClick={(evento) => { evento.stopPropagation(); onEliminar(c) }}
+                  >
+                    <IconTrash size={14} stroke={1.8} />
+                  </ActionIcon>
+                </Group>
+              }
+            />
+          ))}
+          {conversaciones.length === 0 && !cargando && (
+            <Text c="dimmed" size="sm" px="xs">
+              No tienes conversaciones todavía.
+            </Text>
+          )}
+        </Stack>
+      </ScrollArea>
+    </Paper>
+  )
+}
+
 export default function Chat({ proyecto, onVolver }) {
+  const [conversaciones, setConversaciones] = useState([])
+  const [idConversacionActual, setIdConversacionActual] = useState(null)
+  const [cargandoLista, setCargandoLista] = useState(true)
   const [mensajes, setMensajes] = useState([])
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [pendiente, setPendiente] = useState(null)
   const [entrada, setEntrada] = useState("")
   const [error, setError] = useState(null)
+  const [aRenombrar, setARenombrar] = useState(null)
+  const [tituloRenombrar, setTituloRenombrar] = useState("")
   const finalRef = useRef(null)
 
-  useEffect(() => {
+  async function seleccionar(id) {
+    setIdConversacionActual(id)
     setCargando(true)
     setError(null)
-    api
-      .obtenerHistorialChat(proyecto.id)
-      .then((r) => {
-        const vistos = r.mensajes
-          .map((m) => ({ rol: m.role, texto: textoDeMensaje(m) }))
-          .filter((m) => m.texto.trim())
-        setMensajes(vistos)
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setCargando(false))
+    setPendiente(null)
+    try {
+      const r = await api.obtenerConversacionChat(proyecto.id, id)
+      const vistos = r.mensajes
+        .map((m) => ({ rol: m.role, texto: textoDeMensaje(m) }))
+        .filter((m) => m.texto.trim())
+      setMensajes(vistos)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  async function cargarConversaciones() {
+    setCargandoLista(true)
+    setError(null)
+    try {
+      let lista = await api.listarConversacionesChat(proyecto.id)
+      if (lista.length === 0) {
+        lista = [await api.crearConversacionChat(proyecto.id, null)]
+      }
+      setConversaciones(lista)
+      await seleccionar(lista[0].id)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCargandoLista(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarConversaciones()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 
   useEffect(() => {
     finalRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [mensajes, pendiente])
 
+  async function refrescarListaSilenciosa() {
+    try {
+      setConversaciones(await api.listarConversacionesChat(proyecto.id))
+    } catch {
+      // no es crítico — la lista solo queda un poco desactualizada (orden/título)
+    }
+  }
+
   function procesarRespuesta(respuesta) {
     if (respuesta.tipo === "respuesta") {
       setMensajes((m) => [...m, { rol: "assistant", texto: respuesta.texto }])
       setPendiente(null)
+      refrescarListaSilenciosa()
     } else if (respuesta.tipo === "confirmar") {
       setPendiente(respuesta)
     } else {
@@ -117,13 +209,13 @@ export default function Chat({ proyecto, onVolver }) {
   async function enviar(evento) {
     evento.preventDefault()
     const texto = entrada.trim()
-    if (!texto || enviando) return
+    if (!texto || enviando || !idConversacionActual) return
     setEntrada("")
     setError(null)
     setMensajes((m) => [...m, { rol: "user", texto }])
     setEnviando(true)
     try {
-      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, texto))
+      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, idConversacionActual, texto))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -150,6 +242,52 @@ export default function Chat({ proyecto, onVolver }) {
     }
   }
 
+  async function nuevaConversacion() {
+    setError(null)
+    try {
+      const nueva = await api.crearConversacionChat(proyecto.id, null)
+      setConversaciones((c) => [nueva, ...c])
+      await seleccionar(nueva.id)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  function abrirRenombrar(conversacion) {
+    setARenombrar(conversacion)
+    setTituloRenombrar(conversacion.titulo || "")
+  }
+
+  async function guardarRenombrar(evento) {
+    evento.preventDefault()
+    const titulo = tituloRenombrar.trim()
+    if (!titulo) return
+    setError(null)
+    try {
+      await api.renombrarConversacionChat(proyecto.id, aRenombrar.id, titulo)
+      setConversaciones((cs) => cs.map((c) => (c.id === aRenombrar.id ? { ...c, titulo } : c)))
+      setARenombrar(null)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function eliminarConversacion(conversacion) {
+    if (!window.confirm(`¿Eliminar la conversación "${conversacion.titulo || "Sin título"}"? No se puede deshacer.`)) return
+    setError(null)
+    try {
+      await api.eliminarConversacionChat(proyecto.id, conversacion.id)
+      const restantes = conversaciones.filter((c) => c.id !== conversacion.id)
+      setConversaciones(restantes)
+      if (conversacion.id === idConversacionActual) {
+        if (restantes.length > 0) await seleccionar(restantes[0].id)
+        else await nuevaConversacion()
+      }
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   return (
     <>
       <Anchor
@@ -164,57 +302,87 @@ export default function Chat({ proyecto, onVolver }) {
         GD-IA Chat
       </Title>
 
-      <Paper withBorder p="md" radius="md" mb="md">
-        <ScrollArea h={420} mb="md">
-          {cargando ? (
-            <Loader size="sm" />
-          ) : (
-            <Stack gap="sm">
-              {mensajes.length === 0 && (
-                <Text c="dimmed" size="sm">
-                  Pregúntale algo sobre los documentos, entidades o registros de este proyecto.
-                </Text>
-              )}
-              {mensajes.map((m, i) => (
-                <Burbuja key={i} rol={m.rol} texto={m.texto} />
-              ))}
-              {pendiente && (
-                <AccionesPendientes
-                  acciones={pendiente.acciones}
-                  confirmando={confirmando}
-                  onResolver={resolverConfirmacion}
-                />
-              )}
-              {enviando && <Loader size="sm" />}
-              <div ref={finalRef} />
-            </Stack>
-          )}
-        </ScrollArea>
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert color="red" mb="md">
-            {error}
-          </Alert>
-        )}
+      <Group align="flex-start" wrap="nowrap" gap="md">
+        <ListaConversaciones
+          conversaciones={conversaciones}
+          idActual={idConversacionActual}
+          cargando={cargandoLista}
+          onSeleccionar={seleccionar}
+          onNueva={nuevaConversacion}
+          onRenombrar={abrirRenombrar}
+          onEliminar={eliminarConversacion}
+        />
 
-        <Group component="form" onSubmit={enviar} align="flex-end" wrap="nowrap" gap="sm">
-          <Textarea
-            placeholder="Escribe tu pregunta..."
-            value={entrada}
-            onChange={(evento) => setEntrada(evento.currentTarget.value)}
-            onKeyDown={alPulsarTecla}
-            autosize minRows={1} maxRows={6}
-            disabled={enviando || !!pendiente}
-            style={{ flex: 1 }}
+        <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
+          <ScrollArea h={420} mb="md">
+            {cargandoLista || cargando ? (
+              <Loader size="sm" />
+            ) : (
+              <Stack gap="sm">
+                {mensajes.length === 0 && (
+                  <Text c="dimmed" size="sm">
+                    Pregúntale algo sobre los documentos, entidades o registros de este proyecto.
+                  </Text>
+                )}
+                {mensajes.map((m, i) => (
+                  <Burbuja key={i} rol={m.rol} texto={m.texto} />
+                ))}
+                {pendiente && (
+                  <AccionesPendientes
+                    acciones={pendiente.acciones}
+                    confirmando={confirmando}
+                    onResolver={resolverConfirmacion}
+                  />
+                )}
+                {enviando && <Loader size="sm" />}
+                <div ref={finalRef} />
+              </Stack>
+            )}
+          </ScrollArea>
+
+          <Group component="form" onSubmit={enviar} align="flex-end" wrap="nowrap" gap="sm">
+            <Textarea
+              placeholder="Escribe tu pregunta..."
+              value={entrada}
+              onChange={(evento) => setEntrada(evento.currentTarget.value)}
+              onKeyDown={alPulsarTecla}
+              autosize minRows={1} maxRows={6}
+              disabled={enviando || !!pendiente || cargando || cargandoLista}
+              style={{ flex: 1 }}
+            />
+            <ActionIcon
+              type="submit" size={36} radius="md"
+              disabled={enviando || !!pendiente || !entrada.trim() || cargando || cargandoLista}
+            >
+              <IconSend size={17} stroke={1.9} />
+            </ActionIcon>
+          </Group>
+        </Paper>
+      </Group>
+
+      <Modal opened={!!aRenombrar} onClose={() => setARenombrar(null)} title="Renombrar conversación">
+        <Stack component="form" onSubmit={guardarRenombrar} gap="md">
+          <TextInput
+            placeholder="Título de la conversación"
+            value={tituloRenombrar}
+            onChange={(evento) => setTituloRenombrar(evento.target.value)}
+            autoFocus
+            required
           />
-          <ActionIcon
-            type="submit" size={36} radius="md"
-            disabled={enviando || !!pendiente || !entrada.trim()}
-          >
-            <IconSend size={17} stroke={1.9} />
-          </ActionIcon>
-        </Group>
-      </Paper>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setARenombrar(null)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Guardar</Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   )
 }

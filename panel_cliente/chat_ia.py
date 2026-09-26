@@ -121,7 +121,7 @@ async def _pedir_a_claude(id_proyecto: int, mensajes: list[dict], tools: list[di
     )
 
 
-async def _avanzar(id_proyecto: int, id_usuario: int, id_rol: int, mensajes: list[dict]) -> dict:
+async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_rol: int, mensajes: list[dict]) -> dict:
     """Bucle de tool-use: ejecuta directo las herramientas de solo
     lectura y encadena; en cuanto el turno de Claude incluye alguna
     herramienta que escribe, se para ahí y devuelve algo para confirmar
@@ -142,7 +142,7 @@ async def _avanzar(id_proyecto: int, id_usuario: int, id_rol: int, mensajes: lis
 
             if respuesta.stop_reason != "tool_use":
                 texto = "\n".join(b.text for b in respuesta.content if b.type == "text")
-                await ChatConversacionesCRUD(get_db_config(id_proyecto)).guardar_mensajes(id_usuario, mensajes)
+                await ChatConversacionesCRUD(get_db_config(id_proyecto)).guardar_mensajes(id_conversacion, mensajes)
                 return {"tipo": "respuesta", "texto": texto}
 
             llamadas = [b for b in respuesta.content if b.type == "tool_use"]
@@ -174,7 +174,8 @@ async def _avanzar(id_proyecto: int, id_usuario: int, id_rol: int, mensajes: lis
 
             confirmacion_id = str(uuid.uuid4())
             _PENDIENTES[confirmacion_id] = {
-                "id_proyecto": id_proyecto, "id_usuario": id_usuario, "id_rol": id_rol,
+                "id_proyecto": id_proyecto, "id_conversacion": id_conversacion,
+                "id_usuario": id_usuario, "id_rol": id_rol,
                 "mensajes": mensajes, "llamadas": [b.model_dump() for b in llamadas],
                 "resultados_listos": resultados_listos,
             }
@@ -194,15 +195,16 @@ async def _avanzar(id_proyecto: int, id_usuario: int, id_rol: int, mensajes: lis
         return {"tipo": "respuesta", "texto": "No he podido terminar — son demasiados pasos seguidos. Prueba a preguntar algo más concreto."}
 
 
-async def enviar_mensaje(id_proyecto: int, id_usuario: int, es_editor: bool, mensaje: str) -> dict:
-    """Punto de entrada de un mensaje nuevo del cliente. `es_editor`
-    decide con qué rol de API key interna se conecta al MCP (operador si
-    puede escribir en este proyecto, invitado si no — igual que ya se
-    aplica a las keys que el propio cliente emite)."""
+async def enviar_mensaje(id_proyecto: int, id_conversacion: int, id_usuario: int, es_editor: bool, mensaje: str) -> dict:
+    """Punto de entrada de un mensaje nuevo del cliente, dentro de una
+    conversación concreta (el llamador ya comprobó que es suya).
+    `es_editor` decide con qué rol de API key interna se conecta al MCP
+    (operador si puede escribir en este proyecto, invitado si no — igual
+    que ya se aplica a las keys que el propio cliente emite)."""
     id_rol = ID_ROL_OPERADOR if es_editor else ID_ROL_INVITADO
-    mensajes = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener_mensajes(id_usuario)
+    mensajes = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener_mensajes(id_conversacion)
     mensajes.append({"role": "user", "content": mensaje})
-    return await _avanzar(id_proyecto, id_usuario, id_rol, mensajes)
+    return await _avanzar(id_proyecto, id_conversacion, id_usuario, id_rol, mensajes)
 
 
 async def confirmar(id_usuario: int, confirmacion_id: str, aceptar: bool) -> dict:
@@ -210,7 +212,7 @@ async def confirmar(id_usuario: int, confirmacion_id: str, aceptar: bool) -> dic
     if pendiente is None or pendiente["id_usuario"] != id_usuario:
         return {"tipo": "error", "texto": "Esta confirmación ya no está disponible — puede que se haya reiniciado el panel o que ya se resolviera."}
 
-    id_proyecto, id_rol = pendiente["id_proyecto"], pendiente["id_rol"]
+    id_proyecto, id_conversacion, id_rol = pendiente["id_proyecto"], pendiente["id_conversacion"], pendiente["id_rol"]
     mensajes = pendiente["mensajes"]
     resultados = dict(pendiente["resultados_listos"])
 
@@ -232,4 +234,4 @@ async def confirmar(id_usuario: int, confirmacion_id: str, aceptar: bool) -> dic
     # antes de pedir confirmación; la que escribe, resuelta aquí ahora).
     en_orden = [resultados[b["id"]] for b in pendiente["llamadas"]]
     mensajes.append({"role": "user", "content": en_orden})
-    return await _avanzar(id_proyecto, id_usuario, id_rol, mensajes)
+    return await _avanzar(id_proyecto, id_conversacion, id_usuario, id_rol, mensajes)
