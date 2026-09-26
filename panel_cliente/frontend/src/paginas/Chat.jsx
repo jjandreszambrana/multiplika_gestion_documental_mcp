@@ -161,7 +161,7 @@ export default function Chat({ proyecto, onVolver }) {
         Documentos
       </Anchor>
       <Title order={2} mb="lg">
-        Chat con la IA
+        GD-IA Chat
       </Title>
 
       <Paper withBorder p="md" radius="md" mb="md">
