@@ -84,6 +84,27 @@ async def _resultado_tool(mcp: Client, nombre: str, argumentos: dict) -> tuple[s
     return texto or "(sin salida)", bool(resultado.is_error)
 
 
+_CACHE_EFIMERA = {"type": "ephemeral", "ttl": "1h"}
+
+
+def _con_punto_de_cache(mensajes: list[dict]) -> list[dict]:
+    """Copia `mensajes` marcando el final del último mensaje como punto
+    de caché — Anthropic sirve desde caché (a ~1/10 del precio) todo lo
+    que haya antes de ese punto en la próxima llamada con el mismo
+    prefijo, en vez de volver a pagarlo entero. Como el historial solo
+    crece (nunca se reescribe), cada turno nuevo mueve el punto un poco
+    más adelante y el turno anterior entero sale de caché. Solo para la
+    llamada a la API — no se guarda así en el historial (`mensajes` no
+    se modifica, se devuelve una copia)."""
+    if not mensajes:
+        return mensajes
+    ultimo = mensajes[-1]
+    contenido = ultimo["content"]
+    bloques = [{"type": "text", "text": contenido}] if isinstance(contenido, str) else [dict(b) for b in contenido]
+    bloques[-1] = {**bloques[-1], "cache_control": _CACHE_EFIMERA}
+    return [*mensajes[:-1], {**ultimo, "content": bloques}]
+
+
 async def _pedir_a_claude(id_proyecto: int, mensajes: list[dict], tools: list[dict]) -> "anthropic.types.Message":
     clave = await get_anthropic_api_key(id_proyecto)
     if not clave:
@@ -92,7 +113,11 @@ async def _pedir_a_claude(id_proyecto: int, mensajes: list[dict], tools: list[di
     cliente = anthropic.AsyncAnthropic(api_key=clave)
     return await cliente.messages.create(
         model=modelo, max_tokens=MAX_TOKENS_RESPUESTA,
-        system=SYSTEM_PROMPT, tools=tools, messages=mensajes,
+        # Punto de caché tras el prompt del sistema: cubre también las
+        # tools (van antes en el orden que arma la API), que no cambian
+        # de un turno a otro dentro de la misma conversación.
+        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": _CACHE_EFIMERA}],
+        tools=tools, messages=_con_punto_de_cache(mensajes),
     )
 
 
@@ -107,6 +132,12 @@ async def _avanzar(id_proyecto: int, id_usuario: int, id_rol: int, mensajes: lis
 
         for _ in range(MAX_TURNOS_HERRAMIENTA):
             respuesta = await _pedir_a_claude(id_proyecto, mensajes, tools)
+            uso = respuesta.usage
+            print(
+                f"[chat_ia] proyecto={id_proyecto} tokens de entrada={uso.input_tokens} "
+                f"(caché leída={uso.cache_read_input_tokens}, caché escrita={uso.cache_creation_input_tokens}) "
+                f"salida={uso.output_tokens}"
+            )
             mensajes.append({"role": "assistant", "content": _bloques_a_dict(respuesta.content)})
 
             if respuesta.stop_reason != "tool_use":
