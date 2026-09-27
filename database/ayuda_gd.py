@@ -318,6 +318,33 @@ o en el que se usó, igual que las entidades — desde la ficha del \
 documento o desde la ficha del script, y un mismo script puede estar \
 relacionado con varios documentos a la vez.
 
+## Reglas: cómo quieres que trabaje tu IA
+
+Aparte de los documentos, puedes dejarle escritas **reglas de \
+comportamiento**: el correo de contacto de la empresa, en qué idioma se \
+redacta, cómo se calcula algo que hacéis siempre igual, qué hay que \
+incluir en cierto tipo de boletín... Así no tienes que repetirlo en cada \
+conversación.
+
+Cada regla lleva una **categoría** (por ejemplo "datos_empresa", \
+"correo", "boletines") y puede ser **global** o no:
+
+- **Global**: tu IA la recibe al empezar cualquier conversación. Para lo \
+  que hace falta casi siempre, como el correo de contacto.
+- **No global**: tu IA la carga sola justo antes de la tarea de esa \
+  categoría. Para lo que solo importa en un tipo de trabajo concreto, \
+  como el detalle de cómo se monta un boletín.
+
+La diferencia es el coste: lo global viaja en todas las conversaciones, \
+así que conviene que sea corto. En el panel, pantalla "Reglas de la IA", \
+puedes crearlas, editarlas, desactivarlas sin borrarlas y ver \
+aproximadamente cuántos tokens ocupan las globales. También puedes \
+pedírselo a tu IA en conversación (`crear_regla_gd`, \
+`actualizar_regla_gd`...). Si tu GD consulta a una central, heredas \
+también sus reglas; cuando una tuya diga lo contrario, manda la tuya. Una \
+regla marcada como **reservada** no se comparte con las gestiones \
+documentales que te consultan.
+
 ## GDs enlazadas: consultar una central y aprender de tus clientes
 
 Tu gestión documental puede enlazarse con otra que haga de central \
@@ -349,6 +376,8 @@ Desde el panel (con tu usuario y contraseña de empresa) puedes:
 - Subir documentos en bloque a la cola de pendientes.
 - Ver los scripts que tu IA ha guardado y editar su título, descripción, \
   lenguaje y etiquetas (el código no se puede editar desde aquí).
+- Escribir y gestionar las reglas de comportamiento de tu IA, y ver lo \
+  que pesan las globales.
 - Editar o borrar credenciales de otros servicios ya creadas, tu cuenta \
   de correo, avisos de caducidad, usuarios del proyecto y claves de API — todo eso es gestión desde el panel, no por \
   conversación. Dar de alta una credencial nueva también se lo puedes \

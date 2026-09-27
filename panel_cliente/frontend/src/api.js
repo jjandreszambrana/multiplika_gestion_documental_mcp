@@ -468,6 +468,14 @@ export const api = {
   quitarRelacionDocumentoScript: (idProyecto, idScript, idDocumento) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/scripts/${idScript}/documentos/${idDocumento}`),
 
+  listarReglas: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/reglas`),
+  listarReglasHeredadas: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/reglas/heredadas`),
+  textoReglasGlobales: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/reglas/globales/texto`),
+  crearRegla: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/reglas`, datos),
+  actualizarRegla: (idProyecto, idRegla, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/reglas/${idRegla}`, datos),
+  eliminarRegla: (idProyecto, idRegla) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/reglas/${idRegla}`),
+
   listarConversacionesChat: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat/conversaciones`),
   crearConversacionChat: (idProyecto, titulo) =>

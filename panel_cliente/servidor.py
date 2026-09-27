@@ -90,6 +90,12 @@ from ..database.modelos._mod_envios import (
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
+from ..database.modelos._mod_reglas import (
+    CARACTERES_POR_TOKEN,
+    ReglasCRUD,
+    reglas_heredadas,
+    texto_reglas_globales,
+)
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 from ..database.modelos._mod_registros import (
     RegistrosCRUD,
@@ -2294,6 +2300,96 @@ async def reabrir_aprendizaje(
     config = get_db_config(proyecto["id"])
     await _aprendizaje_o_404(config, id_aprendizaje, ESTADO_RECHAZADO)
     return await AprendizajesCRUD(config).volver_a_candidato(id_aprendizaje)
+
+
+# ---------- Reglas de comportamiento (ver docs → "Reglas de comportamiento") ----------
+# Lectura: cualquiera con acceso al proyecto. Alta/edición/borrado: cualquiera
+# salvo invitado, igual que los estilos de informe (son de la misma especie:
+# instrucciones para la IA, no documentos).
+
+class NuevaRegla(BaseModel):
+    texto: str
+    categoria: str
+    es_global: bool = False
+    prioridad: int = 0
+    reservada: bool = False
+
+
+class ActualizarRegla(BaseModel):
+    texto: str | None = None
+    categoria: str | None = None
+    es_global: bool | None = None
+    prioridad: int | None = None
+    activa: bool | None = None
+    reservada: bool | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/reglas")
+async def listar_reglas(
+    id_proyecto: int, categoria: str | None = None, incluir_inactivas: bool = True,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """Las propias. Por defecto incluye las inactivas: esta pantalla es para
+    gestionarlas, y una regla desactivada tiene que poder recuperarse."""
+    config = get_db_config(proyecto["id"])
+    return await ReglasCRUD(config).listar_reglas(categoria, incluir_inactivas=incluir_inactivas)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/reglas/heredadas")
+async def listar_reglas_heredadas(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    """Las de las GDs centrales enlazadas, pedidas en vivo — solo se
+    consultan, se cambian en la central. Si una central no responde, sus
+    reglas simplemente no salen."""
+    return await reglas_heredadas(get_db_config(proyecto["id"]))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/reglas/globales/texto")
+async def texto_reglas_globales_proyecto(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> dict:
+    """Exactamente el bloque que recibe la IA al abrir sesión, para poder ver
+    lo que ocupa (`caracteres`/`tokens_aproximados`, ver el aviso de peso de
+    la pantalla de reglas)."""
+    texto = await texto_reglas_globales(get_db_config(proyecto["id"]))
+    return {"texto": texto, "caracteres": len(texto), "tokens_aproximados": len(texto) // CARACTERES_POR_TOKEN}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/reglas")
+async def crear_regla(
+    id_proyecto: int, datos: NuevaRegla, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    reglas = ReglasCRUD(config)
+    try:
+        id_regla = await reglas.crear(datos.model_dump())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return await reglas.obtener(id_regla)
+
+
+@app.put("/v1/proyectos/{id_proyecto}/reglas/{id_regla}")
+async def actualizar_regla(
+    id_proyecto: int, id_regla: int, datos: ActualizarRegla,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        regla = await ReglasCRUD(config).actualizar_campos(id_regla, datos.model_dump())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    if not regla:
+        raise HTTPException(404, "Regla no encontrada")
+    return regla
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/reglas/{id_regla}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_regla(
+    id_proyecto: int, id_regla: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await ReglasCRUD(config).eliminar(id_regla)
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

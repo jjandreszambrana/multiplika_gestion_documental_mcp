@@ -15,6 +15,7 @@ import {
   IconInbox,
   IconMessageCircle,
   IconCode,
+  IconGavel,
   IconLink,
   IconLogout,
   IconHeadset,
@@ -117,6 +118,7 @@ export default function Sidebar({
           onClick={() => onNavigate("tipos-documento")}
         />
         <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
+        <Item icon={IconGavel} label="Reglas de la IA" active={vista === "reglas"} onClick={() => onNavigate("reglas")} />
         <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
         <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
         <Item icon={IconCode} label="Scripts" active={vista === "scripts"} onClick={() => onNavigate("scripts")} />

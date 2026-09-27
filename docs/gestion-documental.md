@@ -662,3 +662,35 @@ Diferencias respecto al plan, decididas al implementar:
 - Aprendizajes: para resumir, el documento completo viaja a la central (en memoria) — se guarda solo el resumen. `sustituciones` guarda descripciones POR TIPO, nunca los valores originales (sería guardar justo lo que se quiere evitar). Tarifas en `_mod_aprendizajes.py::TARIFAS_USD_POR_MILLON` (mismas cifras que `MODELOS_ANTHROPIC` del núcleo); un modelo sin tarifa se apunta con coste 0 y su nombre.
 - Ficheros: núcleo `_dep_roles.py`, `lib/roles_proyecto.py`, `core/dependencias/auth.py`, `core/solo_lectura.py`, `_api_api_keys.py`, `ApiKeys.jsx`. GD: `_dep_enlaces.py`, `_dep_aprendizajes.py`, `_mod_enlaces.py` (CRUDs + cliente MCP + `consultar_centrales` + emisión/revocación de keys), `_mod_aprendizajes.py`, `_herr_enlaces.py`, `_anotaciones.py`, `_herr_documentos.py`, `_mod_documentos/_mod_versiones/_mod_chunks.py` (`solo_compartidos`), `_dep_documentos.py` (`reservado`), `update_db.py`, `panel_cliente/servidor.py` (bloques "GDs enlazadas" y "Aprendizajes"), `chat_ia.py` (prompt), `ayuda_gd.py`, frontend `Enlaces.jsx` + `componentes/Aprendizajes.jsx` + `Sidebar/App/api.js/DocumentoDetalle/Documentos`.
 - Despliegue: núcleo primero (rol 5 + middleware), luego GD; en un servidor real, aplicar `gd_documentos.reservado` y las 4 tablas nuevas con `ManagerDB` registrando también `TABLA_ESTILOS` (FK de `gd_documentos`) — las 4 tablas nuevas no tienen FKs. `frontend/dist` se sube a mano como siempre.
+
+### Reglas de comportamiento: jerarquía de contexto para la IA (2026-09-27, implementado el mismo día — sin probar todavía)
+
+Plan original en `docs/planificacion/sistema-reglas-jerarquia-contexto.md`. Idea del usuario: hoy las instrucciones a la IA se guardan como documentos normales, mezcladas con normativa e informes; la IA tiene que buscarlas, leerlas e interpretarlas cada vez, y nada garantiza que las cargue en el momento adecuado. Las reglas separan el **comportamiento** (cómo actuar aquí) del **contenido** (los documentos), con su propio mecanismo de carga.
+
+**Tabla `gd_reglas`** (`database/dependencias/_dep_reglas.py`, sin FKs, CRUD en `database/modelos/_mod_reglas.py`): `texto` (una idea por regla), `categoria` (texto libre, catálogo abierto igual que `gd_scripts.lenguaje`), `es_global`, `prioridad`, `activa`, `reservada`, `fecha_alta`.
+
+**Tres niveles de carga:**
+1. **Al abrir sesión**: el bloque de reglas globales entra solo en el `instructions` del `initialize` de MCP, sin que la IA tenga que pedir nada. Lo monta `texto_reglas_globales()` y lo recoge el middleware del núcleo (ver más abajo).
+2. **Bajo demanda**: `obtener_reglas_gd(categoria)` justo antes de la tarea que las necesita — solo cuesta tokens cuando viene a cuento.
+3. **Regla meta** (`REGLA_META`, texto fijo del servidor): va siempre dentro del bloque global, tenga el cliente reglas o no, y es lo que le dice a la IA que existe el nivel 2 y cómo se resuelven los conflictos.
+
+**Precedencia**: reglas propias > heredadas de la central > instrucciones del servidor (el bloque de reglas se añade al final del contexto inicial, después de la ayuda, el negocio y las preferencias de trabajo; en el chat del panel, después del `SYSTEM_PROMPT`).
+
+**Tools MCP** (`mcp_server/herramientas/_herr_reglas.py`): `obtener_reglas_globales_gd` (devuelve el bloque de texto), `obtener_reglas_gd(categoria)` (las que hay que cumplir: propias + heredadas), `listar_reglas_gd` (las propias con su estado, para gestionarlas), `crear_regla_gd`, `actualizar_regla_gd`, `eliminar_regla_gd`, y `obtener_reglas_compartidas_gd` (etiquetada `gd_enlazada`, uso interno entre GDs).
+
+**Panel**: pantalla "Reglas de la IA" (`frontend/src/paginas/Reglas.jsx`), separada de documentos: alta, edición en línea, interruptores de global / activa / reservada, filtro por categoría y por ámbito (propias / heredadas, estas de solo lectura) y aviso del peso aproximado en tokens de las globales (endpoint `/reglas/globales/texto`, umbral `TOKENS_GLOBALES_AVISO`). Escritura para cualquiera salvo invitado, igual que los estilos de informe.
+
+**Cambio en el núcleo** (`apps/mcp_server/core/instrucciones_iniciales.py`): el middleware que ya inyectaba ayuda + negocio + preferencias añade ahora el texto de la tool que empiece por `obtener_reglas_globales` (convención de nombre, igual que `obtener_ayuda*`; ningún nombre de producto vive en el núcleo). La ayuda se cachea por proceso y las reglas **no**: el cliente las cambia en caliente y la siguiente sesión tiene que verlas ya.
+
+Decisiones tomadas al implementar (pendientes de corregir por el usuario):
+- **`ambito` no es una columna**: una fila de `gd_reglas` es siempre `propia`, y las heredadas se piden **en vivo** a las centrales enlazadas (tool `obtener_reglas_compartidas_gd`), igual que los documentos, que tampoco se copian. Así no hay nada que sincronizar ni que quede obsoleto. Solo un salto (las centrales de la central no se recorren, a diferencia de las consultas de documentos).
+- **Timeout corto para las heredadas** (`TIMEOUT_REGLAS_HEREDADAS_SEGUNDOS = 5`, frente a los 30 s de una consulta normal): se piden dentro del `initialize`, así que una central lenta dejaría al cliente sin poder conectarse. Una central caída se salta y se trabaja con las propias.
+- **Los conflictos se resuelven por orden, no descartando reglas**: primero las propias, después las heredadas de cada central, y la regla meta dice que manda la propia. El plan decía descartar las heredadas de una categoría en la que haya reglas propias; una regla es texto libre y el servidor no puede saber si dos se contradicen de verdad o hablan de cosas distintas, así que descartar por categoría perdería instrucciones que no estorbaban.
+- **`reservada`**, no prevista en el plan: una regla suele llevar datos de la empresa (correos, criterios internos) y las globales se inyectan también cuando llama una key `gd_enlazada`, que es de otra empresa. Mismo concepto que `gd_documentos.reservado`. Por eso, además, `obtener_reglas_globales_gd` devuelve vacío si quien llama es una GD enlazada: lo que hereda sale solo por `obtener_reglas_compartidas_gd`, ya filtrado.
+- **`es_global`, no `global`**: `global` es palabra reservada de Python y no puede ser parámetro de una tool.
+- `listar_reglas_gd` enseña solo las propias (es la de gestionarlas); las heredadas se ven con `obtener_reglas_gd`, que es la de cumplirlas.
+- El chat del panel (`chat_ia.py`) recibe las reglas globales a mano, pegadas al `SYSTEM_PROMPT`: el `initialize` de MCP solo sirve para un cliente MCP normal (Claude Desktop), no para el chat, que arma su propio prompt.
+
+Quién decidió: usuario (plan completo); el asistente, los seis puntos de arriba.
+Reversible: sí — una tabla nueva sin FKs y un bloque de texto más en el contexto inicial; sin reglas, todo se comporta como antes.
+Despliegue: núcleo primero (el middleware), luego la GD. En un servidor real, aplicar `gd_reglas` con un `ManagerDB` ad-hoc (no tiene FKs, no hay que registrar ninguna otra tabla). `frontend/dist` se sube a mano como siempre.

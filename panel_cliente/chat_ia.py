@@ -32,6 +32,7 @@ from database.config_db import (
 from lib.roles_proyecto import ID_ROL_INVITADO, ID_ROL_OPERADOR
 
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
+from ..database.modelos._mod_reglas import texto_reglas_globales
 
 SYSTEM_PROMPT = (
     "Eres el asistente de gestión documental de esta empresa, dentro de su propio panel. "
@@ -110,7 +111,9 @@ def _con_punto_de_cache(mensajes: list[dict]) -> list[dict]:
     return [*mensajes[:-1], {**ultimo, "content": bloques}]
 
 
-async def _pedir_a_claude(id_proyecto: int, mensajes: list[dict], tools: list[dict]) -> "anthropic.types.Message":
+async def _pedir_a_claude(
+    id_proyecto: int, mensajes: list[dict], tools: list[dict], reglas_globales: str
+) -> "anthropic.types.Message":
     clave = await get_anthropic_api_key(id_proyecto)
     if not clave:
         raise ValueError("Esta empresa no tiene configurada una clave de API de Claude")
@@ -121,7 +124,16 @@ async def _pedir_a_claude(id_proyecto: int, mensajes: list[dict], tools: list[di
         # Punto de caché tras el prompt del sistema: cubre también las
         # tools (van antes en el orden que arma la API), que no cambian
         # de un turno a otro dentro de la misma conversación.
-        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": _CACHE_EFIMERA}],
+        # Las reglas de comportamiento del cliente van DESPUÉS del prompt
+        # del sistema, no antes: mandan sobre los criterios por defecto
+        # (ver docs/gestion-documental.md → "Reglas de comportamiento").
+        # Aquí hay que pasarlas a mano — el `initialize` de MCP que las
+        # inyecta solo vale para un cliente MCP normal (Claude Desktop),
+        # no para este chat, que arma su propio prompt.
+        system=[{
+            "type": "text", "text": f"{SYSTEM_PROMPT}\n\n{reglas_globales}",
+            "cache_control": _CACHE_EFIMERA,
+        }],
         tools=tools, messages=_con_punto_de_cache(mensajes),
     )
 
@@ -131,12 +143,13 @@ async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_r
     lectura y encadena; en cuanto el turno de Claude incluye alguna
     herramienta que escribe, se para ahí y devuelve algo para confirmar
     en vez de seguir sola."""
+    reglas_globales = await texto_reglas_globales(get_db_config(id_proyecto))
     mcp = await _cliente_mcp(id_proyecto, id_rol)
     async with mcp:
         tools, por_nombre = await _herramientas_anthropic(mcp)
 
         for _ in range(MAX_TURNOS_HERRAMIENTA):
-            respuesta = await _pedir_a_claude(id_proyecto, mensajes, tools)
+            respuesta = await _pedir_a_claude(id_proyecto, mensajes, tools, reglas_globales)
             uso = respuesta.usage
             print(
                 f"[chat_ia] proyecto={id_proyecto} tokens de entrada={uso.input_tokens} "

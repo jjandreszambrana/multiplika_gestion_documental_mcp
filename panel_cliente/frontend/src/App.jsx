@@ -20,6 +20,7 @@ import Contexto from "./paginas/Contexto"
 import Credenciales from "./paginas/Credenciales"
 import Certificados from "./paginas/Certificados"
 import Estilos from "./paginas/Estilos"
+import Reglas from "./paginas/Reglas"
 import TiposDocumento from "./paginas/TiposDocumento"
 import EstiloDetalle from "./paginas/EstiloDetalle"
 import Grupos from "./paginas/Grupos"
@@ -238,6 +239,8 @@ export default function App() {
             <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
           ) : vista === "estilos" ? (
             <Estilos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEstilo={setEstiloActivo} />
+          ) : vista === "reglas" ? (
+            <Reglas proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "tipos-documento" ? (
             <TiposDocumento proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "grupos" && grupoActivo ? (
