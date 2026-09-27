@@ -318,6 +318,26 @@ o en el que se usó, igual que las entidades — desde la ficha del \
 documento o desde la ficha del script, y un mismo script puede estar \
 relacionado con varios documentos a la vez.
 
+## GDs enlazadas: consultar una central y aprender de tus clientes
+
+Tu gestión documental puede enlazarse con otra que haga de central \
+(por ejemplo, la base de conocimiento de tu asesoría). Cuando preguntas \
+algo que no está en tus documentos, tu IA consulta también la central \
+(`consultar_gds_enlazadas_gd`) y te dice de dónde sale cada dato; si un \
+fragmento no basta, puede pedir el documento completo \
+(`obtener_documento_enlazado_gd`). Tú solo lees la central, nunca la \
+cambias. Si la central tampoco lo resuelve, tu IA se lo anota \
+(`anotar_pregunta_pendiente_enlazada_gd`) para que su responsable lo cubra.
+
+Si tu GD hace de central para otras, lo que marques como **reservado** \
+(`marcar_reservado_gd`, o el botón "Reservar" en la ficha del documento) \
+no sale nunca hacia ellas. Las preguntas que no supiste responder quedan \
+en "Preguntas pendientes" (`listar_preguntas_pendientes_gd` / \
+`resolver_pregunta_pendiente_gd`). Enlazar, aspirar aprendizajes de las \
+GDs que te consultan (siempre con una copia sin nombres ni datos \
+identificativos, revisada y aprobada por una persona) y ver el uso que \
+hace cada una se gestiona desde el panel, pantalla "GDs enlazadas".
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:

@@ -9,6 +9,7 @@ import {
   IconCheck,
   IconCircleCheck,
   IconClockHour4,
+  IconEyeOff,
   IconDeviceFloppy,
   IconDownload,
   IconEdit,
@@ -87,6 +88,16 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
         setHistorialVersion((v) => v + 1)
       })
       .catch((err) => setError(err.message))
+  }
+
+  async function alternarReservado() {
+    setError(null)
+    try {
+      const actualizado = await api.cambiarReservadoDocumento(proyecto.id, idDocumento, !documento.reservado)
+      setDocumento({ ...documento, ...actualizado })
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function alternarArchivado() {
@@ -266,6 +277,17 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 >
                   {documento.archivado ? "Desarchivar" : "Archivar"}
                 </Button>
+                {proyecto.puede_editar && (
+                  <Button
+                    variant={documento.reservado ? "light" : "default"}
+                    color={documento.reservado ? "orange" : undefined}
+                    onClick={alternarReservado}
+                    leftSection={<IconEyeOff size={15} stroke={1.8} />}
+                    title="Un documento reservado no se comparte con las gestiones documentales enlazadas a esta"
+                  >
+                    {documento.reservado ? "Reservado" : "Reservar"}
+                  </Button>
+                )}
                 {proyecto.puede_editar && (
                   <Button onClick={empezarEdicion} leftSection={<IconEdit size={15} stroke={1.8} />}>
                     Editar

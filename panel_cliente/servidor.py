@@ -64,6 +64,20 @@ from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_pdf import CSS_DOCUMENTO, imagenes_estilo_html, renderizar_pdf
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.dependencias._dep_aprendizajes import ESTADO_CANDIDATO, ESTADO_PENDIENTE_REVISION, ESTADO_RECHAZADO
+from ..database.dependencias._dep_enlaces import SENTIDO_CENTRAL, SENTIDO_ENLAZADA
+from ..database.modelos._mod_aprendizajes import AprendizajesCRUD
+from ..database.modelos._mod_enlaces import (
+    EnlaceError,
+    EnlacesCRUD,
+    PreguntasPendientesCRUD,
+    UsoEnlacesCRUD,
+    emitir_key_gd_enlazada,
+    llamar_enlace,
+    probar_enlace,
+    revocar_key,
+    url_mcp_propia,
+)
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
 from ..database.modelos._mod_envios import (
     EnviosCRUD,
@@ -765,6 +779,23 @@ async def archivar_documento(
     administración: es parte del día a día con los documentos)."""
     config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).archivar(id_documento)
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+    return documento
+
+
+class CambioReservado(BaseModel):
+    reservado: bool
+
+
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/reservado")
+async def cambiar_reservado_documento(
+    id_proyecto: int, id_documento: int, datos: CambioReservado,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Reservado = no se comparte con las GDs enlazadas a esta (ver
+    "GDs enlazadas"). Cualquiera que pueda escribir, como editar."""
+    documento = await DocumentosCRUD(get_db_config(proyecto["id"])).marcar_reservado(id_documento, datos.reservado)
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
     return documento
@@ -1493,6 +1524,135 @@ async def listar_log_certificado(
     ]
 
 
+# ---------- GDs enlazadas (ver docs/gestion-documental.md → "GDs enlazadas") ----------
+# Todo de administración: enlazar es dar acceso de lectura a otra empresa.
+
+class NuevoEnlace(BaseModel):
+    nombre: str
+    url_mcp: str
+    api_key: str
+
+
+def _nombre_key_para(nombre_central: str) -> str:
+    return f"Central: {nombre_central}"
+
+
+@app.get("/v1/proyectos/{id_proyecto}/enlaces")
+async def listar_enlaces(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> list[dict]:
+    return await EnlacesCRUD(get_db_config(proyecto["id"])).listar_metadatos()
+
+
+@app.post("/v1/proyectos/{id_proyecto}/enlaces")
+async def enlazar_con_central(
+    id_proyecto: int, datos: NuevoEnlace, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Enlace en ambos sentidos en un solo paso: con la key que la central
+    nos dio (1) se comprueba que responde, (2) emitimos nuestra propia key
+    gd_enlazada para ella y (3) se la registramos llamando a su
+    registrar_enlace_gd; solo entonces (4) se guarda el enlace aquí. Si
+    (3) falla, la key de (2) se revoca y no queda nada a medias."""
+    url_propia = url_mcp_propia()
+    if not url_propia:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            "Este servidor no tiene configurada GD_URL_PUBLICA — la central no podría llamarnos de vuelta")
+    url_central = datos.url_mcp.strip()
+    try:
+        herramientas = await probar_enlace(url_central, datos.api_key.strip())
+    except EnlaceError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    if "registrar_enlace_gd" not in herramientas:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "La central responde, pero esa key no es de tipo \"GD enlazada\" (o su servidor es anterior a esta función)")
+
+    id_key_propia, key_propia = await emitir_key_gd_enlazada(proyecto["id"], _nombre_key_para(datos.nombre.strip()))
+    try:
+        await llamar_enlace(url_central, datos.api_key.strip(), "registrar_enlace_gd",
+                            {"url_mcp": url_propia, "api_key": key_propia})
+    except EnlaceError as e:
+        await revocar_key(id_key_propia)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"La central no aceptó el enlace: {e}")
+
+    enlaces = EnlacesCRUD(get_db_config(proyecto["id"]))
+    id_enlace = await enlaces.crear(datos.nombre.strip(), url_central, datos.api_key.strip(), SENTIDO_CENTRAL, id_key_propia)
+    return {k: v for k, v in (await enlaces.obtener(id_enlace)).items() if k != "api_key_cifrada"}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/enlaces/{id_enlace}/probar")
+async def probar_enlace_existente(
+    id_proyecto: int, id_enlace: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    enlace = await EnlacesCRUD(get_db_config(proyecto["id"])).obtener_con_clave(id_enlace)
+    if not enlace:
+        raise HTTPException(404, "Enlace no encontrado")
+    try:
+        herramientas = await probar_enlace(enlace["url_mcp"], enlace["api_key"])
+    except EnlaceError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return {"ok": True, "herramientas": herramientas}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/enlaces/{id_enlace}/activo")
+async def cambiar_activo_enlace(
+    id_proyecto: int, id_enlace: int, datos: dict, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    enlace = await EnlacesCRUD(get_db_config(proyecto["id"])).cambiar_activo(id_enlace, bool(datos.get("activo")))
+    if not enlace:
+        raise HTTPException(404, "Enlace no encontrado")
+    return {k: v for k, v in enlace.items() if k != "api_key_cifrada"}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/enlaces/{id_enlace}", status_code=status.HTTP_204_NO_CONTENT)
+async def desenlazar(
+    id_proyecto: int, id_enlace: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    """Deshace los dos sentidos desde cualquiera de los dos lados: avisa a
+    la otra GD (eliminar_enlace_gd: borra su fila y revoca la key que nos
+    dio), revoca la key que le dimos y borra el enlace. Si la otra GD no
+    responde se sigue igual — lo importante es que aquí no quede acceso."""
+    enlaces = EnlacesCRUD(get_db_config(proyecto["id"]))
+    enlace = await enlaces.obtener_con_clave(id_enlace)
+    if not enlace:
+        raise HTTPException(404, "Enlace no encontrado")
+    try:
+        await llamar_enlace(enlace["url_mcp"], enlace["api_key"], "eliminar_enlace_gd")
+    except EnlaceError as e:
+        print(f"[enlaces] la otra GD no respondió al desenlazar ({enlace['url_mcp']}): {e}")
+    await revocar_key(enlace["id_api_key_emitida"])
+    await enlaces.eliminar(id_enlace)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/preguntas-pendientes")
+async def listar_preguntas_pendientes(
+    id_proyecto: int, estado: str | None = None, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    return await PreguntasPendientesCRUD(get_db_config(proyecto["id"])).listar_por_estado(estado or None)
+
+
+@app.put("/v1/proyectos/{id_proyecto}/preguntas-pendientes/{id_pregunta}/estado")
+async def cambiar_estado_pregunta_pendiente(
+    id_proyecto: int, id_pregunta: int, datos: dict, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    estado = datos.get("estado")
+    if estado not in ("pendiente", "resuelta"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "estado debe ser 'pendiente' o 'resuelta'")
+    pregunta = await PreguntasPendientesCRUD(get_db_config(proyecto["id"])).cambiar_estado(id_pregunta, estado)
+    if not pregunta:
+        raise HTTPException(404, "Pregunta no encontrada")
+    return pregunta
+
+
+@app.get("/v1/proyectos/{id_proyecto}/uso-enlaces")
+async def resumen_uso_enlaces(
+    id_proyecto: int, mes: str, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    """`mes` = YYYY-MM. Lo que cada GD enlazada consumió de esta central,
+    para repercutírselo — la factura se hace fuera con este informe."""
+    if len(mes) != 7 or mes[4] != "-" or not (mes[:4] + mes[5:]).isdigit():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "mes debe tener el formato YYYY-MM")
+    filas = await UsoEnlacesCRUD(get_db_config(proyecto["id"])).resumen_mensual(mes)
+    return [{**f, "coste_estimado": float(f["coste_estimado"] or 0)} for f in filas]
+
+
 # --- Formulario de credencial (enlace de un solo uso) ---
 # Solo para clientes MCP sin soporte de elicitation (PonNodo, ver
 # mcp_server/herramientas/_herr_credenciales.py) — el resto sigue usando el
@@ -1727,7 +1887,7 @@ async def emitir_api_key(
     id_proyecto: int, datos: NuevaApiKey, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
     if datos.id_rol not in ROLES_API_KEY:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una API key solo puede ser operador o invitado")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una API key solo puede ser operador, invitado o GD enlazada")
     key = generar_api_key()
     id_api_key = await _api_keys.insert({
         "id_proyecto": id_proyecto,
@@ -1948,6 +2108,165 @@ async def listar_scripts_documento(
 ) -> list[dict]:
     config = get_db_config(proyecto["id"])
     return await DocumentosScriptsCRUD(config).listar_scripts_de_documento(id_documento)
+
+
+# ---------- Aprendizajes (ver docs → "Aprendizaje de la central") ----------
+# Solo admin: decide qué se aspira de otra empresa y qué pasa a la base común.
+
+class NuevoAprendizaje(BaseModel):
+    id_enlace: int
+    id_documento: int
+
+
+class EdicionAprendizaje(BaseModel):
+    markdown_anonimizado: str
+
+
+class RechazoAprendizaje(BaseModel):
+    motivo: str | None = None
+
+
+async def _enlazada_o_404(config: dict, id_enlace: int) -> dict:
+    enlace = await EnlacesCRUD(config).obtener_con_clave(id_enlace)
+    if not enlace or enlace["sentido"] != SENTIDO_ENLAZADA:
+        raise HTTPException(404, "Esa GD no está enlazada como enlazada nuestra")
+    return enlace
+
+
+async def _aprendizaje_o_404(config: dict, id_aprendizaje: int, estado_esperado: str | None = None) -> dict:
+    aprendizaje = await AprendizajesCRUD(config).obtener(id_aprendizaje)
+    if not aprendizaje:
+        raise HTTPException(404, "Aprendizaje no encontrado")
+    if estado_esperado and aprendizaje["estado"] != estado_esperado:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Este aprendizaje está en estado '{aprendizaje['estado']}', no '{estado_esperado}'")
+    return aprendizaje
+
+
+async def _documento_de_origen(enlace: dict, id_documento: int) -> dict:
+    try:
+        return await llamar_enlace(enlace["url_mcp"], enlace["api_key"], "obtener_documento_completo_gd", {"id_documento": id_documento})
+    except EnlaceError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/enlaces/{id_enlace}/documentos")
+async def listar_documentos_de_enlazada(
+    id_proyecto: int, id_enlace: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    """Documentos no reservados de una GD enlazada, con el estado del
+    aprendizaje si ya se aspiró alguno — para elegir cuáles aspirar."""
+    config = get_db_config(proyecto["id"])
+    enlace = await _enlazada_o_404(config, id_enlace)
+    try:
+        documentos = await llamar_enlace(enlace["url_mcp"], enlace["api_key"], "buscar_documentos_gd", {"limite": 200})
+    except EnlaceError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    aprendizajes = AprendizajesCRUD(config)
+    salida = []
+    for d in documentos or []:
+        existente = await aprendizajes.obtener_por_origen(id_enlace, d["id"])
+        salida.append({
+            "id_documento": d["id"], "nombre": d["nombre"], "tipo_documento": d["tipo_documento"],
+            "fecha_alta": d.get("fecha_alta"), "estado_aprendizaje": existente["estado"] if existente else None,
+            "id_aprendizaje": existente["id"] if existente else None,
+        })
+    return salida
+
+
+@app.post("/v1/proyectos/{id_proyecto}/aprendizajes")
+async def aspirar_aprendizaje(
+    id_proyecto: int, datos: NuevoAprendizaje, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Paso 1: la central trae el documento, la IA lo resume y queda como
+    candidato. El texto completo no se guarda."""
+    config = get_db_config(proyecto["id"])
+    enlace = await _enlazada_o_404(config, datos.id_enlace)
+    aprendizajes = AprendizajesCRUD(config)
+    if await aprendizajes.obtener_por_origen(datos.id_enlace, datos.id_documento):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ese documento ya se aspiró")
+    documento = await _documento_de_origen(enlace, datos.id_documento)
+    try:
+        return await aprendizajes.crear_candidato(proyecto["id"], enlace, documento)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/aprendizajes")
+async def listar_aprendizajes(
+    id_proyecto: int, estado: str | None = None, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> list[dict]:
+    return await AprendizajesCRUD(get_db_config(proyecto["id"])).listar_por_estado(estado or None)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}")
+async def obtener_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    aprendizaje = await _aprendizaje_o_404(get_db_config(proyecto["id"]), id_aprendizaje)
+    return {**aprendizaje, "sustituciones": json.loads(aprendizaje["sustituciones"] or "[]")}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}/via-libre")
+async def dar_via_libre_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Paso 2: se vuelve a traer el documento completo, la IA lo reescribe
+    sin datos identificativos y queda pendiente de revisión."""
+    config = get_db_config(proyecto["id"])
+    aprendizaje = await _aprendizaje_o_404(config, id_aprendizaje, ESTADO_CANDIDATO)
+    enlace = await _enlazada_o_404(config, aprendizaje["id_enlace"])
+    documento = await _documento_de_origen(enlace, aprendizaje["id_documento_origen"])
+    try:
+        return await AprendizajesCRUD(config).anonimizar(proyecto["id"], aprendizaje, documento["markdown"])
+    except ValueError as e:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
+
+
+@app.put("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}")
+async def editar_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, datos: EdicionAprendizaje,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    await _aprendizaje_o_404(config, id_aprendizaje, ESTADO_PENDIENTE_REVISION)
+    return await AprendizajesCRUD(config).editar_markdown(id_aprendizaje, datos.markdown_anonimizado)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}/aprobar")
+async def aprobar_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Paso 3: la copia anonimizada pasa a ser un documento normal de esta
+    central (compartible como cualquier otro)."""
+    config = get_db_config(proyecto["id"])
+    aprendizaje = await _aprendizaje_o_404(config, id_aprendizaje, ESTADO_PENDIENTE_REVISION)
+    fecha = aprendizaje["fecha_documento"] or datetime.now(timezone.utc).date()
+    resultado = await guardar_documento(
+        config, aprendizaje["nombre"], aprendizaje["tipo_documento"], aprendizaje["markdown_anonimizado"], str(fecha),
+    )
+    await _reindexar_si_semantico(config, proyecto["id"], resultado["id_documento"], resultado["id_version"], aprendizaje["markdown_anonimizado"])
+    return await AprendizajesCRUD(config).marcar_aprobado(id_aprendizaje, resultado["id_documento"])
+
+
+@app.post("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}/rechazar")
+async def rechazar_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, datos: RechazoAprendizaje,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    aprendizaje = await _aprendizaje_o_404(config, id_aprendizaje)
+    if aprendizaje["estado"] not in (ESTADO_CANDIDATO, ESTADO_PENDIENTE_REVISION):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se puede rechazar un candidato o uno pendiente de revisión")
+    return await AprendizajesCRUD(config).rechazar(id_aprendizaje, datos.motivo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/aprendizajes/{id_aprendizaje}/reabrir")
+async def reabrir_aprendizaje(
+    id_proyecto: int, id_aprendizaje: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    await _aprendizaje_o_404(config, id_aprendizaje, ESTADO_RECHAZADO)
+    return await AprendizajesCRUD(config).volver_a_candidato(id_aprendizaje)
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

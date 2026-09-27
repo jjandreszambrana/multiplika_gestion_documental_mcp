@@ -12,7 +12,7 @@ from fastmcp.utilities.types import File, Image
 from mcp.shared.exceptions import MCPError
 from pydantic import BaseModel, Field, create_model
 
-from ._anotaciones import SOLO_LECTURA
+from ._anotaciones import SOLO_LECTURA, TAGS_GD_ENLAZADA, es_gd_enlazada, origen_enlazada
 from ._capacidades_elicitacion import puede_elicitar_formulario
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
@@ -20,6 +20,7 @@ from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
+from ..database.modelos._mod_enlaces import UsoEnlacesCRUD, anotar_sin_resultados, consultar_centrales
 from ..database.modelos._mod_estilos import EstilosCRUD
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
@@ -356,7 +357,7 @@ async def listar_documentos_por_caducar_gd(dias: int = 30) -> list[dict]:
     return await VersionesCRUD(config).listar_por_caducar(dias)
 
 
-@mcp_app.tool(annotations=SOLO_LECTURA)
+@mcp_app.tool(annotations=SOLO_LECTURA, tags=TAGS_GD_ENLAZADA)
 async def buscar_documentos_gd(
     referencia: str | None = None,
     tipo_documento: str | None = None,
@@ -368,26 +369,49 @@ async def buscar_documentos_gd(
     documento ya existe antes de guardar una supuesta nueva versión. Por
     defecto no incluye documentos archivados; usa incluir_archivados=True
     para verlos también (por ejemplo, antes de desarchivar uno)."""
-    config, _ = await _contexto_actual()
-    return await DocumentosCRUD(config).buscar(referencia, tipo_documento, limite, incluir_archivados)
+    proyecto = await resolver_proyecto_actual()
+    return await DocumentosCRUD(get_db_config(proyecto["id"])).buscar(
+        referencia, tipo_documento, limite, incluir_archivados, solo_compartidos=es_gd_enlazada(proyecto),
+    )
 
 
-@mcp_app.tool(annotations=SOLO_LECTURA)
-async def consultar_documentos_gd(pregunta: str, limite: int = 5) -> list[dict]:
-    """Responde preguntas del cliente buscando en el contenido de sus
-    documentos. Devuelve los fragmentos más relevantes con su documento,
-    tipo, fecha e identificadores, para citar la fuente y poder pedir el
-    documento completo si un fragmento no basta."""
-    config, id_proyecto = await _contexto_actual()
+async def _buscar_contenido(config: dict, id_proyecto: int, pregunta: str, limite: int, solo_compartidos: bool) -> list[dict]:
     configuracion = ConfiguracionCRUD(config)
     modo = await configuracion.obtener_modo_busqueda()
     if modo == "fulltext":
-        return await VersionesCRUD(config).buscar_fulltext(pregunta, limite)
+        return await VersionesCRUD(config).buscar_fulltext(pregunta, limite, solo_compartidos)
 
     proveedor_embedding = await configuracion.obtener_proveedor_embedding()
     api_key = await _clave_embedding_o_error(proveedor_embedding, id_proyecto)
     (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [pregunta])
-    return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite)
+    return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite, solo_compartidos)
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags=TAGS_GD_ENLAZADA)
+async def consultar_documentos_gd(pregunta: str, limite: int = 5, cadena_gds: list[str] | None = None) -> list[dict]:
+    """Responde preguntas del cliente buscando en el contenido de sus
+    documentos. Devuelve los fragmentos más relevantes con su documento,
+    tipo, fecha e identificadores, para citar la fuente y poder pedir el
+    documento completo si un fragmento no basta.
+
+    `cadena_gds` es de uso interno entre gestiones documentales enlazadas
+    (ver docs → "GDs enlazadas"): no lo rellenes."""
+    proyecto = await resolver_proyecto_actual()
+    config = get_db_config(proyecto["id"])
+    enlazada = es_gd_enlazada(proyecto)
+    resultados = await _buscar_contenido(config, proyecto["id"], pregunta, limite, solo_compartidos=enlazada)
+    if not enlazada:
+        return resultados
+
+    # Nos pregunta otra GD: se le oculta lo reservado (ya hecho arriba), se
+    # apunta el uso, la pregunta sube a nuestras propias centrales si las
+    # hay, y si nadie tiene nada queda anotada como pendiente.
+    origen = origen_enlazada(proyecto)
+    await UsoEnlacesCRUD(config).registrar(origen, "consulta")
+    resultados += await consultar_centrales(config, pregunta, limite, cadena_gds)
+    if not any("fragmento" in r for r in resultados):
+        await anotar_sin_resultados(config, pregunta, origen)
+    return resultados
 
 
 @mcp_app.tool()
@@ -416,16 +440,21 @@ async def activar_busqueda_semantica_gd() -> dict:
     }
 
 
-@mcp_app.tool(annotations=SOLO_LECTURA)
+@mcp_app.tool(annotations=SOLO_LECTURA, tags=TAGS_GD_ENLAZADA)
 async def obtener_documento_completo_gd(id_documento: int, id_version: int | None = None) -> dict:
     """Devuelve el markdown completo de un documento (la versión vigente,
     o `id_version` si se indica), para cuando un fragmento de
     consultar_documentos_gd no basta. Usa buscar_documentos_gd antes si no
     conoces el id_documento."""
-    config, _ = await _contexto_actual()
+    proyecto = await resolver_proyecto_actual()
+    config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).obtener(id_documento)
-    if not documento:
+    # A otra GD un documento reservado se le presenta como inexistente: ni
+    # siquiera debe saber que está ahí.
+    if not documento or (es_gd_enlazada(proyecto) and documento["reservado"]):
         raise ToolError(f"No existe ningún documento con id {id_documento}")
+    if es_gd_enlazada(proyecto):
+        await UsoEnlacesCRUD(config).registrar(origen_enlazada(proyecto), "documento_completo")
     estilo = await EstilosCRUD(config).obtener(documento["id_estilo"]) if documento["id_estilo"] else None
     version = await VersionesCRUD(config).obtener_completo(id_documento, id_version)
     if not version:
@@ -459,6 +488,20 @@ async def archivar_documento_gd(id_documento: int) -> dict:
     desarchivar_documento_gd."""
     config, _ = await _contexto_actual()
     documento = await DocumentosCRUD(config).archivar(id_documento)
+    if not documento:
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    return documento
+
+
+@mcp_app.tool()
+async def marcar_reservado_gd(id_documento: int, reservado: bool = True) -> dict:
+    """Marca (o desmarca, con reservado=False) un documento como reservado:
+    las gestiones documentales enlazadas a esta no lo verán en sus
+    consultas ni podrán pedirlo completo. Para los usuarios de este
+    proyecto no cambia nada. Solo tiene sentido si esta GD actúa de
+    central para otras (ver listar_enlaces_gd)."""
+    config, _ = await _contexto_actual()
+    documento = await DocumentosCRUD(config).marcar_reservado(id_documento, reservado)
     if not documento:
         raise ToolError(f"No existe ningún documento con id {id_documento}")
     return documento

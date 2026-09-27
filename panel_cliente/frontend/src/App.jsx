@@ -32,6 +32,7 @@ import Usuarios from "./paginas/Usuarios"
 import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
 import Ayuda from "./paginas/Ayuda"
+import Enlaces from "./paginas/Enlaces"
 
 export default function App() {
   const [sesion, setSesion] = useState(() => {
@@ -173,6 +174,8 @@ export default function App() {
             />
           ) : vista === "api-keys" ? (
             <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "enlaces" ? (
+            <Enlaces proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "contexto" ? (
             <Contexto proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "credenciales" ? (

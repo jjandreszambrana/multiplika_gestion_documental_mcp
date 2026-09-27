@@ -9,6 +9,7 @@ const ID_ROL_OPERADOR = "3"
 const ROLES_API_KEY = [
   { value: ID_ROL_OPERADOR, label: "Lectura y escritura" },
   { value: "4", label: "Solo lectura" },
+  { value: "5", label: "GD enlazada (otra gestión documental que consulta esta)" },
 ]
 
 export default function ApiKeys({ proyecto, onVolver }) {

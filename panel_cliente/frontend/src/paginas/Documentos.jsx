@@ -296,6 +296,11 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
                       <Badge color="gray" variant="light" radius="sm" tt="none" fw={500}>
                         {r.tipo_documento}
                       </Badge>
+                      {r.reservado && (
+                        <Badge ml="6" color="orange" variant="light" radius="sm" tt="none" fw={500}>
+                          Reservado
+                        </Badge>
+                      )}
                     </Table.Td>
                     <Table.Td>
                       {q ? (

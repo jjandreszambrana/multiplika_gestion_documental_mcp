@@ -21,6 +21,7 @@ class DocumentosCRUD(AsyncCrudBase):
         incluir_archivados: bool = False,
         fecha_desde: str | None = None,
         fecha_hasta: str | None = None,
+        solo_compartidos: bool = False,
     ) -> list[dict]:
         """Búsqueda por metadatos (nombre, tipo, fecha de alta), no por
         contenido — para exploración del cliente y para evitar duplicados
@@ -41,6 +42,8 @@ class DocumentosCRUD(AsyncCrudBase):
             params.append(tipo_documento)
         if not incluir_archivados:
             condiciones.append("d.archivado = false")
+        if solo_compartidos:  # quien pregunta es otra GD enlazada: nada reservado
+            condiciones.append("d.reservado = false")
         if fecha_desde and fecha_hasta:
             condiciones.append("d.fecha_alta BETWEEN %s AND %s")
             params += [fecha_desde, f"{fecha_hasta} 23:59:59"]
@@ -99,6 +102,13 @@ class DocumentosCRUD(AsyncCrudBase):
         if not documento:
             return None
         await self.update(id_documento, {"tipo_documento": tipo_documento, "ambito": ambito})
+        return await self.obtener(id_documento)
+
+    async def marcar_reservado(self, id_documento: int, reservado: bool) -> dict | None:
+        """Reservado = no se comparte con GDs enlazadas (ver gd_enlaces)."""
+        if not await self.obtener(id_documento):
+            return None
+        await self.update(id_documento, {"reservado": reservado})
         return await self.obtener(id_documento)
 
     async def asignar_estilo(self, id_documento: int, id_estilo: int | None) -> dict | None:

@@ -26,6 +26,10 @@ CAMPOS_DOCUMENTOS = [
     Columna(nombre="archivado", tipo="BOOLEAN", not_null=True, default=False,
             comentario="True si el documento ya no aplica (anulado, subido por error...): sigue "
                        "guardado pero desaparece de las búsquedas hasta desarchivarlo"),
+    Columna(nombre="reservado", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="True si NO se comparte con otras gestiones documentales enlazadas (ver "
+                       "gd_enlaces): una key de rol gd_enlazada no lo ve en búsquedas ni puede "
+                       "pedirlo completo. Los usuarios del propio proyecto lo ven igual"),
     Columna(nombre="id_estilo", tipo="INT",
             comentario="Opcional — estilo de informe (→ gd_estilos.id) al que este documento "
                        "sirve de guía: si define cómo elaborar un informe de ese tipo. NULL si no "

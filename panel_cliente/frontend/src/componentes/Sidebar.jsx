@@ -15,6 +15,7 @@ import {
   IconInbox,
   IconMessageCircle,
   IconCode,
+  IconLink,
   IconLogout,
   IconHeadset,
   IconSun,
@@ -103,6 +104,7 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
             <Item icon={IconBriefcase} label="Contexto de negocio" active={vista === "contexto"} onClick={() => onNavigate("contexto")} />
             <Item icon={IconUsers} label="Usuarios" active={vista === "usuarios"} onClick={() => onNavigate("usuarios")} />
             <Item icon={IconKey} label="API keys" active={vista === "api-keys"} onClick={() => onNavigate("api-keys")} />
+            <Item icon={IconLink} label="GDs enlazadas" active={vista === "enlaces"} onClick={() => onNavigate("enlaces")} />
             <Item icon={IconLock} label="Credenciales" active={vista === "credenciales"} onClick={() => onNavigate("credenciales")} />
             <Item icon={IconCertificate} label="Certificados" active={vista === "certificados"} onClick={() => onNavigate("certificados")} />
             <Item

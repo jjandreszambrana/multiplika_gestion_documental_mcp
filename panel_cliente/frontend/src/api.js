@@ -189,6 +189,8 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
   desarchivarDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/desarchivar`),
+  cambiarReservadoDocumento: (idProyecto, idDocumento, reservado) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/documentos/${idDocumento}/reservado`, { reservado }),
   actualizarMetadatosDocumento: (idProyecto, idDocumento, metadatos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/documentos/${idDocumento}/metadatos`, metadatos),
   guardarBorradorDocumento: (idProyecto, idDocumento, idVersion, markdown) =>
@@ -479,4 +481,35 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/confirmar`, {
       confirmacion_id: confirmacionId, aceptar,
     }),
+
+  listarEnlaces: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/enlaces`),
+  enlazarConCentral: (idProyecto, nombre, urlMcp, apiKey) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/enlaces`, { nombre, url_mcp: urlMcp, api_key: apiKey }),
+  probarEnlace: (idProyecto, idEnlace) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/enlaces/${idEnlace}/probar`),
+  cambiarActivoEnlace: (idProyecto, idEnlace, activo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/enlaces/${idEnlace}/activo`, { activo }),
+  desenlazar: (idProyecto, idEnlace) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/enlaces/${idEnlace}`),
+  listarPreguntasPendientes: (idProyecto, estado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/preguntas-pendientes${estado ? `?estado=${estado}` : ""}`),
+  cambiarEstadoPreguntaPendiente: (idProyecto, idPregunta, estado) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/preguntas-pendientes/${idPregunta}/estado`, { estado }),
+  resumenUsoEnlaces: (idProyecto, mes) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/uso-enlaces?mes=${mes}`),
+
+  listarDocumentosDeEnlazada: (idProyecto, idEnlace) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/enlaces/${idEnlace}/documentos`),
+  aspirarAprendizaje: (idProyecto, idEnlace, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes`, { id_enlace: idEnlace, id_documento: idDocumento }),
+  listarAprendizajes: (idProyecto, estado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/aprendizajes${estado ? `?estado=${estado}` : ""}`),
+  obtenerAprendizaje: (idProyecto, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/aprendizajes/${id}`),
+  darViaLibreAprendizaje: (idProyecto, id) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/via-libre`),
+  editarAprendizaje: (idProyecto, id, markdown) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/aprendizajes/${id}`, { markdown_anonimizado: markdown }),
+  aprobarAprendizaje: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/aprobar`),
+  rechazarAprendizaje: (idProyecto, id, motivo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/rechazar`, { motivo: motivo || null }),
+  reabrirAprendizaje: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/reabrir`),
 }

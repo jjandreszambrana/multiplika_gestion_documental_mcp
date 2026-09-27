@@ -19,7 +19,9 @@ class ChunksCRUD(AsyncCrudBase):
         db = AsyncDatabase(**self.config)
         await db.query(f'DELETE FROM "{TABLA_CHUNKS.nombre}" WHERE id_version = %s', (id_version,))
 
-    async def buscar_semantico(self, embedding_pregunta: list[float], limite: int = 5) -> list[dict]:
+    async def buscar_semantico(
+        self, embedding_pregunta: list[float], limite: int = 5, solo_compartidos: bool = False
+    ) -> list[dict]:
         db = AsyncDatabase(**self.config)
         vector_sql = "[" + ",".join(str(x) for x in embedding_pregunta) + "]"
         sql = f"""
@@ -30,6 +32,7 @@ class ChunksCRUD(AsyncCrudBase):
             JOIN "{TABLA_VERSIONES.nombre}" v ON v.id = c.id_version
             JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = v.id_documento
             WHERE (v.vigente = true OR d.todas_versiones_buscables = true) AND d.archivado = false
+              {"AND d.reservado = false" if solo_compartidos else ""}
             ORDER BY c.embedding <=> %s
             LIMIT %s
         """

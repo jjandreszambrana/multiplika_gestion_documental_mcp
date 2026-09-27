@@ -156,7 +156,7 @@ class VersionesCRUD(AsyncCrudBase):
         )
         return await self.obtener(version["id"])
 
-    async def buscar_fulltext(self, pregunta: str, limite: int = 5) -> list[dict]:
+    async def buscar_fulltext(self, pregunta: str, limite: int = 5, solo_compartidos: bool = False) -> list[dict]:
         """Fragmentos de las versiones buscables (vigentes, o todas si el
         documento tiene todas_versiones_buscables=true) que casan con
         `pregunta`, con los metadatos del documento para citar la fuente.
@@ -176,6 +176,7 @@ class VersionesCRUD(AsyncCrudBase):
             WHERE v.tsvector_actual @@ {tsquery}
               AND (v.vigente = true OR d.todas_versiones_buscables = true)
               AND d.archivado = false
+              {"AND d.reservado = false" if solo_compartidos else ""}
             ORDER BY relevancia DESC
             LIMIT %s
         """

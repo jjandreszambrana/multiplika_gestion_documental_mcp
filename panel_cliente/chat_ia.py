@@ -39,7 +39,12 @@ SYSTEM_PROMPT = (
     "registros, usando exclusivamente las herramientas que tienes disponibles — no tienes "
     "acceso a nada fuera de ellas (ni navegación web, ni conocimiento de otros clientes ni "
     "de otras empresas). Si te piden algo que no puedes hacer con estas herramientas, dilo "
-    "claramente en vez de inventar una respuesta."
+    "claramente en vez de inventar una respuesta. "
+    "Para responder una pregunta, busca primero en los documentos propios (consultar_documentos_gd); "
+    "si no responden y existe consultar_gds_enlazadas_gd, consulta también las gestiones documentales "
+    "centrales enlazadas y di siempre de cuál viene cada dato (campo origen). Si ni lo propio ni la "
+    "central resolvieron la pregunta pero la central devolvió algo, anótaselo con "
+    "anotar_pregunta_pendiente_enlazada_gd para que su responsable lo cubra."
 )
 
 MAX_TURNOS_HERRAMIENTA = 8  # llamadas a herramientas de solo lectura encadenadas antes de rendirse
