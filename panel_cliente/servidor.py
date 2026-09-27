@@ -48,7 +48,7 @@ from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from database.control.dependencias._dep_roles import ID_ROL_OPERADOR
 from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
-from lib.api_keys import generar_api_key
+from lib.api_keys import generar_api_key, nombre_api_key_disponible
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
@@ -1524,6 +1524,13 @@ async def listar_log_certificado(
     ]
 
 
+async def _nombre_api_key_o_400(id_proyecto: int, nombre: str, id_excluir: int | None = None) -> str:
+    try:
+        return await nombre_api_key_disponible(id_proyecto, nombre, id_excluir)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
 # ---------- GDs enlazadas (ver docs/gestion-documental.md → "GDs enlazadas") ----------
 # Todo de administración: enlazar es dar acceso de lectura a otra empresa.
 
@@ -1564,7 +1571,8 @@ async def enlazar_con_central(
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "La central responde, pero esa key no es de tipo \"GD enlazada\" (o su servidor es anterior a esta función)")
 
-    id_key_propia, key_propia = await emitir_key_gd_enlazada(proyecto["id"], _nombre_key_para(datos.nombre.strip()))
+    nombre_key_propia = await _nombre_api_key_o_400(proyecto["id"], _nombre_key_para(datos.nombre.strip()))
+    id_key_propia, key_propia = await emitir_key_gd_enlazada(proyecto["id"], nombre_key_propia)
     try:
         await llamar_enlace(url_central, datos.api_key.strip(), "registrar_enlace_gd",
                             {"url_mcp": url_propia, "api_key": key_propia})
@@ -1870,8 +1878,13 @@ _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
 
 
 class NuevaApiKey(BaseModel):
-    nombre: str | None = None
+    nombre: str  # obligatorio: ver lib/api_keys.py::nombre_api_key_disponible del núcleo
     id_rol: int = ID_ROL_OPERADOR
+
+
+class RenombrarApiKey(BaseModel):
+    nombre: str
+
 
 
 @app.get("/v1/proyectos/{id_proyecto}/api-keys")
@@ -1888,18 +1901,32 @@ async def emitir_api_key(
 ) -> dict:
     if datos.id_rol not in ROLES_API_KEY:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una API key solo puede ser operador, invitado o GD enlazada")
+    nombre = await _nombre_api_key_o_400(id_proyecto, datos.nombre)
     key = generar_api_key()
     id_api_key = await _api_keys.insert({
         "id_proyecto": id_proyecto,
-        "nombre": datos.nombre,
+        "nombre": nombre,
         "id_rol": datos.id_rol,
         "prefijo": key["prefijo"],
         "api_key_cifrada": key["api_key_cifrada"],
     })
     return {
-        "id": id_api_key, "nombre": datos.nombre, "id_rol": datos.id_rol,
+        "id": id_api_key, "nombre": nombre, "id_rol": datos.id_rol,
         "prefijo": key["prefijo"], "api_key": key["api_key"],
     }
+
+
+@app.put("/v1/api-keys/{id_api_key}")
+async def renombrar_api_key(
+    id_api_key: int, datos: RenombrarApiKey, fila: dict = Depends(api_key_de_gestion_documental)
+) -> dict:
+    """Cambiar el nombre no toca la key en sí: sirve para identificar las
+    que se emitieron sin nombre, sin revocarlas ni reconfigurar el cliente
+    que las usa."""
+    nombre = await _nombre_api_key_o_400(fila["id_proyecto"], datos.nombre, id_excluir=id_api_key)
+    await _api_keys.update(id_api_key, {"nombre": nombre})
+    actualizada = await _api_keys.obtener(id_api_key)
+    return {k: v for k, v in actualizada.items() if k != "api_key_cifrada"}
 
 
 @app.post("/v1/api-keys/{id_api_key}/revocar")

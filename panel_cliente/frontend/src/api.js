@@ -225,7 +225,8 @@ export const api = {
 
   listarApiKeys: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/api-keys`),
   emitirApiKey: (idProyecto, nombre, idRol) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre: nombre || null, id_rol: idRol }),
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre, id_rol: idRol }),
+  renombrarApiKey: (idApiKey, nombre) => peticion(BASE_CLIENTE, "PUT", `/api-keys/${idApiKey}`, { nombre }),
   revocarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "POST", `/api-keys/${idApiKey}/revocar`),
   eliminarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "DELETE", `/api-keys/${idApiKey}`),
 

@@ -12,6 +12,66 @@ const ROLES_API_KEY = [
   { value: "5", label: "GD enlazada (otra gestión documental que consulta esta)" },
 ]
 
+// El nombre es lo ÚNICO por lo que se puede reconocer una key una vez
+// emitida (el valor no se vuelve a enseñar y el prefijo no dice nada), así
+// que además de pedirlo al emitirla se puede cambiar aquí mismo — las keys
+// emitidas antes de que fuera obligatorio salen marcadas "Sin nombre".
+function NombreEditable({ apiKey, onGuardado, onError }) {
+  const [editando, setEditando] = useState(false)
+  const [valor, setValor] = useState(apiKey.nombre || "")
+  const [guardando, setGuardando] = useState(false)
+
+  async function guardar(evento) {
+    evento.preventDefault()
+    setGuardando(true)
+    try {
+      await api.renombrarApiKey(apiKey.id, valor.trim())
+      setEditando(false)
+      await onGuardado()
+    } catch (err) {
+      onError(err.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  if (!editando) {
+    return (
+      <Group gap="xs" wrap="nowrap">
+        {apiKey.nombre ? <Text fw={500}>{apiKey.nombre}</Text> : <Text c="orange">Sin nombre</Text>}
+        <Anchor
+          component="button" type="button" fz="12px"
+          onClick={() => {
+            setValor(apiKey.nombre || "")
+            setEditando(true)
+          }}
+        >
+          {apiKey.nombre ? "Renombrar" : "Poner nombre"}
+        </Anchor>
+      </Group>
+    )
+  }
+
+  return (
+    <Group component="form" onSubmit={guardar} gap="xs" wrap="nowrap">
+      <TextInput
+        aria-label="Nombre de la API key"
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        size="xs"
+        required
+        autoFocus
+      />
+      <Button type="submit" size="compact-sm" loading={guardando}>
+        Guardar
+      </Button>
+      <Anchor component="button" type="button" fz="12px" c="dimmed" onClick={() => setEditando(false)}>
+        Cancelar
+      </Anchor>
+    </Group>
+  )
+}
+
 export default function ApiKeys({ proyecto, onVolver }) {
   const [keys, setKeys] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -42,7 +102,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
     setEmitiendo(true)
     setError(null)
     try {
-      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva, Number(idRolNueva))
+      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva.trim(), Number(idRolNueva))
       setKeyRecienEmitida(nueva.api_key)
       setNombreNueva("")
       await recargar()
@@ -102,9 +162,12 @@ export default function ApiKeys({ proyecto, onVolver }) {
 
       <Group component="form" onSubmit={emitir} align="flex-end" mb="xl">
         <TextInput
-          placeholder="Nombre para identificarla (opcional, ej. Claude Desktop de Juan)"
+          aria-label="Nombre de la API key"
+          label="Nombre con el que la reconocerás"
+          placeholder="Ej. Claude Desktop de Juan"
           value={nombreNueva}
           onChange={(e) => setNombreNueva(e.target.value)}
+          required
           style={{ flex: 1 }}
         />
         <Select
@@ -222,7 +285,9 @@ export default function ApiKeys({ proyecto, onVolver }) {
           <Table.Tbody>
             {keys.map((k) => (
               <Table.Tr key={k.id}>
-                <Table.Td>{k.nombre || "—"}</Table.Td>
+                <Table.Td>
+                  <NombreEditable apiKey={k} onGuardado={recargar} onError={setError} />
+                </Table.Td>
                 <Table.Td>{k.prefijo}</Table.Td>
                 <Table.Td>{ROLES_API_KEY.find((r) => r.value === String(k.id_rol))?.label}</Table.Td>
                 <Table.Td>
