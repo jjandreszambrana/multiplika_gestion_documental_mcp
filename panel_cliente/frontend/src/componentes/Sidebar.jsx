@@ -78,8 +78,8 @@ export default function Sidebar({
             {empresas.length > 1 ? (
               <Menu shadow="md" width={220} position="bottom-start">
                 <Menu.Target>
-                  <UnstyledButton style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-                    <Text size="11.5px" c="dimmed" truncate>
+                  <UnstyledButton style={{ display: "flex", alignItems: "center", gap: 4, width: "100%", minWidth: 0 }}>
+                    <Text size="11.5px" c="dimmed" truncate style={{ flex: 1, minWidth: 0 }}>
                       {proyecto.nombre}
                     </Text>
                     <IconArrowsRightLeft size={12} stroke={2} style={{ flexShrink: 0, opacity: 0.6 }} />
