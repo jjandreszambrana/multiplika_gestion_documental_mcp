@@ -110,6 +110,8 @@ export const api = {
   login: (email, password, idTenant) =>
     peticion(BASE_ADMIN, "POST", "/auth/login", { email, password, id_tenant: idTenant ?? null }),
   empresasDeEmail: (email) => peticion(BASE_ADMIN, "GET", `/auth/empresas?email=${encodeURIComponent(email)}`),
+  misEmpresas: () => peticion(BASE_ADMIN, "GET", "/auth/mis-empresas"),
+  cambiarEmpresa: (idTenant) => peticion(BASE_ADMIN, "POST", "/auth/cambiar-empresa", { id_tenant: idTenant }),
 
   listarProyectosDeLaEmpresa: (idTenant) => peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/proyectos`),
   verProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}`),

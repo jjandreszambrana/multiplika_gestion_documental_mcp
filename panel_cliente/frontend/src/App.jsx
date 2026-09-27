@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { AppShell, Container, Text } from "@mantine/core"
+import { AppShell, Container, Group, Text } from "@mantine/core"
+import { IconBuildingSkyscraper } from "@tabler/icons-react"
 import { api, cargarTokenGuardado, leerToken, setToken } from "./api"
 import Sidebar from "./componentes/Sidebar"
 
@@ -49,6 +50,7 @@ export default function App() {
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
   const [pendientesCount, setPendientesCount] = useState(0)
+  const [empresas, setEmpresas] = useState([])
 
   // Enlace directo del superadmin desde el panel de administración
   // (?token=...&id_proyecto=...): entra sin login ni selector — el
@@ -93,9 +95,27 @@ export default function App() {
       .catch(() => setPendientesCount(0))
   }, [proyecto, idDocumentoActivo, vista])
 
+  useEffect(() => {
+    if (!sesion || sesion.tipo !== "usuario") {
+      setEmpresas([])
+      return
+    }
+    api.misEmpresas().then(setEmpresas).catch(() => setEmpresas([]))
+  }, [sesion])
+
   function iniciarSesion(token) {
     setToken(token)
     setSesion(leerToken(token))
+  }
+
+  function cambiarEmpresa(idTenant) {
+    return api.cambiarEmpresa(idTenant).then(({ token }) => {
+      setToken(token)
+      setSesion(leerToken(token))
+      setProyecto(null)
+      localStorage.removeItem(CLAVE_PROYECTO)
+      navegar("documentos")
+    })
   }
 
   function elegirProyecto(p) {
@@ -154,8 +174,29 @@ export default function App() {
     )
   }
 
+  // Solo quien tiene cuenta en varias empresas ve esta franja — para
+  // todos los demás la pantalla queda exactamente igual que siempre. El
+  // motivo es evitar que alguien confunda los documentos de una empresa
+  // con los de otra tras cambiar de sesión (ver Sidebar, que ya deja
+  // cambiar de empresa sin volver a poner la contraseña).
+  const avisoEmpresa = empresas.length > 1
+
   return (
-    <AppShell navbar={{ width: 252, breakpoint: 0 }} padding="xl">
+    <AppShell
+      header={avisoEmpresa ? { height: 34 } : undefined}
+      navbar={{ width: 252, breakpoint: 0 }}
+      padding="xl"
+    >
+      {avisoEmpresa && (
+        <AppShell.Header>
+          <Group h="100%" justify="center" gap="6" bg="acento.6">
+            <IconBuildingSkyscraper size={14} color="white" stroke={2} />
+            <Text size="12.5px" fw={700} c="white" tt="uppercase" style={{ letterSpacing: ".03em" }}>
+              Estás viendo: {proyecto.nombre}
+            </Text>
+          </Group>
+        </AppShell.Header>
+      )}
       <Sidebar
         proyecto={proyecto}
         esSuperadmin={esSuperadmin}
@@ -163,6 +204,9 @@ export default function App() {
         pendientesCount={pendientesCount}
         onNavigate={navegar}
         onCerrarSesion={cerrarSesion}
+        empresas={empresas}
+        idTenantActual={sesion.id_tenant}
+        onCambiarEmpresa={cambiarEmpresa}
       />
       <AppShell.Main>
         <Container size="lg" px={0}>

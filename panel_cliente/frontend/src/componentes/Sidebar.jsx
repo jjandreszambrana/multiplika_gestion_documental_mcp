@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Avatar, Badge, Group, NavLink, Text, ThemeIcon, Tooltip, useMantineColorScheme } from "@mantine/core"
+import { ActionIcon, AppShell, Avatar, Badge, Group, Menu, NavLink, Text, ThemeIcon, Tooltip, UnstyledButton, useMantineColorScheme } from "@mantine/core"
 import {
   IconFileText,
   IconCategory,
@@ -20,6 +20,8 @@ import {
   IconHeadset,
   IconSun,
   IconMoonStars,
+  IconArrowsRightLeft,
+  IconCheck,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -42,7 +44,10 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
   )
 }
 
-export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount, onNavigate, onCerrarSesion }) {
+export default function Sidebar({
+  proyecto, esSuperadmin, vista, pendientesCount, onNavigate, onCerrarSesion,
+  empresas = [], idTenantActual, onCambiarEmpresa,
+}) {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
   // "auto" (el valor de partida, ver main.jsx) sigue el sistema operativo
   // de cada dispositivo — de ahí que el mismo usuario viera el panel
@@ -66,13 +71,39 @@ export default function Sidebar({ proyecto, esSuperadmin, vista, pendientesCount
           <ThemeIcon size={34} radius="md">
             <IconFileText size={19} stroke={1.9} />
           </ThemeIcon>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <Text fw={600} ff="heading" size="15.5px" lh={1.2} truncate>
               Gestión documental
             </Text>
-            <Text size="11.5px" c="dimmed" truncate>
-              {proyecto.nombre}
-            </Text>
+            {empresas.length > 1 ? (
+              <Menu shadow="md" width={220} position="bottom-start">
+                <Menu.Target>
+                  <UnstyledButton style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                    <Text size="11.5px" c="dimmed" truncate>
+                      {proyecto.nombre}
+                    </Text>
+                    <IconArrowsRightLeft size={12} stroke={2} style={{ flexShrink: 0, opacity: 0.6 }} />
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>Cambiar de empresa</Menu.Label>
+                  {empresas.map((empresa) => (
+                    <Menu.Item
+                      key={empresa.id_tenant}
+                      leftSection={empresa.id_tenant === idTenantActual ? <IconCheck size={14} /> : null}
+                      disabled={empresa.id_tenant === idTenantActual}
+                      onClick={() => onCambiarEmpresa(empresa.id_tenant)}
+                    >
+                      {empresa.nombre}
+                    </Menu.Item>
+                  ))}
+                </Menu.Dropdown>
+              </Menu>
+            ) : (
+              <Text size="11.5px" c="dimmed" truncate>
+                {proyecto.nombre}
+              </Text>
+            )}
           </div>
         </Group>
       </AppShell.Section>
