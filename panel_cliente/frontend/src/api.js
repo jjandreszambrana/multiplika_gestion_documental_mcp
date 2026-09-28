@@ -581,4 +581,14 @@ export const api = {
   rechazarAprendizaje: (idProyecto, id, motivo) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/rechazar`, { motivo: motivo || null }),
   reabrirAprendizaje: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/aprendizajes/${id}/reabrir`),
+
+  listarActividad: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (valor !== null && valor !== undefined && valor !== "") parametros.set(clave, valor)
+    }
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/actividad${query ? `?${query}` : ""}`)
+  },
+  listarQuienesActividad: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/actividad/quienes`),
 }

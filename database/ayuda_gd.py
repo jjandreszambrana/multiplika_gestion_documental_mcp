@@ -441,6 +441,37 @@ lo pides.
   "Avanzado", el campo \
   `imap_host` (y `imap_port` / `imap_seguridad` si no es el 993 con SSL).
 
+## Registro de actividad: quién cambió qué y cuándo
+
+Todo cambio que sale bien queda apuntado con su fecha, quién lo hizo, \
+desde dónde (tu IA con su clave, el chat del panel o un botón del \
+panel) y sobre qué: guardar, corregir, archivar, borrar, enviar, crear \
+reglas o scripts, etc. Las consultas y búsquedas no se apuntan, y nunca \
+se guardan contraseñas, valores de credenciales ni archivos. Lo que \
+tenga más de un año se borra solo.
+
+Puedes preguntarle a tu IA cosas como "¿quién archivó la factura \
+1234?", "¿qué se cambió ayer?" o "¿qué ha hecho Ana esta semana?". En \
+el panel está la pantalla "Actividad", con filtros por persona, fechas \
+y desde dónde, y cada documento tiene además su pestaña "Actividad" \
+con su propio historial. Lo ve cualquier usuario menos los invitados, \
+y las claves de invitado tampoco pueden consultarlo.
+
+Cuando el cambio viene de tu IA, el registro sabe qué **clave** usó, \
+no qué persona había detrás: si varias personas comparten una misma \
+clave, no se pueden distinguir. Para saber con exactitud quién hizo \
+cada cosa, que cada persona tenga su propia clave con su nombre.
+
+Para tu IA: usa `consultar_actividad_gd` cuando te pregunten quién \
+hizo algo, cuándo cambió algo o qué se ha hecho en un periodo — no lo \
+deduzcas de las fechas de los documentos. Para el historial de un \
+documento concreto, filtra por `tipo_objeto="documento"` y su \
+`id_objeto`. Responde siempre con quién, cuándo y desde dónde, y si \
+no aparece nada, dilo tal cual (puede que sea anterior a que existiera \
+el registro, que tenga más de un año o que fuera una consulta). Si \
+quien aparece es el nombre de una clave, dilo así ("se hizo con la \
+clave «X»"), sin inventar qué persona fue.
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:
@@ -450,6 +481,8 @@ Desde el panel (con tu usuario y contraseña de empresa) puedes:
   la fuente si la tiene, y el texto completo.
 - Archivar / desarchivar.
 - Subir documentos en bloque a la cola de pendientes.
+- Ver el registro de actividad (quién cambió qué y cuándo), en general \
+  o de un documento concreto — todos menos los invitados.
 - Ver los scripts que tu IA ha guardado y editar su título, descripción, \
   lenguaje y etiquetas (el código no se puede editar desde aquí).
 - Escribir y gestionar las reglas de comportamiento de tu IA, y ver lo \

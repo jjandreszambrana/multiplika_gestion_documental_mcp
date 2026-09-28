@@ -3,6 +3,7 @@ import { Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
+  IconActivity,
   IconAlertTriangle,
   IconArchive,
   IconArrowLeft,
@@ -28,6 +29,7 @@ import EntidadesDocumento from "../componentes/EntidadesDocumento"
 import ScriptsDocumento from "../componentes/ScriptsDocumento"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import EnviosDocumento from "../componentes/EnviosDocumento"
+import ActividadDocumento from "../componentes/ActividadDocumento"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
 
@@ -393,6 +395,13 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 <Tabs.Tab value="enviar" leftSection={<IconSend size={15} stroke={1.8} />}>
                   Enviar
                 </Tabs.Tab>
+                {/* Invitado no ve la actividad (ver listar_actividad en servidor.py);
+                    soporte sí — llega con es_admin */}
+                {(proyecto.puede_editar || proyecto.es_admin) && (
+                  <Tabs.Tab value="actividad" leftSection={<IconActivity size={15} stroke={1.8} />}>
+                    Actividad
+                  </Tabs.Tab>
+                )}
               </Tabs.List>
 
               <Tabs.Panel value="documento" pt="lg">
@@ -470,6 +479,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               <Tabs.Panel value="enviar" pt="lg">
                 <EnviosDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
               </Tabs.Panel>
+
+              {(proyecto.puede_editar || proyecto.es_admin) && (
+                <Tabs.Panel value="actividad" pt="lg">
+                  {vista === "actividad" && <ActividadDocumento proyecto={proyecto} idDocumento={idDocumento} />}
+                </Tabs.Panel>
+              )}
             </Tabs>
           )}
 

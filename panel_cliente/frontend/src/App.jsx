@@ -36,6 +36,7 @@ import Avisos from "./paginas/Avisos"
 import CuentaCorreo from "./paginas/CuentaCorreo"
 import Ayuda from "./paginas/Ayuda"
 import Enlaces from "./paginas/Enlaces"
+import Actividad from "./paginas/Actividad"
 
 export default function App() {
   const [sesion, setSesion] = useState(() => {
@@ -273,6 +274,8 @@ export default function App() {
             />
           ) : vista === "scripts" ? (
             <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
+          ) : vista === "actividad" ? (
+            <Actividad proyecto={proyecto} onVolver={() => navegar("documentos")} onVerDocumento={setIdDocumentoActivo} />
           ) : vista === "chat" ? (
             <Chat proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : (

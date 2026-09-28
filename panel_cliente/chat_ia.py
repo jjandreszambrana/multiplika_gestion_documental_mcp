@@ -31,6 +31,7 @@ from database.config_db import (
 )
 from lib.roles_proyecto import ID_ROL_INVITADO, ID_ROL_OPERADOR
 
+from ..database.modelos._mod_actividad import CABECERA_USUARIO_CHAT, PREFIJO_KEY_CHAT_INTERNO
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
 from ..database.modelos._mod_reglas import texto_reglas_globales
 
@@ -55,10 +56,14 @@ MAX_TOKENS_RESPUESTA = 16000  # incluye lo que gasta en pensar antes de responde
 _PENDIENTES: dict[str, dict] = {}
 
 
-async def _cliente_mcp(id_proyecto: int, id_rol: int) -> Client:
-    nombre = "Chat interno (operador)" if id_rol == ID_ROL_OPERADOR else "Chat interno (invitado)"
-    clave = await clave_interna_proyecto(id_proyecto, id_rol, nombre)
-    transporte = StreamableHttpTransport(get_mcp_url_local(), headers={"x-api-key": clave})
+async def _cliente_mcp(id_proyecto: int, id_rol: int, id_usuario: int) -> Client:
+    """`id_usuario` viaja en CABECERA_USUARIO_CHAT para que el registro de
+    actividad apunte a la persona que chatea, no a la key interna."""
+    rol = "operador" if id_rol == ID_ROL_OPERADOR else "invitado"
+    clave = await clave_interna_proyecto(id_proyecto, id_rol, f"{PREFIJO_KEY_CHAT_INTERNO} ({rol})")
+    transporte = StreamableHttpTransport(
+        get_mcp_url_local(), headers={"x-api-key": clave, CABECERA_USUARIO_CHAT: str(id_usuario)},
+    )
     return Client(transporte)
 
 
@@ -144,7 +149,7 @@ async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_r
     herramienta que escribe, se para ahí y devuelve algo para confirmar
     en vez de seguir sola."""
     reglas_globales = await texto_reglas_globales(get_db_config(id_proyecto))
-    mcp = await _cliente_mcp(id_proyecto, id_rol)
+    mcp = await _cliente_mcp(id_proyecto, id_rol, id_usuario)
     async with mcp:
         tools, por_nombre = await _herramientas_anthropic(mcp)
 
@@ -234,7 +239,7 @@ async def confirmar(id_usuario: int, confirmacion_id: str, aceptar: bool) -> dic
     mensajes = pendiente["mensajes"]
     resultados = dict(pendiente["resultados_listos"])
 
-    async with await _cliente_mcp(id_proyecto, id_rol) as mcp:
+    async with await _cliente_mcp(id_proyecto, id_rol, id_usuario) as mcp:
         for llamada in pendiente["llamadas"]:
             if llamada["id"] in resultados:
                 continue

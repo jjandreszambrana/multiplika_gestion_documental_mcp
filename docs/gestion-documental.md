@@ -784,3 +784,18 @@ Petición del usuario: que la GD se conecte por IMAP a una cuenta de correo dada
 
 Quién decidió: usuario (IMAP con credenciales, que la IA pueda marcar como leído y mover, cualquier proveedor). El asistente: conexión por petición, OAuth de aplicación para Microsoft 365, y `obtener_adjunto`/`guardar_adjunto` como tools aparte. Usuario: invitados sin acceso al buzón.
 Reversible: sí — sin tablas nuevas; quitar `_herr_correo.py` no afecta a nada existente.
+
+### Registro de actividad (2026-09-28)
+
+Quién cambió qué y cuándo, en una sola tabla `gd_actividad` (esquema en `database/dependencias/_dep_actividad.py`). Se apunta todo cambio que sale bien, venga de donde venga; las consultas no. Decisiones del usuario: lo ve cualquiera menos los invitados (en el panel y por MCP), y se borra lo que tenga más de 365 días.
+
+- **Sin FKs a propósito**: `quien` y `nombre_objeto` son copias del nombre en ese momento, para que el apunte siga legible aunque se borre el documento, el usuario o la key.
+- **Lado MCP** (`mcp_server/herramientas/_herr_actividad.py`): un middleware de fastmcp que el propio proyecto engancha a su instancia al importarse (`mcp_app.add_middleware`), sin tocar el core. Apunta solo las herramientas de la lista `ACCIONES_MCP` — lista explícita porque hay herramientas que leen sin estar marcadas `readOnlyHint` (las de correo). **Una herramienta nueva que cambie datos debe añadirse ahí.** Quién = nombre de la API key; si la key compartida la usan varias personas, no se distinguen.
+- **Chat del panel**: llama al MCP con su key interna ("Chat interno (...)") y manda el id del usuario en la cabecera `x-gd-id-usuario`; el middleware la cree solo con esa key interna (nunca se enseña a nadie) y apunta a la persona con `origen="chat"`.
+- **Lado panel** (`panel_cliente/actividad_panel.py`): middleware ASGI que empareja cada POST/PUT/DELETE con su endpoint por el nombre de la función y apunta los de `ACCIONES_PANEL` que respondan < 400. **Un endpoint nuevo que cambie datos debe añadirse ahí.** Fuera a propósito: el borrador automático, las conversaciones del chat y "probar enlace". Superadmin = "Soporte Multiplika".
+- **Sin secretos**: `limpiar_detalle` oculta cualquier campo cuyo nombre suene a clave/contraseña/token/base64 y recorta textos a 300 caracteres; el cuerpo de credenciales, certificados, cuenta de correo, enlace y emisión de key no se guarda nunca.
+- **Nombre antes de ejecutar**: para que un borrado siga diciendo qué se borró, el nombre se lee antes de la acción y se vuelve a leer después (por si cambió o se creó).
+- **Apuntar nunca tumba la acción**: si falla el insert, se escribe en la salida del proceso y se sigue.
+- **Consulta**: tool `consultar_actividad_gd` (marcada de lectura para que el chat no pida confirmación, pero rechaza keys de invitado dentro), pantalla "Actividad" del panel y pestaña "Actividad" en la ficha de cada documento (`GET /v1/proyectos/{id}/actividad`, con `escritor_gestion_documental_actual`).
+- **Limpieza**: `scripts/limpiar_actividad.py`, cron mensual, mismo patrón que `limpiar_conversaciones_chat.py`.
+- **El log de certificados** (`gd_certificados_log`, descargas) se queda como estaba: apunta lecturas, que este registro no apunta.

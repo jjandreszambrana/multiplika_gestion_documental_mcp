@@ -52,6 +52,7 @@ from lib.api_keys import generar_api_key, nombre_api_key_disponible
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import TEXTO_AYUDA_GD
+from ..database.modelos._mod_actividad import ActividadCRUD
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
 from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestra_chat
@@ -115,6 +116,7 @@ from ..database.modelos._mod_notas import (
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, guardar_documento, revertir_edicion
 from . import chat_ia
+from .actividad_panel import ActividadPanelMiddleware
 from .extraccion_pdf import extraer_texto, texto_unido
 from .dependencias import (
     Identidad,
@@ -145,6 +147,11 @@ app.add_middleware(
     # (ver identidad_actual en dependencias.py).
     expose_headers=["X-Nuevo-Token"],
 )
+
+# Apunta en gd_actividad los cambios hechos desde el panel (ver
+# actividad_panel.py). Recibe la lista de rutas (la misma, no una copia)
+# para emparejar cada petición con su endpoint.
+app.add_middleware(ActividadPanelMiddleware, rutas=app.router.routes)
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
 _proyectos_control = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
@@ -2702,6 +2709,41 @@ async def eliminar_registro(
 ) -> None:
     config = get_db_config(proyecto["id"])
     await RegistrosCRUD(config).eliminar(id_registro)
+
+
+# --- Registro de actividad (ver docs/gestion-documental.md → "Registro de
+# actividad"). Lo apunta ActividadPanelMiddleware (panel) y el middleware
+# MCP (IA y chat). Lo ve cualquiera salvo invitado — un superadmin sí,
+# para dar soporte.
+
+
+@app.get("/v1/proyectos/{id_proyecto}/actividad")
+async def listar_actividad(
+    id_proyecto: int,
+    quien: str | None = None,
+    origen: Literal["ia", "chat", "panel"] | None = None,
+    tipo_objeto: str | None = None,
+    id_objeto: int | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+    q: str | None = None,
+    pagina: int = 1,
+    por_pagina: int = 50,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    por_pagina = max(1, min(por_pagina, 200))
+    filas, total = await ActividadCRUD(get_db_config(proyecto["id"])).buscar(
+        quien=quien, origen=origen, tipo_objeto=tipo_objeto, id_objeto=id_objeto,
+        desde=desde, hasta=hasta, q=q, limite=por_pagina, offset=(max(pagina, 1) - 1) * por_pagina,
+    )
+    return {"total": total, "filas": filas}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/actividad/quienes")
+async def listar_quienes_actividad(
+    id_proyecto: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[str]:
+    return await ActividadCRUD(get_db_config(proyecto["id"])).quienes()
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

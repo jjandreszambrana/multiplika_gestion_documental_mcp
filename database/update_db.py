@@ -52,6 +52,7 @@ from database.dependencias._dep_enlaces import TABLA_ENLACES, TABLA_PREGUNTAS_PE
 from database.dependencias._dep_aprendizajes import TABLA_APRENDIZAJES
 from database.dependencias._dep_reglas import TABLA_REGLAS
 from database.dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS, TABLA_REGISTROS_DOCUMENTOS
+from database.dependencias._dep_actividad import TABLA_ACTIVIDAD
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -109,6 +110,7 @@ def main():
         TABLA_MODELOS_REGISTRO,
         TABLA_REGISTROS,
         TABLA_REGISTROS_DOCUMENTOS,
+        TABLA_ACTIVIDAD,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

@@ -24,6 +24,7 @@ import {
   IconMoonStars,
   IconArrowsRightLeft,
   IconCheck,
+  IconActivity,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -124,6 +125,10 @@ export default function Sidebar({
         <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
         <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
         <Item icon={IconCode} label="Scripts" active={vista === "scripts"} onClick={() => onNavigate("scripts")} />
+        {/* Invitado no ve la actividad; soporte sí (llega con es_admin) */}
+        {(proyecto.puede_editar || proyecto.es_admin) && (
+          <Item icon={IconActivity} label="Actividad" active={vista === "actividad"} onClick={() => onNavigate("actividad")} />
+        )}
         {/* El chat solo existe para usuarios de la empresa (el historial
             referencia mcpc_usuarios) — un superadmin en modo soporte no
             puede usarlo, ver usuario_chat_gd_actual en dependencias.py */}
