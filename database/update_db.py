@@ -51,6 +51,7 @@ from database.dependencias._dep_scripts import TABLA_DOCUMENTOS_SCRIPTS, TABLA_S
 from database.dependencias._dep_enlaces import TABLA_ENLACES, TABLA_PREGUNTAS_PENDIENTES, TABLA_USO_ENLACES
 from database.dependencias._dep_aprendizajes import TABLA_APRENDIZAJES
 from database.dependencias._dep_reglas import TABLA_REGLAS
+from database.dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -105,6 +106,8 @@ def main():
         TABLA_USO_ENLACES,
         TABLA_APRENDIZAJES,
         TABLA_REGLAS,
+        TABLA_MODELOS_REGISTRO,
+        TABLA_REGISTROS,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

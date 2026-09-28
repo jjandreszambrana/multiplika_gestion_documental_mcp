@@ -318,6 +318,37 @@ o en el que se usó, igual que las entidades — desde la ficha del \
 documento o desde la ficha del script, y un mismo script puede estar \
 relacionado con varios documentos a la vez.
 
+## Registros de datos
+
+Aparte de los documentos, puedes anotar **datos que se repiten con la misma \
+forma**: las temperaturas de las cámaras, el parte de limpieza de cada día, \
+los resultados de un análisis, el control de una recepción de mercancía. No \
+son documentos (no hay un PDF que interpretar) ni comentarios sobre un \
+documento: son datos, y por eso se pueden buscar, filtrar y hacer medias con \
+ellos.
+
+Cada tipo de anotación tiene un **modelo**, que dice qué campos lleva y cómo \
+tienen que ser: qué valores puede tomar cada uno, entre qué límites es \
+correcto y cuáles son obligatorios. El modelo lo construye tu IA hablando \
+contigo ("¿qué apuntas cada vez en ese parte?", "¿entre qué temperaturas es \
+correcto?") y te lo enseña antes de crearlo. A partir de ahí, cada vez que \
+le dictes una anotación, la comprueba contra el modelo: si algo no encaja \
+—falta un campo, una temperatura se sale del límite, una cámara no existe— \
+no lo guarda y te dice qué falla. Así lo guardado siempre es correcto.
+
+**Un modelo con anotaciones no se cambia nunca.** Si hace falta añadir o \
+quitar un campo, tu IA crea una versión nueva del modelo, con el motivo del \
+cambio, y la anterior se retira: deja de admitir anotaciones nuevas, pero \
+las suyas siguen ahí. Así siempre se puede saber qué forma tenía ese parte \
+el día que se rellenó, que es lo que se mira en una auditoría.
+
+Cada anotación lleva además, fuera del modelo, la fecha y la hora a la que \
+se refiere (que no tiene por qué ser cuándo la anotas), quién la anotó, si \
+es conforme o no, unas observaciones, y a qué entidad o documento se \
+refiere. Por eso puedes pedirle a tu IA cosas como "enséñame los registros \
+no conformes de septiembre" o "la temperatura media de la cámara 2 la semana \
+pasada" sin que tenga que leerlos uno a uno.
+
 ## Reglas: cómo quieres que trabaje tu IA
 
 Aparte de los documentos, puedes dejarle escritas **reglas de \

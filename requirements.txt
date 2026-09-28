@@ -8,4 +8,5 @@ markdown
 weasyprint
 cryptography
 pdfplumber
+jsonschema
 pytesseract
