@@ -238,7 +238,8 @@ async def guardar_documento_gd(
     correcto.
     Si este documento viene de la cola de pendientes (obtenido con
     obtener_documento_pendiente_gd), pasa su id en
-    `id_documento_pendiente`: al guardar con éxito sale solo de la cola.
+    `id_documento_pendiente`: al guardar con éxito sale solo de la cola, y
+    su archivo queda guardado como archivo original de esta versión.
     Si el documento viene de una URL pública (p.ej. una normativa
     publicada en el BOE) que tú mismo has descargado y convertido a
     markdown, pasa esa URL en `url_origen` — queda guardada solo como
@@ -295,7 +296,14 @@ async def guardar_documento_gd(
         raise ToolError(str(e)) from e
     await _reindexar_si_semantico(config, id_proyecto, resultado["id_documento"], resultado["id_version"], markdown)
     if id_documento_pendiente is not None:
-        await DocumentosPendientesCRUD(config).eliminar(id_documento_pendiente)
+        pendientes = DocumentosPendientesCRUD(config)
+        pendiente = await pendientes.obtener(id_documento_pendiente)
+        if pendiente:
+            await VersionesCRUD(config).guardar_archivo_original(
+                resultado["id_version"], bytes(pendiente["archivo"]),
+                pendiente["tipo_mime"] or "application/octet-stream", pendiente["nombre_original"],
+            )
+            await pendientes.eliminar(id_documento_pendiente)
     return resultado
 
 
@@ -497,6 +505,12 @@ async def adjuntar_archivo_original_gd(
     a un documento — en su versión vigente — o junto a un registro de datos.
     Indica uno de los dos: `id_documento` o `id_registro`. Si ya tenía uno,
     se sustituye.
+
+    Último recurso: escribir el base64 gasta muchísimos tokens. Lo normal es
+    que el archivo entre por la cola de documentos pendientes (el cliente lo
+    sube al panel con "Subir documentos", o llega por correo) y se pase su
+    `id_documento_pendiente` a guardar_documento_gd, crear_registro_gd o
+    corregir_registro_gd, que lo guardan sin que pase por la conversación.
 
     `archivo_base64`: el contenido del archivo codificado en base64; aquí se
     pasa a binario y se guarda así. Solo viable si tienes el archivo al

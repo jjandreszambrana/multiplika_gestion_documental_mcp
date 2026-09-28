@@ -344,10 +344,22 @@ el día que se rellenó, que es lo que se mira en una auditoría.
 
 Cada anotación lleva además, fuera del modelo, la fecha y la hora a la que \
 se refiere (que no tiene por qué ser cuándo la anotas), quién la anotó, si \
-es conforme o no, unas observaciones, y a qué entidad o documento se \
-refiere. Por eso puedes pedirle a tu IA cosas como "enséñame los registros \
-no conformes de septiembre" o "la temperatura media de la cámara 2 la semana \
-pasada" sin que tenga que leerlos uno a uno.
+es conforme o no, unas observaciones, y a qué entidad se refiere. Por eso \
+puedes pedirle a tu IA cosas como "enséñame los registros no conformes de \
+septiembre" o "la temperatura media de la cámara 2 la semana pasada" sin que \
+tenga que leerlos uno a uno.
+
+Un registro se puede **vincular a uno o varios documentos** (el certificado \
+de calibración del termómetro, el procedimiento de limpieza...), y un mismo \
+documento a varios registros. Se hace al anotarlo o después, por \
+conversación o desde el panel; en la ficha del documento ves sus registros.
+
+Para guardar **el archivo del que salen los datos** (la foto del parte, el \
+PDF del análisis), súbelo al panel con "Subir documentos" (o que llegue por \
+correo) y dile a tu IA que es para ese registro: lo coge de la cola sin que \
+el archivo tenga que pasar por la conversación, que saldría mucho más caro. \
+Lo mismo vale para los documentos: al guardarlos desde la cola, el archivo \
+original queda guardado con ellos.
 
 ## Reglas: cómo quieres que trabaje tu IA
 

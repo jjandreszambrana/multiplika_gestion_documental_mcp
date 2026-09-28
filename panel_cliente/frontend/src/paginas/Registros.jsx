@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, NumberInput, Paper, Select, Stack,
+  ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, MultiSelect, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
 import { IconArrowLeft, IconHistory, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
@@ -74,17 +74,19 @@ function CampoDeEsquema({ nombre, definicion, requerido, valor, onChange }) {
   )
 }
 
-function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
+function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuardar }) {
   const hoy = new Date().toISOString().slice(0, 10)
   const [valores, setValores] = useState({})
   const [datos, setDatos] = useState({ fecha: hoy, hora: "", conforme: null, observaciones: "" })
   const [archivo, setArchivo] = useState(null)
+  const [idsDocumentos, setIdsDocumentos] = useState([])
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
     if (!opened) return
     setValores(registro ? { ...registro.valores } : {})
+    setIdsDocumentos((registro?.documentos || []).map((d) => String(d.id)))
     setDatos({
       fecha: registro?.fecha?.slice(0, 10) || hoy,
       hora: registro?.hora?.slice(0, 5) || "",
@@ -112,7 +114,7 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
         hora: datos.hora || null,
         conforme: datos.conforme,
         observaciones: datos.observaciones || null,
-      }, archivo)
+      }, archivo, idsDocumentos.map(Number))
       onClose()
     } catch (err) {
       setError(err.message)
@@ -169,6 +171,13 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
           value={datos.observaciones}
           onChange={(e) => setDatos({ ...datos, observaciones: e.currentTarget.value })}
         />
+        <MultiSelect
+          label="Documentos vinculados" searchable clearable
+          placeholder="El certificado de calibración, el informe del laboratorio..."
+          data={documentos.map((d) => ({ value: String(d.id), label: `${d.nombre} (${d.tipo_documento})` }))}
+          value={idsDocumentos}
+          onChange={setIdsDocumentos}
+        />
         <FileInput
           label="Archivo original" clearable
           placeholder={registro?.archivo_original_nombre || "La foto del parte, el PDF del análisis..."}
@@ -205,6 +214,11 @@ function PestanaRegistros({ proyecto, modelos }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [registroEditando, setRegistroEditando] = useState(null)
   const [modeloDelRegistro, setModeloDelRegistro] = useState(null)
+  const [documentos, setDocumentos] = useState([])
+
+  useEffect(() => {
+    api.listarOBuscarDocumentos(proyecto.id, "").then(setDocumentos).catch(() => setDocumentos([]))
+  }, [proyecto.id])
 
   const modelo = modelos.find((m) => String(m.id) === String(idModelo)) || null
 
@@ -245,10 +259,19 @@ function PestanaRegistros({ proyecto, modelos }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idModelo, desde, hasta, conforme])
 
-  async function guardar(datos, archivo) {
+  async function guardar(datos, archivo, idsDocumentos) {
     const fila = registroEditando
       ? await api.corregirRegistro(proyecto.id, registroEditando.id, datos)
-      : await api.crearRegistro(proyecto.id, { ...datos, id_modelo: Number(idModelo) })
+      : await api.crearRegistro(proyecto.id, { ...datos, id_modelo: Number(idModelo), id_documentos: idsDocumentos })
+    if (registroEditando) {
+      const antes = (registroEditando.documentos || []).map((d) => d.id)
+      for (const id of idsDocumentos.filter((id) => !antes.includes(id))) {
+        await api.vincularDocumentoRegistro(proyecto.id, fila.id, id)
+      }
+      for (const id of antes.filter((id) => !idsDocumentos.includes(id))) {
+        await api.desvincularDocumentoRegistro(proyecto.id, fila.id, id)
+      }
+    }
     // Si el archivo falla, el registro ya está guardado: al recargar se ve
     // sin archivo y el error sale en el modal, que sigue abierto.
     if (archivo) await api.subirArchivoOriginalRegistro(proyecto.id, fila.id, archivo)
@@ -345,6 +368,7 @@ function PestanaRegistros({ proyecto, modelos }) {
                   <Table.Th key={nombre}>{nombre}</Table.Th>
                 ))}
                 <Table.Th w={130}>Conformidad</Table.Th>
+                <Table.Th>Documentos</Table.Th>
                 <Table.Th w={160}>Anotado por</Table.Th>
                 {puedeEscribir && <Table.Th w={80} />}
               </Table.Tr>
@@ -394,6 +418,15 @@ function PestanaRegistros({ proyecto, modelos }) {
                     )}
                   </Table.Td>
                   <Table.Td>
+                    <Group gap="4">
+                      {r.documentos.map((d) => (
+                        <Badge key={d.id} variant="light" color="gray" radius="sm" tt="none" fw={500} title={d.tipo_documento}>
+                          {d.nombre}
+                        </Badge>
+                      ))}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
                     <Text fz="13px" c="dimmed">
                       {r.creado_por}
                     </Text>
@@ -421,7 +454,7 @@ function PestanaRegistros({ proyecto, modelos }) {
               ))}
               {registros.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={campos(modelo).length + 4}>
+                  <Table.Td colSpan={campos(modelo).length + 5}>
                     <Text c="dimmed" py="md">
                       No hay registros con estos filtros.
                     </Text>
@@ -437,6 +470,7 @@ function PestanaRegistros({ proyecto, modelos }) {
         opened={modalAbierto}
         modelo={registroEditando ? modeloDelRegistro || modelo : modelo}
         registro={registroEditando}
+        documentos={documentos}
         onClose={() => setModalAbierto(false)}
         onGuardar={guardar}
       />

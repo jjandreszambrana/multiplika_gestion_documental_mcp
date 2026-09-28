@@ -17,10 +17,10 @@ la primera por `id_modelo_raiz`. Así cada registro sigue apuntando a la
 versión exacta con la que se validó y la trazabilidad se lee sola: qué forma
 tenía el parte el día que se rellenó, y en qué cambió después.
 
-Las dos tablas se relacionan solo entre sí: `id_entidad` e `id_documento`
-van sin clave ajena a propósito (ver el comentario de cada una), así el
-esquema se puede aplicar en un servidor real registrando únicamente estas
-dos tablas."""
+Las tablas se relacionan solo entre sí: `id_entidad` y el `id_documento`
+de gd_registros_documentos van sin clave ajena a propósito (ver el
+comentario de cada una), así el esquema se puede aplicar en un servidor
+real registrando únicamente las tablas de este fichero."""
 
 from database.config_db import get_db_name
 from mtpk_postgres import Columna, ForeignKey, Index, Tabla
@@ -28,6 +28,7 @@ from mtpk_postgres.core_sync import SQLLiteral
 
 NOMBRE_TABLA_MODELOS_REGISTRO = "gd_modelos_registro"
 NOMBRE_TABLA_REGISTROS = "gd_registros"
+NOMBRE_TABLA_REGISTROS_DOCUMENTOS = "gd_registros_documentos"
 __DB_NAME__ = get_db_name("gestion_documental")
 
 #: Cada cuánto se espera un registro de este modelo. Solo informativo hoy;
@@ -127,10 +128,6 @@ CAMPOS_REGISTROS = [
                        "registrar gd_entidades al aplicar el esquema en un servidor real, y de ahí "
                        "salen ALTER sobre tablas con datos. Si la entidad se borra, queda un id "
                        "huérfano que se comprueba al leer"),
-    Columna(nombre="id_documento", tipo="INT",
-            comentario="Documento que respalda este registro (→ gd_documentos.id), p.ej. el informe "
-                       "de laboratorio del que salen los valores. Opcional y sin clave ajena, mismo "
-                       "motivo que id_entidad"),
     Columna(nombre="archivo_original", tipo="BLOB",
             comentario="Opcional — el archivo del que salen los datos (la foto del parte, el PDF "
                        "del análisis), guardado tal cual, igual que gd_versiones.archivo_original: "
@@ -168,4 +165,41 @@ TABLA_REGISTROS = Tabla(
     db_name=__DB_NAME__,
 )
 
-__TABLAS__ = [TABLA_MODELOS_REGISTRO, TABLA_REGISTROS]
+
+# Documentos vinculados a un registro: varios por registro (p.ej. el
+# certificado de calibración del termómetro y el procedimiento de limpieza) y
+# un documento en varios registros. Sustituye a gd_registros.id_documento,
+# que solo admitía uno (2026-09-28, petición del usuario).
+CAMPOS_REGISTROS_DOCUMENTOS = [
+    Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
+            comentario="Identificador interno del vínculo"),
+    Columna(nombre="id_registro", tipo="INT", not_null=True,
+            comentario="Registro (→ gd_registros.id)"),
+    Columna(nombre="id_documento", tipo="INT", not_null=True,
+            comentario="Documento vinculado (→ gd_documentos.id). Sin clave ajena, mismo motivo que "
+                       "gd_registros.id_entidad: una FK obligaría a registrar gd_documentos al aplicar "
+                       "el esquema y de ahí salen ALTER sobre tablas con datos"),
+    Columna(nombre="fecha_asignacion", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
+            protegido_actualizar=True),
+]
+
+# Con nombre propio: el que genera el ORM sale de las columnas y
+# "id_documento_idx" ya lo usa otra tabla del esquema (ver _dep_reglas.py).
+INDICES_REGISTROS_DOCUMENTOS = [
+    Index(columnas=["id_registro", "id_documento"], unico=True, nombre="gd_registros_documentos_uk"),
+    Index(columnas=["id_documento"], nombre="gd_registros_documentos_id_documento_idx"),
+]
+
+FKS_REGISTROS_DOCUMENTOS = [
+    ForeignKey(columna="id_registro", referencia_tabla=NOMBRE_TABLA_REGISTROS,
+               referencia_columna="id", on_delete="CASCADE"),
+]
+
+TABLA_REGISTROS_DOCUMENTOS = Tabla(
+    nombre=NOMBRE_TABLA_REGISTROS_DOCUMENTOS, columnas=CAMPOS_REGISTROS_DOCUMENTOS,
+    indices=INDICES_REGISTROS_DOCUMENTOS, foreign_keys=FKS_REGISTROS_DOCUMENTOS,
+    comentario="Documentos vinculados a cada registro de datos (muchos a muchos)",
+    db_name=__DB_NAME__,
+)
+
+__TABLAS__ = [TABLA_MODELOS_REGISTRO, TABLA_REGISTROS, TABLA_REGISTROS_DOCUMENTOS]

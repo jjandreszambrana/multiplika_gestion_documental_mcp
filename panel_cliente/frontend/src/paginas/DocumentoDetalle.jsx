@@ -26,6 +26,7 @@ import NotasDocumento from "../componentes/NotasDocumento"
 import GruposDocumento from "../componentes/GruposDocumento"
 import EntidadesDocumento from "../componentes/EntidadesDocumento"
 import ScriptsDocumento from "../componentes/ScriptsDocumento"
+import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import EnviosDocumento from "../componentes/EnviosDocumento"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
@@ -300,6 +301,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
           {!editando && <GruposDocumento proyecto={proyecto} idDocumento={idDocumento} />}
           {!editando && <EntidadesDocumento proyecto={proyecto} idDocumento={idDocumento} />}
           {!editando && <ScriptsDocumento proyecto={proyecto} idDocumento={idDocumento} />}
+          {!editando && <RegistrosDocumento proyecto={proyecto} idDocumento={idDocumento} />}
 
           {!editando && documento.incumplimientos && (
             <Alert color="red" mb="lg" radius="lg" icon={<IconAlertTriangle size={19} />} title="No cumple el formato/normativa de su tipo">

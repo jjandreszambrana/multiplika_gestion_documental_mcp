@@ -94,6 +94,7 @@ from ..database.modelos._mod_registros import (
     LIMITE_REGISTROS,
     ModelosRegistroCRUD,
     RegistrosCRUD,
+    RegistrosDocumentosCRUD,
     plantilla_de_valores,
     sin_archivo,
 )
@@ -2440,7 +2441,7 @@ class NuevoRegistro(BaseModel):
     conforme: bool | None = None
     observaciones: str | None = None
     id_entidad: int | None = None
-    id_documento: int | None = None
+    id_documentos: list[int] = []
 
 
 class CorreccionRegistro(BaseModel):
@@ -2450,7 +2451,10 @@ class CorreccionRegistro(BaseModel):
     conforme: bool | None = None
     observaciones: str | None = None
     id_entidad: int | None = None
-    id_documento: int | None = None
+
+
+class VinculoDocumentoRegistro(BaseModel):
+    id_documento: int
 
 
 def _modelo_con_plantilla(modelo: dict) -> dict:
@@ -2584,13 +2588,19 @@ async def crear_registro(
     if not modelo:
         raise HTTPException(404, "Modelo de registro no encontrado")
     registros = RegistrosCRUD(config)
+    for id_documento in datos.id_documentos:
+        if not await DocumentosCRUD(config).obtener(id_documento):
+            raise HTTPException(404, f"Documento {id_documento} no encontrado")
     try:
         id_registro = await registros.crear(modelo, {
-            **datos.model_dump(exclude={"modelo", "id_modelo", "creado_por"}),
+            **datos.model_dump(exclude={"modelo", "id_modelo", "creado_por", "id_documentos"}),
             "creado_por": await _nombre_usuario(id_usuario) or "Usuario eliminado",
         })
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    vinculos = RegistrosDocumentosCRUD(config)
+    for id_documento in datos.id_documentos:
+        await vinculos.vincular(id_registro, id_documento)
     return sin_archivo(await registros.obtener(id_registro))
 
 
@@ -2646,6 +2656,42 @@ async def descargar_archivo_original_registro(
         content=fila["archivo_original"], media_type=fila["archivo_original_tipo_mime"],
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(fila['archivo_original_nombre'])}"},
     )
+
+
+@app.post("/v1/proyectos/{id_proyecto}/registros/{id_registro}/documentos")
+async def vincular_documento_registro(
+    id_proyecto: int, id_registro: int, datos: VinculoDocumentoRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if not await RegistrosCRUD(config).obtener(id_registro):
+        raise HTTPException(404, "Registro no encontrado")
+    if not await DocumentosCRUD(config).obtener(datos.id_documento):
+        raise HTTPException(404, "Documento no encontrado")
+    await RegistrosDocumentosCRUD(config).vincular(id_registro, datos.id_documento)
+    return {"id_registro": id_registro, "id_documento": datos.id_documento}
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/registros/{id_registro}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def desvincular_documento_registro(
+    id_proyecto: int, id_registro: int, id_documento: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    await RegistrosDocumentosCRUD(get_db_config(proyecto["id"])).desvincular(id_registro, id_documento)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros")
+async def listar_registros_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """Registros vinculados a un documento, de cualquier modelo — para la
+    ficha del documento."""
+    return await RegistrosCRUD(get_db_config(proyecto["id"])).buscar(id_documento=id_documento)
 
 
 @app.delete("/v1/proyectos/{id_proyecto}/registros/{id_registro}", status_code=status.HTTP_204_NO_CONTENT)

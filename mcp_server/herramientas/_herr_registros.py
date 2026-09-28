@@ -20,10 +20,12 @@ from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 
 from ._anotaciones import SOLO_LECTURA
+from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_registros import (
     LIMITE_REGISTROS,
     ModelosRegistroCRUD,
     RegistrosCRUD,
+    RegistrosDocumentosCRUD,
     plantilla_de_valores,
     sin_archivo,
 )
@@ -42,7 +44,24 @@ def _con_plantilla(modelo: dict) -> dict:
 
 
 async def _uno(registros: "RegistrosCRUD", id_registro: int) -> dict:
-    return sin_archivo(await registros.obtener(id_registro))
+    documentos = await RegistrosDocumentosCRUD(registros.config).documentos_de_registros([id_registro])
+    return {**sin_archivo(await registros.obtener(id_registro)), "documentos": documentos.get(id_registro, [])}
+
+
+async def _comprobar_documentos(config: dict, ids_documento: list[int]) -> None:
+    documentos = DocumentosCRUD(config)
+    for id_documento in ids_documento:
+        if not await documentos.obtener(id_documento):
+            raise ToolError(f"No existe ningún documento con id {id_documento}")
+
+
+async def _adjuntar_pendiente(registros: "RegistrosCRUD", id_registro: int, id_documento_pendiente: int | None) -> None:
+    if id_documento_pendiente is None:
+        return
+    try:
+        await registros.adjuntar_pendiente(id_registro, id_documento_pendiente)
+    except ValueError as e:
+        raise ToolError(f"El registro {id_registro} se ha guardado, pero sin archivo: {e}") from e
 
 
 async def _modelo_o_error(config: dict, modelo: str | None, id_modelo: int | None, version: int | None = None) -> dict:
@@ -223,7 +242,8 @@ async def crear_registro_gd(
     valores: dict, fecha: str, creado_por: str,
     modelo: str | None = None, id_modelo: int | None = None,
     hora: str | None = None, conforme: bool | None = None, observaciones: str | None = None,
-    id_entidad: int | None = None, id_documento: int | None = None,
+    id_entidad: int | None = None, id_documentos: list[int] | None = None,
+    id_documento_pendiente: int | None = None,
 ) -> dict:
     """Anota un registro de datos. Antes de llamarla, mira el modelo con
     obtener_modelo_registro_gd y calca la forma de `valores_de_ejemplo`: si
@@ -250,19 +270,36 @@ async def crear_registro_gd(
 
     `observaciones`: la desviación y qué se hizo, en palabras, si la hay.
 
-    `id_entidad`/`id_documento`: a qué entidad se refiere (el proveedor, el
-    local, el equipo) y qué documento lo respalda, si aplica."""
+    `id_entidad`: a qué entidad se refiere (el proveedor, el local, el
+    equipo), si aplica.
+
+    `id_documentos`: los documentos de la gestión documental que respaldan
+    este registro, si los hay (el certificado de calibración del termómetro,
+    el informe del laboratorio...). Se pueden añadir o quitar después con
+    vincular_documento_registro_gd / desvincular_documento_registro_gd.
+
+    `id_documento_pendiente`: si el archivo del que salen los datos (la foto
+    del parte, el PDF del análisis) está en la cola de documentos pendientes
+    (subido al panel con "Subir documentos", o guardado desde un correo con
+    guardar_adjunto_correo_gd), pasa su id: queda como archivo original del
+    registro y sale de la cola. Es la forma de guardar el archivo — no lo
+    mandes en base64 con adjuntar_archivo_original_gd, que gasta muchísimo.
+    Si el cliente te lo adjunta en el chat, pídele que lo suba al panel."""
     config = await _config_actual()
     fila_modelo = await _modelo_o_error(config, modelo, id_modelo)
+    await _comprobar_documentos(config, id_documentos or [])
     registros = RegistrosCRUD(config)
     try:
         id_registro = await registros.crear(fila_modelo, {
             "valores": valores, "fecha": fecha, "hora": hora, "creado_por": creado_por,
-            "conforme": conforme, "observaciones": observaciones,
-            "id_entidad": id_entidad, "id_documento": id_documento,
+            "conforme": conforme, "observaciones": observaciones, "id_entidad": id_entidad,
         })
     except ValueError as e:
         raise ToolError(str(e)) from e
+    vinculos = RegistrosDocumentosCRUD(config)
+    for id_documento in id_documentos or []:
+        await vinculos.vincular(id_registro, id_documento)
+    await _adjuntar_pendiente(registros, id_registro, id_documento_pendiente)
     return await _uno(registros, id_registro)
 
 
@@ -270,7 +307,7 @@ async def crear_registro_gd(
 async def listar_registros_gd(
     modelo: str | None = None, desde: str | None = None, hasta: str | None = None,
     id_entidad: int | None = None, conforme: bool | None = None,
-    filtros: dict | None = None, limite: int = 100,
+    filtros: dict | None = None, limite: int = 100, id_documento: int | None = None,
 ) -> list[dict]:
     """Los registros anotados que encajan con lo que pidas, del más reciente
     al más antiguo. Cada uno trae sus `valores` ya como objeto, más el nombre
@@ -288,6 +325,9 @@ async def listar_registros_gd(
     `filtros`: para buscar por un campo de dentro del JSON, en pares campo y
     valor, p.ej. {"camara": "Cámara 2"}. Compara como texto.
 
+    `id_documento`: solo los registros vinculados a ese documento. Cada
+    registro trae en `documentos` los que tiene vinculados.
+
     Si vas a hacer una media o buscar el máximo de un campo, usa mejor
     resumir_registros_gd: no te traes cientos de registros para eso."""
     config = await _config_actual()
@@ -295,7 +335,7 @@ async def listar_registros_gd(
     if modelo:
         ids = await _ids_de_la_familia(config, await _modelo_o_error(config, modelo, None))
     return await RegistrosCRUD(config).buscar(
-        ids, desde, hasta, id_entidad, conforme, filtros, min(limite, LIMITE_REGISTROS),
+        ids, desde, hasta, id_entidad, conforme, filtros, min(limite, LIMITE_REGISTROS), id_documento,
     )
 
 
@@ -318,12 +358,17 @@ async def resumir_registros_gd(
 async def corregir_registro_gd(
     id_registro: int, valores: dict | None = None, fecha: str | None = None, hora: str | None = None,
     conforme: bool | None = None, observaciones: str | None = None,
-    id_entidad: int | None = None, id_documento: int | None = None,
+    id_entidad: int | None = None, id_documento_pendiente: int | None = None,
 ) -> dict:
     """Corrige un registro mal anotado (los campos que no pases no se tocan).
     Si cambias los `valores`, se validan contra el esquema de LA VERSIÓN con
     la que se anotó, no contra la vigente. Un registro no puede cambiar de
-    modelo: eso sería otro registro."""
+    modelo: eso sería otro registro.
+
+    `id_documento_pendiente`: pone (o sustituye) el archivo original del
+    registro con el de ese documento pendiente, igual que en
+    crear_registro_gd. Los documentos vinculados se cambian con
+    vincular_documento_registro_gd / desvincular_documento_registro_gd."""
     config = await _config_actual()
     registros = RegistrosCRUD(config)
     fila = await registros.obtener(id_registro)
@@ -333,10 +378,11 @@ async def corregir_registro_gd(
     try:
         await registros.corregir(id_registro, modelo, {
             "valores": valores, "fecha": fecha, "hora": hora, "conforme": conforme,
-            "observaciones": observaciones, "id_entidad": id_entidad, "id_documento": id_documento,
+            "observaciones": observaciones, "id_entidad": id_entidad,
         })
     except ValueError as e:
         raise ToolError(str(e)) from e
+    await _adjuntar_pendiente(registros, id_registro, id_documento_pendiente)
     return await _uno(registros, id_registro)
 
 
@@ -350,3 +396,30 @@ async def eliminar_registro_gd(id_registro: int) -> dict:
         raise ToolError(f"No existe ningún registro con id {id_registro}")
     await registros.eliminar(id_registro)
     return {"id": id_registro, "eliminado": True}
+
+
+@mcp_app.tool()
+async def vincular_documento_registro_gd(id_registro: int, id_documento: int) -> dict:
+    """Vincula un documento de la gestión documental a un registro de datos
+    (p.ej. el certificado de calibración del termómetro al parte de
+    temperaturas). Un registro puede tener varios documentos y un documento
+    estar en varios registros. No falla si ya estaban vinculados."""
+    config = await _config_actual()
+    registros = RegistrosCRUD(config)
+    if not await registros.obtener(id_registro):
+        raise ToolError(f"No existe ningún registro con id {id_registro}")
+    await _comprobar_documentos(config, [id_documento])
+    await RegistrosDocumentosCRUD(config).vincular(id_registro, id_documento)
+    return await _uno(registros, id_registro)
+
+
+@mcp_app.tool()
+async def desvincular_documento_registro_gd(id_registro: int, id_documento: int) -> dict:
+    """Quita el vínculo entre un documento y un registro — no se borra
+    ninguno de los dos."""
+    config = await _config_actual()
+    registros = RegistrosCRUD(config)
+    if not await registros.obtener(id_registro):
+        raise ToolError(f"No existe ningún registro con id {id_registro}")
+    estaba = await RegistrosDocumentosCRUD(config).desvincular(id_registro, id_documento)
+    return {**await _uno(registros, id_registro), "estaba_vinculado": estaba}

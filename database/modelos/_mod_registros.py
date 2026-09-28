@@ -18,7 +18,9 @@ from jsonschema.exceptions import best_match
 from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
-from ..dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS
+from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS, TABLA_REGISTROS_DOCUMENTOS
+from ._mod_documentos_pendientes import DocumentosPendientesCRUD
 
 # minimo: sin paginar — un cliente anota decenas de registros al día, no miles
 LIMITE_REGISTROS = 500
@@ -27,7 +29,7 @@ LIMITE_MODELOS = 200
 _CAMPOS_MODELO = ["nombre", "titulo", "descripcion", "esquema", "periodicidad"]
 _CAMPOS_REGISTRO = [
     "id_modelo", "valores", "fecha", "hora", "creado_por", "conforme",
-    "observaciones", "id_entidad", "id_documento",
+    "observaciones", "id_entidad",
 ]
 #: Todo menos el binario: un listado de 200 registros no debe arrastrar 200
 #: fotos. Quien necesite saber si hay archivo mira archivo_original_nombre.
@@ -270,10 +272,25 @@ class RegistrosCRUD(AsyncCrudBase):
             {"archivo_original": contenido, "archivo_original_tipo_mime": tipo_mime, "archivo_original_nombre": nombre},
         )
 
+    async def adjuntar_pendiente(self, id_registro: int, id_pendiente: int) -> None:
+        """El archivo de un documento pendiente (subido al panel o llegado por
+        correo) pasa a ser el archivo original del registro y sale de la
+        cola — igual que un documento guardado desde la cola. Así el archivo
+        nunca viaja por la conversación con la IA."""
+        pendientes = DocumentosPendientesCRUD(self.config)
+        pendiente = await pendientes.obtener(id_pendiente)
+        if not pendiente:
+            raise ValueError(f"No existe ningún documento pendiente con id {id_pendiente}")
+        await self.guardar_archivo_original(
+            id_registro, bytes(pendiente["archivo"]),
+            pendiente["tipo_mime"] or "application/octet-stream", pendiente["nombre_original"],
+        )
+        await pendientes.eliminar(id_pendiente)
+
     async def buscar(
         self, ids_modelo: list[int] | None = None, desde: str | None = None, hasta: str | None = None,
         id_entidad: int | None = None, conforme: bool | None = None, filtros: dict | None = None,
-        limite: int = LIMITE_REGISTROS,
+        limite: int = LIMITE_REGISTROS, id_documento: int | None = None,
     ) -> list[dict]:
         """`ids_modelo` son todas las versiones de la familia que se consulta
         (las resuelve quien llama). `filtros` mira dentro del JSON: el ORM no
@@ -295,6 +312,11 @@ class RegistrosCRUD(AsyncCrudBase):
         if conforme is not None:
             condiciones.append("r.conforme = %s")
             params.append(conforme)
+        if id_documento is not None:
+            condiciones.append(
+                f'r.id IN (SELECT id_registro FROM "{TABLA_REGISTROS_DOCUMENTOS.nombre}" WHERE id_documento = %s)'
+            )
+            params.append(id_documento)
         for campo, valor in (filtros or {}).items():
             condiciones.append("(r.valores::jsonb ->> %s) = %s")
             params += [campo, str(valor)]
@@ -313,7 +335,8 @@ class RegistrosCRUD(AsyncCrudBase):
             """,
             tuple(params),
         )
-        return [{**f, "valores": json.loads(f["valores"])} for f in filas]
+        documentos = await RegistrosDocumentosCRUD(self.config).documentos_de_registros([f["id"] for f in filas])
+        return [{**f, "valores": json.loads(f["valores"]), "documentos": documentos.get(f["id"], [])} for f in filas]
 
     async def resumen(
         self, ids_modelo: list[int], campo: str, desde: str | None = None, hasta: str | None = None
@@ -348,3 +371,46 @@ class RegistrosCRUD(AsyncCrudBase):
         # Postgres devuelve NUMERIC como Decimal y de ahí sale como texto al
         # otro lado de MCP; números, que es lo que se espera para hacer cuentas.
         return {"campo": campo, **{k: float(v) if isinstance(v, Decimal) else v for k, v in fila.items()}}
+
+
+class RegistrosDocumentosCRUD(AsyncCrudBase):
+    """Documentos vinculados a cada registro — varios por registro y un
+    documento en varios registros (ver _dep_registros.py)."""
+
+    def __init__(self, config: dict):
+        super().__init__(TABLA_REGISTROS_DOCUMENTOS, config)
+
+    async def vincular(self, id_registro: int, id_documento: int) -> None:
+        """No falla si ya estaban vinculados."""
+        await AsyncDatabase(**self.config).query(
+            f'INSERT INTO "{TABLA_REGISTROS_DOCUMENTOS.nombre}" (id_registro, id_documento) VALUES (%s, %s) '
+            "ON CONFLICT (id_registro, id_documento) DO NOTHING",
+            (id_registro, id_documento),
+        )
+
+    async def desvincular(self, id_registro: int, id_documento: int) -> bool:
+        borradas = await AsyncDatabase(**self.config).query(
+            f'DELETE FROM "{TABLA_REGISTROS_DOCUMENTOS.nombre}" WHERE id_registro = %s AND id_documento = %s',
+            (id_registro, id_documento),
+        )
+        return borradas > 0
+
+    async def documentos_de_registros(self, ids_registro: list[int]) -> dict[int, list[dict]]:
+        """{id_registro: [{id, nombre, tipo_documento, archivado}]} en una sola
+        consulta, para acompañar un listado de registros."""
+        if not ids_registro:
+            return {}
+        filas = await AsyncDatabase(**self.config).query(
+            f"""
+            SELECT rd.id_registro, d.id, d.nombre, d.tipo_documento, d.archivado
+            FROM "{TABLA_REGISTROS_DOCUMENTOS.nombre}" rd
+            JOIN "{TABLA_DOCUMENTOS.nombre}" d ON d.id = rd.id_documento
+            WHERE rd.id_registro IN ({', '.join(['%s'] * len(ids_registro))})
+            ORDER BY d.nombre ASC
+            """,
+            tuple(ids_registro),
+        )
+        por_registro: dict[int, list[dict]] = {}
+        for f in filas:
+            por_registro.setdefault(f.pop("id_registro"), []).append(f)
+        return por_registro

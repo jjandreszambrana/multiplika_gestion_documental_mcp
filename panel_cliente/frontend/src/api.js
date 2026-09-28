@@ -527,6 +527,12 @@ export const api = {
   },
   eliminarRegistro: (idProyecto, idRegistro) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/registros/${idRegistro}`),
+  vincularDocumentoRegistro: (idProyecto, idRegistro, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros/${idRegistro}/documentos`, { id_documento: idDocumento }),
+  desvincularDocumentoRegistro: (idProyecto, idRegistro, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/registros/${idRegistro}/documentos/${idDocumento}`),
+  listarRegistrosDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/registros`),
 
   listarConversacionesChat: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat/conversaciones`),
