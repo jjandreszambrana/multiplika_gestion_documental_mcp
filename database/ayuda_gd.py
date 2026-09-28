@@ -326,14 +326,22 @@ redacta, cómo se calcula algo que hacéis siempre igual, qué hay que \
 incluir en cierto tipo de boletín... Así no tienes que repetirlo en cada \
 conversación.
 
-Cada regla lleva una **categoría** (por ejemplo "datos_empresa", \
-"correo", "boletines") y puede ser **global** o no:
+Cada regla lleva un **nombre** que no se repite (por ejemplo \
+"boletines_replicas") y una **categoría** (por ejemplo "datos_empresa", \
+"correo", "boletines"), y puede ser **global** o no:
 
 - **Global**: tu IA la recibe al empezar cualquier conversación. Para lo \
   que hace falta casi siempre, como el correo de contacto.
 - **No global**: tu IA la carga sola justo antes de la tarea de esa \
   categoría. Para lo que solo importa en un tipo de trabajo concreto, \
   como el detalle de cómo se monta un boletín.
+
+El nombre sirve para enlazar unas con otras: una regla global puede decir \
+en su texto "antes de redactar un boletín carga boletines_replicas y \
+boletines_firma", y tu IA va a buscar esas dos por su nombre solo cuando \
+toca. Así la global hace de índice y el detalle no ocupa sitio en las \
+conversaciones donde no hace falta. Si renombras una regla a la que otra \
+se refiere, acuérdate de cambiarlo también en el texto de esa otra.
 
 La diferencia es el coste: lo global viaja en todas las conversaciones, \
 así que conviene que sea corto. En el panel, pantalla "Reglas de la IA", \

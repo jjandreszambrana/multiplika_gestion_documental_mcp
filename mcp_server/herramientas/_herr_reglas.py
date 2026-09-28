@@ -7,9 +7,9 @@ Tres niveles de carga:
 1. Las globales entran solas en el contexto al abrir sesión (el middleware
    del núcleo llama a `obtener_reglas_globales_gd`, ver
    apps/mcp_server/core/instrucciones_iniciales.py).
-2. El resto se pide por categoría con `obtener_reglas_gd(categoria)` justo
-   antes de la tarea que las necesita — así solo cuestan tokens cuando
-   vienen a cuento.
+2. El resto se pide con `obtener_reglas_gd` justo antes de la tarea que las
+   necesita — por categoría, o por nombre cuando una regla global remita a
+   otras por el suyo. Así solo cuestan tokens cuando vienen a cuento.
 3. La regla meta (`REGLA_META`) va siempre dentro del bloque global y es la
    que le dice a la IA que existe el nivel 2."""
 
@@ -44,25 +44,31 @@ async def obtener_reglas_globales_gd() -> str:
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)
-async def obtener_reglas_gd(categoria: str | None = None) -> list[dict]:
-    """Reglas que debes cumplir en esta gestión documental: llámala con la
-    `categoria` correspondiente ANTES de empezar una tarea especializada
-    (p.ej. "boletines" antes de redactar un boletín, "facturacion" antes de
-    tocar facturas) — listar_reglas_gd te dice qué categorías hay. Sin
-    `categoria` devuelve todas las activas.
+async def obtener_reglas_gd(categoria: str | None = None, nombres: list[str] | None = None) -> list[dict]:
+    """Reglas que debes cumplir en esta gestión documental. Llámala ANTES de
+    empezar una tarea especializada, de una de estas dos formas:
+
+    - `nombres`: cuando una regla que ya tienes te remita a otras por su
+      nombre (p.ej. su texto dice "carga boletines_replicas") — pásalos todos
+      juntos en una sola llamada.
+    - `categoria`: cuando vayas por el tipo de tarea (p.ej. "boletines" antes
+      de redactar un boletín) — listar_reglas_gd te dice qué categorías hay.
+
+    Sin ninguna de las dos devuelve todas las activas.
 
     Vienen primero las de esta GD (`ambito` propia) y después las heredadas
     de las GDs centrales enlazadas (`ambito` heredada, con `origen`): si dos
     se contradicen, manda la propia."""
-    return await reglas_con_heredadas(await _config_actual(), categoria)
+    return await reglas_con_heredadas(await _config_actual(), categoria, nombres=nombres)
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)
 async def listar_reglas_gd(categoria: str | None = None, incluir_inactivas: bool = False) -> list[dict]:
     """Reglas propias de esta GD para gestionarlas (no para cumplirlas — eso
-    es obtener_reglas_gd): con su categoría, si es global, su prioridad y si
-    está activa o reservada. Úsala para ver qué categorías existen antes de
-    crear una regla nueva, y para no duplicar una que ya está escrita."""
+    es obtener_reglas_gd): con su nombre, su categoría, si es global, su
+    prioridad y si está activa o reservada. Úsala para ver qué nombres y
+    categorías existen antes de crear una regla nueva (los nombres no se
+    repiten), y para no duplicar una que ya está escrita."""
     return await ReglasCRUD(await _config_actual()).listar_reglas(
         categoria, incluir_inactivas=incluir_inactivas,
     )
@@ -70,12 +76,18 @@ async def listar_reglas_gd(categoria: str | None = None, incluir_inactivas: bool
 
 @mcp_app.tool()
 async def crear_regla_gd(
-    texto: str, categoria: str, es_global: bool = False, prioridad: int = 0, reservada: bool = False,
+    nombre: str, texto: str, categoria: str, es_global: bool = False,
+    prioridad: int = 0, reservada: bool = False,
 ) -> dict:
     """Guarda una instrucción de comportamiento para esta gestión documental
     (cómo trabajar aquí), no un documento. Confirma con el cliente el texto
     antes de crearla, y consulta listar_reglas_gd para reutilizar una
     categoría existente en vez de inventar una variante del mismo nombre.
+
+    `nombre`: obligatorio y sin repetir, corto y descriptivo (p.ej.
+    "boletines_replicas"). Es como se localiza esta regla: el texto de una
+    regla global puede remitir a ella por su nombre, y entonces se carga con
+    obtener_reglas_gd(nombres=["boletines_replicas"]).
 
     `texto`: una sola idea, en una o dos frases — cuanto más corta, menos
     cuesta cada sesión.
@@ -95,7 +107,7 @@ async def crear_regla_gd(
     reglas = ReglasCRUD(config)
     try:
         id_regla = await reglas.crear({
-            "texto": texto, "categoria": categoria, "es_global": es_global,
+            "nombre": nombre, "texto": texto, "categoria": categoria, "es_global": es_global,
             "prioridad": prioridad, "reservada": reservada,
         })
     except ValueError as e:
@@ -105,15 +117,17 @@ async def crear_regla_gd(
 
 @mcp_app.tool()
 async def actualizar_regla_gd(
-    id_regla: int, texto: str | None = None, categoria: str | None = None,
-    es_global: bool | None = None, prioridad: int | None = None,
+    id_regla: int, nombre: str | None = None, texto: str | None = None,
+    categoria: str | None = None, es_global: bool | None = None, prioridad: int | None = None,
     activa: bool | None = None, reservada: bool | None = None,
 ) -> dict:
     """Cambia los campos que se pasen de una regla ya existente (los que se
-    dejen en blanco no se tocan). `activa=False` la retira sin borrarla."""
+    dejen en blanco no se tocan). `activa=False` la retira sin borrarla. Se
+    puede renombrar, pero si otra regla remite a ella por el nombre viejo en su
+    texto, hay que cambiarlo también ahí."""
     try:
         regla = await ReglasCRUD(await _config_actual()).actualizar_campos(id_regla, {
-            "texto": texto, "categoria": categoria, "es_global": es_global,
+            "nombre": nombre, "texto": texto, "categoria": categoria, "es_global": es_global,
             "prioridad": prioridad, "activa": activa, "reservada": reservada,
         })
     except ValueError as e:
@@ -137,11 +151,13 @@ async def eliminar_regla_gd(id_regla: int) -> dict:
 # ---------- para otra GD que nos llama con key gd_enlazada ----------
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags=TAGS_GD_ENLAZADA)
-async def obtener_reglas_compartidas_gd(categoria: str | None = None, solo_globales: bool = False) -> list[dict]:
+async def obtener_reglas_compartidas_gd(
+    categoria: str | None = None, solo_globales: bool = False, nombres: list[str] | None = None,
+) -> list[dict]:
     """Uso interno entre gestiones documentales: las reglas de esta GD que
     una GD enlazada hereda (activas y no reservadas, solo las propias — no
     las que esta GD hereda a su vez). La llama el servidor de la otra GD, no
     una persona."""
     return await ReglasCRUD(await _config_actual()).listar_reglas(
-        categoria, solo_globales=solo_globales, solo_compartidas=True,
+        categoria, solo_globales=solo_globales, solo_compartidas=True, nombres=nombres,
     )

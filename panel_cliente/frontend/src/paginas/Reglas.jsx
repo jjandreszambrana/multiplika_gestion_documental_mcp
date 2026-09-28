@@ -16,6 +16,11 @@ const TOKENS_GLOBALES_AVISO = 1500
 function Etiquetas({ regla }) {
   return (
     <Group gap="6">
+      <Tooltip label="Nombre de la regla: por aquí la localiza cualquier otra que la mencione">
+        <Badge variant="outline" color="acento" style={{ fontFamily: "monospace", textTransform: "none" }}>
+          {regla.nombre}
+        </Badge>
+      </Tooltip>
       <Badge variant="light" color="gray">
         {regla.categoria}
       </Badge>
@@ -46,6 +51,7 @@ function Etiquetas({ regla }) {
 
 function FilaRegla({ proyecto, regla, puedeEscribir, onCambiada, onEliminar }) {
   const [editando, setEditando] = useState(false)
+  const [nombre, setNombre] = useState(regla.nombre)
   const [texto, setTexto] = useState(regla.texto)
   const [categoria, setCategoria] = useState(regla.categoria)
   const [prioridad, setPrioridad] = useState(regla.prioridad)
@@ -116,17 +122,29 @@ function FilaRegla({ proyecto, regla, puedeEscribir, onCambiada, onEliminar }) {
         <Stack mt="sm" maw={640}>
           <Textarea label="Texto de la regla" autosize minRows={2} value={texto} onChange={(e) => setTexto(e.currentTarget.value)} />
           <Group align="flex-end">
+            <TextInput label="Nombre" value={nombre} onChange={(e) => setNombre(e.currentTarget.value)} />
             <TextInput label="Categoría" value={categoria} onChange={(e) => setCategoria(e.currentTarget.value)} />
             <NumberInput label="Prioridad" w={110} value={prioridad} onChange={setPrioridad} />
             <Button
               size="sm"
               loading={guardando}
-              disabled={!texto.trim() || !categoria.trim()}
-              onClick={() => cambiar({ texto: texto.trim(), categoria: categoria.trim(), prioridad: Number(prioridad) || 0 })}
+              disabled={!nombre.trim() || !texto.trim() || !categoria.trim()}
+              onClick={() =>
+                cambiar({
+                  nombre: nombre.trim(),
+                  texto: texto.trim(),
+                  categoria: categoria.trim(),
+                  prioridad: Number(prioridad) || 0,
+                })
+              }
             >
               Guardar
             </Button>
           </Group>
+          <Text c="dimmed" fz="12.5px">
+            Si renombras esta regla y otra la menciona por su nombre, cámbialo también en el texto de
+            esa otra.
+          </Text>
         </Stack>
       )}
     </Paper>
@@ -142,6 +160,7 @@ export default function Reglas({ proyecto, onVolver }) {
   const [categoria, setCategoria] = useState(TODAS)
   const [error, setError] = useState(null)
   const [texto, setTexto] = useState("")
+  const [nombreNuevo, setNombreNuevo] = useState("")
   const [categoriaNueva, setCategoriaNueva] = useState("")
   const [esGlobal, setEsGlobal] = useState(false)
   const [reservada, setReservada] = useState(false)
@@ -169,11 +188,13 @@ export default function Reglas({ proyecto, onVolver }) {
     setError(null)
     try {
       await api.crearRegla(proyecto.id, {
+        nombre: nombreNuevo.trim(),
         texto: texto.trim(),
         categoria: categoriaNueva.trim(),
         es_global: esGlobal,
         reservada,
       })
+      setNombreNuevo("")
       setTexto("")
       setEsGlobal(false)
       setReservada(false)
@@ -219,7 +240,7 @@ export default function Reglas({ proyecto, onVolver }) {
         Cómo debe trabajar la IA en esta gestión documental: datos fijos de la empresa, criterios,
         formas de redactar. No son documentos. Las marcadas como <b>globales</b> las recibe la IA al
         empezar cada conversación; el resto las pide ella sola cuando le toca una tarea de esa
-        categoría, así que no cuestan nada mientras no vengan a cuento.
+        categoría, o por su nombre cuando una regla global le dice que cargue otra.
       </Text>
 
       {peso && (
@@ -245,6 +266,13 @@ export default function Reglas({ proyecto, onVolver }) {
           />
           <Group align="flex-end">
             <TextInput
+              label="Nombre"
+              placeholder="boletines_replicas"
+              value={nombreNuevo}
+              onChange={(e) => setNombreNuevo(e.currentTarget.value)}
+              required
+            />
+            <TextInput
               label="Categoría"
               placeholder="datos_empresa, correo, estilo..."
               value={categoriaNueva}
@@ -261,8 +289,10 @@ export default function Reglas({ proyecto, onVolver }) {
             </Button>
           </Group>
           <Text c="dimmed" fz="12.5px">
-            Marca "global" solo lo que hace falta en casi cualquier tarea. "Reservada" impide que la
-            regla se comparta con las gestiones documentales que nos consultan.
+            El nombre no se repite y sirve para localizar la regla: una regla global puede decir en su
+            texto "carga boletines_replicas" y la IA irá a buscarla por ese nombre. Marca "global" solo
+            lo que hace falta en casi cualquier tarea. "Reservada" impide que la regla se comparta con
+            las gestiones documentales que nos consultan.
           </Text>
         </Stack>
       )}

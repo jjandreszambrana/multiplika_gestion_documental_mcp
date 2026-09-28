@@ -23,16 +23,24 @@ AMBITO_HEREDADA = "heredada"
 #: no: es lo que le dice a la IA que existe el nivel 2 (reglas por categoría
 #: bajo demanda) y cómo se resuelven los conflictos.
 REGLA_META = (
-    "Las reglas globales de esta gestión documental ya están en tu contexto. Antes de empezar "
-    "cualquier tarea especializada (redactar un tipo de informe, preparar un envío, facturar...), "
-    "carga las reglas de la categoría correspondiente con obtener_reglas_gd(categoria) — "
-    "listar_reglas_gd() te dice qué categorías hay. Si una regla de esta gestión documental "
-    "contradice a una heredada de una GD central, manda la de esta gestión documental."
+    "Las reglas globales de esta gestión documental ya están en tu contexto, cada una con su nombre "
+    "delante. Antes de empezar cualquier tarea especializada (redactar un tipo de informe, preparar "
+    "un envío, facturar...), carga las reglas que hagan falta con obtener_reglas_gd: por categoría "
+    "si vas por el tipo de tarea, o por nombre (nombres=[...]) cuando una regla global te remita a "
+    "otras por su nombre. listar_reglas_gd() te dice qué reglas y categorías hay. Si una regla de "
+    "esta gestión documental contradice a una heredada de una GD central, manda la de esta gestión "
+    "documental."
 )
 
 CAMPOS_REGLAS = [
     Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
             comentario="Identificador interno de la regla"),
+    Columna(nombre="nombre", tipo="VARCHAR", longitud=100, not_null=True,
+            comentario='Cómo se llama esta regla, p.ej. "boletines_replicas": obligatorio, sin '
+                       "repetir y renombrable (igual que el nombre de una API key). Sirve para que "
+                       "una regla global remita a otra por su nombre en su propio texto y la IA "
+                       "pueda cargarla con obtener_reglas_gd(nombres=[...]) — el nombre va delante "
+                       "de cada regla en el bloque que recibe la IA"),
     Columna(nombre="texto", tipo="MEDIUMTEXT", not_null=True,
             comentario="La instrucción, redactada para la IA y en una sola idea por regla "
                        "(cuanto más corta, menos cuesta inyectarla en cada sesión)"),
@@ -60,6 +68,7 @@ CAMPOS_REGLAS = [
 ]
 
 INDICES_REGLAS = [
+    Index(columnas=["nombre"], unico=True),
     Index(columnas=["categoria"]),
     Index(columnas=["es_global"]),
 ]

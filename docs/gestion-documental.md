@@ -667,20 +667,30 @@ Diferencias respecto al plan, decididas al implementar:
 
 Plan original en `docs/planificacion/sistema-reglas-jerarquia-contexto.md`. Idea del usuario: hoy las instrucciones a la IA se guardan como documentos normales, mezcladas con normativa e informes; la IA tiene que buscarlas, leerlas e interpretarlas cada vez, y nada garantiza que las cargue en el momento adecuado. Las reglas separan el **comportamiento** (cómo actuar aquí) del **contenido** (los documentos), con su propio mecanismo de carga.
 
-**Tabla `gd_reglas`** (`database/dependencias/_dep_reglas.py`, sin FKs, CRUD en `database/modelos/_mod_reglas.py`): `texto` (una idea por regla), `categoria` (texto libre, catálogo abierto igual que `gd_scripts.lenguaje`), `es_global`, `prioridad`, `activa`, `reservada`, `fecha_alta`.
+**Tabla `gd_reglas`** (`database/dependencias/_dep_reglas.py`, sin FKs, CRUD en `database/modelos/_mod_reglas.py`): `nombre` (obligatorio, único y renombrable), `texto` (una idea por regla), `categoria` (texto libre, catálogo abierto igual que `gd_scripts.lenguaje`), `es_global`, `prioridad`, `activa`, `reservada`, `fecha_alta`.
 
 **Tres niveles de carga:**
 1. **Al abrir sesión**: el bloque de reglas globales entra solo en el `instructions` del `initialize` de MCP, sin que la IA tenga que pedir nada. Lo monta `texto_reglas_globales()` y lo recoge el middleware del núcleo (ver más abajo).
-2. **Bajo demanda**: `obtener_reglas_gd(categoria)` justo antes de la tarea que las necesita — solo cuesta tokens cuando viene a cuento.
+2. **Bajo demanda**: `obtener_reglas_gd` justo antes de la tarea que las necesita — por `categoria` (tipo de tarea) o por `nombres` (cuando una regla global remite a otras por su nombre). Solo cuesta tokens cuando viene a cuento.
 3. **Regla meta** (`REGLA_META`, texto fijo del servidor): va siempre dentro del bloque global, tenga el cliente reglas o no, y es lo que le dice a la IA que existe el nivel 2 y cómo se resuelven los conflictos.
 
 **Precedencia**: reglas propias > heredadas de la central > instrucciones del servidor (el bloque de reglas se añade al final del contexto inicial, después de la ayuda, el negocio y las preferencias de trabajo; en el chat del panel, después del `SYSTEM_PROMPT`).
 
-**Tools MCP** (`mcp_server/herramientas/_herr_reglas.py`): `obtener_reglas_globales_gd` (devuelve el bloque de texto), `obtener_reglas_gd(categoria)` (las que hay que cumplir: propias + heredadas), `listar_reglas_gd` (las propias con su estado, para gestionarlas), `crear_regla_gd`, `actualizar_regla_gd`, `eliminar_regla_gd`, y `obtener_reglas_compartidas_gd` (etiquetada `gd_enlazada`, uso interno entre GDs).
+**Tools MCP** (`mcp_server/herramientas/_herr_reglas.py`): `obtener_reglas_globales_gd` (devuelve el bloque de texto), `obtener_reglas_gd(categoria, nombres)` (las que hay que cumplir: propias + heredadas), `listar_reglas_gd` (las propias con su estado, para gestionarlas), `crear_regla_gd`, `actualizar_regla_gd`, `eliminar_regla_gd`, y `obtener_reglas_compartidas_gd` (etiquetada `gd_enlazada`, uso interno entre GDs).
 
-**Panel**: pantalla "Reglas de la IA" (`frontend/src/paginas/Reglas.jsx`), separada de documentos: alta, edición en línea, interruptores de global / activa / reservada, filtro por categoría y por ámbito (propias / heredadas, estas de solo lectura) y aviso del peso aproximado en tokens de las globales (endpoint `/reglas/globales/texto`, umbral `TOKENS_GLOBALES_AVISO`). Escritura para cualquiera salvo invitado, igual que los estilos de informe.
+**Panel**: pantalla "Reglas de la IA" (`frontend/src/paginas/Reglas.jsx`), separada de documentos: alta, edición en línea (incluido renombrar), interruptores de global / activa / reservada, filtro por categoría y por ámbito (propias / heredadas, estas de solo lectura) y aviso del peso aproximado en tokens de las globales (endpoint `/reglas/globales/texto`, umbral `TOKENS_GLOBALES_AVISO`). Escritura para cualquiera salvo invitado, igual que los estilos de informe.
 
 **Cambio en el núcleo** (`apps/mcp_server/core/instrucciones_iniciales.py`): el middleware que ya inyectaba ayuda + negocio + preferencias añade ahora el texto de la tool que empiece por `obtener_reglas_globales` (convención de nombre, igual que `obtener_ayuda*`; ningún nombre de producto vive en el núcleo). La ayuda se cachea por proceso y las reglas **no**: el cliente las cambia en caliente y la siguiente sesión tiene que verlas ya.
+
+#### Nombre de la regla, para que una global localice a sus subordinadas (2026-09-28, decisión del usuario)
+
+`gd_reglas.nombre`: obligatorio, sin repetir y renombrable, igual que el nombre de una API key (índice único; la unicidad se comprueba además en el CRUD para poder dar un mensaje claro en vez de un error de base de datos). Va **delante de cada regla** en el bloque que recibe la IA — `- nombre [categoria]: texto` — y `obtener_reglas_gd` acepta `nombres=[...]` (varias de golpe, para no encadenar llamadas).
+
+Con esto una regla global hace de índice de sus subordinadas: la global "boletines" dice en su texto "antes de redactar un boletín carga boletines_replicas y boletines_firma", y la IA se las trae en una sola llamada sin que esas dos ocupen sitio en las sesiones donde no hacen falta.
+
+El usuario descartó a propósito las otras dos opciones que se le ofrecieron: un campo de dependencia (`depende_de`) y que el nombre sustituyera a la categoría. El vínculo lo escribe él en el texto de la global, que es justo lo que la IA ya lee. Consecuencia asumida: al renombrar una regla, si otra la mencionaba por el nombre viejo hay que cambiarlo en ese texto a mano (avisado en el panel y en el docstring de `actualizar_regla_gd`).
+
+Se aplicó con `gd_reglas` vacía en los 6 proyectos de los 5 servidores, así que la columna `NOT NULL` entra sin migración ni valores por defecto.
 
 Decisiones tomadas al implementar (pendientes de corregir por el usuario):
 - **`ambito` no es una columna**: una fila de `gd_reglas` es siempre `propia`, y las heredadas se piden **en vivo** a las centrales enlazadas (tool `obtener_reglas_compartidas_gd`), igual que los documentos, que tampoco se copian. Así no hay nada que sincronizar ni que quede obsoleto. Solo un salto (las centrales de la central no se recorren, a diferencia de las consultas de documentos).

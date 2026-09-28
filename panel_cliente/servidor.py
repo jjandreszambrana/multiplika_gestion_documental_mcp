@@ -2308,6 +2308,7 @@ async def reabrir_aprendizaje(
 # instrucciones para la IA, no documentos).
 
 class NuevaRegla(BaseModel):
+    nombre: str
     texto: str
     categoria: str
     es_global: bool = False
@@ -2316,6 +2317,7 @@ class NuevaRegla(BaseModel):
 
 
 class ActualizarRegla(BaseModel):
+    nombre: str | None = None
     texto: str | None = None
     categoria: str | None = None
     es_global: bool | None = None
