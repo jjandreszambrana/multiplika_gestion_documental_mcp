@@ -46,6 +46,108 @@ function comoTexto(valor) {
   return typeof valor === "object" ? JSON.stringify(valor) : String(valor)
 }
 
+function esListaDeObjetos(definicion) {
+  return [].concat(definicion?.type || []).includes("array") && [].concat(definicion?.items?.type || []).includes("object")
+}
+
+// Una lista de objetos (p.ej. los parámetros de un análisis) se edita como
+// tabla: una fila por objeto y una columna por propiedad. Las columnas salen
+// del esquema (items.properties) y, si el esquema no las declara, de los
+// datos que ya haya.
+function TablaDeObjetos({ etiqueta, definicion, valor, onChange }) {
+  const filas = Array.isArray(valor) ? valor : []
+  const propiedades = definicion.items?.properties || {}
+  const columnas = [...new Set([...Object.keys(propiedades), ...filas.flatMap((f) => Object.keys(f || {}))])]
+  const [columnaNueva, setColumnaNueva] = useState("")
+
+  function cambiar(indice, columna, texto) {
+    const tipo = [].concat(propiedades[columna]?.type || [])
+    const numero = (tipo.includes("number") || tipo.includes("integer")) && texto !== "" && !isNaN(Number(texto))
+    const fila = { ...filas[indice] }
+    if (texto === "") delete fila[columna]
+    else fila[columna] = numero ? Number(texto) : texto
+    onChange(filas.map((f, i) => (i === indice ? fila : f)))
+  }
+
+  return (
+    <div>
+      <Text fz="sm" fw={500} mb="4">
+        {etiqueta}
+      </Text>
+      <Paper withBorder radius="md" style={{ overflowX: "auto" }}>
+        <Table verticalSpacing="4" horizontalSpacing="6" withColumnBorders>
+          <Table.Thead>
+            <Table.Tr>
+              {columnas.map((c) => (
+                <Table.Th key={c} fz="12px" miw={120}>
+                  {c}
+                  {(definicion.items?.required || []).includes(c) ? " *" : ""}
+                </Table.Th>
+              ))}
+              <Table.Th w={36} />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {filas.map((fila, i) => (
+              <Table.Tr key={i}>
+                {columnas.map((c) => (
+                  <Table.Td key={c}>
+                    <Textarea
+                      size="xs" variant="unstyled" autosize minRows={1} aria-label={`${c} fila ${i + 1}`}
+                      value={fila?.[c] === undefined || fila?.[c] === null ? "" : typeof fila[c] === "object" ? JSON.stringify(fila[c]) : String(fila[c])}
+                      onChange={(e) => cambiar(i, c, e.currentTarget.value)}
+                    />
+                  </Table.Td>
+                ))}
+                <Table.Td>
+                  <ActionIcon
+                    variant="subtle" color="red" size="sm" aria-label={`Quitar fila ${i + 1}`}
+                    onClick={() => onChange(filas.filter((_, j) => j !== i))}
+                  >
+                    <IconTrash size={14} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+            {filas.length === 0 && (
+              <Table.Tr>
+                <Table.Td colSpan={columnas.length + 1}>
+                  <Text fz="12.5px" c="dimmed">
+                    Sin filas
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
+            )}
+          </Table.Tbody>
+        </Table>
+      </Paper>
+      <Group mt="6" gap="xs">
+        <Button size="xs" variant="light" leftSection={<IconPlus size={13} />} onClick={() => onChange([...filas, {}])}>
+          Añadir fila
+        </Button>
+        {!Object.keys(propiedades).length && (
+          <>
+            <TextInput
+              size="xs" placeholder="Nueva columna" value={columnaNueva}
+              onChange={(e) => setColumnaNueva(e.currentTarget.value)}
+            />
+            <Button
+              size="xs" variant="subtle" disabled={!columnaNueva.trim() || columnas.includes(columnaNueva.trim())}
+              onClick={() => {
+                const nombre = columnaNueva.trim()
+                onChange((filas.length ? filas : [{}]).map((f) => ({ ...f, [nombre]: f[nombre] ?? "" })))
+                setColumnaNueva("")
+              }}
+            >
+              Añadir columna
+            </Button>
+          </>
+        )}
+      </Group>
+    </div>
+  )
+}
+
 // Un campo del formulario por cada campo del esquema: la forma de lo que se
 // anota la decide el modelo, no esta pantalla.
 function CampoDeEsquema({ nombre, definicion, requerido, valor, onChange }) {
@@ -71,6 +173,9 @@ function CampoDeEsquema({ nombre, definicion, requerido, valor, onChange }) {
         }
       />
     )
+  }
+  if (esListaDeObjetos(definicion) && typeof valor !== "string") {
+    return <TablaDeObjetos etiqueta={etiqueta} definicion={definicion} valor={valor} onChange={onChange} />
   }
   if (esCompuesto(definicion)) {
     return (
@@ -132,6 +237,12 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
       )
       // Las listas y objetos se editan como texto JSON: se convierten aquí.
       for (const [nombre, definicion] of campos(modelo)) {
+        // De la tabla: fuera celdas vacías y filas en blanco.
+        if (Array.isArray(limpios[nombre]) && esListaDeObjetos(definicion)) {
+          limpios[nombre] = limpios[nombre]
+            .map((fila) => Object.fromEntries(Object.entries(fila || {}).filter(([, v]) => v !== "" && v !== null)))
+            .filter((fila) => Object.keys(fila).length > 0)
+        }
         if (esCompuesto(definicion) && typeof limpios[nombre] === "string") {
           try {
             limpios[nombre] = JSON.parse(limpios[nombre])
@@ -157,7 +268,7 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
 
   return (
     <Modal
-      opened={opened} onClose={onClose} size="lg"
+      opened={opened} onClose={onClose} size="75rem"
       title={registro ? `Corregir registro #${registro.id}` : `Nuevo registro — ${modelo?.titulo || ""}`}
     >
       <Stack component="form" onSubmit={guardar}>
