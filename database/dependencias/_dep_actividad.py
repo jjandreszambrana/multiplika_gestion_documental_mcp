@@ -46,10 +46,13 @@ CAMPOS_ACTIVIDAD = [
                        "recortados (ver _mod_actividad.limpiar_detalle)"),
 ]
 
+# Nombres propios: los automáticos ("fecha_idx"...) chocan con índices de
+# otras tablas — en Postgres el nombre es único en todo el esquema, y el
+# CREATE INDEX IF NOT EXISTS se saltaba el nuestro sin avisar.
 INDICES_ACTIVIDAD = [
-    Index(columnas=["fecha"]),
-    Index(columnas=["tipo_objeto", "id_objeto"]),
-    Index(columnas=["quien", "fecha"]),
+    Index(columnas=["fecha"], nombre="gd_actividad_fecha_idx"),
+    Index(columnas=["tipo_objeto", "id_objeto"], nombre="gd_actividad_objeto_idx"),
+    Index(columnas=["quien", "fecha"], nombre="gd_actividad_quien_fecha_idx"),
 ]
 
 TABLA_ACTIVIDAD = Tabla(
