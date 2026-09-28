@@ -3,6 +3,9 @@
 partir de la API key autenticada, nunca de un parámetro (ver
 guia_nuevo_proyecto.md, paso 6)."""
 
+import base64
+import binascii
+
 from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
@@ -22,6 +25,7 @@ from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCR
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.modelos._mod_enlaces import UsoEnlacesCRUD, anotar_sin_resultados, consultar_centrales
 from ..database.modelos._mod_estilos import EstilosCRUD
+from ..database.modelos._mod_registros import RegistrosCRUD
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
 
@@ -476,7 +480,60 @@ async def obtener_documento_completo_gd(id_documento: int, id_version: int | Non
         "revisado_manualmente": version["revisado_manualmente"],
         "incumplimientos": version["incumplimientos"],
         "url_origen": version["url_origen"],
+        "archivo_original_nombre": version["archivo_original_nombre"],
         "markdown": version["markdown_actual"],
+    }
+
+
+LIMITE_BYTES_ARCHIVO_ORIGINAL = 20 * 1024 * 1024
+
+
+@mcp_app.tool()
+async def adjuntar_archivo_original_gd(
+    archivo_base64: str, nombre: str, tipo_mime: str = "application/pdf",
+    id_documento: int | None = None, id_registro: int | None = None,
+) -> dict:
+    """Guarda el archivo original tal cual (el PDF, la foto del parte) junto
+    a un documento — en su versión vigente — o junto a un registro de datos.
+    Indica uno de los dos: `id_documento` o `id_registro`. Si ya tenía uno,
+    se sustituye.
+
+    `archivo_base64`: el contenido del archivo codificado en base64; aquí se
+    pasa a binario y se guarda así. Solo viable si tienes el archivo al
+    alcance (p.ej. en Claude Code o con ejecución de código). Hasta 20 MB.
+    `nombre`: el nombre de fichero con su extensión, p.ej. "analisis.pdf".
+
+    Es solo para consultar/descargar el original: lo que se busca y lo que
+    manda sigue siendo el markdown del documento o los valores del registro."""
+    if (id_documento is None) == (id_registro is None):
+        raise ToolError("Indica id_documento o id_registro (uno de los dos)")
+    nombre = (nombre or "").strip()[:255]
+    if not nombre:
+        raise ToolError("Indica el nombre del archivo, p.ej. analisis.pdf")
+    try:
+        contenido = base64.b64decode("".join(archivo_base64.split()), validate=True)
+    except binascii.Error as e:
+        raise ToolError("archivo_base64 no es base64 válido") from e
+    if not contenido:
+        raise ToolError("El archivo está vacío")
+    if len(contenido) > LIMITE_BYTES_ARCHIVO_ORIGINAL:
+        raise ToolError(f"El archivo pesa más de {LIMITE_BYTES_ARCHIVO_ORIGINAL // (1024 * 1024)} MB")
+
+    config, _ = await _contexto_actual()
+    if id_registro is not None:
+        registros = RegistrosCRUD(config)
+        if not await registros.obtener(id_registro):
+            raise ToolError(f"No existe ningún registro con id {id_registro}")
+        await registros.guardar_archivo_original(id_registro, contenido, tipo_mime, nombre)
+        return {"id_registro": id_registro, "archivo_original_nombre": nombre, "bytes": len(contenido)}
+
+    version = await VersionesCRUD(config).obtener_vigente(id_documento)
+    if not version:
+        raise ToolError(f"No hay ninguna versión vigente para el documento {id_documento}")
+    await VersionesCRUD(config).guardar_archivo_original(version["id"], contenido, tipo_mime, nombre)
+    return {
+        "id_documento": id_documento, "id_version": version["id"],
+        "archivo_original_nombre": nombre, "bytes": len(contenido),
     }
 
 
