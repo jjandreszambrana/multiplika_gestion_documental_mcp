@@ -35,7 +35,12 @@ REGLA_META = (
 CAMPOS_REGLAS = [
     Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
             comentario="Identificador interno de la regla"),
-    Columna(nombre="nombre", tipo="VARCHAR", longitud=100, not_null=True,
+    # `unique=True` en la columna, no un Index(unico=True): el ORM nombra los
+    # índices solo por sus columnas ("nombre_idx"), y ese nombre ya lo tiene
+    # gd_documentos en el mismo esquema — el índice no llegaba a crearse (los
+    # nombres de índice son únicos por esquema en Postgres). Como restricción
+    # de columna, Postgres la llama gd_reglas_nombre_key y no choca con nada.
+    Columna(nombre="nombre", tipo="VARCHAR", longitud=100, not_null=True, unique=True,
             comentario='Cómo se llama esta regla, p.ej. "boletines_replicas": obligatorio, sin '
                        "repetir y renombrable (igual que el nombre de una API key). Sirve para que "
                        "una regla global remita a otra por su nombre en su propio texto y la IA "
@@ -68,7 +73,6 @@ CAMPOS_REGLAS = [
 ]
 
 INDICES_REGLAS = [
-    Index(columnas=["nombre"], unico=True),
     Index(columnas=["categoria"]),
     Index(columnas=["es_global"]),
 ]

@@ -22,7 +22,7 @@ Dos tablas nuevas, relacionadas por id:
 | Campo | Tipo | Para qué |
 |---|---|---|
 | `id` | INT autonumérico | Identificador operativo (igual que el resto del esquema) |
-| `nombre` | VARCHAR(100), único | `temperaturas_camaras` — es como se cita el modelo en conversación y en una regla |
+| `nombre` | VARCHAR(100), único (como `unique=True` de la columna, no como índice: el ORM nombra los índices solo por su columna y `nombre_idx` ya lo tiene `gd_documentos`) | `temperaturas_camaras` — es como se cita el modelo en conversación y en una regla |
 | `titulo` | VARCHAR(255) | Cómo se llama para una persona: "Control diario de temperaturas" |
 | `descripcion` | TEXT | Qué se anota, cuándo y quién — lo que lee la IA antes de rellenar uno |
 | `esquema` | TEXT (JSON) | El modelo al que debe ajustarse el registro (ver abajo) |

@@ -716,7 +716,7 @@ Plan original en `docs/planificacion/sistema-reglas-jerarquia-contexto.md`. Idea
 
 #### Nombre de la regla, para que una global localice a sus subordinadas (2026-09-28, decisión del usuario)
 
-`gd_reglas.nombre`: obligatorio, sin repetir y renombrable, igual que el nombre de una API key (índice único; la unicidad se comprueba además en el CRUD para poder dar un mensaje claro en vez de un error de base de datos). Va **delante de cada regla** en el bloque que recibe la IA — `- nombre [categoria]: texto` — y `obtener_reglas_gd` acepta `nombres=[...]` (varias de golpe, para no encadenar llamadas).
+`gd_reglas.nombre`: obligatorio, sin repetir y renombrable, igual que el nombre de una API key. La unicidad va como `unique=True` **de la columna**, no como un `Index(unico=True)`: el ORM nombra los índices solo por sus columnas (`nombre_idx`) y ese nombre ya lo tenía `gd_documentos` en el mismo esquema, así que el índice no llegaba a crearse y nadie se enteraba (descubierto al desplegar el 2026-09-28; aplicado a mano como `gd_reglas_nombre_key` en las 6 bases). Además se comprueba en el CRUD, para dar un mensaje claro en vez de un error de base de datos. Va **delante de cada regla** en el bloque que recibe la IA — `- nombre [categoria]: texto` — y `obtener_reglas_gd` acepta `nombres=[...]` (varias de golpe, para no encadenar llamadas).
 
 Con esto una regla global hace de índice de sus subordinadas: la global "boletines" dice en su texto "antes de redactar un boletín carga boletines_replicas y boletines_firma", y la IA se las trae en una sola llamada sin que esas dos ocupen sitio en las sesiones donde no hacen falta.
 
