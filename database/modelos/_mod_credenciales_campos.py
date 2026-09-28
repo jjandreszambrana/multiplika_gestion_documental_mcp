@@ -39,6 +39,15 @@ class CredencialesCamposCRUD(AsyncCrudBase):
                 "valor_cifrado": cifrar(campo["valor"]),
             })
 
+    async def valores_descifrados(self, id_credencial: int) -> dict[str, str]:
+        """{nombre: valor} de todos los campos extra de la credencial — solo
+        para uso interno del backend (p.ej. _mod_correo_imap.py), igual que
+        valor_descifrado."""
+        filas, _ = await self.listar(
+            filtros={"id_credencial": {"op": "=", "valor": id_credencial}}, limit=200,
+        )
+        return {fila["nombre"]: descifrar(fila["valor_cifrado"]) for fila in filas}
+
     async def valor_descifrado(self, id_campo: int) -> str | None:
         """Solo para uso interno del backend, igual que
         CredencialesCRUD.valor_descifrado — nunca se expone tal cual."""

@@ -69,7 +69,14 @@ async def crear_credencial_gd(
     con un aviso. Si el cliente cierra el formulario sin rellenarlo, o
     faltan `nombre`/`descripcion` y no hay formulario disponible, dile que
     no se ha creado nada y, en este último caso, pregúntaselos por chat y
-    vuelve a llamar a esta tool."""
+    vuelve a llamar a esta tool.
+
+    Para una cuenta de correo (la que luego usan listar_correos_gd y
+    compañía): usuario = la dirección de correo, valor = su contraseña (en
+    Gmail, una contraseña de aplicación). Los campos avanzados que alguna
+    necesita (`imap_host`, o `tenant_id`/`client_id`/`client_secret` en
+    Microsoft 365) no caben en este formulario: se añaden después desde el
+    panel."""
     proyecto = await resolver_proyecto_actual()
     config = get_db_config(proyecto["id"])
     credenciales = CredencialesCRUD(config)

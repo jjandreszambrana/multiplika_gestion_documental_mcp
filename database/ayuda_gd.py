@@ -407,6 +407,28 @@ GDs que te consultan (siempre con una copia sin nombres ni datos \
 identificativos, revisada y aprobada por una persona) y ver el uso que \
 hace cada una se gestiona desde el panel, pantalla "GDs enlazadas".
 
+## Leer y ordenar un buzón de correo
+
+Tu IA puede entrar en cualquier cuenta de correo que tengas dada de alta \
+como credencial: usuario = la dirección de correo, contraseña = la del \
+buzón. Le dices qué credencial usar ("mira el correo de Facturación") y \
+puede ver las carpetas, buscar correos (por remitente, asunto, fechas o \
+solo los no leídos), leer uno con sus adjuntos, marcarlos como leídos o \
+no leídos, moverlos a otra carpeta y pasar un adjunto a la cola de \
+documentos pendientes. Leer un correo no lo marca como leído: solo si se \
+lo pides.
+
+- **Gmail**: en lugar de tu contraseña normal usa una "contraseña de \
+  aplicación" (se crea en tu cuenta de Google → Seguridad).
+- **Microsoft 365 / Outlook de empresa**: no admite contraseña. Tu \
+  informático tiene que registrar una aplicación en Microsoft Entra con \
+  permiso de acceso IMAP y añadir a la credencial, desde el panel \
+  (bloque "Avanzado"), los campos `tenant_id`, `client_id` y `client_secret`.
+- **Otros proveedores**: normalmente basta con dirección y contraseña. Si \
+  el servidor no es `imap.<tu dominio>`, añade desde el panel, en \
+  "Avanzado", el campo \
+  `imap_host` (y `imap_port` / `imap_seguridad` si no es el 993 con SSL).
+
 ## El panel web
 
 Desde el panel (con tu usuario y contraseña de empresa) puedes:
