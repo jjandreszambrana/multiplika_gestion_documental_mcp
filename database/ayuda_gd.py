@@ -394,6 +394,9 @@ fragmento no basta, puede pedir el documento completo \
 (`obtener_documento_enlazado_gd`). Tú solo lees la central, nunca la \
 cambias. Si la central tampoco lo resuelve, tu IA se lo anota \
 (`anotar_pregunta_pendiente_enlazada_gd`) para que su responsable lo cubra.
+Para ver con qué GDs estás enlazado usa `listar_enlaces_gd`, y para \
+comprobar que un enlace sigue vivo y qué te deja pedir esa GD, \
+`listar_herramientas_enlace_gd`.
 
 Si tu GD hace de central para otras, lo que marques como **reservado** \
 (`marcar_reservado_gd`, o el botón "Reservar" en la ficha del documento) \

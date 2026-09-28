@@ -27,6 +27,7 @@ from ..database.modelos._mod_enlaces import (
     PreguntasPendientesCRUD,
     consultar_centrales,
     llamar_enlace,
+    probar_enlace,
     revocar_key,
 )
 
@@ -51,6 +52,21 @@ async def listar_enlaces_gd() -> list[dict]:
     las que consultamos (sentido 'central') y las que nos consultan a
     nosotros (sentido 'enlazada')."""
     return await EnlacesCRUD(await _config_actual()).listar_metadatos()
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA)
+async def listar_herramientas_enlace_gd(id_enlace: int) -> list[str]:
+    """Qué herramientas nos deja usar una GD enlazada con la clave que nos
+    dio — lo mismo que el botón "probar conexión" del panel. Sirve para
+    comprobar que el enlace sigue vivo y para saber qué se le puede pedir.
+    `id_enlace` viene de listar_enlaces_gd."""
+    enlace = await EnlacesCRUD(await _config_actual()).obtener_con_clave(id_enlace)
+    if not enlace:
+        raise ToolError(f"No existe ningún enlace con id_enlace {id_enlace} — mira listar_enlaces_gd")
+    try:
+        return await probar_enlace(enlace["url_mcp"], enlace["api_key"])
+    except EnlaceError as e:
+        raise ToolError(str(e))
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)
