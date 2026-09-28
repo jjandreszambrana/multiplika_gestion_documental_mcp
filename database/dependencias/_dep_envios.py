@@ -61,7 +61,7 @@ CAMPOS_ENVIOS = [
     Columna(nombre="error", tipo="MEDIUMTEXT", comentario="Motivo del fallo, si estado='fallido'"),
     Columna(nombre="creado_por", tipo="VARCHAR", longitud=255, not_null=True,
             comentario="Quién programó/mandó este envío — texto libre, mismo motivo que "
-                       "gd_registros.creado_por (no hay identidad de persona fiable por MCP)"),
+                       "gd_notas.creado_por (no hay identidad de persona fiable por MCP)"),
     Columna(nombre="fecha_creacion", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
             protegido_actualizar=True),
 ]

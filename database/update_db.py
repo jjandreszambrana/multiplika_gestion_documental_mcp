@@ -42,7 +42,7 @@ from database.dependencias._dep_credenciales_campos import TABLA_CREDENCIALES_CA
 from database.dependencias._dep_solicitudes_credencial import TABLA_SOLICITUDES_CREDENCIAL
 from database.dependencias._dep_estilos import TABLA_ESTILOS, TABLA_ESTILOS_IMAGENES
 from database.dependencias._dep_tipos_documento import TABLA_TIPOS_DOCUMENTO, TIPOS_POR_DEFECTO
-from database.dependencias._dep_registros import TABLA_REGISTROS, TABLA_REGISTROS_RELACIONES
+from database.dependencias._dep_notas import TABLA_NOTAS, TABLA_NOTAS_RELACIONES
 from database.dependencias._dep_grupos import TABLA_DOCUMENTOS_GRUPOS, TABLA_GRUPOS
 from database.dependencias._dep_entidades import TABLA_DOCUMENTOS_ENTIDADES, TABLA_ENTIDADES
 from database.dependencias._dep_envios import TABLA_ENVIOS
@@ -90,8 +90,8 @@ def main():
         TABLA_ESTILOS,
         TABLA_ESTILOS_IMAGENES,
         TABLA_TIPOS_DOCUMENTO,
-        TABLA_REGISTROS,
-        TABLA_REGISTROS_RELACIONES,
+        TABLA_NOTAS,
+        TABLA_NOTAS_RELACIONES,
         TABLA_GRUPOS,
         TABLA_DOCUMENTOS_GRUPOS,
         TABLA_ENTIDADES,

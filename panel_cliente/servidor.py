@@ -97,11 +97,11 @@ from ..database.modelos._mod_reglas import (
     texto_reglas_globales,
 )
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
-from ..database.modelos._mod_registros import (
-    RegistrosCRUD,
-    RegistrosRelacionesCRUD,
-    crear_registro,
-    listar_registros_documento,
+from ..database.modelos._mod_notas import (
+    NotasCRUD,
+    NotasRelacionesCRUD,
+    crear_nota,
+    listar_notas_documento,
     resolver_incidencia,
 )
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
@@ -818,9 +818,9 @@ async def desarchivar_documento(
     return documento
 
 
-# --- Registros de seguimiento (comentarios, anotaciones, observaciones,
+# --- Notas de seguimiento (comentarios, anotaciones, observaciones,
 # incidencias y sus resoluciones) — ver docs/gestion-documental.md →
-# "Registros de seguimiento". Cuelgan del documento, no de una versión
+# "Notas de seguimiento". Cuelgan del documento, no de una versión
 # concreta: siguen disponibles con cualquier versión nueva. Leer: cualquiera
 # con acceso al proyecto (incluido invitado, es consulta). Crear/resolver/
 # asignar: igual criterio que editar el documento (no invitado, no
@@ -828,7 +828,7 @@ async def desarchivar_documento(
 # actúa, sin tener que pedírselo.
 
 
-class NuevoRegistro(BaseModel):
+class NuevaNota(BaseModel):
     tipo: str
     texto: str
     responsable: str | None = None
@@ -842,30 +842,30 @@ class ResolverIncidencia(BaseModel):
     texto_resolucion: str
 
 
-class ActualizarResponsableRegistro(BaseModel):
+class ActualizarResponsableNota(BaseModel):
     responsable: str | None = None
     responsable_email: str | None = None
 
 
-class NuevaRelacionRegistro(BaseModel):
+class NuevaRelacionNota(BaseModel):
     id_destino: int
     tipo_relacion: str | None = None
 
 
-@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros")
-async def listar_registros(
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/notas")
+async def listar_notas(
     id_proyecto: int, id_documento: int, tipo: str | None = None,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> list[dict]:
     config = get_db_config(proyecto["id"])
     if not await DocumentosCRUD(config).obtener(id_documento):
         raise HTTPException(404, "Documento no encontrado")
-    return await listar_registros_documento(config, id_documento, tipo)
+    return await listar_notas_documento(config, id_documento, tipo)
 
 
-@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros")
-async def crear_registro_endpoint(
-    id_proyecto: int, id_documento: int, datos: NuevoRegistro,
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/notas")
+async def crear_nota_endpoint(
+    id_proyecto: int, id_documento: int, datos: NuevaNota,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     id_usuario: int = Depends(puede_editar_documento_actual),
 ) -> dict:
@@ -874,7 +874,7 @@ async def crear_registro_endpoint(
         raise HTTPException(404, "Documento no encontrado")
     creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
     try:
-        id_registro = await crear_registro(
+        id_nota = await crear_nota(
             config, id_documento, datos.tipo, datos.texto, creado_por,
             id_version_origen=datos.id_version_origen, responsable=datos.responsable,
             responsable_email=datos.responsable_email,
@@ -882,54 +882,54 @@ async def crear_registro_endpoint(
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
-    return await RegistrosCRUD(config).obtener(id_registro)
+    return await NotasCRUD(config).obtener(id_nota)
 
 
-@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/resolver")
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/notas/{id_nota}/resolver")
 async def resolver_incidencia_endpoint(
-    id_proyecto: int, id_documento: int, id_registro: int, datos: ResolverIncidencia,
+    id_proyecto: int, id_documento: int, id_nota: int, datos: ResolverIncidencia,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     id_usuario: int = Depends(puede_editar_documento_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
     creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
     try:
-        return await resolver_incidencia(config, id_registro, datos.texto_resolucion, creado_por)
+        return await resolver_incidencia(config, id_nota, datos.texto_resolucion, creado_por)
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
 
-@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/responsable")
-async def actualizar_responsable_registro(
-    id_proyecto: int, id_documento: int, id_registro: int, datos: ActualizarResponsableRegistro,
+@app.put("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/notas/{id_nota}/responsable")
+async def actualizar_responsable_nota(
+    id_proyecto: int, id_documento: int, id_nota: int, datos: ActualizarResponsableNota,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     id_usuario: int = Depends(puede_editar_documento_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
-    registro = await RegistrosCRUD(config).actualizar_responsable(id_registro, datos.responsable, datos.responsable_email)
-    if not registro:
-        raise HTTPException(404, "Registro no encontrado")
-    return registro
+    nota = await NotasCRUD(config).actualizar_responsable(id_nota, datos.responsable, datos.responsable_email)
+    if not nota:
+        raise HTTPException(404, "Nota no encontrada")
+    return nota
 
 
-@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/registros/{id_registro}/relaciones")
-async def crear_relacion_registro(
-    id_proyecto: int, id_documento: int, id_registro: int, datos: NuevaRelacionRegistro,
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/notas/{id_nota}/relaciones")
+async def crear_relacion_nota(
+    id_proyecto: int, id_documento: int, id_nota: int, datos: NuevaRelacionNota,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     id_usuario: int = Depends(puede_editar_documento_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
-    registros = RegistrosCRUD(config)
-    if not await registros.obtener(id_registro) or not await registros.obtener(datos.id_destino):
-        raise HTTPException(404, "Registro no encontrado")
-    id_relacion = await RegistrosRelacionesCRUD(config).crear(id_registro, datos.id_destino, datos.tipo_relacion)
-    return await RegistrosRelacionesCRUD(config).obtener(id_relacion)
+    notas = NotasCRUD(config)
+    if not await notas.obtener(id_nota) or not await notas.obtener(datos.id_destino):
+        raise HTTPException(404, "Nota no encontrada")
+    id_relacion = await NotasRelacionesCRUD(config).crear(id_nota, datos.id_destino, datos.tipo_relacion)
+    return await NotasRelacionesCRUD(config).obtener(id_relacion)
 
 
 # --- Grupos de documentos (ver docs/gestion-documental.md → "Grupos de
 # documentos"): un grupo agrupa documentos para un fin concreto; no todos
 # los documentos están en uno, y uno mismo puede estar en varios. Mismo
-# criterio de permisos que registros/archivar: día a día con documentos,
+# criterio de permisos que notas/archivar: día a día con documentos,
 # no administración — cualquiera con acceso puede leer, puede_editar hace
 # falta para crear/asignar/quitar.
 
@@ -1043,7 +1043,7 @@ async def listar_grupos_documento(
 
 # --- Entidades (ver docs/gestion-documental.md → "Entidades"): clientes,
 # proveedores, empleados... relacionables con documentos. Mismo criterio de
-# permisos que grupos/registros: cualquiera con acceso lee, puede_editar
+# permisos que grupos/notas: cualquiera con acceso lee, puede_editar
 # hace falta para crear/editar/borrar/relacionar.
 
 
@@ -1190,7 +1190,7 @@ async def listar_entidades_documento(
 # --- Comunicaciones y envíos (ver docs/gestion-documental.md →
 # "Comunicaciones y envíos"): un documento usado como plantilla, con
 # variables `{{asi}}`, se manda por email a una o varias entidades. Mismo
-# criterio de permisos que registros/grupos/entidades: cualquiera con
+# criterio de permisos que notas/grupos/entidades: cualquiera con
 # acceso lee, puede_editar hace falta para crear/mandar/cancelar/reintentar.
 
 

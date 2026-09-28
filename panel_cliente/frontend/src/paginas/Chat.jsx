@@ -327,7 +327,7 @@ export default function Chat({ proyecto, onVolver }) {
               <Stack gap="sm">
                 {mensajes.length === 0 && (
                   <Text c="dimmed" size="sm">
-                    Pregúntale algo sobre los documentos, entidades o registros de este proyecto.
+                    Pregúntale algo sobre los documentos, entidades o notas de este proyecto.
                   </Text>
                 )}
                 {mensajes.map((m, i) => (

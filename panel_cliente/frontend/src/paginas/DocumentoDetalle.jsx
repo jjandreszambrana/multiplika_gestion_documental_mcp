@@ -22,7 +22,7 @@ import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import { formatearFecha } from "../formato"
 import HistorialEdicion from "../componentes/HistorialEdicion"
-import RegistrosDocumento from "../componentes/RegistrosDocumento"
+import NotasDocumento from "../componentes/NotasDocumento"
 import GruposDocumento from "../componentes/GruposDocumento"
 import EntidadesDocumento from "../componentes/EntidadesDocumento"
 import ScriptsDocumento from "../componentes/ScriptsDocumento"
@@ -63,8 +63,8 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
   const [historialVersion, setHistorialVersion] = useState(0)
   const [vista, setVista] = useState("documento")
-  const [registros, setRegistros] = useState(null)
-  const incidenciasAbiertas = registros?.filter((r) => r.tipo === "incidencia" && r.estado === "abierta").length || 0
+  const [notas, setNotas] = useState(null)
+  const incidenciasAbiertas = notas?.filter((n) => n.tipo === "incidencia" && n.estado === "abierta").length || 0
   const esquemaColor = useComputedColorScheme("light")
 
   useEffect(() => {
@@ -376,12 +376,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   Documento
                 </Tabs.Tab>
                 <Tabs.Tab
-                  value="registros"
+                  value="notas"
                   leftSection={<IconMessageCircle size={15} stroke={1.8} />}
                   rightSection={
-                    registros?.length > 0 ? (
+                    notas?.length > 0 ? (
                       <Badge size="sm" circle variant="light" color={incidenciasAbiertas > 0 ? "red" : "gray"}>
-                        {incidenciasAbiertas > 0 ? incidenciasAbiertas : registros.length}
+                        {incidenciasAbiertas > 0 ? incidenciasAbiertas : notas.length}
                       </Badge>
                     ) : null
                   }
@@ -455,12 +455,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 )}
               </Tabs.Panel>
 
-              <Tabs.Panel value="registros" pt="lg">
-                <RegistrosDocumento
+              <Tabs.Panel value="notas" pt="lg">
+                <NotasDocumento
                   proyecto={proyecto}
                   idDocumento={idDocumento}
                   idVersion={documento.id_version}
-                  onCargado={setRegistros}
+                  onCargado={setNotas}
                   mostrarTitulo={false}
                 />
               </Tabs.Panel>

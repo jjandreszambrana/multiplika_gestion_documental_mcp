@@ -33,7 +33,7 @@ CAMPOS_SCRIPTS = [
                        'envio") — texto libre, opcional'),
     Columna(nombre="creado_por", tipo="VARCHAR", longitud=255, not_null=True,
             comentario="Quién o qué lo generó (nombre de la IA/asistente, o de la persona si lo "
-                       "sube a mano) — texto libre, igual que gd_registros.creado_por"),
+                       "sube a mano) — texto libre, igual que gd_notas.creado_por"),
     Columna(nombre="veces_usado", tipo="INT", not_null=True, default=0,
             comentario="Cuántas veces se ha reaprovechado — sirve para ver cuáles compensan tener "
                        "guardados. Se incrementa con marcar_uso_script_gd, no a mano"),

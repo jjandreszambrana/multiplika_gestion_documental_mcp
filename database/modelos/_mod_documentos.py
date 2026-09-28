@@ -5,7 +5,7 @@ from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
-from ..dependencias._dep_registros import TABLA_REGISTROS
+from ..dependencias._dep_notas import TABLA_NOTAS
 from ..dependencias._dep_versiones import TABLA_VERSIONES
 
 
@@ -28,8 +28,8 @@ class DocumentosCRUD(AsyncCrudBase):
         al ingerir. Por defecto no incluye documentos archivados.
 
         Incluye el estado de la versión vigente (borrador, incumplimientos,
-        revisado_manualmente) y el recuento de registros de seguimiento
-        (total_registros, incidencias_abiertas) vía LEFT JOIN — el panel
+        revisado_manualmente) y el recuento de notas de seguimiento
+        (total_notas, incidencias_abiertas) vía LEFT JOIN — el panel
         los muestra como badges en el listado sin tener que pedir cada
         documento aparte."""
         condiciones = []
@@ -58,16 +58,16 @@ class DocumentosCRUD(AsyncCrudBase):
         db = AsyncDatabase(**self.config)
         sql = f"""
             SELECT d.*, v.id AS id_version, v.borrador, v.incumplimientos, v.revisado_manualmente,
-                   COALESCE(reg.total, 0) AS total_registros,
-                   COALESCE(reg.abiertas, 0) AS incidencias_abiertas
+                   COALESCE(n.total, 0) AS total_notas,
+                   COALESCE(n.abiertas, 0) AS incidencias_abiertas
             FROM "{TABLA_DOCUMENTOS.nombre}" d
             LEFT JOIN "{TABLA_VERSIONES.nombre}" v ON v.id_documento = d.id AND v.vigente = true
             LEFT JOIN (
                 SELECT id_documento, COUNT(*) AS total,
                        COUNT(*) FILTER (WHERE tipo = 'incidencia' AND estado = 'abierta') AS abiertas
-                FROM "{TABLA_REGISTROS.nombre}"
+                FROM "{TABLA_NOTAS.nombre}"
                 GROUP BY id_documento
-            ) reg ON reg.id_documento = d.id
+            ) n ON n.id_documento = d.id
             {where}
             ORDER BY d.fecha_alta DESC
             LIMIT %s

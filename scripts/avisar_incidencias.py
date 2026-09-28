@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 """Aviso proactivo por email de incidencias abiertas con responsable
-asignado — ver docs/gestion-documental.md → "Registros de seguimiento" /
+asignado — ver docs/gestion-documental.md → "Notas de seguimiento" /
 "Aviso de incidencias". Recorre cada proyecto de gestión documental activo
 (Postgres, `tipo_producto='gestion_documental'` en la base de control) y
 manda UN correo si tiene incidencias abiertas, con responsable, para las
 que no se haya avisado ya de ESE responsable en concreto —
 `aviso_responsable_enviado` se reinicia a false cada vez que se cambia el
-responsable (ver `RegistrosCRUD.actualizar_responsable`), así que
+responsable (ver `NotasCRUD.actualizar_responsable`), así que
 reasignarla vuelve a avisar. Un aviso por asignación, no un recordatorio
 diario mientras siga abierta — mismo motivo que `avisar_caducidades.py`:
 evitar saturar de correos por algo que puede tardar en resolverse.
@@ -22,7 +22,7 @@ esas no hay a quién escribirle de forma fiable.
 Autocontenido a propósito, mismo motivo que avisar_caducidades.py: no
 importa la capa `database/modelos` de este repo (imports relativos
 pensados para desplegarse bajo `apps.mcp_server.*`) — consulta
-`gd_registros`/`gd_documentos`/`gd_configuracion` con SQL en línea. Si el
+`gd_notas`/`gd_documentos`/`gd_configuracion` con SQL en línea. Si el
 esquema de esas tablas cambia, hay que tocar también aquí.
 
 Pensado para cron, corriendo ya desplegado en
@@ -74,13 +74,13 @@ async def _proyectos_gestion_documental_activos() -> list[dict]:
 async def _incidencias_pendientes_aviso(config: dict) -> list[dict]:
     db = AsyncDatabase(**config)
     sql = """
-        SELECT r.id, r.texto, r.responsable, r.responsable_email, d.nombre AS documento
-        FROM gd_registros r
-        JOIN gd_documentos d ON d.id = r.id_documento
-        WHERE r.tipo = 'incidencia' AND r.estado = 'abierta'
-          AND r.responsable IS NOT NULL AND r.responsable <> ''
-          AND r.aviso_responsable_enviado = false
-        ORDER BY r.fecha_creacion ASC
+        SELECT n.id, n.texto, n.responsable, n.responsable_email, d.nombre AS documento
+        FROM gd_notas n
+        JOIN gd_documentos d ON d.id = n.id_documento
+        WHERE n.tipo = 'incidencia' AND n.estado = 'abierta'
+          AND n.responsable IS NOT NULL AND n.responsable <> ''
+          AND n.aviso_responsable_enviado = false
+        ORDER BY n.fecha_creacion ASC
     """
     return await db.query(sql)
 
@@ -113,10 +113,10 @@ async def _cuenta_email(config: dict) -> dict | None:
     }
 
 
-async def _marcar_avisadas(config: dict, ids_registro: list[int]) -> None:
+async def _marcar_avisadas(config: dict, ids_nota: list[int]) -> None:
     db = AsyncDatabase(**config)
     await db.query(
-        "UPDATE gd_registros SET aviso_responsable_enviado = true WHERE id = ANY(%s)", (ids_registro,)
+        "UPDATE gd_notas SET aviso_responsable_enviado = true WHERE id = ANY(%s)", (ids_nota,)
     )
 
 

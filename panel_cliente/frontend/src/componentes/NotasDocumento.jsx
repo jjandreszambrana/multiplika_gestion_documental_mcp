@@ -20,25 +20,25 @@ function resumen(texto, limite = 40) {
   return texto.length > limite ? `${texto.slice(0, limite)}…` : texto
 }
 
-function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
+function Nota({ proyecto, idDocumento, notas, nota, onCambiado }) {
   const [resolviendo, setResolviendo] = useState(false)
   const [textoResolucion, setTextoResolucion] = useState("")
   const [relacionando, setRelacionando] = useState(false)
   const [idDestino, setIdDestino] = useState(null)
   const [tipoRelacion, setTipoRelacion] = useState("")
   const [editandoResponsable, setEditandoResponsable] = useState(false)
-  const [nuevoResponsable, setNuevoResponsable] = useState(registro.responsable || "")
-  const [nuevoResponsableEmail, setNuevoResponsableEmail] = useState(registro.responsable_email || "")
+  const [nuevoResponsable, setNuevoResponsable] = useState(nota.responsable || "")
+  const [nuevoResponsableEmail, setNuevoResponsableEmail] = useState(nota.responsable_email || "")
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
 
-  const esIncidenciaAbierta = registro.tipo === "incidencia" && registro.estado === "abierta"
+  const esIncidenciaAbierta = nota.tipo === "incidencia" && nota.estado === "abierta"
 
   async function resolver() {
     setGuardando(true)
     setError(null)
     try {
-      await api.resolverIncidencia(proyecto.id, idDocumento, registro.id, textoResolucion)
+      await api.resolverIncidencia(proyecto.id, idDocumento, nota.id, textoResolucion)
       setResolviendo(false)
       setTextoResolucion("")
       await onCambiado()
@@ -54,7 +54,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
     setGuardando(true)
     setError(null)
     try {
-      await api.relacionarRegistros(proyecto.id, idDocumento, registro.id, Number(idDestino), tipoRelacion || null)
+      await api.relacionarNotas(proyecto.id, idDocumento, nota.id, Number(idDestino), tipoRelacion || null)
       setRelacionando(false)
       setIdDestino(null)
       setTipoRelacion("")
@@ -70,7 +70,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
     setGuardando(true)
     setError(null)
     try {
-      await api.asignarResponsableRegistro(proyecto.id, idDocumento, registro.id, nuevoResponsable, nuevoResponsableEmail)
+      await api.asignarResponsableNota(proyecto.id, idDocumento, nota.id, nuevoResponsable, nuevoResponsableEmail)
       setEditandoResponsable(false)
       await onCambiado()
     } catch (err) {
@@ -80,37 +80,37 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
     }
   }
 
-  const opcionesRelacion = registros
-    .filter((r) => r.id !== registro.id)
+  const opcionesRelacion = notas
+    .filter((n) => n.id !== nota.id)
     .map((r) => ({ value: String(r.id), label: `#${r.id} · ${infoTipo(r.tipo).label} — ${resumen(r.texto)}` }))
 
   return (
     <Paper withBorder radius="lg" p="14">
       <Group justify="space-between" wrap="nowrap" align="flex-start">
         <Group gap="8" wrap="nowrap">
-          <Badge color={infoTipo(registro.tipo).color} variant="light">
-            {infoTipo(registro.tipo).label}
+          <Badge color={infoTipo(nota.tipo).color} variant="light">
+            {infoTipo(nota.tipo).label}
           </Badge>
-          {registro.tipo === "incidencia" && (
-            <Badge color={registro.estado === "abierta" ? "orange" : "green"} variant="light">
-              {registro.estado === "abierta" ? "Abierta" : "Resuelta"}
+          {nota.tipo === "incidencia" && (
+            <Badge color={nota.estado === "abierta" ? "orange" : "green"} variant="light">
+              {nota.estado === "abierta" ? "Abierta" : "Resuelta"}
             </Badge>
           )}
         </Group>
         <Text size="11.5px" c="dimmed">
-          {registro.creado_por} · {formatearFecha(registro.fecha_creacion)}
+          {nota.creado_por} · {formatearFecha(nota.fecha_creacion)}
         </Text>
       </Group>
 
       <Text size="13.5px" mt="8" style={{ whiteSpace: "pre-wrap" }}>
-        {registro.texto}
+        {nota.texto}
       </Text>
 
       {!editandoResponsable ? (
         <Group gap="6" mt="8">
           <Text size="12px" c="dimmed">
-            {registro.responsable
-              ? `Responsable: ${registro.responsable}${registro.responsable_email ? ` (${registro.responsable_email})` : ""}`
+            {nota.responsable
+              ? `Responsable: ${nota.responsable}${nota.responsable_email ? ` (${nota.responsable_email})` : ""}`
               : "Sin responsable asignado"}
           </Text>
           <Text
@@ -118,7 +118,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
             onClick={() => setEditandoResponsable(true)}
             style={{ background: "none", border: 0, cursor: "pointer", padding: 0 }}
           >
-            {registro.responsable ? "Cambiar" : "Asignar"}
+            {nota.responsable ? "Cambiar" : "Asignar"}
           </Text>
         </Group>
       ) : (
@@ -142,9 +142,9 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
         </Group>
       )}
 
-      {registro.relaciones?.length > 0 && (
+      {nota.relaciones?.length > 0 && (
         <Stack gap="2" mt="8">
-          {registro.relaciones.map((rel, i) => (
+          {nota.relaciones.map((rel, i) => (
             <Text key={i} size="11.5px" c="dimmed">
               {rel.direccion === "hacia" ? "→" : "←"} {rel.tipo_relacion || "relacionado"} con #{rel.id_relacionado}
             </Text>
@@ -193,7 +193,7 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
       {relacionando && (
         <Group gap="8" mt="10" align="flex-end">
           <Select
-            placeholder="Registro relacionado" data={opcionesRelacion}
+            placeholder="Nota relacionada" data={opcionesRelacion}
             value={idDestino} onChange={setIdDestino} searchable
             style={{ flex: 1, minWidth: 200 }}
           />
@@ -214,8 +214,8 @@ function Registro({ proyecto, idDocumento, registros, registro, onCambiado }) {
   )
 }
 
-export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, onCargado, mostrarTitulo = true }) {
-  const [registros, setRegistros] = useState(null)
+export default function NotasDocumento({ proyecto, idDocumento, idVersion, onCargado, mostrarTitulo = true }) {
+  const [notas, setNotas] = useState(null)
   const [error, setError] = useState(null)
   const [tipo, setTipo] = useState("comentario")
   const [texto, setTexto] = useState("")
@@ -225,9 +225,9 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
 
   function cargar() {
     return api
-      .listarRegistrosDocumento(proyecto.id, idDocumento)
+      .listarNotasDocumento(proyecto.id, idDocumento)
       .then((lista) => {
-        setRegistros(lista)
+        setNotas(lista)
         onCargado?.(lista)
       })
       .catch((err) => setError(err.message))
@@ -243,7 +243,7 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
     setCreando(true)
     setError(null)
     try {
-      await api.crearRegistroDocumento(proyecto.id, idDocumento, {
+      await api.crearNotaDocumento(proyecto.id, idDocumento, {
         tipo, texto, responsable: responsable || null, responsable_email: responsableEmail || null,
         id_version_origen: idVersion,
       })
@@ -301,23 +301,23 @@ export default function RegistrosDocumento({ proyecto, idDocumento, idVersion, o
       )}
 
       {error && <Alert color="red">{error}</Alert>}
-      {!error && !registros && (
+      {!error && !notas && (
         <Text size="sm" c="dimmed">
           Cargando...
         </Text>
       )}
-      {registros && registros.length === 0 && (
+      {notas && notas.length === 0 && (
         <Text size="sm" c="dimmed">
           Este documento no tiene comentarios ni incidencias todavía.
         </Text>
       )}
-      {registros?.map((registro) => (
-        <Registro
-          key={registro.id}
+      {notas?.map((nota) => (
+        <Nota
+          key={nota.id}
           proyecto={proyecto}
           idDocumento={idDocumento}
-          registros={registros}
-          registro={registro}
+          notas={notas}
+          nota={nota}
           onCambiado={cargar}
         />
       ))}

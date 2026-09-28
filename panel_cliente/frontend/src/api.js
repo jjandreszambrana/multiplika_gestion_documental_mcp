@@ -297,29 +297,29 @@ export const api = {
       `/proyectos/${idProyecto}/documentos-pendientes/${idPendiente}/estructurar`, { texto },
     ),
 
-  listarRegistrosDocumento: (idProyecto, idDocumento, tipo) =>
+  listarNotasDocumento: (idProyecto, idDocumento, tipo) =>
     peticion(
       BASE_CLIENTE, "GET",
-      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros${tipo ? `?tipo=${tipo}` : ""}`,
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/notas${tipo ? `?tipo=${tipo}` : ""}`,
     ),
-  crearRegistroDocumento: (idProyecto, idDocumento, datos) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/registros`, datos),
-  resolverIncidencia: (idProyecto, idDocumento, idRegistro, textoResolucion) =>
+  crearNotaDocumento: (idProyecto, idDocumento, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/notas`, datos),
+  resolverIncidencia: (idProyecto, idDocumento, idNota, textoResolucion) =>
     peticion(
       BASE_CLIENTE, "POST",
-      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/resolver`,
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/notas/${idNota}/resolver`,
       { texto_resolucion: textoResolucion },
     ),
-  asignarResponsableRegistro: (idProyecto, idDocumento, idRegistro, responsable, responsableEmail) =>
+  asignarResponsableNota: (idProyecto, idDocumento, idNota, responsable, responsableEmail) =>
     peticion(
       BASE_CLIENTE, "PUT",
-      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idRegistro}/responsable`,
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/notas/${idNota}/responsable`,
       { responsable: responsable || null, responsable_email: responsableEmail || null },
     ),
-  relacionarRegistros: (idProyecto, idDocumento, idOrigen, idDestino, tipoRelacion) =>
+  relacionarNotas: (idProyecto, idDocumento, idOrigen, idDestino, tipoRelacion) =>
     peticion(
       BASE_CLIENTE, "POST",
-      `/proyectos/${idProyecto}/documentos/${idDocumento}/registros/${idOrigen}/relaciones`,
+      `/proyectos/${idProyecto}/documentos/${idDocumento}/notas/${idOrigen}/relaciones`,
       { id_destino: idDestino, tipo_relacion: tipoRelacion || null },
     ),
 

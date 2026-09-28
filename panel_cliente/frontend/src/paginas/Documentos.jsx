@@ -3,7 +3,7 @@ import { ActionIcon, Alert, Badge, Button, Group, Modal, Paper, Select, Table, T
 import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconFilePlus, IconMessageCircle, IconRefresh, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
 import NuevoDocumentoModal from "../componentes/NuevoDocumentoModal"
-import RegistrosDocumento from "../componentes/RegistrosDocumento"
+import NotasDocumento from "../componentes/NotasDocumento"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
 import { formatearFecha } from "../formato"
 
@@ -48,7 +48,7 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
   const [errorPendientes, setErrorPendientes] = useState(null)
   const [modalSubidaAbierto, setModalSubidaAbierto] = useState(false)
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false)
-  const [docRegistros, setDocRegistros] = useState(null)
+  const [docNotas, setDocNotas] = useState(null)
 
   useEffect(() => {
     api.listarTiposDocumento(proyecto.id)
@@ -328,21 +328,21 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
                         label={
                           r.incidencias_abiertas > 0
                             ? `${r.incidencias_abiertas} incidencia${r.incidencias_abiertas === 1 ? "" : "s"} abierta${r.incidencias_abiertas === 1 ? "" : "s"}`
-                            : r.total_registros > 0
-                              ? `${r.total_registros} comentario${r.total_registros === 1 ? "" : "s"}/incidencia${r.total_registros === 1 ? "" : "s"}`
+                            : r.total_notas > 0
+                              ? `${r.total_notas} comentario${r.total_notas === 1 ? "" : "s"}/incidencia${r.total_notas === 1 ? "" : "s"}`
                               : "Comentarios e incidencias"
                         }
                       >
                         <Group
                           gap="4" wrap="nowrap" style={{ cursor: "pointer", display: "inline-flex" }}
-                          onClick={() => setDocRegistros({ id: idDocumento, idVersion: r.id_version, nombre: r.nombre })}
+                          onClick={() => setDocNotas({ id: idDocumento, idVersion: r.id_version, nombre: r.nombre })}
                         >
                           <ActionIcon variant="light" color={r.incidencias_abiertas > 0 ? "red" : "gray"}>
                             <IconMessageCircle size={15} stroke={1.8} />
                           </ActionIcon>
-                          {r.total_registros > 0 && (
+                          {r.total_notas > 0 && (
                             <Badge size="sm" circle variant="light" color={r.incidencias_abiertas > 0 ? "red" : "gray"}>
-                              {r.incidencias_abiertas > 0 ? r.incidencias_abiertas : r.total_registros}
+                              {r.incidencias_abiertas > 0 ? r.incidencias_abiertas : r.total_notas}
                             </Badge>
                           )}
                         </Group>
@@ -366,16 +366,16 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
       )}
 
       <Modal
-        opened={!!docRegistros}
-        onClose={() => setDocRegistros(null)}
-        title={docRegistros?.nombre}
+        opened={!!docNotas}
+        onClose={() => setDocNotas(null)}
+        title={docNotas?.nombre}
         size="lg"
       >
-        {docRegistros && (
-          <RegistrosDocumento
+        {docNotas && (
+          <NotasDocumento
             proyecto={proyecto}
-            idDocumento={docRegistros.id}
-            idVersion={docRegistros.idVersion}
+            idDocumento={docNotas.id}
+            idVersion={docNotas.idVersion}
             mostrarTitulo={false}
           />
         )}

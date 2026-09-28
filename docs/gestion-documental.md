@@ -453,33 +453,65 @@ Si el cliente cierra el formulario sin rellenarlo (`action != "accept"`), la too
 
 **Sin probar todavía contra un cliente MCP real** (ni Claude ni ChatGPT) — depende de que la aplicación que conecta soporte elicitation; en ChatGPT hace falta además su "Developer Mode". Antes de dar esto por bueno hay que verificarlo con una conexión real.
 
-### Registros de seguimiento: comentarios, anotaciones, observaciones, incidencias (2026-09-16)
+### Notas de seguimiento: comentarios, anotaciones, observaciones, incidencias (2026-09-16; se llamaban "registros" hasta el 2026-09-28, ver el renombrado al final de este apartado)
 
-El cliente quiere poder dejar comentarios/anotaciones/observaciones sobre un documento, abrir incidencias con un responsable asignado, resolverlas dejando constancia de cómo, relacionar estos registros entre sí, y que todo eso siga disponible aunque el documento tenga una versión nueva.
+El cliente quiere poder dejar comentarios/anotaciones/observaciones sobre un documento, abrir incidencias con un responsable asignado, resolverlas dejando constancia de cómo, relacionar estas notas entre sí, y que todo eso siga disponible aunque el documento tenga una versión nueva.
 
-**Decisión clave — una sola tabla (`gd_registros`), no cinco.** Un campo `tipo` (`comentario` / `anotacion` / `observacion` / `incidencia` / `resolucion`) distingue cada caso. Ventaja principal: relacionar dos registros entre sí es la misma mecánica sea cual sea su tipo, y una resolución no deja de ser más que un registro de tipo `resolucion` enlazado a su incidencia — no hace falta un mecanismo aparte para "resolver".
+**Decisión clave — una sola tabla (`gd_notas`), no cinco.** Un campo `tipo` (`comentario` / `anotacion` / `observacion` / `incidencia` / `resolucion`) distingue cada caso. Ventaja principal: relacionar dos notas entre sí es la misma mecánica sea cual sea su tipo, y una resolución no deja de ser más que una nota de tipo `resolucion` enlazada a su incidencia — no hace falta un mecanismo aparte para "resolver".
 
-- **Cuelga de `gd_documentos`, no de `gd_versiones`** — a propósito, para que un registro siga apareciendo entero con cualquier versión nueva del documento sin copiarlo ni migrarlo nada. Lleva además `id_version_origen` (nullable, informativo): en qué versión estaba el documento cuando se creó, pero nunca decide en qué versiones se ve.
+- **Cuelga de `gd_documentos`, no de `gd_versiones`** — a propósito, para que una nota siga apareciendo entera con cualquier versión nueva del documento sin copiarla ni migrarla. Lleva además `id_version_origen` (nullable, informativo): en qué versión estaba el documento cuando se creó, pero nunca decide en qué versiones se ve.
 - **`creado_por` es texto libre, no un id de usuario real.** Desde el panel se podría resolver de sobra (hay sesión, `puede_editar_documento_actual` ya da el `id_usuario`, ver "Edición desde el panel"), pero desde una tool MCP no hay una identidad de persona fiable — la API key identifica al proyecto, no a quién escribe en ese momento del chat. En vez de dos mecanismos distintos según el origen, un único campo de texto: el panel lo rellena solo con el nombre real de quien tiene la sesión, y por chat se le pregunta a la IA que lo pida si no lo sabe ya (nunca que lo invente).
-- **`responsable` es texto libre en cualquier tipo de registro, no solo en incidencias** — decisión explícita del cliente: no hace falta que sea un usuario real del sistema, y no vale la pena limitarlo a un tipo concreto.
-- **`estado` (`abierta`/`resuelta`) solo tiene sentido en incidencias** — estructuralmente disponible en cualquier registro (columna nullable en la misma tabla, no una tabla aparte) por simplicidad, pero NULL fuera de ese tipo.
-- **Relaciones en tabla aparte (`gd_registros_relaciones`)**, no una columna `id_registro_padre`: un registro puede relacionarse con más de uno, y en cualquier dirección. `tipo_relacion` es una etiqueta libre (p.ej. "relacionado", "duplica"); `"resuelve"` la pone siempre `resolver_incidencia()`, nunca a mano — así una incidencia resuelta tiene garantizado tener su resolución enlazada (misma transacción: crear el registro de resolución, crear la relación, marcar `estado='resuelta'`).
-- **Crear una `resolucion` directamente está bloqueado** (`crear_registro()` solo acepta los otros cuatro tipos) — la única vía es `resolver_incidencia_gd`/el endpoint de resolver, para que ese invariante (incidencia resuelta ⇒ resolución enlazada) no se pueda romper por otro camino.
+- **`responsable` es texto libre en cualquier tipo de nota, no solo en incidencias** — decisión explícita del cliente: no hace falta que sea un usuario real del sistema, y no vale la pena limitarlo a un tipo concreto.
+- **`estado` (`abierta`/`resuelta`) solo tiene sentido en incidencias** — estructuralmente disponible en cualquier nota (columna nullable en la misma tabla, no una tabla aparte) por simplicidad, pero NULL fuera de ese tipo.
+- **Relaciones en tabla aparte (`gd_notas_relaciones`)**, no una columna `id_nota_padre`: una nota puede relacionarse con más de una, y en cualquier dirección. `tipo_relacion` es una etiqueta libre (p.ej. "relacionado", "duplica"); `"resuelve"` la pone siempre `resolver_incidencia()`, nunca a mano — así una incidencia resuelta tiene garantizado tener su resolución enlazada (misma transacción: crear la nota de resolución, crear la relación, marcar `estado='resuelta'`).
+- **Crear una `resolucion` directamente está bloqueado** (`crear_nota()` solo acepta los otros cuatro tipos) — la única vía es `resolver_incidencia_gd`/el endpoint de resolver, para que ese invariante (incidencia resuelta ⇒ resolución enlazada) no se pueda romper por otro camino.
 
-**Tools MCP** (`mcp_server/herramientas/_herr_registros.py`): `crear_registro_documento_gd`, `listar_registros_documento_gd`, `resolver_incidencia_gd`, `asignar_responsable_registro_gd`, `relacionar_registros_gd`. Sin elicitation aquí — a diferencia de `guardar_documento_gd`/`crear_credencial_gd`, `creado_por`/`responsable` son campos sueltos de bajo riesgo (no secretos, no un cluster de varios campos), así que van como parámetro normal de la tool con instrucción en el docstring de preguntarlos por chat en vez de inventarlos.
+**Tools MCP** (`mcp_server/herramientas/_herr_notas.py`): `crear_nota_documento_gd`, `listar_notas_documento_gd`, `resolver_incidencia_gd`, `asignar_responsable_nota_gd`, `relacionar_notas_gd`. Sin elicitation aquí — a diferencia de `guardar_documento_gd`/`crear_credencial_gd`, `creado_por`/`responsable` son campos sueltos de bajo riesgo (no secretos, no un cluster de varios campos), así que van como parámetro normal de la tool con instrucción en el docstring de preguntarlos por chat en vez de inventarlos.
 
-**Panel**: sección nueva "Comentarios e incidencias" en `DocumentoDetalle.jsx` (`componentes/RegistrosDocumento.jsx`) — listar, crear, resolver, asignar responsable y relacionar, todo desde la ficha del documento. Mismo criterio de permisos que editar el documento (`puede_editar_documento_actual`): invitado puede leer, no crear.
+**Panel**: sección nueva "Comentarios e incidencias" en `DocumentoDetalle.jsx` (`componentes/NotasDocumento.jsx`) — listar, crear, resolver, asignar responsable y relacionar, todo desde la ficha del documento. Mismo criterio de permisos que editar el documento (`puede_editar_documento_actual`): invitado puede leer, no crear.
 
 **Estado (2026-09-16): implementado y desplegado en los 4 servidores** (`mcp-d`, `maderascilpe`, `mgsasesores`, `adimelsl`), esquema aplicado sobre Postgres real en las 4 bases sin tocar datos existentes (verificado contando filas de `gd_documentos`/`gd_versiones` antes y después). Sin probar todavía con un cliente MCP real end-to-end (Claude Desktop/Code) ni desde el panel en producción — pendiente de una prueba real antes de darlo por cerrado del todo.
 
 Quién decidió: usuario (confirmado en conversación, incluida la decisión explícita de que `responsable` sea libre en todos los tipos).
 Reversible: sí — son dos tablas nuevas, sin tocar ninguna existente; quitar las tools/el endpoint/la sección del panel no afecta a nada más.
 
+#### Renombrado a "notas" (2026-09-28, decisión del usuario)
+
+`gd_registros` → `gd_notas` y `gd_registros_relaciones` → `gd_notas_relaciones`, con sus columnas `id_registro_origen`/`id_registro_destino` → `id_nota_origen`/`id_nota_destino`. Motivo: hacía falta el nombre "registro" para los **registros de datos** (anotaciones estructuradas con su propio modelo, ver `docs/planificacion/registros-y-modelos-de-registro.md`), y tener dos cosas distintas llamadas igual confundiría a la IA y al cliente todos los días.
+
+Se eligió "nota" y no "anotación" (la palabra que usó el usuario) porque `anotacion` es ya uno de los cinco valores de `tipo` dentro de esa misma tabla: habría reproducido la confusión en pequeño.
+
+Momento aprovechado: las seis bases de los cinco servidores tenían 4 filas en total (4 comentarios y 1 relación, en Codemartia). Renombrar con datos de verdad dentro habría sido otra conversación.
+
+Cambia también lo que ve la IA: `crear_registro_documento_gd` → `crear_nota_documento_gd`, `listar_registros_documento_gd` → `listar_notas_documento_gd`, `asignar_responsable_registro_gd` → `asignar_responsable_nota_gd`, `relacionar_registros_gd` → `relacionar_notas_gd` (`resolver_incidencia_gd` no cambia). Y las rutas del panel `/documentos/{id}/registros…` → `/documentos/{id}/notas…`, más `total_registros` → `total_notas` en el listado de documentos.
+
+**Cómo se aplicó en cada base** (el `ManagerDB` no entiende de renombrados: con el nombre nuevo en el código habría creado una tabla vacía y dejado la vieja con los datos dentro):
+
+```sql
+ALTER TABLE gd_registros RENAME TO gd_notas;
+ALTER TABLE gd_registros_relaciones RENAME TO gd_notas_relaciones;
+ALTER TABLE gd_notas_relaciones RENAME COLUMN id_registro_origen TO id_nota_origen;
+ALTER TABLE gd_notas_relaciones RENAME COLUMN id_registro_destino TO id_nota_destino;
+-- índices y restricciones, que en Postgres conservan el nombre viejo al renombrar la tabla
+ALTER INDEX gd_registros_pkey RENAME TO gd_notas_pkey;
+ALTER INDEX gd_registros_relaciones_pkey RENAME TO gd_notas_relaciones_pkey;
+ALTER INDEX id_registro_origen_idx RENAME TO id_nota_origen_idx;
+ALTER INDEX id_registro_destino_idx RENAME TO id_nota_destino_idx;
+ALTER TABLE gd_notas RENAME CONSTRAINT gd_registros_id_documento_fkey TO gd_notas_id_documento_fkey;
+ALTER TABLE gd_notas RENAME CONSTRAINT gd_registros_id_version_origen_fkey TO gd_notas_id_version_origen_fkey;
+ALTER TABLE gd_notas_relaciones RENAME CONSTRAINT gd_registros_relaciones_id_registro_origen_fkey TO gd_notas_relaciones_id_nota_origen_fkey;
+ALTER TABLE gd_notas_relaciones RENAME CONSTRAINT gd_registros_relaciones_id_registro_destino_fkey TO gd_notas_relaciones_id_nota_destino_fkey;
+-- el registro interno del ORM, que compara contra lo que tiene apuntado
+DELETE FROM estructura_actual WHERE tabla IN ('gd_registros', 'gd_registros_relaciones');
+```
+
+Después, el script de esquema con `TABLA_NOTAS`/`TABLA_NOTAS_RELACIONES` vuelve a apuntar la estructura con el nombre nuevo (todo lo que emite es `IF NOT EXISTS` sobre lo que ya existe renombrado). Orden por servidor: copiar el código nuevo sin reiniciar → renombrar en la base → reiniciar `multiplika_mcp` y el panel. Vuelta atrás: el mismo SQL al revés.
+
 ### Aviso de incidencias abiertas por email (2026-09-17)
 
 Mismo problema que resolvió "Fechas de caducidad y avisos proactivos por email" (más arriba), aplicado a incidencias: si nadie entra al panel ni le pregunta a la IA, abrir una incidencia y asignarle un responsable no avisa a nadie de que existe.
 
-**Decisión: un aviso por asignación, no un recordatorio diario mientras siga abierta.** Se valoró mandar un resumen diario con todo lo abierto (como hace `avisar_caducidades.py` cada día hasta que caduca), pero una incidencia puede tardar semanas en resolverse — recibir el mismo aviso cada día durante ese tiempo es ruido, no ayuda a que se resuelva antes. En vez de eso: columna `gd_registros.aviso_responsable_enviado` (mismo patrón que `gd_versiones.aviso_caducidad_enviado`), y `RegistrosCRUD.actualizar_responsable()` la reinicia a `false` cada vez que cambia el responsable — así reasignarla sí vuelve a avisar (a quien corresponda ahora), pero dejarla como está no genera más correos.
+**Decisión: un aviso por asignación, no un recordatorio diario mientras siga abierta.** Se valoró mandar un resumen diario con todo lo abierto (como hace `avisar_caducidades.py` cada día hasta que caduca), pero una incidencia puede tardar semanas en resolverse — recibir el mismo aviso cada día durante ese tiempo es ruido, no ayuda a que se resuelva antes. En vez de eso: columna `gd_notas.aviso_responsable_enviado` (mismo patrón que `gd_versiones.aviso_caducidad_enviado`), y `NotasCRUD.actualizar_responsable()` la reinicia a `false` cada vez que cambia el responsable — así reasignarla sí vuelve a avisar (a quien corresponda ahora), pero dejarla como está no genera más correos.
 
 **El correo va a `email_avisos`, no al responsable directamente** — `responsable` es texto libre (ver decisión de arriba), no necesariamente un email real ni un usuario del sistema, así que no hay a quién escribirle de forma fiable. El cuerpo del correo menciona el nombre del responsable en cada línea para que quien lo reciba (normalmente un admin, la misma persona que ya recibe los avisos de caducidad) sepa a quién avisar.
 
@@ -492,20 +524,20 @@ Reversible: sí — una columna nueva (`aviso_responsable_enviado`, `NOT NULL DE
 
 A los pocos minutos de cerrar lo de arriba, pregunta obvia en retrospectiva: si `responsable` es texto libre, ¿por qué no dejar apuntar también su email, para escribirle a él en vez de al `email_avisos` genérico?
 
-**`gd_registros.responsable_email`**, columna nueva, opcional — no se valida el formato (es un dato de contacto, no una cuenta del sistema; ver la misma filosofía de `responsable` en sí). `RegistrosCRUD.actualizar_responsable()` la actualiza junto con `responsable` y sigue reiniciando `aviso_responsable_enviado` si cualquiera de los dos cambia (así añadir el email que faltaba también dispara un aviso nuevo, no solo cambiar de persona).
+**`gd_notas.responsable_email`**, columna nueva, opcional — no se valida el formato (es un dato de contacto, no una cuenta del sistema; ver la misma filosofía de `responsable` en sí). `NotasCRUD.actualizar_responsable()` la actualiza junto con `responsable` y sigue reiniciando `aviso_responsable_enviado` si cualquiera de los dos cambia (así añadir el email que faltaba también dispara un aviso nuevo, no solo cambiar de persona).
 
 `avisar_incidencias.py` ahora separa las incidencias pendientes de aviso en dos grupos: las que tienen `responsable_email` van agrupadas por dirección (una persona con varias incidencias recibe un solo correo con todas) directo a esa persona; las que no, siguen cayendo en el correo a `email_avisos` de siempre, mencionando el nombre. Un proyecto sin `email_avisos` configurado ya no bloquea los avisos a responsables que sí tienen email — cada grupo se manda con independencia del otro.
 
-Tools/API: `crear_registro_documento_gd`, `asignar_responsable_registro_gd` y sus endpoints/formulario del panel llevan `responsable_email` opcional junto a `responsable`. Mismo criterio que el nombre: si viene por chat, la IA lo pasa solo si el cliente lo da, nunca lo inventa.
+Tools/API: `crear_nota_documento_gd`, `asignar_responsable_nota_gd` y sus endpoints/formulario del panel llevan `responsable_email` opcional junto a `responsable`. Mismo criterio que el nombre: si viene por chat, la IA lo pasa solo si el cliente lo da, nunca lo inventa.
 
 Quién decidió: usuario.
-Reversible: sí — columna nullable, no rompe nada existente; sin `responsable_email` en ningún registro, el comportamiento es idéntico al de antes de este cambio.
+Reversible: sí — columna nullable, no rompe nada existente; sin `responsable_email` en ninguna nota, el comportamiento es idéntico al de antes de este cambio.
 
 ### Grupos de documentos (2026-09-17)
 
 El cliente quiere poder agrupar documentos "para un fin concreto" (una auditoría, un expediente) sin que eso implique que todo documento tenga que estar en un grupo.
 
-**Decisión: muchos-a-muchos, no un `id_grupo` en `gd_documentos`** — confirmado con el usuario: un mismo documento puede estar en varios grupos a la vez (p.ej. una factura relevante tanto para "Auditoría 2026" como para "Proyecto X"). De ahí `gd_documentos_grupos`, tabla de relación pura, mismo patrón que `gd_registros_relaciones` — índice único `(id_documento, id_grupo)` para que asignar dos veces no duplique fila, `ON DELETE CASCADE` en ambos lados (borrar un documento o un grupo limpia sus relaciones solas).
+**Decisión: muchos-a-muchos, no un `id_grupo` en `gd_documentos`** — confirmado con el usuario: un mismo documento puede estar en varios grupos a la vez (p.ej. una factura relevante tanto para "Auditoría 2026" como para "Proyecto X"). De ahí `gd_documentos_grupos`, tabla de relación pura, mismo patrón que `gd_notas_relaciones` — índice único `(id_documento, id_grupo)` para que asignar dos veces no duplique fila, `ON DELETE CASCADE` en ambos lados (borrar un documento o un grupo limpia sus relaciones solas).
 
 **`gd_grupos` deliberadamente mínima: solo `nombre` (único) y `proposito`** — el usuario descartó explícitamente añadir responsable/estado al grupo en esta primera versión; se puede ampliar después si hace falta, sin migrar nada existente.
 
@@ -513,7 +545,7 @@ El cliente quiere poder agrupar documentos "para un fin concreto" (una auditorí
 
 **Tools MCP** (`mcp_server/herramientas/_herr_grupos.py`): `crear_grupo_gd`, `listar_grupos_gd`, `asignar_documento_grupo_gd`, `quitar_documento_grupo_gd`, `listar_documentos_grupo_gd`, `eliminar_grupo_gd`.
 
-**Panel**: pantalla nueva "Grupos" (`Grupos.jsx` → lista y crea; `GrupoDetalle.jsx` → edita, borra, añade/quita documentos), enlazada en la barra lateral igual que Tipos de documento/Estilos (no gated a admin — es día a día, no configuración). En la ficha de cada documento, `componentes/GruposDocumento.jsx` muestra sus grupos como chips (con su propósito en el tooltip) y deja añadir/quitar sin salir de ahí. Mismo criterio de permisos que registros: cualquiera con acceso lee, `puede_editar` para crear/asignar/quitar/borrar.
+**Panel**: pantalla nueva "Grupos" (`Grupos.jsx` → lista y crea; `GrupoDetalle.jsx` → edita, borra, añade/quita documentos), enlazada en la barra lateral igual que Tipos de documento/Estilos (no gated a admin — es día a día, no configuración). En la ficha de cada documento, `componentes/GruposDocumento.jsx` muestra sus grupos como chips (con su propósito en el tooltip) y deja añadir/quitar sin salir de ahí. Mismo criterio de permisos que las notas: cualquiera con acceso lee, `puede_editar` para crear/asignar/quitar/borrar.
 
 **Ajuste (2026-09-17, mismo día): crear un grupo nuevo también desde la ficha del documento.** La primera versión de `GruposDocumento.jsx` solo dejaba asignar a grupos ya existentes — para crear uno había que ir a la pantalla "Grupos" y volver. El usuario no quería salir del documento en ningún caso: se añadió un formulario compacto (nombre + propósito) plegable en el propio widget, que crea el grupo y lo asigna al documento en el mismo paso (dos llamadas seguidas, `crearGrupo` + `asignarDocumentoGrupo`, sin transacción — aceptable: si la segunda fallase, el grupo queda creado pero sin asignar, visible y corregible a mano desde "Grupos", no es un estado inconsistente grave). **Mismo ajuste en `EntidadesDocumento.jsx` (2026-09-17, pedido después)** — con una diferencia: en vez de un formulario compacto inline (la entidad tiene 11 campos, no 2), se abre en un `Modal` reutilizando `FormularioEntidad.jsx` (el mismo componente que ya usan `Entidades.jsx`/`EntidadDetalle.jsx`) — sigue sin salir de la ficha del documento, solo que como superposición en vez de un bloque plegable, por el volumen de campos. Mismo patrón de dos llamadas seguidas (`crearEntidad` + `relacionarDocumentoEntidad`). De paso, los dos selectores de "añadir/relacionar" (grupos y entidades) se agrandaron (de `size="xs" w=200/220` a `size="sm" w=340`) — ya eran buscables (`searchable`), pero al ser tan pequeños no se notaba.
 
@@ -528,7 +560,7 @@ El cliente quiere una tabla de clientes/proveedores/empleados relacionable con d
 
 **`gd_entidades`**: `nombre`, `tipo`, `direccion`, `localidad`, `provincia`, `codigo_postal`, `pais`, `telefono`, `email`, `observaciones`, `codigo` (para vincular con el ERP del cliente, único si se rellena). `tipo` es el campo que el cliente llamó "entidad" en la petición original ("id, nombre, entidad, dirección...") — aclarado en conversación: es el qué-es-esto (cliente/proveedor/empleado), no un segundo nombre. Se renombró a `tipo` para no repetir "entidad" dentro de la propia tabla `gd_entidades` y para seguir el mismo patrón que `gd_documentos.tipo_documento` — catálogo abierto, texto libre, sin tabla de catálogo aparte (el cliente pidió expresamente "solo los campos básicos").
 
-**Relación con documentos: muchos-a-muchos**, mismo patrón que grupos — `gd_documentos_entidades`, sin campo de "rol" en la relación (a diferencia de `gd_registros_relaciones`, aquí no se pidió distinguir "cliente" de "proveedor" en una factura con dos entidades; si hiciera falta más adelante, se añade un `rol` a esta tabla sin tocar el resto).
+**Relación con documentos: muchos-a-muchos**, mismo patrón que grupos — `gd_documentos_entidades`, sin campo de "rol" en la relación (a diferencia de `gd_notas_relaciones`, aquí no se pidió distinguir "cliente" de "proveedor" en una factura con dos entidades; si hiciera falta más adelante, se añade un `rol` a esta tabla sin tocar el resto).
 
 `codigo_postal` es texto, no número (hay formatos con letras fuera de España, y `pais` ya es un campo aparte). Sin "archivar" en entidades — a diferencia de documentos: no se pidió, y borrar sin más ya dijo el cliente que no debía tocar los documentos relacionados (limpieza en cascada solo de la fila de relación, `ON DELETE CASCADE` en `gd_documentos_entidades`, nunca en `gd_documentos` ni en `gd_entidades` entre sí).
 
@@ -654,7 +686,7 @@ Consecuencias en el diseño (propuestas por el asistente, pendientes de confirma
 Todo lo anterior está en código, en ambos repos, **sin probar todavía de punta a punta** (pendiente: mcp-d contra sí misma, después un servidor real, después los 5).
 
 Diferencias respecto al plan, decididas al implementar:
-- **Una key `gd_enlazada` ve SOLO las herramientas etiquetadas** (`tags={"gd_enlazada"}`), no "las de lectura más las etiquetadas": las de lectura incluyen credenciales, entidades, registros, contexto de negocio… y esa key la tiene otra empresa. Etiquetadas en la central: `consultar_documentos_gd`, `buscar_documentos_gd`, `obtener_documento_completo_gd` (las tres filtran `reservado` y apuntan uso cuando llama una enlazada), `registrar_enlace_gd`, `eliminar_enlace_gd`, `anotar_pregunta_pendiente_gd`.
+- **Una key `gd_enlazada` ve SOLO las herramientas etiquetadas** (`tags={"gd_enlazada"}`), no "las de lectura más las etiquetadas": las de lectura incluyen credenciales, entidades, notas, contexto de negocio… y esa key la tiene otra empresa. Etiquetadas en la central: `consultar_documentos_gd`, `buscar_documentos_gd`, `obtener_documento_completo_gd` (las tres filtran `reservado` y apuntan uso cuando llama una enlazada), `registrar_enlace_gd`, `eliminar_enlace_gd`, `anotar_pregunta_pendiente_gd`.
 - El núcleo expone en el contexto de la petición `id_api_key` y `nombre_api_key` (`auth.py`); `clave_actual_es_solo_lectura()` cubre invitado y gd_enlazada, y `clave_actual_es_gd_enlazada()` distingue la segunda. Rol 5 en `mcpc_roles` (se inserta solo al desplegar: `insertar_registros_iniciales`), `ROLES_API_KEY` y `ROLES_SOLO_LECTURA` en `lib/roles_proyecto.py`, opción "GD enlazada" en el selector de rol de ambos paneles.
 - `gd_enlaces.id_api_key_emitida` (única): la key que NOSOTROS emitimos a la otra GD. Desenlazar desde cualquier lado revoca las dos: la propia directamente y la de la otra GD llamando a su `eliminar_enlace_gd` (que borra su fila y revoca la key con la que la llamamos). `registrar_enlace_gd` toma como nombre del enlace el nombre de la key con la que le llaman (el que puso el admin de la central al emitirla) — es el mismo `origen` que usan preguntas pendientes y uso, así todo cuadra.
 - `consultar_documentos_gd(pregunta, limite, cadena_gds)`: `cadena_gds` es el parámetro interno de la transitividad (URLs ya recorridas; `PROFUNDIDAD_MAXIMA = 3`). Documentado en el docstring como "no lo rellenes".
