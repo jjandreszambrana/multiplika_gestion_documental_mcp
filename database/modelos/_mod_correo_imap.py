@@ -9,7 +9,8 @@ buzones conectados a la vez, a cambio de ~1 s más por llamada.
 Cómo se lee la credencial (gd_credenciales + gd_credenciales_campos):
 - `usuario`: la dirección/login de la cuenta. `valor`: la contraseña (en
   Gmail, una contraseña de aplicación).
-- Campos extra opcionales: `imap_host` (si no, se deduce del dominio),
+- Campos extra opcionales: `imap_host` (si no, se deduce del dominio:
+  proveedores conocidos, o `imap.<dominio>` y si no existe `mail.<dominio>`),
   `imap_port` (993), `imap_seguridad` (ssl | starttls | ninguna).
 - Microsoft 365 no acepta contraseña: con los campos extra `tenant_id` y
   `client_id` se usa OAuth de aplicación (client credentials, permiso
@@ -78,9 +79,8 @@ async def cargar_cuenta(config: dict, nombre_credencial: str) -> dict:
     oauth = bool(extra.get("tenant_id") and extra.get("client_id"))
     dominio = usuario.rsplit("@", 1)[-1].lower() if "@" in usuario else ""
     host = extra.get("imap_host") or (HOST_MICROSOFT if oauth else HOSTS_CONOCIDOS.get(dominio))
-    if not host and dominio:
-        host = f"imap.{dominio}"
-    if not host:
+    hosts = [host] if host else [f"imap.{dominio}", f"mail.{dominio}"] if dominio else []
+    if not hosts:
         raise ErrorCorreo(f'No sé a qué servidor conectar: añade el campo extra "imap_host" a la credencial "{nombre_credencial}"')
     seguridad = (extra.get("imap_seguridad") or "ssl").lower()
     if seguridad not in ("ssl", "starttls", "ninguna"):
@@ -89,7 +89,7 @@ async def cargar_cuenta(config: dict, nombre_credencial: str) -> dict:
     cuenta = {
         "nombre": nombre_credencial,
         "usuario": usuario,
-        "host": host,
+        "hosts": hosts,
         "puerto": int(extra.get("imap_port") or (993 if seguridad == "ssl" else 143)),
         "seguridad": seguridad,
         "password": descifrar(fila["valor_cifrado"]),
@@ -125,15 +125,23 @@ def _token_microsoft(tenant_id: str, client_id: str, client_secret: str) -> str:
 def _sesion(cuenta: dict):
     """Abre, autentica y activa UTF-8 si el servidor lo admite; siempre
     cierra al salir. Devuelve (imap, capacidades)."""
-    try:
-        if cuenta["seguridad"] == "ssl":
-            imap = imaplib.IMAP4_SSL(cuenta["host"], cuenta["puerto"], timeout=TIMEOUT_SEGUNDOS)
-        else:
-            imap = imaplib.IMAP4(cuenta["host"], cuenta["puerto"], timeout=TIMEOUT_SEGUNDOS)
-            if cuenta["seguridad"] == "starttls":
-                imap.starttls()
-    except OSError as e:
-        raise ErrorCorreo(f'No se pudo conectar con {cuenta["host"]}:{cuenta["puerto"]}: {e}') from e
+    imap, fallos = None, []
+    for host in cuenta["hosts"]:  # sin imap_host: imap.<dominio> y, si no responde, mail.<dominio>
+        try:
+            if cuenta["seguridad"] == "ssl":
+                imap = imaplib.IMAP4_SSL(host, cuenta["puerto"], timeout=TIMEOUT_SEGUNDOS)
+            else:
+                imap = imaplib.IMAP4(host, cuenta["puerto"], timeout=TIMEOUT_SEGUNDOS)
+                if cuenta["seguridad"] == "starttls":
+                    imap.starttls()
+            break
+        except OSError as e:
+            fallos.append(f'{host}:{cuenta["puerto"]} ({e})')
+    if imap is None:
+        raise ErrorCorreo(
+            f'No se pudo conectar con {" ni con ".join(fallos)}. Si el servidor de correo es otro, '
+            f'añade desde el panel el campo extra "imap_host" a la credencial "{cuenta["nombre"]}".'
+        )
 
     try:
         try:

@@ -425,7 +425,7 @@ lo pides.
   permiso de acceso IMAP y añadir a la credencial, desde el panel \
   (bloque "Avanzado"), los campos `tenant_id`, `client_id` y `client_secret`.
 - **Otros proveedores**: normalmente basta con dirección y contraseña. Si \
-  el servidor no es `imap.<tu dominio>`, añade desde el panel, en \
+  el servidor no es `imap.<tu dominio>` ni `mail.<tu dominio>`, añade desde el panel, en \
   "Avanzado", el campo \
   `imap_host` (y `imap_port` / `imap_seguridad` si no es el 993 con SSL).
 
