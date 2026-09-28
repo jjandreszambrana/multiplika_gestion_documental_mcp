@@ -270,11 +270,16 @@ Dos cosas, las dos desde el panel (no por chat):
   Una entidad sin email tampoco bloquea el envío a las demás: se queda \
   en "fallido" con el motivo, y las demás salen igual.
 
-## Archivar y desarchivar
+## Archivar, desarchivar y borrar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \
 archivar, desde el panel — deja de salir en búsquedas pero no se borra, \
 y se puede recuperar en cualquier momento.
+
+Si además quieres **borrarlo para siempre**, primero archívalo y luego \
+bórralo, desde el panel o pidiéndoselo a tu IA. Se borra todo: versiones, \
+archivo original y notas, sin vuelta atrás. Un documento que ya se ha \
+enviado por correo no se puede borrar: se queda archivado como constancia.
 
 ## Fechas de caducidad
 

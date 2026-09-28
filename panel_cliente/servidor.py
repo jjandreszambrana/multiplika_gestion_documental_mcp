@@ -805,6 +805,24 @@ async def archivar_documento(
     return documento
 
 
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def eliminar_documento(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> None:
+    """Borrado definitivo — solo archivados y nunca enviados (ver
+    DocumentosCRUD.eliminar_definitivo). Invitados no."""
+    resultado = await DocumentosCRUD(get_db_config(proyecto["id"])).eliminar_definitivo(id_documento)
+    if resultado == "no_existe":
+        raise HTTPException(404, "Documento no encontrado")
+    if resultado == "no_archivado":
+        raise HTTPException(409, "Solo se puede borrar un documento archivado")
+    if resultado == "enviado":
+        raise HTTPException(409, "Este documento se ha enviado por correo: no se puede borrar, solo dejarlo archivado")
+
+
 class CambioReservado(BaseModel):
     reservado: bool
 

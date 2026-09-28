@@ -45,6 +45,7 @@ ACCIONES_MCP = {
     "actualizar_incumplimientos_gd": ("actualizó los incumplimientos del documento", "documento", "id_documento", None),
     "adjuntar_archivo_original_gd": ("adjuntó el archivo original del documento", "documento", "id_documento", None),
     "archivar_documento_gd": ("archivó el documento", "documento", "id_documento", None),
+    "eliminar_documento_gd": ("eliminó el documento", "documento", "id_documento", None),
     "desarchivar_documento_gd": ("desarchivó el documento", "documento", "id_documento", None),
     "marcar_reservado_gd": ("cambió si es reservado el documento", "documento", "id_documento", None),
     "asignar_estilo_documento_gd": ("asignó un estilo de informe al documento", "documento", "id_documento", None),

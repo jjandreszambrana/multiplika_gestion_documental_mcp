@@ -132,6 +132,8 @@ Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda
 
 **`archivar_documento_gd(id_documento)` / `desarchivar_documento_gd(id_documento)`** (añadidas 2026-09-09): un documento que ya no aplica (anulado, subido por error) se marca `archivado` en vez de borrarse — desaparece de `buscar_documentos_gd` (salvo `incluir_archivados=True`) y de `consultar_documentos_gd` (fulltext y semántico), pero sigue accesible por id y se puede recuperar sin perder nada del histórico.
 
+**`eliminar_documento_gd(id_documento)`** y `DELETE /v1/proyectos/{id}/documentos/{id_documento}` en el panel (añadidas 2026-09-28): borrado definitivo, sin vuelta atrás. Condiciones (decisión del usuario): el documento tiene que estar archivado antes (nadie borra de un paso un documento en uso) y no puede tener ningún envío en estado `enviado` (queda archivado como constancia de lo enviado). Versiones, archivo original, chunks, notas, envíos no hechos y relaciones con entidades/grupos/scripts caen por `ON DELETE CASCADE`; `gd_registros_documentos` se borra y `gd_aprendizajes.id_documento_creado` se pone a NULL en la misma sentencia (no tienen FK). Invitados no pueden borrar.
+
 **`confirmar_documento_gd(id_documento, id_version=None)`** (añadida 2026-09-13): cierra un borrador (ver "Borrador" más arriba) sin cambiar su contenido.
 
 **`listar_credenciales_gd()`** (añadida 2026-09-09): nombre, descripción y usuario (si lo lleva) de cada credencial del proyecto — nunca la contraseña/API key. Ver "Credenciales" más abajo.

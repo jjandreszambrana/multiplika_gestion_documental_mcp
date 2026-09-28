@@ -4,7 +4,10 @@
 from mtpk_postgres import AsyncCrudBase
 from mtpk_postgres.async_adapter import AsyncDatabase
 
+from ..dependencias._dep_aprendizajes import NOMBRE_TABLA_APRENDIZAJES
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_envios import NOMBRE_TABLA_ENVIOS
+from ..dependencias._dep_registros import NOMBRE_TABLA_REGISTROS_DOCUMENTOS
 from ..dependencias._dep_notas import TABLA_NOTAS
 from ..dependencias._dep_versiones import TABLA_VERSIONES
 
@@ -90,6 +93,47 @@ class DocumentosCRUD(AsyncCrudBase):
             return None
         await self.update(id_documento, {"archivado": False})
         return await self.obtener(id_documento)
+
+    async def eliminar_definitivo(self, id_documento: int) -> str:
+        """Borra para siempre un documento archivado que nunca se ha
+        enviado. Devuelve "eliminado", "no_existe", "no_archivado" o
+        "enviado" (tiene envíos hechos: queda constancia, solo archivar).
+
+        Versiones, archivo original, chunks, notas, envíos no hechos y
+        relaciones con entidades, grupos y scripts caen por ON DELETE
+        CASCADE. gd_registros_documentos y gd_aprendizajes no tienen clave
+        ajena (ver sus _dep_), así que se limpian aquí — todo en una sola
+        sentencia, para que o se hace entero o no se hace nada."""
+        db = AsyncDatabase(**self.config)
+        filas = await db.query(
+            f"""
+            SELECT d.archivado,
+                   EXISTS (SELECT 1 FROM "{NOMBRE_TABLA_ENVIOS}" e
+                           WHERE e.id_documento = d.id AND e.estado = 'enviado') AS enviado
+            FROM "{TABLA_DOCUMENTOS.nombre}" d WHERE d.id = %s
+            """,
+            (id_documento,),
+        )
+        if not filas:
+            return "no_existe"
+        if not filas[0]["archivado"]:
+            return "no_archivado"
+        if filas[0]["enviado"]:
+            return "enviado"
+        borradas = await db.query(
+            f"""
+            WITH rd AS (DELETE FROM "{NOMBRE_TABLA_REGISTROS_DOCUMENTOS}" WHERE id_documento = %s),
+                 ap AS (UPDATE "{NOMBRE_TABLA_APRENDIZAJES}" SET id_documento_creado = NULL
+                        WHERE id_documento_creado = %s)
+            DELETE FROM "{TABLA_DOCUMENTOS.nombre}" d
+            WHERE d.id = %s AND d.archivado
+              AND NOT EXISTS (SELECT 1 FROM "{NOMBRE_TABLA_ENVIOS}" e
+                              WHERE e.id_documento = d.id AND e.estado = 'enviado')
+            """,
+            (id_documento, id_documento, id_documento),
+        )
+        # 0 filas: alguien lo desarchivó o lo envió entre la comprobación y el borrado.
+        return "eliminado" if borradas else "no_archivado"
 
     async def actualizar_metadatos(
         self, id_documento: int, tipo_documento: str, ambito: str | None

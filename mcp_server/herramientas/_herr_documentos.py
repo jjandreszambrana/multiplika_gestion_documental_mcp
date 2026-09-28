@@ -588,6 +588,26 @@ async def desarchivar_documento_gd(id_documento: int) -> dict:
     return documento
 
 
+@mcp_app.tool()
+async def eliminar_documento_gd(id_documento: int) -> dict:
+    """Borra un documento PARA SIEMPRE, con todas sus versiones, archivo
+    original, notas y relaciones (entidades, grupos, scripts, registros).
+    No se puede deshacer: confirma antes con el usuario.
+
+    Solo se puede borrar un documento ya archivado (archivar_documento_gd
+    primero) y que nunca se haya enviado por correo — si se envió, queda
+    archivado como constancia de lo enviado."""
+    config, _ = await _contexto_actual()
+    resultado = await DocumentosCRUD(config).eliminar_definitivo(id_documento)
+    if resultado == "no_existe":
+        raise ToolError(f"No existe ningún documento con id {id_documento}")
+    if resultado == "no_archivado":
+        raise ToolError("Solo se puede borrar un documento archivado: archívalo antes con archivar_documento_gd")
+    if resultado == "enviado":
+        raise ToolError("Este documento se ha enviado por correo y no se puede borrar: déjalo archivado")
+    return {"id": id_documento, "eliminado": True}
+
+
 @mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_estado_proyecto_gd() -> dict:
     """Estado actual de este proyecto: cuántos documentos hay guardados y

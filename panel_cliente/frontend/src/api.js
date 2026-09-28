@@ -191,6 +191,8 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/archivar`),
   desarchivarDocumento: (idProyecto, idDocumento) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/desarchivar`),
+  eliminarDocumento: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/documentos/${idDocumento}`),
   cambiarReservadoDocumento: (idProyecto, idDocumento, reservado) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/documentos/${idDocumento}/reservado`, { reservado }),
   actualizarMetadatosDocumento: (idProyecto, idDocumento, metadatos) =>

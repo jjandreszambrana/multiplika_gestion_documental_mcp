@@ -40,6 +40,7 @@ ACCIONES_PANEL = {
     "confirmar_edicion_documento": ("editó el texto del documento", "documento", "id_documento"),
     "revertir_documento": ("deshizo una edición del documento", "documento", "id_documento"),
     "archivar_documento": ("archivó el documento", "documento", "id_documento"),
+    "eliminar_documento": ("eliminó el documento", "documento", "id_documento"),
     "desarchivar_documento": ("desarchivó el documento", "documento", "id_documento"),
     "cambiar_reservado_documento": ("cambió si es reservado el documento", "documento", "id_documento"),
     "crear_nota_endpoint": ("añadió una nota al documento", "documento", "id_documento"),

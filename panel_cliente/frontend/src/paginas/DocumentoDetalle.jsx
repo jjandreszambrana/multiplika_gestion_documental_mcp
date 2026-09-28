@@ -18,6 +18,7 @@ import {
   IconHistory,
   IconMessageCircle,
   IconSend,
+  IconTrash,
 } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
@@ -50,6 +51,8 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
   const [documento, setDocumento] = useState(null)
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
+  const [modalBorrarAbierto, setModalBorrarAbierto] = useState(false)
+  const [borrando, setBorrando] = useState(false)
   const [descargandoPdf, setDescargandoPdf] = useState(false)
   const [descargandoOriginal, setDescargandoOriginal] = useState(false)
   const [modalPdfAbierto, setModalPdfAbierto] = useState(false)
@@ -115,6 +118,20 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
       setError(err.message)
     } finally {
       setCambiandoArchivo(false)
+    }
+  }
+
+  async function borrarDocumento() {
+    setBorrando(true)
+    setError(null)
+    try {
+      await api.eliminarDocumento(proyecto.id, idDocumento)
+      onVolver()
+    } catch (err) {
+      setError(err.message)
+      setModalBorrarAbierto(false)
+    } finally {
+      setBorrando(false)
     }
   }
 
@@ -280,6 +297,16 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 >
                   {documento.archivado ? "Desarchivar" : "Archivar"}
                 </Button>
+                {proyecto.puede_editar && documento.archivado && (
+                  <Button
+                    variant="default"
+                    color="red"
+                    onClick={() => setModalBorrarAbierto(true)}
+                    leftSection={<IconTrash size={15} stroke={1.8} />}
+                  >
+                    Borrar
+                  </Button>
+                )}
                 {proyecto.puede_editar && (
                   <Button
                     variant={documento.reservado ? "light" : "default"}
@@ -503,6 +530,22 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                   onClick={descargarPdf}
                 >
                   Descargar
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
+          <Modal opened={modalBorrarAbierto} onClose={() => setModalBorrarAbierto(false)} title="Borrar documento" size="sm">
+            <Stack>
+              <Text size="sm">
+                Se borrará «{documento.nombre}» para siempre, con todas sus versiones, el archivo original y sus notas.
+                No se puede deshacer.
+              </Text>
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setModalBorrarAbierto(false)}>
+                  Cancelar
+                </Button>
+                <Button color="red" loading={borrando} leftSection={<IconTrash size={15} stroke={1.8} />} onClick={borrarDocumento}>
+                  Borrar para siempre
                 </Button>
               </Group>
             </Stack>
