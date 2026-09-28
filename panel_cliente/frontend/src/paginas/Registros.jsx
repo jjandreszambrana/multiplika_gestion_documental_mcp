@@ -24,6 +24,17 @@ function campos(modelo) {
   return Object.entries(modelo?.esquema?.properties || {})
 }
 
+// Listas y objetos (p.ej. todos los parámetros de un análisis) no caben en
+// una celda: no salen como columna de la tabla, solo en el formulario.
+function esCompuesto(definicion) {
+  const tipos = [].concat(definicion?.type || [])
+  return tipos.includes("array") || tipos.includes("object")
+}
+
+function camposDeTabla(modelo) {
+  return campos(modelo).filter(([, definicion]) => !esCompuesto(definicion))
+}
+
 function obligatorio(modelo, campo) {
   return (modelo?.esquema?.required || []).includes(campo)
 }
@@ -58,6 +69,17 @@ function CampoDeEsquema({ nombre, definicion, requerido, valor, onChange }) {
             ? `Entre ${definicion.minimum ?? "—"} y ${definicion.maximum ?? "—"}`
             : undefined
         }
+      />
+    )
+  }
+  if (esCompuesto(definicion)) {
+    return (
+      <Textarea
+        label={etiqueta} autosize minRows={3} maxRows={14}
+        description="En JSON"
+        styles={{ input: { fontFamily: "monospace", fontSize: "12.5px" } }}
+        value={typeof valor === "string" ? valor : valor === undefined || valor === null ? "" : JSON.stringify(valor, null, 2)}
+        onChange={(e) => onChange(e.currentTarget.value)}
       />
     )
   }
@@ -108,6 +130,16 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
       const limpios = Object.fromEntries(
         Object.entries(valores).filter(([, v]) => v !== "" && v !== null && v !== undefined),
       )
+      // Las listas y objetos se editan como texto JSON: se convierten aquí.
+      for (const [nombre, definicion] of campos(modelo)) {
+        if (esCompuesto(definicion) && typeof limpios[nombre] === "string") {
+          try {
+            limpios[nombre] = JSON.parse(limpios[nombre])
+          } catch {
+            throw new Error(`El campo "${nombre}" no es JSON válido`)
+          }
+        }
+      }
       await onGuardar({
         valores: limpios,
         fecha: datos.fecha,
@@ -364,7 +396,7 @@ function PestanaRegistros({ proyecto, modelos }) {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th w={150}>Fecha</Table.Th>
-                {campos(modelo).map(([nombre]) => (
+                {camposDeTabla(modelo).map(([nombre]) => (
                   <Table.Th key={nombre}>{nombre}</Table.Th>
                 ))}
                 <Table.Th w={130}>Conformidad</Table.Th>
@@ -399,7 +431,7 @@ function PestanaRegistros({ proyecto, modelos }) {
                       )}
                     </Group>
                   </Table.Td>
-                  {campos(modelo).map(([nombre]) => (
+                  {camposDeTabla(modelo).map(([nombre]) => (
                     <Table.Td key={nombre}>
                       <Text fz="13.5px">{comoTexto(r.valores[nombre])}</Text>
                     </Table.Td>
@@ -454,7 +486,7 @@ function PestanaRegistros({ proyecto, modelos }) {
               ))}
               {registros.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={campos(modelo).length + 5}>
+                  <Table.Td colSpan={camposDeTabla(modelo).length + 5}>
                     <Text c="dimmed" py="md">
                       No hay registros con estos filtros.
                     </Text>
