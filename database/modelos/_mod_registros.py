@@ -11,6 +11,7 @@ igual por MCP y desde el panel:
    viejos siguen apuntando a la versión con la que nacieron."""
 
 import json
+from decimal import Decimal
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import best_match
@@ -322,4 +323,6 @@ class RegistrosCRUD(AsyncCrudBase):
             """,
             tuple([campo, campo] + params), uno=True,
         )
-        return {"campo": campo, **fila}
+        # Postgres devuelve NUMERIC como Decimal y de ahí sale como texto al
+        # otro lado de MCP; números, que es lo que se espera para hacer cuentas.
+        return {"campo": campo, **{k: float(v) if isinstance(v, Decimal) else v for k, v in fila.items()}}
