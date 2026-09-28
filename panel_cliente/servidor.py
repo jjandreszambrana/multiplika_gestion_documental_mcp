@@ -95,6 +95,7 @@ from ..database.modelos._mod_registros import (
     ModelosRegistroCRUD,
     RegistrosCRUD,
     plantilla_de_valores,
+    sin_archivo,
 )
 from ..database.modelos._mod_reglas import (
     CARACTERES_POR_TOKEN,
@@ -2590,8 +2591,7 @@ async def crear_registro(
         })
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
-    fila = await registros.obtener(id_registro)
-    return {**fila, "valores": json.loads(fila["valores"])}
+    return sin_archivo(await registros.obtener(id_registro))
 
 
 @app.put("/v1/proyectos/{id_proyecto}/registros/{id_registro}")
@@ -2610,7 +2610,42 @@ async def corregir_registro(
         actualizado = await registros.corregir(id_registro, modelo, datos.model_dump())
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
-    return {**actualizado, "valores": json.loads(actualizado["valores"])}
+    return sin_archivo(actualizado)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/registros/{id_registro}/archivo-original")
+async def subir_archivo_original_registro(
+    id_proyecto: int, id_registro: int, archivo: UploadFile = File(...),
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    """Adjunta el archivo del que salen los datos, o sustituye el que hubiera
+    — igual que el archivo original de un documento (ver "Alta manual desde
+    el panel"). Va aparte del alta porque esa es JSON, no un formulario."""
+    config = get_db_config(proyecto["id"])
+    registros = RegistrosCRUD(config)
+    if not await registros.obtener(id_registro):
+        raise HTTPException(404, "Registro no encontrado")
+    await registros.guardar_archivo_original(
+        id_registro, await archivo.read(),
+        archivo.content_type or "application/octet-stream", archivo.filename or "archivo",
+    )
+    return sin_archivo(await registros.obtener(id_registro))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros/{id_registro}/archivo-original")
+async def descargar_archivo_original_registro(
+    id_proyecto: int, id_registro: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> Response:
+    fila = await RegistrosCRUD(get_db_config(proyecto["id"])).obtener(id_registro)
+    if not fila:
+        raise HTTPException(404, "Registro no encontrado")
+    if not fila["archivo_original"]:
+        raise HTTPException(404, "Este registro no tiene ningún archivo original adjunto")
+    return Response(
+        content=fila["archivo_original"], media_type=fila["archivo_original_tipo_mime"],
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(fila['archivo_original_nombre'])}"},
+    )
 
 
 @app.delete("/v1/proyectos/{id_proyecto}/registros/{id_registro}", status_code=status.HTTP_204_NO_CONTENT)

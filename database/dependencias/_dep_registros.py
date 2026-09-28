@@ -131,6 +131,16 @@ CAMPOS_REGISTROS = [
             comentario="Documento que respalda este registro (→ gd_documentos.id), p.ej. el informe "
                        "de laboratorio del que salen los valores. Opcional y sin clave ajena, mismo "
                        "motivo que id_entidad"),
+    Columna(nombre="archivo_original", tipo="BLOB",
+            comentario="Opcional — el archivo del que salen los datos (la foto del parte, el PDF "
+                       "del análisis), guardado tal cual, igual que gd_versiones.archivo_original: "
+                       "solo de referencia/descarga, lo que manda son los valores. NULL si no hay. "
+                       "Nunca sale en los listados (ver COLUMNAS_SIN_ARCHIVO en el CRUD)"),
+    Columna(nombre="archivo_original_nombre", tipo="VARCHAR", longitud=255,
+            comentario="Nombre de fichero de archivo_original. NULL si no hay archivo adjunto"),
+    Columna(nombre="archivo_original_tipo_mime", tipo="VARCHAR", longitud=100,
+            comentario="Tipo MIME de archivo_original (p.ej. 'application/pdf'). NULL si no hay "
+                       "archivo adjunto"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
             protegido_actualizar=True,
             comentario="Cuándo se guardó de verdad, distinto de fecha/hora"),

@@ -499,6 +499,32 @@ export const api = {
   crearRegistro: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros`, datos),
   corregirRegistro: (idProyecto, idRegistro, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/${idRegistro}`, datos),
+  subirArchivoOriginalRegistro: (idProyecto, idRegistro, archivo) => {
+    const formData = new FormData()
+    formData.append("archivo", archivo)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/registros/${idRegistro}/archivo-original`, formData)
+  },
+  // Igual que descargarArchivoOriginalBlob, pero del registro.
+  descargarArchivoOriginalRegistroBlob: async (idProyecto, idRegistro) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/registros/${idRegistro}/archivo-original`, {
+      headers,
+    })
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    const disposicion = res.headers.get("Content-Disposition") || ""
+    const coincidencia = disposicion.match(/filename\*=UTF-8''(.+)$/)
+    const nombreFichero = coincidencia ? decodeURIComponent(coincidencia[1]) : "archivo"
+    return { blob: await res.blob(), nombreFichero }
+  },
   eliminarRegistro: (idProyecto, idRegistro) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/registros/${idRegistro}`),
 

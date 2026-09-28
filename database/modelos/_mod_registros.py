@@ -29,6 +29,18 @@ _CAMPOS_REGISTRO = [
     "id_modelo", "valores", "fecha", "hora", "creado_por", "conforme",
     "observaciones", "id_entidad", "id_documento",
 ]
+#: Todo menos el binario: un listado de 200 registros no debe arrastrar 200
+#: fotos. Quien necesite saber si hay archivo mira archivo_original_nombre.
+COLUMNAS_SIN_ARCHIVO = [c.nombre for c in TABLA_REGISTROS.columnas if c.nombre != "archivo_original"]
+
+
+def sin_archivo(fila: dict) -> dict:
+    """La fila sin el binario, con los valores ya como objeto — lo que se
+    devuelve por MCP y por el panel."""
+    return {
+        **{k: v for k, v in fila.items() if k != "archivo_original"},
+        "valores": json.loads(fila["valores"]) if isinstance(fila["valores"], str) else fila["valores"],
+    }
 
 
 def _como_dict(valor, campo: str) -> dict:
@@ -248,6 +260,16 @@ class RegistrosCRUD(AsyncCrudBase):
             await self.update(id_registro, cambios)
         return await self.obtener(id_registro)
 
+    async def guardar_archivo_original(
+        self, id_registro: int, contenido: bytes, tipo_mime: str, nombre: str
+    ) -> None:
+        """Adjunta (o sustituye) el archivo del que salen los datos — se
+        guarda tal cual, solo como referencia/descarga."""
+        await self.update(
+            id_registro,
+            {"archivo_original": contenido, "archivo_original_tipo_mime": tipo_mime, "archivo_original_nombre": nombre},
+        )
+
     async def buscar(
         self, ids_modelo: list[int] | None = None, desde: str | None = None, hasta: str | None = None,
         id_entidad: int | None = None, conforme: bool | None = None, filtros: dict | None = None,
@@ -282,7 +304,7 @@ class RegistrosCRUD(AsyncCrudBase):
         params.append(limite)
         filas = await db.query(
             f"""
-            SELECT r.*, m.nombre AS modelo, m.version AS version_modelo
+            SELECT {', '.join(f'r.{c}' for c in COLUMNAS_SIN_ARCHIVO)}, m.nombre AS modelo, m.version AS version_modelo
             FROM "{TABLA_REGISTROS.nombre}" r
             JOIN "{TABLA_MODELOS_REGISTRO.nombre}" m ON m.id = r.id_modelo
             {where}

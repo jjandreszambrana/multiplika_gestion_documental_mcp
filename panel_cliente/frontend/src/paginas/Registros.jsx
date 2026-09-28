@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Checkbox, Group, Modal, NumberInput, Paper, Select, Stack,
+  ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconHistory, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconArrowLeft, IconHistory, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -78,6 +78,7 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
   const hoy = new Date().toISOString().slice(0, 10)
   const [valores, setValores] = useState({})
   const [datos, setDatos] = useState({ fecha: hoy, hora: "", conforme: null, observaciones: "" })
+  const [archivo, setArchivo] = useState(null)
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -90,6 +91,7 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
       conforme: registro?.conforme ?? null,
       observaciones: registro?.observaciones || "",
     })
+    setArchivo(null)
     setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, registro])
@@ -110,7 +112,7 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
         hora: datos.hora || null,
         conforme: datos.conforme,
         observaciones: datos.observaciones || null,
-      })
+      }, archivo)
       onClose()
     } catch (err) {
       setError(err.message)
@@ -166,6 +168,13 @@ function ModalRegistro({ opened, modelo, registro, onClose, onGuardar }) {
           placeholder="La desviación y qué se hizo, si la hay"
           value={datos.observaciones}
           onChange={(e) => setDatos({ ...datos, observaciones: e.currentTarget.value })}
+        />
+        <FileInput
+          label="Archivo original" clearable
+          placeholder={registro?.archivo_original_nombre || "La foto del parte, el PDF del análisis..."}
+          description={registro?.archivo_original_nombre ? "Si eliges otro, sustituye al que ya tiene" : "Opcional, se guarda tal cual"}
+          value={archivo}
+          onChange={setArchivo}
         />
 
         {error && <Alert color="red">{error}</Alert>}
@@ -236,13 +245,28 @@ function PestanaRegistros({ proyecto, modelos }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idModelo, desde, hasta, conforme])
 
-  async function guardar(datos) {
-    if (registroEditando) {
-      await api.corregirRegistro(proyecto.id, registroEditando.id, datos)
-    } else {
-      await api.crearRegistro(proyecto.id, { ...datos, id_modelo: Number(idModelo) })
-    }
+  async function guardar(datos, archivo) {
+    const fila = registroEditando
+      ? await api.corregirRegistro(proyecto.id, registroEditando.id, datos)
+      : await api.crearRegistro(proyecto.id, { ...datos, id_modelo: Number(idModelo) })
+    // Si el archivo falla, el registro ya está guardado: al recargar se ve
+    // sin archivo y el error sale en el modal, que sigue abierto.
+    if (archivo) await api.subirArchivoOriginalRegistro(proyecto.id, fila.id, archivo)
     await cargar()
+  }
+
+  async function descargarOriginal(registro) {
+    try {
+      const { blob, nombreFichero } = await api.descargarArchivoOriginalRegistroBlob(proyecto.id, registro.id)
+      const url = URL.createObjectURL(blob)
+      const enlace = document.createElement("a")
+      enlace.href = url
+      enlace.download = nombreFichero
+      enlace.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function eliminar(registro) {
@@ -339,6 +363,16 @@ function PestanaRegistros({ proyecto, modelos }) {
                       <Text fz="11.5px" c="dimmed">
                         v{r.version_modelo}
                       </Text>
+                      {r.archivo_original_nombre && (
+                        <Tooltip label={`Descargar ${r.archivo_original_nombre}`}>
+                          <ActionIcon
+                            variant="subtle" color="gray" size="xs" aria-label="Descargar archivo original"
+                            onClick={() => descargarOriginal(r)}
+                          >
+                            <IconPaperclip size={13} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
                     </Group>
                   </Table.Td>
                   {campos(modelo).map(([nombre]) => (

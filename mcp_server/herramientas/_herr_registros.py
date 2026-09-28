@@ -25,6 +25,7 @@ from ..database.modelos._mod_registros import (
     ModelosRegistroCRUD,
     RegistrosCRUD,
     plantilla_de_valores,
+    sin_archivo,
 )
 
 
@@ -41,8 +42,7 @@ def _con_plantilla(modelo: dict) -> dict:
 
 
 async def _uno(registros: "RegistrosCRUD", id_registro: int) -> dict:
-    fila = await registros.obtener(id_registro)
-    return {**fila, "valores": json.loads(fila["valores"])}
+    return sin_archivo(await registros.obtener(id_registro))
 
 
 async def _modelo_o_error(config: dict, modelo: str | None, id_modelo: int | None, version: int | None = None) -> dict:
