@@ -476,6 +476,32 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/reglas/${idRegla}`, datos),
   eliminarRegla: (idProyecto, idRegla) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/reglas/${idRegla}`),
 
+  listarModelosRegistro: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/registros/modelos`),
+  listarVersionesModeloRegistro: (idProyecto, idModelo) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/versiones`),
+  crearModeloRegistro: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros/modelos`, datos),
+  corregirModeloRegistro: (idProyecto, idModelo, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/modelos/${idModelo}`, datos),
+  nuevaVersionModeloRegistro: (idProyecto, idModelo, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/versiones`, datos),
+  cambiarActivoModeloRegistro: (idProyecto, idModelo, activo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/activo`, { activo }),
+  listarRegistros: (idProyecto, { idModelo, desde, hasta, conforme } = {}) => {
+    const parametros = new URLSearchParams()
+    if (idModelo) parametros.set("id_modelo", idModelo)
+    if (desde) parametros.set("desde", desde)
+    if (hasta) parametros.set("hasta", hasta)
+    if (conforme !== undefined && conforme !== null) parametros.set("conforme", conforme)
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/registros${query ? `?${query}` : ""}`)
+  },
+  crearRegistro: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros`, datos),
+  corregirRegistro: (idProyecto, idRegistro, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/${idRegistro}`, datos),
+  eliminarRegistro: (idProyecto, idRegistro) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/registros/${idRegistro}`),
+
   listarConversacionesChat: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/chat/conversaciones`),
   crearConversacionChat: (idProyecto, titulo) =>

@@ -90,6 +90,12 @@ from ..database.modelos._mod_envios import (
 from ..database.modelos._mod_estilos import EstilosCRUD, EstilosImagenesCRUD
 from ..database.modelos._mod_grupos import DocumentosGruposCRUD, GruposCRUD
 from ..database.modelos._mod_historial_ediciones import HistorialEdicionesCRUD, calcular_diff
+from ..database.modelos._mod_registros import (
+    LIMITE_REGISTROS,
+    ModelosRegistroCRUD,
+    RegistrosCRUD,
+    plantilla_de_valores,
+)
 from ..database.modelos._mod_reglas import (
     CARACTERES_POR_TOKEN,
     ReglasCRUD,
@@ -2392,6 +2398,229 @@ async def eliminar_regla(
 ) -> None:
     config = get_db_config(proyecto["id"])
     await ReglasCRUD(config).eliminar(id_regla)
+
+
+# ---------- Registros de datos (ver docs → "Registros de datos") ----------
+# Lectura: cualquiera con acceso al proyecto. Alta/edición: cualquiera salvo
+# invitado, igual que las reglas y los estilos. Un modelo con registros no se
+# puede editar: el CRUD lanza ValueError y aquí sale como 400.
+
+class NuevoModeloRegistro(BaseModel):
+    nombre: str
+    titulo: str
+    descripcion: str
+    esquema: dict
+    periodicidad: str | None = None
+
+
+class CorreccionModeloRegistro(BaseModel):
+    titulo: str | None = None
+    descripcion: str | None = None
+    esquema: dict | None = None
+    periodicidad: str | None = None
+
+
+class NuevaVersionModeloRegistro(CorreccionModeloRegistro):
+    esquema: dict
+    motivo: str
+
+
+class CambioActivoModelo(BaseModel):
+    activo: bool
+
+
+class NuevoRegistro(BaseModel):
+    valores: dict
+    fecha: str
+    hora: str | None = None
+    id_modelo: int | None = None
+    modelo: str | None = None
+    creado_por: str | None = None
+    conforme: bool | None = None
+    observaciones: str | None = None
+    id_entidad: int | None = None
+    id_documento: int | None = None
+
+
+class CorreccionRegistro(BaseModel):
+    valores: dict | None = None
+    fecha: str | None = None
+    hora: str | None = None
+    conforme: bool | None = None
+    observaciones: str | None = None
+    id_entidad: int | None = None
+    id_documento: int | None = None
+
+
+def _modelo_con_plantilla(modelo: dict) -> dict:
+    esquema = json.loads(modelo["esquema"])
+    return {**modelo, "esquema": esquema, "valores_de_ejemplo": plantilla_de_valores(esquema)}
+
+
+async def _modelo_o_404(config: dict, id_modelo: int) -> dict:
+    modelo = await ModelosRegistroCRUD(config).obtener(id_modelo)
+    if not modelo:
+        raise HTTPException(404, "Modelo de registro no encontrado")
+    return modelo
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros/modelos")
+async def listar_modelos_registro(
+    id_proyecto: int, incluir_inactivos: bool = True,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """La última versión de cada modelo. Por defecto incluye los retirados:
+    esta pantalla es para gestionarlos."""
+    config = get_db_config(proyecto["id"])
+    modelos = ModelosRegistroCRUD(config)
+    salida = []
+    for m in await modelos.listar_modelos(incluir_inactivos):
+        salida.append({**_modelo_con_plantilla(m), "tiene_registros": await modelos.tiene_registros(m["id"])})
+    return salida
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}/versiones")
+async def listar_versiones_modelo_registro(
+    id_proyecto: int, id_modelo: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    modelo = await _modelo_o_404(config, id_modelo)
+    return [_modelo_con_plantilla(v) for v in await ModelosRegistroCRUD(config).listar_versiones(modelo["nombre"])]
+
+
+@app.post("/v1/proyectos/{id_proyecto}/registros/modelos")
+async def crear_modelo_registro(
+    id_proyecto: int, datos: NuevoModeloRegistro, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    modelos = ModelosRegistroCRUD(config)
+    try:
+        id_modelo = await modelos.crear(datos.model_dump())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return _modelo_con_plantilla(await modelos.obtener(id_modelo))
+
+
+@app.put("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}")
+async def corregir_modelo_registro(
+    id_proyecto: int, id_modelo: int, datos: CorreccionModeloRegistro,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Solo mientras no tenga registros — si los tiene, 400 pidiendo una
+    versión nueva."""
+    config = get_db_config(proyecto["id"])
+    try:
+        modelo = await ModelosRegistroCRUD(config).actualizar(id_modelo, datos.model_dump())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    if not modelo:
+        raise HTTPException(404, "Modelo de registro no encontrado")
+    return _modelo_con_plantilla(modelo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}/versiones")
+async def nueva_version_modelo_registro(
+    id_proyecto: int, id_modelo: int, datos: NuevaVersionModeloRegistro,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        return _modelo_con_plantilla(await ModelosRegistroCRUD(config).nueva_version(
+            id_modelo, datos.esquema, datos.motivo,
+            {"titulo": datos.titulo, "descripcion": datos.descripcion, "periodicidad": datos.periodicidad},
+        ))
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+
+
+@app.put("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}/activo")
+async def cambiar_activo_modelo_registro(
+    id_proyecto: int, id_modelo: int, datos: CambioActivoModelo,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    modelo = await ModelosRegistroCRUD(config).cambiar_activo(id_modelo, datos.activo)
+    if not modelo:
+        raise HTTPException(404, "Modelo de registro no encontrado")
+    return _modelo_con_plantilla(modelo)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros")
+async def listar_registros(
+    id_proyecto: int, id_modelo: int | None = None, desde: str | None = None, hasta: str | None = None,
+    conforme: bool | None = None, limite: int = 200,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    """`id_modelo` es cualquiera de las versiones: se listan los registros de
+    TODAS las versiones de ese modelo, que es lo que se espera al mirar el
+    histórico."""
+    config = get_db_config(proyecto["id"])
+    ids = None
+    if id_modelo is not None:
+        modelo = await _modelo_o_404(config, id_modelo)
+        versiones = await ModelosRegistroCRUD(config).listar_versiones(modelo["nombre"])
+        ids = [v["id"] for v in versiones] or [modelo["id"]]
+    return await RegistrosCRUD(config).buscar(
+        ids, desde, hasta, None, conforme, None, min(limite, LIMITE_REGISTROS)
+    )
+
+
+@app.post("/v1/proyectos/{id_proyecto}/registros")
+async def crear_registro(
+    id_proyecto: int, datos: NuevoRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    """`creado_por` sale de la sesión, como en las notas: aquí sí se sabe
+    quién está escribiendo."""
+    config = get_db_config(proyecto["id"])
+    modelos = ModelosRegistroCRUD(config)
+    modelo = None
+    if datos.id_modelo is not None:
+        modelo = await _modelo_o_404(config, datos.id_modelo)
+    elif datos.modelo:
+        modelo = await modelos.obtener_por_nombre(datos.modelo)
+    if not modelo:
+        raise HTTPException(404, "Modelo de registro no encontrado")
+    registros = RegistrosCRUD(config)
+    try:
+        id_registro = await registros.crear(modelo, {
+            **datos.model_dump(exclude={"modelo", "id_modelo", "creado_por"}),
+            "creado_por": await _nombre_usuario(id_usuario) or "Usuario eliminado",
+        })
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    fila = await registros.obtener(id_registro)
+    return {**fila, "valores": json.loads(fila["valores"])}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/registros/{id_registro}")
+async def corregir_registro(
+    id_proyecto: int, id_registro: int, datos: CorreccionRegistro,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    registros = RegistrosCRUD(config)
+    fila = await registros.obtener(id_registro)
+    if not fila:
+        raise HTTPException(404, "Registro no encontrado")
+    modelo = await _modelo_o_404(config, fila["id_modelo"])
+    try:
+        actualizado = await registros.corregir(id_registro, modelo, datos.model_dump())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return {**actualizado, "valores": json.loads(actualizado["valores"])}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/registros/{id_registro}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_registro(
+    id_proyecto: int, id_registro: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await RegistrosCRUD(config).eliminar(id_registro)
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre
