@@ -35,7 +35,6 @@ from typing import Literal
 from urllib.parse import quote
 
 import anthropic
-import markdown as md
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
@@ -57,12 +56,13 @@ from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosL
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
 from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestra_chat
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
+from ..database.modelos._mod_compartidos import CompartidosCRUD, anular_compartido, crear_compartido
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._mod_credenciales_campos import CredencialesCamposCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
-from ..database.modelos._mod_pdf import CSS_DOCUMENTO, imagenes_estilo_html, renderizar_pdf
+from ..database.modelos._mod_pdf import pdf_de_documento
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.dependencias._dep_aprendizajes import ESTADO_CANDIDATO, ESTADO_PENDIENTE_REVISION, ESTADO_RECHAZADO
@@ -585,12 +585,8 @@ async def exportar_documento_pdf(
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> Response:
     """Exporta la versión vigente del documento a PDF, con el mismo
-    formato (títulos, tablas, negritas...) que se ve en el panel — mismo
-    mecanismo (markdown -> HTML -> WeasyPrint) que ya usa la IA para
-    generar informes por chat, ver database/modelos/_mod_pdf.py. Con
-    incluir_metadatos=true añade un pie de página (tipo, ámbito, fecha)
-    repetido en cada hoja, vía el mecanismo "running element" de CSS que
-    entiende WeasyPrint."""
+    formato que se ve en el panel — ver pdf_de_documento en
+    database/modelos/_mod_pdf.py."""
     config = get_db_config(proyecto["id"])
     documento = await DocumentosCRUD(config).obtener(id_documento)
     if not documento:
@@ -599,35 +595,8 @@ async def exportar_documento_pdf(
     if not version:
         raise HTTPException(404, "Este documento no tiene ninguna versión vigente")
 
-    imagenes_html = ""
-    if documento["id_estilo"]:
-        imagenes_html = await imagenes_estilo_html(config, documento["id_estilo"])
-
-    pie_html = ""
-    css_pie = ""
-    if incluir_metadatos:
-        partes = [documento["nombre"], documento["tipo_documento"]]
-        if documento["ambito"]:
-            partes.append(documento["ambito"])
-        fecha = version["fecha_documento"] or documento["fecha_alta"]
-        if fecha:
-            partes.append(fecha.strftime("%d/%m/%Y") if hasattr(fecha, "strftime") else str(fecha))
-        texto_pie = html.escape(" · ".join(str(p) for p in partes))
-        pie_html = f'<div class="pie-documento">{texto_pie}</div>'
-        css_pie = """
-            .pie-documento { position: running(pie-documento); font-size: 8pt; color: #888; }
-            @page { @bottom-center { content: element(pie-documento); } }
-        """
-
-    cuerpo_html = md.markdown(version["markdown_actual"], extensions=["tables"])
-    titulo_html = html.escape(documento["nombre"])
-    html_completo = (
-        f"<html><head><meta charset='utf-8'><title>{titulo_html}</title>"
-        f"<style>{CSS_DOCUMENTO}{css_pie}</style></head>"
-        f"<body>{pie_html}{imagenes_html}{cuerpo_html}</body></html>"
-    )
     try:
-        pdf_bytes = await renderizar_pdf(html_completo)
+        pdf_bytes = await pdf_de_documento(config, documento, version, incluir_metadatos)
     except RuntimeError as e:
         raise HTTPException(500, str(e)) from e
 
@@ -1311,6 +1280,61 @@ async def reintentar_envio_endpoint(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
 
+# --- Compartir un documento por enlace (ver docs/gestion-documental.md →
+# "Compartir un documento por enlace"). Mismo criterio de permisos que los
+# envíos: cualquiera con acceso ve los enlaces, puede_editar hace falta
+# para crearlos y anularlos. La página pública que abre el destinatario va
+# más abajo, junto al formulario de credencial (también pública).
+
+
+class NuevoCompartido(BaseModel):
+    dias_validez: int = 7
+    incluir_original: bool = False
+    email_destino: str | None = None
+    mensaje: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/compartidos")
+async def listar_compartidos_endpoint(
+    id_proyecto: int, id_documento: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await CompartidosCRUD(config).listar_de_documento(proyecto["id"], id_documento)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/documentos/{id_documento}/compartidos")
+async def crear_compartido_endpoint(
+    id_proyecto: int, id_documento: int, datos: NuevoCompartido,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    creado_por = await _nombre_usuario(id_usuario) or "Usuario eliminado"
+    try:
+        return await crear_compartido(
+            config, proyecto["id"], id_documento, creado_por, datos.dias_validez,
+            datos.incluir_original, (datos.email_destino or "").strip() or None, datos.mensaje,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/compartidos/{id_compartido}/anular")
+async def anular_compartido_endpoint(
+    id_proyecto: int, id_compartido: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_usuario: int = Depends(puede_editar_documento_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await anular_compartido(config, proyecto["id"], id_compartido)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
 # --- Aviso de caducidad por email (ver docs/gestion-documental.md →
 # "Fechas de caducidad") — solo admin, es configuración de cuenta, no día
 # a día con documentos.
@@ -1798,6 +1822,100 @@ async def rellenar_formulario_credencial(id_proyecto: int, token: str, valor: st
     return HTMLResponse(_pagina_mensaje_credencial(
         "Credencial guardada", f'Ya puedes cerrar esta ventana — "{solicitud["nombre"]}" está lista.',
     ))
+
+
+# --- Enlace compartido: lo que abre el destinatario ---
+# Público a propósito (sin JWT ni x-api-key), como el formulario de
+# credencial de arriba: la única protección es el token aleatorio, y que
+# caduca o se puede anular. Ni se indexa ni se guarda en caché.
+
+_CABECERAS_COMPARTIDO = {
+    "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer",
+}
+_COMPARTIDO_NO_VALIDO = _pagina_mensaje_credencial(
+    "Enlace no disponible",
+    "Este enlace ha caducado, se ha anulado o no existe. Pide a quien te lo mandó uno nuevo.",
+)
+
+
+async def _compartido_vigente(id_proyecto: int, token: str) -> tuple[dict, dict] | None:
+    config = _config_proyecto_o_none(id_proyecto)
+    compartido = await CompartidosCRUD(config).obtener_vigente(token) if config else None
+    return (config, compartido) if compartido else None
+
+
+def _pagina_compartido(compartido: dict, token: str, nombre_original: str | None) -> str:
+    nombre = html.escape(compartido["nombre_documento"])
+    fecha = compartido["fecha_expiracion"].strftime("%d/%m/%Y")
+    boton_original = (
+        f'<a class="boton secundario" href="{token}/original">Descargar archivo original'
+        f'<small>{html.escape(nombre_original)}</small></a>'
+        if nombre_original else ""
+    )
+    return f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{nombre}</title>
+<style>
+body {{ font-family: system-ui, sans-serif; max-width: 520px; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }}
+h1 {{ font-size: 1.4rem; margin-bottom: 0.3rem; }}
+.ayuda {{ color: #666; font-size: 0.9rem; }}
+.boton {{ display: block; margin-top: 1rem; padding: 0.8rem 1rem; border-radius: 8px; background: #1c7ed6;
+          color: #fff; text-decoration: none; font-weight: 600; text-align: center; }}
+.boton.secundario {{ background: #e7f5ff; color: #1864ab; }}
+.boton small {{ display: block; font-weight: 400; font-size: 0.8rem; margin-top: 0.2rem; }}
+</style></head><body>
+<p class="ayuda">{html.escape(compartido["creado_por"])} te ha compartido este documento</p>
+<h1>{nombre}</h1>
+<a class="boton" href="{token}/pdf">Descargar PDF</a>
+{boton_original}
+<p class="ayuda">Este enlace funciona hasta el {fecha}.</p>
+</body></html>"""
+
+
+@app.get("/v1/compartido/{id_proyecto}/{token}", response_class=HTMLResponse)
+async def ver_compartido(id_proyecto: int, token: str) -> HTMLResponse:
+    vigente = await _compartido_vigente(id_proyecto, token)
+    if not vigente:
+        return HTMLResponse(_COMPARTIDO_NO_VALIDO, status.HTTP_404_NOT_FOUND, headers=_CABECERAS_COMPARTIDO)
+    config, compartido = vigente
+    nombre_original = None
+    if compartido["incluir_original"]:
+        version = await VersionesCRUD(config).obtener(compartido["id_version"])
+        nombre_original = version["archivo_original_nombre"] if version and version["archivo_original"] else None
+    return HTMLResponse(_pagina_compartido(compartido, token, nombre_original), headers=_CABECERAS_COMPARTIDO)
+
+
+@app.get("/v1/compartido/{id_proyecto}/{token}/pdf")
+async def descargar_compartido_pdf(id_proyecto: int, token: str) -> Response:
+    vigente = await _compartido_vigente(id_proyecto, token)
+    if not vigente:
+        return HTMLResponse(_COMPARTIDO_NO_VALIDO, status.HTTP_404_NOT_FOUND, headers=_CABECERAS_COMPARTIDO)
+    config, compartido = vigente
+    await CompartidosCRUD(config).apuntar_descarga(compartido["id"], "descargas_pdf")
+    nombre_archivo = quote(f"{compartido['nombre_documento']}.pdf")
+    return Response(
+        content=bytes(compartido["pdf"]), media_type="application/pdf",
+        headers={**_CABECERAS_COMPARTIDO, "Content-Disposition": f"attachment; filename*=UTF-8''{nombre_archivo}"},
+    )
+
+
+@app.get("/v1/compartido/{id_proyecto}/{token}/original")
+async def descargar_compartido_original(id_proyecto: int, token: str) -> Response:
+    vigente = await _compartido_vigente(id_proyecto, token)
+    if not vigente or not vigente[1]["incluir_original"]:
+        return HTMLResponse(_COMPARTIDO_NO_VALIDO, status.HTTP_404_NOT_FOUND, headers=_CABECERAS_COMPARTIDO)
+    config, compartido = vigente
+    version = await VersionesCRUD(config).obtener(compartido["id_version"])
+    if not version or not version["archivo_original"]:
+        return HTMLResponse(_COMPARTIDO_NO_VALIDO, status.HTTP_404_NOT_FOUND, headers=_CABECERAS_COMPARTIDO)
+    await CompartidosCRUD(config).apuntar_descarga(compartido["id"], "descargas_original")
+    nombre_codificado = quote(version["archivo_original_nombre"])
+    return Response(
+        content=bytes(version["archivo_original"]), media_type=version["archivo_original_tipo_mime"],
+        headers={**_CABECERAS_COMPARTIDO, "Content-Disposition": f"attachment; filename*=UTF-8''{nombre_codificado}"},
+    )
 
 
 # --- Tabla de estilos (ver docs/gestion-documental.md → "Tabla de estilos") ---

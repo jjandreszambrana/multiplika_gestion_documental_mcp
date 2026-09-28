@@ -18,8 +18,11 @@ dependencia."""
 
 import asyncio
 import base64
+import html
 import os
 import sys
+
+import markdown as md
 
 from ._mod_estilos import EstilosImagenesCRUD
 
@@ -94,3 +97,40 @@ async def renderizar_pdf(html_completo: str) -> bytes:
     if proceso.returncode != 0:
         raise RuntimeError(f"No se pudo generar el PDF: {error.decode(errors='replace')[-500:]}")
     return pdf_bytes
+
+
+async def pdf_de_documento(config: dict, documento: dict, version: dict, incluir_metadatos: bool = False) -> bytes:
+    """PDF de una versión de un documento, con el mismo formato (títulos,
+    tablas, negritas...) que se ve en el panel y las imágenes de su estilo
+    de informe — compartido entre el botón "Descargar PDF" del panel y los
+    enlaces para compartir (_mod_compartidos.py). Con incluir_metadatos
+    añade un pie de página (nombre, tipo, ámbito, fecha) repetido en cada
+    hoja, vía el mecanismo "running element" de CSS que entiende
+    WeasyPrint."""
+    imagenes_html = ""
+    if documento["id_estilo"]:
+        imagenes_html = await imagenes_estilo_html(config, documento["id_estilo"])
+
+    pie_html = ""
+    css_pie = ""
+    if incluir_metadatos:
+        partes = [documento["nombre"], documento["tipo_documento"]]
+        if documento["ambito"]:
+            partes.append(documento["ambito"])
+        fecha = version["fecha_documento"] or documento["fecha_alta"]
+        if fecha:
+            partes.append(fecha.strftime("%d/%m/%Y") if hasattr(fecha, "strftime") else str(fecha))
+        texto_pie = html.escape(" · ".join(str(p) for p in partes))
+        pie_html = f'<div class="pie-documento">{texto_pie}</div>'
+        css_pie = """
+            .pie-documento { position: running(pie-documento); font-size: 8pt; color: #888; }
+            @page { @bottom-center { content: element(pie-documento); } }
+        """
+
+    cuerpo_html = md.markdown(version["markdown_actual"], extensions=["tables"])
+    titulo_html = html.escape(documento["nombre"])
+    return await renderizar_pdf(
+        f"<html><head><meta charset='utf-8'><title>{titulo_html}</title>"
+        f"<style>{CSS_DOCUMENTO}{css_pie}</style></head>"
+        f"<body>{pie_html}{imagenes_html}{cuerpo_html}</body></html>"
+    )

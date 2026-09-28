@@ -81,6 +81,28 @@ def _renderizar_html(cuerpo_markdown: str) -> str:
     return f"<html><head><style>{_CSS_EMAIL}</style></head><body>{cuerpo_html}</body></html>"
 
 
+def mandar_correo(cuenta: dict, destino: str, asunto: str, texto: str, html: str) -> None:
+    """Manda un email (texto + HTML) con la cuenta de correo del proyecto
+    (ConfiguracionCRUD.obtener_cuenta_email). Lanza SMTPException/OSError
+    si falla — el llamador decide qué hacer con el error."""
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = asunto
+    mensaje["From"] = cuenta["direccion"]
+    mensaje["To"] = destino
+    mensaje.attach(MIMEText(texto, "plain", _charset="utf-8"))
+    mensaje.attach(MIMEText(html, "html", _charset="utf-8"))
+
+    if cuenta["smtp_seguridad"] == "ssl":
+        smtp = smtplib.SMTP_SSL(cuenta["smtp_host"], cuenta["smtp_port"])
+    else:
+        smtp = smtplib.SMTP(cuenta["smtp_host"], cuenta["smtp_port"])
+        if cuenta["smtp_seguridad"] == "starttls":
+            smtp.starttls()
+    with smtp:
+        smtp.login(cuenta["usuario"], cuenta["password"])
+        smtp.send_message(mensaje)
+
+
 class EnviosCRUD(AsyncCrudBase):
     def __init__(self, config: dict):
         super().__init__(TABLA_ENVIOS, config)
@@ -215,23 +237,8 @@ async def enviar_envio(config: dict, id_envio: int) -> dict:
         await envios.update(id_envio, {"estado": "fallido", "error": "No hay cuenta de correo configurada"})
         return await envios.obtener(id_envio)
 
-    mensaje = MIMEMultipart("alternative")
-    mensaje["Subject"] = envio["asunto"]
-    mensaje["From"] = cuenta["direccion"]
-    mensaje["To"] = envio["email_destino"]
-    mensaje.attach(MIMEText(envio["contenido_texto"], "plain", _charset="utf-8"))
-    mensaje.attach(MIMEText(envio["contenido_html"], "html", _charset="utf-8"))
-
     try:
-        if cuenta["smtp_seguridad"] == "ssl":
-            smtp = smtplib.SMTP_SSL(cuenta["smtp_host"], cuenta["smtp_port"])
-        else:
-            smtp = smtplib.SMTP(cuenta["smtp_host"], cuenta["smtp_port"])
-            if cuenta["smtp_seguridad"] == "starttls":
-                smtp.starttls()
-        with smtp:
-            smtp.login(cuenta["usuario"], cuenta["password"])
-            smtp.send_message(mensaje)
+        mandar_correo(cuenta, envio["email_destino"], envio["asunto"], envio["contenido_texto"], envio["contenido_html"])
     except (smtplib.SMTPException, OSError) as e:
         await envios.update(id_envio, {"estado": "fallido", "error": str(e)})
         return await envios.obtener(id_envio)

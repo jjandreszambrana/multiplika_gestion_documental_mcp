@@ -60,6 +60,8 @@ ACCIONES_PANEL = {
     "crear_envios_endpoint": ("programó envíos del documento", "documento", "id_documento"),
     "cancelar_envio_endpoint": ("canceló el envío", "envio", "id_envio"),
     "reintentar_envio_endpoint": ("reintentó el envío", "envio", "id_envio"),
+    "crear_compartido_endpoint": ("compartió por enlace el documento", "documento", "id_documento"),
+    "anular_compartido_endpoint": ("anuló el enlace compartido", "compartido", "id_compartido"),
     "actualizar_configuracion_avisos": ("cambió la configuración de avisos de caducidad", None, None),
     "actualizar_cuenta_email": ("cambió la cuenta de correo de envío", None, None),
     "crear_credencial": ("dio de alta la credencial", "credencial", None),

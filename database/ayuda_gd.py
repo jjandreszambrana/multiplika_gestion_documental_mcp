@@ -270,6 +270,29 @@ Dos cosas, las dos desde el panel (no por chat):
   Una entidad sin email tampoco bloquea el envío a las demás: se queda \
   en "fallido" con el motivo, y las demás salen igual.
 
+## Compartir un documento por enlace
+
+Para mandarle un documento a alguien de fuera (un cliente, un \
+inspector...) sin darle acceso a tu gestión documental, crea un enlace \
+desde la pestaña "Compartir" del documento o pidiéndoselo a tu IA. Quien \
+lo abre, sin necesidad de cuenta, descarga el documento en PDF y, si lo \
+eliges al crearlo, también el archivo original (el escaneado, la foto...).
+
+- **Caduca** a los 7, 30 o 90 días, según elijas; lo puedes anular antes.
+- **Queda fijo**: si corriges el documento después, el enlace sigue dando \
+  lo que compartiste. Para mandar lo corregido, crea otro enlace.
+- **Cómo llega**: copias el enlace y lo mandas tú, o escribes el email \
+  del destinatario y sale solo desde la cuenta de correo del proyecto \
+  (la misma de los envíos, ver arriba).
+- **Quien tenga el enlace puede descargar**: no lo publiques en sitios \
+  abiertos. En la pestaña ves cuántas veces se ha descargado cada uno.
+
+Un documento archivado no se puede compartir.
+
+Para tu IA: usa `compartir_documento_gd` (confirma antes el documento y \
+el destinatario, y pregunta quién comparte: sale en el email), \
+`listar_compartidos_documento_gd` y `anular_compartido_gd`.
+
 ## Archivar, desarchivar y borrar
 
 Un documento que ya no aplica (anulado, subido por error) se puede \

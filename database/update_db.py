@@ -46,6 +46,7 @@ from database.dependencias._dep_notas import TABLA_NOTAS, TABLA_NOTAS_RELACIONES
 from database.dependencias._dep_grupos import TABLA_DOCUMENTOS_GRUPOS, TABLA_GRUPOS
 from database.dependencias._dep_entidades import TABLA_DOCUMENTOS_ENTIDADES, TABLA_ENTIDADES
 from database.dependencias._dep_envios import TABLA_ENVIOS
+from database.dependencias._dep_compartidos import TABLA_COMPARTIDOS
 from database.dependencias._dep_chat import TABLA_CHAT_CONVERSACIONES
 from database.dependencias._dep_scripts import TABLA_DOCUMENTOS_SCRIPTS, TABLA_SCRIPTS
 from database.dependencias._dep_enlaces import TABLA_ENLACES, TABLA_PREGUNTAS_PENDIENTES, TABLA_USO_ENLACES
@@ -99,6 +100,7 @@ def main():
         TABLA_ENTIDADES,
         TABLA_DOCUMENTOS_ENTIDADES,
         TABLA_ENVIOS,
+        TABLA_COMPARTIDOS,
         TABLA_CHAT_CONVERSACIONES,
         TABLA_SCRIPTS,
         TABLA_DOCUMENTOS_SCRIPTS,

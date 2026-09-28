@@ -359,6 +359,12 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/envios/${idEnvio}/cancelar`),
   reintentarEnvio: (idProyecto, idEnvio) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/envios/${idEnvio}/reintentar`),
+  listarCompartidos: (idProyecto, idDocumento) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos/${idDocumento}/compartidos`),
+  crearCompartido: (idProyecto, idDocumento, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/documentos/${idDocumento}/compartidos`, datos),
+  anularCompartido: (idProyecto, idCompartido) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/compartidos/${idCompartido}/anular`),
 
   listarGrupos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/grupos`),
   crearGrupo: (idProyecto, nombre, proposito) =>

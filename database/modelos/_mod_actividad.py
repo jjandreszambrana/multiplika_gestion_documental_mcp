@@ -35,6 +35,7 @@ NOMBRE_POR_TIPO = {
     "tipo_documento": ("gd_tipos_documento", "nombre"),
     "enlace": ("gd_enlaces", "nombre"),
     "envio": ("gd_envios", "asunto"),
+    "compartido": ("gd_compartidos", "nombre_documento"),
     "nota": ("gd_notas", "texto"),
     "aprendizaje": ("gd_aprendizajes", "nombre"),
     "pregunta_pendiente": ("gd_preguntas_pendientes", "pregunta"),

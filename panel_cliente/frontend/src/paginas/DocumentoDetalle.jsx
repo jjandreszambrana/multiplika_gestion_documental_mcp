@@ -18,6 +18,7 @@ import {
   IconHistory,
   IconMessageCircle,
   IconSend,
+  IconShare,
   IconTrash,
 } from "@tabler/icons-react"
 import { api } from "../api"
@@ -30,6 +31,7 @@ import EntidadesDocumento from "../componentes/EntidadesDocumento"
 import ScriptsDocumento from "../componentes/ScriptsDocumento"
 import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import EnviosDocumento from "../componentes/EnviosDocumento"
+import CompartirDocumento from "../componentes/CompartirDocumento"
 import ActividadDocumento from "../componentes/ActividadDocumento"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
@@ -422,6 +424,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 <Tabs.Tab value="enviar" leftSection={<IconSend size={15} stroke={1.8} />}>
                   Enviar
                 </Tabs.Tab>
+                <Tabs.Tab value="compartir" leftSection={<IconShare size={15} stroke={1.8} />}>
+                  Compartir
+                </Tabs.Tab>
                 {/* Invitado no ve la actividad (ver listar_actividad en servidor.py);
                     soporte sí — llega con es_admin */}
                 {(proyecto.puede_editar || proyecto.es_admin) && (
@@ -505,6 +510,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
 
               <Tabs.Panel value="enviar" pt="lg">
                 <EnviosDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="compartir" pt="lg">
+                {vista === "compartir" && (
+                  <CompartirDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
+                )}
               </Tabs.Panel>
 
               {(proyecto.puede_editar || proyecto.es_admin) && (

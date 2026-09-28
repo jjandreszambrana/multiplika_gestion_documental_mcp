@@ -67,6 +67,8 @@ ACCIONES_MCP = {
     "enviar_envio_gd": ("mandó el envío", "envio", "id_envio", None),
     "cancelar_envio_gd": ("canceló el envío", "envio", "id_envio", None),
     "reintentar_envio_gd": ("reintentó el envío", "envio", "id_envio", None),
+    "compartir_documento_gd": ("compartió por enlace el documento", "documento", "id_documento", None),
+    "anular_compartido_gd": ("anuló el enlace compartido", "compartido", "id_compartido", None),
     "crear_estilo_informe_gd": ("creó el estilo de informe", "estilo", None, "nombre_tipo"),
     "actualizar_estilo_informe_gd": ("modificó el estilo de informe", "estilo", None, "nombre_tipo"),
     "subir_imagen_estilo_gd": ("subió una imagen al estilo de informe", "estilo", None, "nombre_tipo"),
@@ -184,7 +186,7 @@ async def consultar_actividad_gd(
     - `tipo_objeto` + `id_objeto`: historial de un elemento concreto,
       p.ej. tipo_objeto="documento", id_objeto=12. Tipos: documento,
       documento_pendiente, entidad, grupo, script, regla, modelo_registro,
-      registro, estilo, credencial, tipo_documento, envio, nota, enlace,
+      registro, estilo, credencial, tipo_documento, envio, compartido, nota, enlace,
       pregunta_pendiente.
     - `desde` / `hasta`: fechas AAAA-MM-DD (hasta incluye el día entero).
     - `texto`: busca en la frase y en el nombre del elemento.

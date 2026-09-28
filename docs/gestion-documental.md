@@ -801,3 +801,20 @@ Quién cambió qué y cuándo, en una sola tabla `gd_actividad` (esquema en `dat
 - **Consulta**: tool `consultar_actividad_gd` (marcada de lectura para que el chat no pida confirmación, pero rechaza keys de invitado dentro), pantalla "Actividad" del panel y pestaña "Actividad" en la ficha de cada documento (`GET /v1/proyectos/{id}/actividad`, con `escritor_gestion_documental_actual`).
 - **Limpieza**: `scripts/limpiar_actividad.py`, cron mensual, mismo patrón que `limpiar_conversaciones_chat.py`.
 - **El log de certificados** (`gd_certificados_log`, descargas) se queda como estaba: apunta lecturas, que este registro no apunta.
+
+### Compartir un documento por enlace (2026-09-28)
+
+Un enlace público para que alguien de fuera, sin cuenta, descargue un documento en PDF y, si se elige, también su archivo original. Tabla `gd_compartidos` (`database/dependencias/_dep_compartidos.py`), lógica en `database/modelos/_mod_compartidos.py`.
+
+Decisiones del usuario: la caducidad se elige al crear (7, 30 o 90 días; 7 por defecto) y se puede anular antes; el contenido queda **congelado** al compartir (si el documento se corrige después, el enlace sigue dando lo que se mandó); el enlace se puede copiar o mandar por email desde la cuenta de correo del proyecto; sin protección extra aparte del token, pero se cuentan las descargas.
+
+- **PDF guardado al crear** (columna `pdf`), no generado en cada visita: así queda congelado de verdad (la edición desde el panel cambia `markdown_actual` de la misma versión) y una página pública no lanza WeasyPrint cada vez que alguien la abre. Mismo formato que "Descargar PDF" del panel: `pdf_de_documento` en `_mod_pdf.py`, compartido por los dos.
+- **Archivo original**: sale de la versión vigente al compartir (`id_version`), no se copia.
+- **Token en claro** (no su hash), para poder volver a copiar el enlace desde el panel: quien lee la tabla ya puede leer el documento, el hash no protegería nada.
+- **URL**: `GD_URL_PUBLICA` + `/v1/compartido/{id_proyecto}/{token}` (página con los botones), `/pdf` y `/original`. Públicas, como el formulario de credencial; con `no-store`, `noindex` y `no-referrer`. Caducado, anulado o inexistente dan la misma página "Enlace no disponible".
+- **Email**: `mandar_correo` (sacado de `enviar_envio` en `_mod_envios.py`). Si falla, el enlace queda creado igual con `estado_email='fallido'` y el motivo, para copiarlo a mano.
+- **No se comparte un documento archivado**; los enlaces ya creados siguen funcionando si se archiva después. Si se borra el documento, sus enlaces caen con él (`ON DELETE CASCADE`).
+- **Tools MCP** (`_herr_compartidos.py`): `compartir_documento_gd`, `listar_compartidos_documento_gd`, `anular_compartido_gd` (invitados: solo listar). **Panel**: pestaña "Compartir" en la ficha del documento. Crear y anular se apuntan en el registro de actividad; las descargas no (van en los contadores del propio enlace).
+
+Quién decidió: usuario (caducidad elegible, contenido congelado, copiar o mandar, sin protección extra). El asistente: PDF guardado en la tabla, token en claro, rutas públicas.
+Reversible: sí — tabla nueva sin dependencias de otras.
