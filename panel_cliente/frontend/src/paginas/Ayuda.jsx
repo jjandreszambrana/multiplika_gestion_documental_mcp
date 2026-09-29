@@ -1,19 +1,33 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Paper, Text } from "@mantine/core"
+import { Alert, Anchor, Grid, NavLink, Paper, Text, Title } from "@mantine/core"
 import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 
 export default function Ayuda({ onVolver }) {
-  const [markdown, setMarkdown] = useState(null)
+  const [secciones, setSecciones] = useState(null)
+  const [idActual, setIdActual] = useState(null)
+  const [seccion, setSeccion] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     api
       .obtenerAyuda()
-      .then((r) => setMarkdown(r.markdown))
+      .then((r) => {
+        setSecciones(r.secciones)
+        setIdActual(r.secciones[0]?.id ?? null)
+      })
       .catch((err) => setError(err.message))
   }, [])
+
+  useEffect(() => {
+    if (!idActual) return
+    setSeccion(null)
+    api
+      .obtenerSeccionAyuda(idActual)
+      .then(setSeccion)
+      .catch((err) => setError(err.message))
+  }, [idActual])
 
   return (
     <>
@@ -31,12 +45,39 @@ export default function Ayuda({ onVolver }) {
           {error}
         </Alert>
       )}
-      {!markdown && !error && <Text>Cargando...</Text>}
+      {!secciones && !error && <Text>Cargando...</Text>}
 
-      {markdown && (
-        <Paper withBorder p="lg">
-          <Markdown>{markdown}</Markdown>
-        </Paper>
+      {secciones && (
+        <Grid gutter="lg">
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <Paper withBorder p="xs">
+              {secciones.map((s) => (
+                <NavLink
+                  key={s.id}
+                  label={s.titulo}
+                  description={s.resumen}
+                  active={s.id === idActual}
+                  onClick={() => setIdActual(s.id)}
+                  styles={{ root: { borderRadius: "var(--mantine-radius-md)" } }}
+                />
+              ))}
+            </Paper>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 8 }}>
+            <Paper withBorder p="lg">
+              {!seccion ? (
+                <Text>Cargando...</Text>
+              ) : (
+                <>
+                  <Title order={2} mb="md">
+                    {seccion.titulo}
+                  </Title>
+                  <Markdown>{seccion.markdown}</Markdown>
+                </>
+              )}
+            </Paper>
+          </Grid.Col>
+        </Grid>
       )}
     </>
   )

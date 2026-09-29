@@ -6,11 +6,10 @@ forma (una temperatura, un parte de limpieza, un resultado de análisis). No
 es un documento ni una nota sobre un documento: es un dato, y por eso tiene
 un modelo que dice qué campos lleva y cómo deben ser.
 
-El contexto que necesita la IA para manejarlos vive en dos sitios: estos
-docstrings, que explican CÓMO se construye un modelo y cómo se rellena un
-registro, y la sección "Registros de datos" de ayuda_gd.py, que entra en el
-contexto de cada sesión por el `initialize` y explica CUÁNDO usarlos y en
-qué se diferencian de un documento o de una nota."""
+El contexto que necesita la IA para manejarlos vive en estos docstrings:
+CUÁNDO usarlos (crear_modelo_registro_gd), CÓMO se construye un modelo y
+cómo se rellena un registro. La sección "Registros de datos" de
+ayuda_gd.py es para el usuario y solo llega si la pide."""
 
 import json
 
@@ -132,7 +131,11 @@ async def crear_modelo_registro_gd(
     nombre: str, titulo: str, descripcion: str, esquema: dict, periodicidad: str | None = None,
 ) -> dict:
     """Da de alta un tipo de registro de datos: qué campos lleva y cómo deben
-    ser. Construye el esquema HABLANDO con el cliente ("¿qué anotas cada vez
+    ser. Un registro es para datos que se anotan una y otra vez con la misma
+    forma (temperaturas de cámaras, parte de limpieza, resultado de un
+    análisis) y que luego se filtran o se promedian; un documento con texto
+    que interpretar va con guardar_documento_gd, y un comentario sobre un
+    documento, con crear_nota_documento_gd. Construye el esquema HABLANDO con el cliente ("¿qué anotas cada vez
     en ese parte?", "¿qué valores puede tomar?", "¿entre qué límites es
     correcto?"), enséñaselo en palabras y confírmalo antes de crearlo — una
     vez tenga registros ya no se podrá tocar, solo versionar.

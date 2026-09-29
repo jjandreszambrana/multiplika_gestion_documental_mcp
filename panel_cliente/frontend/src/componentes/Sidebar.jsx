@@ -49,7 +49,7 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
 
 export default function Sidebar({
   proyecto, esSuperadmin, vista, pendientesCount, onNavigate, onCerrarSesion,
-  empresas = [], idTenantActual, onCambiarEmpresa,
+  empresas = [], idTenantActual, onCambiarEmpresa, chatAbierto, onAlternarChat,
 }) {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
   // "auto" (el valor de partida, ver main.jsx) sigue el sistema operativo
@@ -133,7 +133,7 @@ export default function Sidebar({
             referencia mcpc_usuarios) — un superadmin en modo soporte no
             puede usarlo, ver usuario_chat_gd_actual en dependencias.py */}
         {!esSuperadmin && (
-          <Item icon={IconMessageCircle} label="Chat con la IA" active={vista === "chat"} onClick={() => onNavigate("chat")} />
+          <Item icon={IconMessageCircle} label="Chat con la IA" active={chatAbierto} onClick={onAlternarChat} />
         )}
 
         {proyecto.es_admin && (

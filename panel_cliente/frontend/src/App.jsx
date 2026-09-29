@@ -11,6 +11,27 @@ import Sidebar from "./componentes/Sidebar"
 // forma de volver a elegirlo (ElegirProyecto es solo para usuarios de
 // empresa, no para superadmin).
 const CLAVE_PROYECTO = "gd_panel_id_proyecto"
+
+// Ancho del chat lateral: lo elige el usuario arrastrando el borde y se
+// recuerda en este navegador (si no se puede leer/guardar, se usa el de
+// por defecto — es solo una comodidad).
+const CLAVE_ANCHO_CHAT = "gd_panel_ancho_chat"
+const ANCHO_CHAT_DEFECTO = 420
+const ANCHO_CHAT_MINIMO = 320
+
+function anchoChatGuardado() {
+  try {
+    const valor = Number(localStorage.getItem(CLAVE_ANCHO_CHAT))
+    return valor >= ANCHO_CHAT_MINIMO ? valor : ANCHO_CHAT_DEFECTO
+  } catch {
+    return ANCHO_CHAT_DEFECTO
+  }
+}
+
+// Deja siempre sitio para el menú y un mínimo de contenido a la izquierda.
+function limitarAnchoChat(ancho) {
+  return Math.round(Math.max(ANCHO_CHAT_MINIMO, Math.min(ancho, window.innerWidth - 252 - 360)))
+}
 import Login from "./paginas/Login"
 import ElegirProyecto from "./paginas/ElegirProyecto"
 import Documentos from "./paginas/Documentos"
@@ -54,6 +75,13 @@ export default function App() {
   const [error, setError] = useState(null)
   const [pendientesCount, setPendientesCount] = useState(0)
   const [empresas, setEmpresas] = useState([])
+  // El chat se monta la primera vez que se abre (así no crea una
+  // conversación vacía a quien nunca lo usa) y ya no se desmonta al
+  // cerrarlo: solo se oculta, y la conversación sigue intacta.
+  const [chatAbierto, setChatAbierto] = useState(false)
+  const [chatMontado, setChatMontado] = useState(false)
+  const [anchoChat, setAnchoChat] = useState(anchoChatGuardado)
+  const [redimensionando, setRedimensionando] = useState(false)
 
   // Enlace directo del superadmin desde el panel de administración
   // (?token=...&id_proyecto=...): entra sin login ni selector — el
@@ -116,6 +144,8 @@ export default function App() {
       setToken(token)
       setSesion(leerToken(token))
       setProyecto(null)
+      setChatAbierto(false)
+      setChatMontado(false)
       localStorage.removeItem(CLAVE_PROYECTO)
       navegar("documentos")
     })
@@ -128,7 +158,36 @@ export default function App() {
     cargarProyecto(p.id)
   }
 
+  function alternarChat() {
+    setChatMontado(true)
+    setChatAbierto((abierto) => !abierto)
+  }
+
+  function empezarRedimension(evento) {
+    evento.preventDefault()
+    setRedimensionando(true)
+    let ultimo = anchoChat
+    const mover = (e) => {
+      ultimo = limitarAnchoChat(window.innerWidth - e.clientX)
+      setAnchoChat(ultimo)
+    }
+    const soltar = () => {
+      setRedimensionando(false)
+      window.removeEventListener("pointermove", mover)
+      window.removeEventListener("pointerup", soltar)
+      try {
+        localStorage.setItem(CLAVE_ANCHO_CHAT, String(ultimo))
+      } catch {
+        // sin almacenamiento: el ancho vale solo para esta sesión
+      }
+    }
+    window.addEventListener("pointermove", mover)
+    window.addEventListener("pointerup", soltar)
+  }
+
   function cerrarSesion() {
+    setChatAbierto(false)
+    setChatMontado(false)
     setToken(null)
     setSesion(null)
     setProyecto(null)
@@ -188,6 +247,9 @@ export default function App() {
     <AppShell
       header={avisoEmpresa ? { height: 34 } : undefined}
       navbar={{ width: 252, breakpoint: 0 }}
+      // En pantallas estrechas (móvil) Mantine lo pone a pantalla completa
+      aside={{ width: anchoChat, breakpoint: "sm", collapsed: { desktop: !chatAbierto, mobile: !chatAbierto } }}
+      transitionDuration={redimensionando ? 0 : 200}
       padding="xl"
     >
       {avisoEmpresa && (
@@ -206,6 +268,8 @@ export default function App() {
         vista={idDocumentoActivo ? "documentos" : vista}
         pendientesCount={pendientesCount}
         onNavigate={navegar}
+        chatAbierto={chatAbierto}
+        onAlternarChat={alternarChat}
         onCerrarSesion={cerrarSesion}
         empresas={empresas}
         idTenantActual={sesion.id_tenant}
@@ -276,8 +340,6 @@ export default function App() {
             <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
           ) : vista === "actividad" ? (
             <Actividad proyecto={proyecto} onVolver={() => navegar("documentos")} onVerDocumento={setIdDocumentoActivo} />
-          ) : vista === "chat" ? (
-            <Chat proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : (
             <Documentos
               proyecto={proyecto}
@@ -295,6 +357,19 @@ export default function App() {
           )}
         </Container>
       </AppShell.Main>
+      {!esSuperadmin && (
+        <AppShell.Aside p="md" style={{ userSelect: redimensionando ? "none" : undefined }}>
+          <div
+            onPointerDown={empezarRedimension}
+            title="Arrastra para cambiar el ancho"
+            style={{
+              position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
+              cursor: "col-resize", zIndex: 1, touchAction: "none",
+            }}
+          />
+          {chatMontado && <Chat proyecto={proyecto} onCerrar={() => setChatAbierto(false)} />}
+        </AppShell.Aside>
+      )}
     </AppShell>
   )
 }

@@ -192,6 +192,12 @@ async def consultar_actividad_gd(
     - `texto`: busca en la frase y en el nombre del elemento.
     - `limite`: máximo 100; vienen los más recientes primero.
 
+    No lo deduzcas de las fechas de los documentos: usa esta tool.
+    Responde con quién, cuándo y desde dónde. Si quien aparece es el
+    nombre de una API key, dilo así ("se hizo con la clave «X»"), sin
+    inventar qué persona fue. Si no sale nada, dilo tal cual: puede ser
+    anterior al registro, tener más de un año o ser una consulta.
+
     Solo se guarda un año: lo más antiguo se borra solo. Si la API key
     la comparten varias personas, `quien` no las distingue. No
     disponible para claves de invitado."""

@@ -116,6 +116,7 @@ export const api = {
   listarProyectosDeLaEmpresa: (idTenant) => peticion(BASE_ADMIN, "GET", `/tenants/${idTenant}/proyectos`),
   verProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}`),
   obtenerAyuda: () => peticion(BASE_CLIENTE, "GET", "/ayuda"),
+  obtenerSeccionAyuda: (idSeccion) => peticion(BASE_CLIENTE, "GET", `/ayuda/${idSeccion}`),
 
   // Gestión de usuarios/roles: vive en el backend del panel de
   // administración (mismo JWT, se puede llamar desde aquí igual que

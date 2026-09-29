@@ -50,7 +50,7 @@ from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.api_keys import generar_api_key, nombre_api_key_disponible
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
-from ..database.ayuda_gd import TEXTO_AYUDA_GD
+from ..database.ayuda_gd import indice_ayuda, obtener_seccion
 from ..database.modelos._mod_actividad import ActividadCRUD
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
@@ -188,11 +188,11 @@ async def _reindexar_si_semantico(config: dict, id_proyecto: int, id_documento: 
 
 @app.get("/v1/ayuda")
 async def obtener_ayuda() -> dict:
-    """Mismo texto que la tool MCP `obtener_ayuda_gd()` (ver
-    database/ayuda_gd.py) — cómo funciona la Gestión Documental, para la
-    pantalla "Ayuda" del panel. No depende de ningún proyecto ni requiere
+    """Índice de la ayuda (id, título y resumen de cada parte, en el orden
+    del menú) — mismo contenido que la tool MCP `obtener_ayuda_gd()`, ver
+    database/ayuda_gd.py. No depende de ningún proyecto ni requiere
     sesión: es contenido estático, igual para cualquier cliente."""
-    return {"markdown": TEXTO_AYUDA_GD}
+    return {"secciones": indice_ayuda()}
 
 
 @app.get("/v1/proyectos/{id_proyecto}")

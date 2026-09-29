@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, create_model
 
 from ._anotaciones import SOLO_LECTURA, TAGS_GD_ENLAZADA, es_gd_enlazada, origen_enlazada
 from ._capacidades_elicitacion import puede_elicitar_formulario
-from ..database.ayuda_gd import TEXTO_AYUDA_GD
+from ..database.ayuda_gd import indice_ayuda, obtener_seccion, texto_seccion
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
@@ -68,13 +68,23 @@ async def _reindexar_si_semantico(
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)
-async def obtener_ayuda_gd() -> str:
-    """Explicación en lenguaje sencillo de cómo funciona la Gestión
-    Documental (guardar, buscar, corregir, archivar, caducidades,
-    normativas, el panel web...). Úsala cuando el cliente pregunte cómo
-    funciona esto, qué puede hacer, o esté perdido — mismo texto que la
-    pantalla "Ayuda" del panel."""
-    return TEXTO_AYUDA_GD
+async def obtener_ayuda_gd(seccion: str | None = None) -> str:
+    """Ayuda para el usuario sobre cómo funciona la Gestión Documental,
+    por partes en el mismo orden que el menú del panel — mismo texto que
+    la pantalla "Ayuda". Úsala SOLO cuando el usuario pida ayuda o
+    pregunte cómo funciona algo, no por iniciativa propia.
+
+    Sin `seccion` devuelve el índice (id, título y resumen de cada parte):
+    enséñaselo al usuario y trae la parte que elija. Si ya está claro qué
+    le interesa, pide directamente esa `seccion` (p.ej. "documentos",
+    "enviar", "registros"). Un id que no existe devuelve también el
+    índice."""
+    encontrada = obtener_seccion(seccion) if seccion else None
+    if encontrada:
+        return texto_seccion(encontrada)
+    lista = "\n".join(f"- `{s['id']}`: {s['titulo']} — {s['resumen']}" for s in indice_ayuda())
+    aviso = f"No hay ninguna sección «{seccion}». " if seccion else ""
+    return f"{aviso}Partes de la ayuda (pide una con `seccion`):\n\n{lista}"
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)

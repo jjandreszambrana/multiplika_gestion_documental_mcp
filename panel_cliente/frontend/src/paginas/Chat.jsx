@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Card, Code, Group,
-  Loader, Modal, NavLink, Paper, ScrollArea, Stack, Text, Textarea, TextInput, Title, Tooltip,
+  ActionIcon, Alert, Badge, Button, Card, Code, Group,
+  Loader, Modal, Paper, ScrollArea, Select, Stack, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconPencil, IconPlus, IconSend, IconTrash } from "@tabler/icons-react"
+import { IconPencil, IconPlus, IconSend, IconTrash, IconX } from "@tabler/icons-react"
 import { api } from "../api"
-import { formatearFecha } from "../formato"
 import Markdown from "../componentes/Markdown"
 
 // El historial llega en el formato bruto de la Messages API de
@@ -30,7 +29,7 @@ function Burbuja({ rol, texto }) {
   const esUsuario = rol === "user"
   return (
     <Group justify={esUsuario ? "flex-end" : "flex-start"} wrap="nowrap">
-      <Paper withBorder p="sm" radius="md" maw="80%" bg={esUsuario ? "acento.6" : undefined}>
+      <Paper withBorder p="sm" radius="md" maw="85%" style={{ minWidth: 0, overflowWrap: "anywhere" }} bg={esUsuario ? "acento.6" : undefined}>
         {esUsuario ? (
           <Text c="white" style={{ whiteSpace: "pre-wrap" }}>
             {texto}
@@ -74,59 +73,12 @@ function AccionesPendientes({ acciones, confirmando, onResolver }) {
   )
 }
 
-function ListaConversaciones({ conversaciones, idActual, cargando, onSeleccionar, onNueva, onRenombrar, onEliminar }) {
-  return (
-    <Paper withBorder p="xs" radius="md" w={260} style={{ flexShrink: 0 }}>
-      <Group justify="space-between" mb="xs" px="xs">
-        <Text fw={600} size="sm">
-          Conversaciones
-        </Text>
-        <Tooltip label="Nueva conversación">
-          <ActionIcon variant="light" onClick={onNueva}>
-            <IconPlus size={16} stroke={1.9} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-      <ScrollArea h="calc(100vh - 300px)">
-        <Stack gap={2}>
-          {conversaciones.map((c) => (
-            <NavLink
-              key={c.id}
-              label={c.titulo || "Sin título"}
-              description={formatearFecha(c.fecha_actualizacion)}
-              active={c.id === idActual}
-              onClick={() => onSeleccionar(c.id)}
-              styles={{ root: { borderRadius: "var(--mantine-radius-md)" } }}
-              rightSection={
-                <Group gap={2} wrap="nowrap">
-                  <ActionIcon
-                    size="sm" variant="subtle" color="gray"
-                    onClick={(evento) => { evento.stopPropagation(); onRenombrar(c) }}
-                  >
-                    <IconPencil size={14} stroke={1.8} />
-                  </ActionIcon>
-                  <ActionIcon
-                    size="sm" variant="subtle" color="red"
-                    onClick={(evento) => { evento.stopPropagation(); onEliminar(c) }}
-                  >
-                    <IconTrash size={14} stroke={1.8} />
-                  </ActionIcon>
-                </Group>
-              }
-            />
-          ))}
-          {conversaciones.length === 0 && !cargando && (
-            <Text c="dimmed" size="sm" px="xs">
-              No tienes conversaciones todavía.
-            </Text>
-          )}
-        </Stack>
-      </ScrollArea>
-    </Paper>
-  )
-}
-
-export default function Chat({ proyecto, onVolver }) {
+// Vive en el panel lateral derecho (AppShell.Aside, ver App.jsx): se
+// monta la primera vez que se abre y ya no se desmonta al cerrarlo ni al
+// cambiar de pantalla, así la conversación (y una respuesta en camino)
+// sigue intacta. Por eso la lista de conversaciones va en un desplegable
+// en vez de en una columna: no cabe en un panel estrecho.
+export default function Chat({ proyecto, onCerrar }) {
   const [conversaciones, setConversaciones] = useState([])
   const [idConversacionActual, setIdConversacionActual] = useState(null)
   const [cargandoLista, setCargandoLista] = useState(true)
@@ -288,82 +240,97 @@ export default function Chat({ proyecto, onVolver }) {
     }
   }
 
+  const conversacionActual = conversaciones.find((c) => c.id === idConversacionActual)
+
   return (
-    <>
-      <Anchor
-        component="button" type="button" onClick={onVolver} mb="lg"
-        display="flex" style={{ alignItems: "center", gap: 6 }}
-        underline="hover" c="dimmed" fz="13.5px" fw={500}
-      >
-        <IconArrowLeft size={15} stroke={2} />
-        Documentos
-      </Anchor>
-      <Title order={2} mb="lg">
-        GD-IA Chat
-      </Title>
+    <Stack h="100%" gap="sm">
+      <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Title order={4}>GD-IA Chat</Title>
+        <Tooltip label="Cerrar el chat (la conversación se mantiene)">
+          <ActionIcon variant="subtle" color="gray" onClick={onCerrar} aria-label="Cerrar el chat">
+            <IconX size={17} stroke={1.9} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
-      {error && (
-        <Alert color="red" mb="md">
-          {error}
-        </Alert>
-      )}
-
-      <Group align="flex-start" wrap="nowrap" gap="md">
-        <ListaConversaciones
-          conversaciones={conversaciones}
-          idActual={idConversacionActual}
-          cargando={cargandoLista}
-          onSeleccionar={seleccionar}
-          onNueva={nuevaConversacion}
-          onRenombrar={abrirRenombrar}
-          onEliminar={eliminarConversacion}
+      <Group wrap="nowrap" gap={4}>
+        <Select
+          aria-label="Conversación"
+          placeholder={cargandoLista ? "Cargando..." : "Sin conversaciones"}
+          data={conversaciones.map((c) => ({ value: String(c.id), label: c.titulo || "Sin título" }))}
+          value={idConversacionActual ? String(idConversacionActual) : null}
+          onChange={(valor) => valor && seleccionar(Number(valor))}
+          allowDeselect={false}
+          searchable
+          style={{ flex: 1, minWidth: 0 }}
         />
+        <Tooltip label="Nueva conversación">
+          <ActionIcon variant="light" size="lg" onClick={nuevaConversacion} aria-label="Nueva conversación">
+            <IconPlus size={16} stroke={1.9} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label="Renombrar">
+          <ActionIcon
+            variant="subtle" color="gray" size="lg" disabled={!conversacionActual}
+            onClick={() => abrirRenombrar(conversacionActual)} aria-label="Renombrar conversación"
+          >
+            <IconPencil size={15} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label="Eliminar">
+          <ActionIcon
+            variant="subtle" color="red" size="lg" disabled={!conversacionActual}
+            onClick={() => eliminarConversacion(conversacionActual)} aria-label="Eliminar conversación"
+          >
+            <IconTrash size={15} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
-        <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
-          <ScrollArea h="calc(100vh - 300px)" mb="md">
-            {cargandoLista || cargando ? (
-              <Loader size="sm" />
-            ) : (
-              <Stack gap="sm">
-                {mensajes.length === 0 && (
-                  <Text c="dimmed" size="sm">
-                    Pregúntale algo sobre los documentos, entidades o notas de este proyecto.
-                  </Text>
-                )}
-                {mensajes.map((m, i) => (
-                  <Burbuja key={i} rol={m.rol} texto={m.texto} />
-                ))}
-                {pendiente && (
-                  <AccionesPendientes
-                    acciones={pendiente.acciones}
-                    confirmando={confirmando}
-                    onResolver={resolverConfirmacion}
-                  />
-                )}
-                {enviando && <Loader size="sm" />}
-                <div ref={finalRef} />
-              </Stack>
+      {error && <Alert color="red">{error}</Alert>}
+
+      <ScrollArea style={{ flex: 1, minHeight: 0 }}>
+        {cargandoLista || cargando ? (
+          <Loader size="sm" />
+        ) : (
+          <Stack gap="sm">
+            {mensajes.length === 0 && (
+              <Text c="dimmed" size="sm">
+                Pregúntale algo sobre los documentos, entidades o notas de este proyecto.
+              </Text>
             )}
-          </ScrollArea>
+            {mensajes.map((m, i) => (
+              <Burbuja key={i} rol={m.rol} texto={m.texto} />
+            ))}
+            {pendiente && (
+              <AccionesPendientes
+                acciones={pendiente.acciones}
+                confirmando={confirmando}
+                onResolver={resolverConfirmacion}
+              />
+            )}
+            {enviando && <Loader size="sm" />}
+            <div ref={finalRef} />
+          </Stack>
+        )}
+      </ScrollArea>
 
-          <Group component="form" onSubmit={enviar} align="flex-end" wrap="nowrap" gap="sm">
-            <Textarea
-              placeholder="Escribe tu pregunta..."
-              value={entrada}
-              onChange={(evento) => setEntrada(evento.currentTarget.value)}
-              onKeyDown={alPulsarTecla}
-              autosize minRows={1} maxRows={6}
-              disabled={enviando || !!pendiente || cargando || cargandoLista}
-              style={{ flex: 1 }}
-            />
-            <ActionIcon
-              type="submit" size={36} radius="md"
-              disabled={enviando || !!pendiente || !entrada.trim() || cargando || cargandoLista}
-            >
-              <IconSend size={17} stroke={1.9} />
-            </ActionIcon>
-          </Group>
-        </Paper>
+      <Group component="form" onSubmit={enviar} align="flex-end" wrap="nowrap" gap="sm">
+        <Textarea
+          placeholder="Escribe tu pregunta..."
+          value={entrada}
+          onChange={(evento) => setEntrada(evento.currentTarget.value)}
+          onKeyDown={alPulsarTecla}
+          autosize minRows={1} maxRows={6}
+          disabled={enviando || !!pendiente || cargando || cargandoLista}
+          style={{ flex: 1 }}
+        />
+        <ActionIcon
+          type="submit" size={36} radius="md"
+          disabled={enviando || !!pendiente || !entrada.trim() || cargando || cargandoLista}
+        >
+          <IconSend size={17} stroke={1.9} />
+        </ActionIcon>
       </Group>
 
       <Modal opened={!!aRenombrar} onClose={() => setARenombrar(null)} title="Renombrar conversación">
@@ -383,6 +350,6 @@ export default function Chat({ proyecto, onVolver }) {
           </Group>
         </Stack>
       </Modal>
-    </>
+    </Stack>
   )
 }
