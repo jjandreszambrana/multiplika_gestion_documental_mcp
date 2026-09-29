@@ -195,6 +195,16 @@ async def obtener_ayuda() -> dict:
     return {"secciones": indice_ayuda()}
 
 
+@app.get("/v1/ayuda/{id_seccion}")
+async def obtener_seccion_ayuda(id_seccion: str) -> dict:
+    """Una parte de la ayuda, en markdown (sin el título, que ya va en
+    `titulo`)."""
+    seccion = obtener_seccion(id_seccion)
+    if not seccion:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe esa sección de la ayuda")
+    return seccion
+
+
 @app.get("/v1/proyectos/{id_proyecto}")
 async def ver_proyecto(
     id_proyecto: int,
