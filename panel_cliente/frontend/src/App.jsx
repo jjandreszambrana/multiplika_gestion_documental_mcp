@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { AppShell, Container, Group, Text } from "@mantine/core"
+import { AppShell, Box, Container, Group, Text } from "@mantine/core"
 import { IconBuildingSkyscraper } from "@tabler/icons-react"
 import { api, cargarTokenGuardado, leerToken, setToken } from "./api"
 import Sidebar from "./componentes/Sidebar"
@@ -250,7 +250,7 @@ export default function App() {
       // En pantallas estrechas (móvil) Mantine lo pone a pantalla completa
       aside={{ width: anchoChat, breakpoint: "sm", collapsed: { desktop: !chatAbierto, mobile: !chatAbierto } }}
       transitionDuration={redimensionando ? 0 : 200}
-      padding="xl"
+      padding={0}
     >
       {avisoEmpresa && (
         <AppShell.Header>
@@ -275,7 +275,11 @@ export default function App() {
         idTenantActual={sesion.id_tenant}
         onCambiarEmpresa={cambiarEmpresa}
       />
-      <AppShell.Main>
+      {/* La zona central tiene su propia barra de desplazamiento: si fuera
+          la de la ventana, saldría pegada al borde derecho, por fuera del
+          chat lateral. */}
+      <AppShell.Main h="100dvh" style={{ overflow: "hidden" }}>
+        <Box h="100%" p="xl" style={{ overflowY: "auto" }}>
         <Container size="lg" px={0}>
           {idDocumentoActivo ? (
             <DocumentoDetalle
@@ -356,6 +360,7 @@ export default function App() {
             />
           )}
         </Container>
+        </Box>
       </AppShell.Main>
       {!esSuperadmin && (
         <AppShell.Aside p="md" style={{ userSelect: redimensionando ? "none" : undefined }}>
