@@ -58,6 +58,13 @@ import CuentaCorreo from "./paginas/CuentaCorreo"
 import Ayuda from "./paginas/Ayuda"
 import Enlaces from "./paginas/Enlaces"
 import Actividad from "./paginas/Actividad"
+import Programaciones from "./paginas/Programaciones"
+import ProgramacionDetalle from "./paginas/ProgramacionDetalle"
+import Notificaciones from "./paginas/Notificaciones"
+
+// Cada cuánto se mira si han llegado notificaciones nuevas (el número
+// del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
+const INTERVALO_NOTIFICACIONES_MS = 60 * 1000
 
 export default function App() {
   const [sesion, setSesion] = useState(() => {
@@ -70,6 +77,8 @@ export default function App() {
   const [grupoActivo, setGrupoActivo] = useState(null)
   const [entidadActiva, setEntidadActiva] = useState(null)
   const [scriptActivo, setScriptActivo] = useState(null)
+  const [idProgramacionActiva, setIdProgramacionActiva] = useState(null)
+  const [noLeidas, setNoLeidas] = useState(0)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
@@ -125,6 +134,19 @@ export default function App() {
       .then((filas) => setPendientesCount(filas.length))
       .catch(() => setPendientesCount(0))
   }, [proyecto, idDocumentoActivo, vista])
+
+  function contarNoLeidas() {
+    if (!proyecto) return
+    api.contarNotificacionesNoLeidas(proyecto.id).then((r) => setNoLeidas(r.total)).catch(() => {})
+  }
+
+  useEffect(() => {
+    if (!proyecto) return
+    contarNoLeidas()
+    const temporizador = setInterval(contarNoLeidas, INTERVALO_NOTIFICACIONES_MS)
+    return () => clearInterval(temporizador)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proyecto])
 
   useEffect(() => {
     if (!sesion || sesion.tipo !== "usuario") {
@@ -196,6 +218,7 @@ export default function App() {
     setGrupoActivo(null)
     setEntidadActiva(null)
     setScriptActivo(null)
+    setIdProgramacionActiva(null)
     setVista("documentos")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -206,7 +229,13 @@ export default function App() {
     setGrupoActivo(null)
     setEntidadActiva(null)
     setScriptActivo(null)
+    setIdProgramacionActiva(null)
     setVista(nuevaVista)
+  }
+
+  function verProgramacion(idProgramacion) {
+    navegar("programaciones")
+    setIdProgramacionActiva(idProgramacion)
   }
 
   if (comprobandoEnlace) {
@@ -267,6 +296,7 @@ export default function App() {
         esSuperadmin={esSuperadmin}
         vista={idDocumentoActivo ? "documentos" : vista}
         pendientesCount={pendientesCount}
+        noLeidas={noLeidas}
         onNavigate={navegar}
         chatAbierto={chatAbierto}
         onAlternarChat={alternarChat}
@@ -286,6 +316,7 @@ export default function App() {
               proyecto={proyecto}
               idDocumento={idDocumentoActivo}
               onVolver={() => setIdDocumentoActivo(null)}
+              onVerProgramacion={verProgramacion}
             />
           ) : vista === "api-keys" ? (
             <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
@@ -342,6 +373,22 @@ export default function App() {
             />
           ) : vista === "scripts" ? (
             <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
+          ) : vista === "programaciones" && idProgramacionActiva ? (
+            <ProgramacionDetalle
+              proyecto={proyecto}
+              idProgramacion={idProgramacionActiva}
+              onVolver={() => setIdProgramacionActiva(null)}
+              onVerDocumento={setIdDocumentoActivo}
+            />
+          ) : vista === "programaciones" ? (
+            <Programaciones proyecto={proyecto} onVolver={() => navegar("documentos")} onVerProgramacion={setIdProgramacionActiva} />
+          ) : vista === "notificaciones" ? (
+            <Notificaciones
+              proyecto={proyecto}
+              onVolver={() => navegar("documentos")}
+              onVerProgramacion={verProgramacion}
+              onCambiadas={contarNoLeidas}
+            />
           ) : vista === "actividad" ? (
             <Actividad proyecto={proyecto} onVolver={() => navegar("documentos")} onVerDocumento={setIdDocumentoActivo} />
           ) : (

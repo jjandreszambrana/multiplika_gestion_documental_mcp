@@ -339,6 +339,32 @@ caducar (no uno cada día). El mismo aviso incluye los certificados \
 digitales que vayan a caducar.""",
     },
     {
+        "id": "avisos-programados",
+        "titulo": "Avisos programados y notificaciones",
+        "resumen": "Recordatorios para una fecha o que se repiten, para las personas que elijas.",
+        "markdown": """\
+Un aviso programado es un recordatorio que llega a las personas que \
+elijas en un momento concreto ("el 15 de octubre a las 9:00") o de forma \
+repetida (todos los días, algunos días de la semana, una vez al mes o al \
+año). Se puede enlazar con uno o varios documentos.
+
+- **Cómo crearlo**: en "Avisos programados" o en la pestaña "Avisos" de un \
+documento. También puedes pedírselo a tu IA: "recuérdale a Ana cada lunes \
+a las 8 que revise las temperaturas".
+- **Cómo llega**: siempre en "Notificaciones" del panel (el número rojo \
+del menú son las que no has leído) y, si lo marcas, también por email \
+desde la cuenta de correo del proyecto.
+- **Tareas con "Hecho"**: si marcas que hay que confirmarlo, el aviso lleva \
+un botón "Hecho" y se vuelve a recordar cada pocos días hasta que alguien \
+lo pulse. Tú eliges cuántas veces como mucho, o que no pare hasta que se \
+pulse. Basta con que lo pulse una de las personas avisadas.
+- **Pausar**: deja de avisar sin borrarlo. Al reanudarlo, lo que tocaba \
+mientras estuvo pausado no se manda de golpe.
+
+Las horas son de Madrid. En la ficha de cada aviso ves cuándo avisó, a \
+quién le llegó y si falló algún email.""",
+    },
+    {
         "id": "tipos-documento",
         "titulo": "Tipos de documento",
         "resumen": "El catálogo de tipos, y el formato o normativa que debe cumplir cada uno.",

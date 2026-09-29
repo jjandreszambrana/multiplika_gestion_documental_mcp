@@ -25,6 +25,8 @@ import {
   IconArrowsRightLeft,
   IconCheck,
   IconActivity,
+  IconBell,
+  IconAlarm,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -48,7 +50,7 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
 }
 
 export default function Sidebar({
-  proyecto, esSuperadmin, vista, pendientesCount, onNavigate, onCerrarSesion,
+  proyecto, esSuperadmin, vista, pendientesCount, noLeidas = 0, onNavigate, onCerrarSesion,
   empresas = [], idTenantActual, onCambiarEmpresa, chatAbierto, onAlternarChat,
 }) {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
@@ -113,6 +115,14 @@ export default function Sidebar({
 
       <AppShell.Section grow style={{ overflowY: "auto" }}>
         <Item icon={IconFileText} label="Documentos" active={vista === "documentos"} onClick={() => onNavigate("documentos")} />
+        {/* Las notificaciones son de cada usuario: soporte no tiene */}
+        {!esSuperadmin && (
+          <Item
+            icon={IconBell} label="Notificaciones" active={vista === "notificaciones"}
+            badge={noLeidas > 0 ? noLeidas : null} onClick={() => onNavigate("notificaciones")}
+          />
+        )}
+        <Item icon={IconAlarm} label="Avisos programados" active={vista === "programaciones"} onClick={() => onNavigate("programaciones")} />
         <Item
           icon={IconCategory}
           label="Tipos de documento"

@@ -105,6 +105,19 @@ from ..database.modelos._mod_reglas import (
     reglas_heredadas,
     texto_reglas_globales,
 )
+from ..database.modelos._mod_programaciones import (
+    actualizar_programacion,
+    cambiar_pausa,
+    contar_no_leidas,
+    crear_programacion,
+    eliminar_programacion,
+    listar_notificaciones,
+    listar_programaciones,
+    marcar_hecho,
+    marcar_leidas,
+    obtener_programacion,
+    usuarios_del_proyecto,
+)
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 from ..database.modelos._mod_notas import (
     NotasCRUD,
@@ -2890,6 +2903,180 @@ async def listar_quienes_actividad(
     id_proyecto: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
 ) -> list[str]:
     return await ActividadCRUD(get_db_config(proyecto["id"])).quienes()
+
+
+# --- Programaciones y notificaciones (ver docs/gestion-documental.md →
+# "Programaciones y notificaciones"). Verlas, cualquiera con acceso;
+# crearlas y cambiarlas, cualquiera salvo invitado. Las notificaciones
+# son de cada usuario: un superadmin no tiene.
+
+
+def _error_programacion(e: Exception) -> HTTPException:
+    return HTTPException(404 if isinstance(e, LookupError) else 400, str(e))
+
+
+async def _quien_panel(identidad: Identidad) -> tuple[str, int | None]:
+    if identidad.tipo != "usuario":
+        return "Soporte Multiplika", None
+    return await _nombre_usuario(identidad.id) or f"Usuario n.º {identidad.id}", identidad.id
+
+
+class DatosProgramacion(BaseModel):
+    titulo: str | None = None
+    descripcion: str | None = None
+    regla: dict | None = None
+    ids_usuarios: list[int] | None = None
+    ids_documentos: list[int] | None = None
+    avisar_por_email: bool | None = None
+    requiere_hecho: bool | None = None
+    max_recordatorios: int | None = None
+    cada_dias_recordatorio: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/usuarios-proyecto")
+async def listar_usuarios_para_avisar(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    return [{"id": u["id"], "nombre": u["nombre"]} for u in await usuarios_del_proyecto(proyecto["id"])]
+
+
+@app.get("/v1/proyectos/{id_proyecto}/programaciones")
+async def listar_programaciones_endpoint(
+    id_proyecto: int, estado: Literal["activa", "pausada", "terminada"] | None = None,
+    id_documento: int | None = None, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    return await listar_programaciones(get_db_config(proyecto["id"]), proyecto["id"], estado, id_documento)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/programaciones")
+async def crear_programacion_endpoint(
+    id_proyecto: int, datos: DatosProgramacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    campos = datos.model_dump(exclude={"ids_usuarios", "ids_documentos"}, exclude_none=True)
+    campos["max_recordatorios"] = datos.max_recordatorios
+    try:
+        return await crear_programacion(
+            get_db_config(proyecto["id"]), proyecto["id"], campos,
+            datos.ids_usuarios or ([id_usuario] if id_usuario else []), datos.ids_documentos or [],
+            quien, id_usuario,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_programacion(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/programaciones/{id_programacion}")
+async def obtener_programacion_endpoint(
+    id_proyecto: int, id_programacion: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> dict:
+    programacion = await obtener_programacion(get_db_config(proyecto["id"]), proyecto["id"], id_programacion)
+    if not programacion:
+        raise HTTPException(404, "Programación no encontrada")
+    return programacion
+
+
+@app.put("/v1/proyectos/{id_proyecto}/programaciones/{id_programacion}")
+async def actualizar_programacion_endpoint(
+    id_proyecto: int, id_programacion: int, datos: DatosProgramacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    # exclude_unset: max_recordatorios=null (sin límite) no es lo mismo que no mandarlo
+    campos = datos.model_dump(exclude={"ids_usuarios", "ids_documentos"}, exclude_unset=True)
+    try:
+        return await actualizar_programacion(
+            get_db_config(proyecto["id"]), proyecto["id"], id_programacion, campos,
+            datos.ids_usuarios, datos.ids_documentos,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_programacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/programaciones/{id_programacion}/pausar")
+async def pausar_programacion_endpoint(
+    id_proyecto: int, id_programacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await cambiar_pausa(get_db_config(proyecto["id"]), proyecto["id"], id_programacion, True)
+    except (ValueError, LookupError) as e:
+        raise _error_programacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/programaciones/{id_programacion}/reanudar")
+async def reanudar_programacion_endpoint(
+    id_proyecto: int, id_programacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await cambiar_pausa(get_db_config(proyecto["id"]), proyecto["id"], id_programacion, False)
+    except (ValueError, LookupError) as e:
+        raise _error_programacion(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/programaciones/{id_programacion}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_programacion_endpoint(
+    id_proyecto: int, id_programacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> None:
+    if not await eliminar_programacion(get_db_config(proyecto["id"]), id_programacion):
+        raise HTTPException(404, "Programación no encontrada")
+
+
+@app.get("/v1/proyectos/{id_proyecto}/notificaciones")
+async def listar_notificaciones_endpoint(
+    id_proyecto: int, solo_no_leidas: bool = False,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> list[dict]:
+    if identidad.tipo != "usuario":
+        return []
+    return await listar_notificaciones(get_db_config(proyecto["id"]), identidad.id, solo_no_leidas)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/notificaciones/no-leidas")
+async def contar_notificaciones_no_leidas(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    if identidad.tipo != "usuario":
+        return {"total": 0}
+    return {"total": await contar_no_leidas(get_db_config(proyecto["id"]), identidad.id)}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/notificaciones/leer-todas", status_code=status.HTTP_204_NO_CONTENT)
+async def leer_todas_notificaciones(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> None:
+    if identidad.tipo == "usuario":
+        await marcar_leidas(get_db_config(proyecto["id"]), identidad.id)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/notificaciones/{id_notificacion}/leida", status_code=status.HTTP_204_NO_CONTENT)
+async def leer_notificacion(
+    id_proyecto: int, id_notificacion: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> None:
+    if identidad.tipo == "usuario":
+        await marcar_leidas(get_db_config(proyecto["id"]), identidad.id, id_notificacion)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/avisos/{id_ejecucion}/hecho")
+async def marcar_hecho_endpoint(
+    id_proyecto: int, id_ejecucion: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Lo puede cerrar quien recibió el aviso (aunque sea invitado) o
+    cualquiera que pueda escribir en el proyecto."""
+    config = get_db_config(proyecto["id"])
+    if identidad.tipo == "usuario" and not await puede_editar_proyecto(identidad.id, proyecto["id"]):
+        mias = await listar_notificaciones(config, identidad.id, limite=1000)
+        if not any(n["id_ejecucion"] == id_ejecucion for n in mias):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Este aviso no es tuyo")
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await marcar_hecho(config, id_ejecucion, quien)
+    except (ValueError, LookupError) as e:
+        raise _error_programacion(e) from e
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

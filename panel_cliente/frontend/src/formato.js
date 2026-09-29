@@ -23,3 +23,6 @@ export function formatearFecha(valor) {
   const horaFormateada = `${dosDigitos(fecha.getHours())}:${dosDigitos(fecha.getMinutes())}:${dosDigitos(fecha.getSeconds())}`
   return `${fechaFormateada} ${horaFormateada}`
 }
+
+// Color del estado de un aviso programado (Programaciones y su ficha).
+export const COLOR_ESTADO = { activa: "green", pausada: "yellow", terminada: "gray" }

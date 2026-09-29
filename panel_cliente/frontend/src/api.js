@@ -600,4 +600,30 @@ export const api = {
     return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/actividad${query ? `?${query}` : ""}`)
   },
   listarQuienesActividad: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/actividad/quienes`),
+
+  listarUsuariosProyecto: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/usuarios-proyecto`),
+  listarProgramaciones: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (valor) parametros.set(clave, valor)
+    }
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/programaciones${query ? `?${query}` : ""}`)
+  },
+  obtenerProgramacion: (idProyecto, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/programaciones/${id}`),
+  crearProgramacion: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/programaciones`, datos),
+  actualizarProgramacion: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/programaciones/${id}`, datos),
+  pausarProgramacion: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/programaciones/${id}/pausar`),
+  reanudarProgramacion: (idProyecto, id) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/programaciones/${id}/reanudar`),
+  eliminarProgramacion: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/programaciones/${id}`),
+
+  listarNotificaciones: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/notificaciones`),
+  contarNotificacionesNoLeidas: (idProyecto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/notificaciones/no-leidas`),
+  leerNotificacion: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/${id}/leida`),
+  leerTodasNotificaciones: (idProyecto) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/leer-todas`),
+  marcarAvisoHecho: (idProyecto, idEjecucion) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/avisos/${idEjecucion}/hecho`),
 }

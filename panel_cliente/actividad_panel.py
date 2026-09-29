@@ -108,6 +108,12 @@ ACCIONES_PANEL = {
     "vincular_documento_registro": ("vinculó un documento al registro de datos", "registro", "id_registro"),
     "desvincular_documento_registro": ("desvinculó de un registro de datos el documento", "documento", "id_documento"),
     "eliminar_registro": ("eliminó el registro de datos", "registro", "id_registro"),
+    "crear_programacion_endpoint": ("programó el aviso", "programacion", None),
+    "actualizar_programacion_endpoint": ("modificó el aviso programado", "programacion", "id_programacion"),
+    "pausar_programacion_endpoint": ("pausó el aviso programado", "programacion", "id_programacion"),
+    "reanudar_programacion_endpoint": ("reanudó el aviso programado", "programacion", "id_programacion"),
+    "eliminar_programacion_endpoint": ("eliminó el aviso programado", "programacion", "id_programacion"),
+    "marcar_hecho_endpoint": ("marcó como hecho un aviso", None, None),
 }
 
 # Su cuerpo no se guarda nunca en el detalle, ni recortado: son secretos.

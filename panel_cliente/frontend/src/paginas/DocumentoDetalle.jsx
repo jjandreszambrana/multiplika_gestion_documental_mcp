@@ -7,6 +7,7 @@ import {
   IconAlertTriangle,
   IconArchive,
   IconArrowLeft,
+  IconBell,
   IconCheck,
   IconCircleCheck,
   IconClockHour4,
@@ -33,6 +34,7 @@ import RegistrosDocumento from "../componentes/RegistrosDocumento"
 import EnviosDocumento from "../componentes/EnviosDocumento"
 import CompartirDocumento from "../componentes/CompartirDocumento"
 import ActividadDocumento from "../componentes/ActividadDocumento"
+import ProgramacionesDocumento from "../componentes/ProgramacionesDocumento"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
 
@@ -49,7 +51,7 @@ function CampoMeta({ etiqueta, valor }) {
   )
 }
 
-export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
+export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVerProgramacion }) {
   const [documento, setDocumento] = useState(null)
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
@@ -427,6 +429,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
                 <Tabs.Tab value="compartir" leftSection={<IconShare size={15} stroke={1.8} />}>
                   Compartir
                 </Tabs.Tab>
+                <Tabs.Tab value="avisos" leftSection={<IconBell size={15} stroke={1.8} />}>
+                  Avisos
+                </Tabs.Tab>
                 {/* Invitado no ve la actividad (ver listar_actividad en servidor.py);
                     soporte sí — llega con es_admin */}
                 {(proyecto.puede_editar || proyecto.es_admin) && (
@@ -515,6 +520,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver }) {
               <Tabs.Panel value="compartir" pt="lg">
                 {vista === "compartir" && (
                   <CompartirDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
+                )}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="avisos" pt="lg">
+                {vista === "avisos" && (
+                  <ProgramacionesDocumento proyecto={proyecto} idDocumento={idDocumento} onVerProgramacion={onVerProgramacion} />
                 )}
               </Tabs.Panel>
 

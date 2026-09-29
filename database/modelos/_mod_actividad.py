@@ -39,6 +39,7 @@ NOMBRE_POR_TIPO = {
     "nota": ("gd_notas", "texto"),
     "aprendizaje": ("gd_aprendizajes", "nombre"),
     "pregunta_pendiente": ("gd_preguntas_pendientes", "pregunta"),
+    "programacion": ("gd_programaciones", "titulo"),
 }
 
 # Nunca se guarda el valor de un campo cuyo nombre encaje aquí: claves,
