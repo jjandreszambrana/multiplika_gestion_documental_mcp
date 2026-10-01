@@ -2,7 +2,9 @@
 # -*- coding: UTF-8 -*-
 """Hace saltar las programaciones cuya hora ya llegó y manda los
 recordatorios de los avisos sin "Hecho" — ver docs/gestion-documental.md
-→ "Programaciones y notificaciones". Recorre cada proyecto de gestión
+→ "Programaciones y notificaciones". También lleva el seguimiento (ver
+"Seguimiento"): lo aplazado que vence vuelve a pendiente y, a partir de
+las 8:00, una vez al día, manda el resumen de lo pendiente. Recorre cada proyecto de gestión
 documental activo; un fallo en uno no para a los demás.
 
 A diferencia de avisar_caducidades.py y compañía, NO es autocontenido:
@@ -29,6 +31,7 @@ from database.config_db import get_db_config
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 
 from ..database.modelos._mod_programaciones import procesar_pendientes
+from ..database.modelos._mod_seguimiento import procesar_seguimiento
 
 
 async def _proyectos_gestion_documental_activos() -> list[dict]:
@@ -47,14 +50,20 @@ async def _proyectos_gestion_documental_activos() -> list[dict]:
 async def main() -> int:
     errores = 0
     for proyecto in await _proyectos_gestion_documental_activos():
+        config = get_db_config(proyecto["id"])
         try:
-            resultado = await procesar_pendientes(get_db_config(proyecto["id"]), proyecto["id"])
+            resultado = await procesar_pendientes(config, proyecto["id"])
+            seguimiento = await procesar_seguimiento(config, proyecto["id"])
         except Exception as e:  # tabla aún sin crear, base caída... sigue con el resto
             errores += 1
             print(f"[{proyecto['nombre']}] error: {e}", file=sys.stderr)
             continue
         if resultado["saltadas"] or resultado["recordatorios"]:
             print(f"[{proyecto['nombre']}] avisos: {resultado['saltadas']}, recordatorios: {resultado['recordatorios']}")
+        if seguimiento["vueltos_a_pendiente"]:
+            print(f"[{proyecto['nombre']}] aplazados vueltos a pendiente: {seguimiento['vueltos_a_pendiente']}")
+        if seguimiento["resumen"]:
+            print(f"[{proyecto['nombre']}] resumen de seguimiento: {seguimiento['resumen']}")
     return 1 if errores else 0
 
 

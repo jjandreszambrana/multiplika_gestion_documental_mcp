@@ -11,6 +11,7 @@ import {
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import FormularioProgramacion from "../componentes/FormularioProgramacion"
+import ControlSeguimiento from "../componentes/Seguimiento"
 import { COLORES, VISIBILIDADES } from "../componentes/TarjetaNotaBloc"
 import { COLOR_ESTADO, formatearFecha } from "../formato"
 
@@ -426,6 +427,10 @@ export default function NotaBlocDetalle({
             ? ` · cambiada por ${nota.modificado_por} el ${formatearFecha(nota.fecha_modificacion).slice(0, 16)}`
             : ""}
         </Text>
+      </Group>
+
+      <Group mb="md">
+        <ControlSeguimiento proyecto={proyecto} tipo="nota_bloc" idObjeto={nota.id} />
       </Group>
 
       {nota.etiquetas.length > 0 && (

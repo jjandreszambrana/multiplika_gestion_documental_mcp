@@ -858,3 +858,18 @@ Notas sueltas de los usuarios (reuniones, llamadas, ideas) enlazables entre sí,
 
 Quién decidió: usuario (visibilidad por nota, claves de una persona o de todos, etiquetas, IA, recordatorio, fijar/archivar, notas de seguimiento aparte). El asistente: permisos de edición, búsqueda por texto, privacidad en el registro de actividad.
 Reversible: sí — tablas nuevas y dos columnas que admiten NULL (`gd_programaciones.id_nota_bloc`, `mcpc_api_keys.id_usuario`).
+
+### Seguimiento (2026-10-01)
+
+Estado de seguimiento para notas del bloc, documentos y notas de documentos (`gd_notas`), para no perder de vista lo que hay que hacer, y un resumen diario de lo pendiente. Plan y decisiones: `docs/planificacion/seguimiento.md`.
+
+- **Estados**: sin estado (no tener fila: lo normal, también para todo lo que ya existía), `pendiente`, `en_curso`, `realizado` y `aplazado`. Cada elemento con estado puede tener un responsable (usuario del proyecto que no sea invitado) o nadie.
+- **Tablas** (`database/dependencias/_dep_seguimiento.py`): `gd_seguimiento`, una sola para los tres tipos, con `id_nota_bloc` / `id_documento` / `id_nota` (cada una única y con FK `ON DELETE CASCADE`; va rellena exactamente una), estado, `id_usuario_responsable` sin FK, `aplazado_hasta`, `id_programacion` (FK `SET NULL`) y quién/cuándo lo cambió. `gd_seguimiento_resumenes`: una fila por día con resumen mandado, para no repetirlo.
+- **Aplazado**: exige fecha (y hora, por defecto 9:00) y crea un aviso programado normal (`gd_programaciones`, una vez) al responsable, o a quien lo aplaza, o, si no se sabe quién es, a todos los que pueden escribir. Cuando el aviso salta, `_saltar` (`_mod_programaciones.py`) devuelve el elemento a pendiente. Cambiar la fecha o salir del aplazado borra el aviso si no ha saltado. Red de seguridad: si alguien borra o pausa ese aviso, el cron lo devuelve a pendiente igual al llegar la fecha. Para una nota del bloc que no es de todos, el aviso no lleva su título (la lista de avisos la ve todo el proyecto).
+- **Resumen diario** (`_mod_seguimiento.py → mandar_resumen_diario`, desde el cron de cada minuto `procesar_programaciones.py`, sin cron nuevo): a partir de las 8:00 de Madrid, una vez al día, a cada persona lo pendiente y en curso de lo que se encarga más lo que no tiene responsable (esto último no a los invitados), solo de lo que ve y sin archivados. Campanita (`gd_notificaciones.origen = 'seguimiento'`, sin programación) y email con la cuenta del proyecto. Quien no tiene nada no recibe nada.
+- **Quién ve y cambia**: lo mismo que el elemento. Notas del bloc, según su visibilidad (y el responsable tiene que poder verla); documentos y sus notas, todo el proyecto. Cambiar, cualquiera salvo invitado.
+- **Tools MCP** (`_herr_seguimiento.py`): `cambiar_seguimiento_gd` y `listar_seguimiento_gd` (solo lectura). `obtener_nota_bloc_gd` y `listar_notas_documento_gd` traen además el seguimiento.
+- **Panel**: "Seguimiento" en el menú (todo junto, con filtros por estado, tipo y responsable), y el estado se cambia pulsando su etiqueta en la ficha de la nota del bloc, en la cabecera del documento y en cada nota del documento. La lista del bloc enseña el estado de cada nota. Pulsar un resumen en Notificaciones lleva a Seguimiento.
+
+Quién decidió: usuario (los cinco estados, aplazado con aviso, sin estado por defecto, cada uno lo suyo y lo de nadie a todos, campanita + email a las 8:00). El asistente: una sola tabla, responsable distinto del `responsable` de texto libre de `gd_notas`, resumen dentro del cron de programaciones, invitados fuera.
+Reversible: sí — dos tablas nuevas; no toca ninguna columna existente.

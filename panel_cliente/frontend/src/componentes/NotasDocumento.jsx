@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Group, Paper, Select, Stack, Text, TextInput, Tex
 import { IconCheck, IconLink, IconPlus } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
+import ControlSeguimiento from "./Seguimiento"
 
 const TIPOS = [
   { value: "comentario", label: "Comentario", color: "gray" },
@@ -96,6 +97,7 @@ function Nota({ proyecto, idDocumento, notas, nota, onCambiado }) {
               {nota.estado === "abierta" ? "Abierta" : "Resuelta"}
             </Badge>
           )}
+          <ControlSeguimiento proyecto={proyecto} tipo="nota_documento" idObjeto={nota.id} seguimiento={nota.seguimiento} size="xs" />
         </Group>
         <Text size="11.5px" c="dimmed">
           {nota.creado_por} · {formatearFecha(nota.fecha_creacion)}

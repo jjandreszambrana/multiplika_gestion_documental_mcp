@@ -28,6 +28,7 @@ import {
   IconBell,
   IconAlarm,
   IconNotebook,
+  IconProgressCheck,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -124,6 +125,7 @@ export default function Sidebar({
           />
         )}
         <Item icon={IconNotebook} label="Bloc de notas" active={vista === "bloc-notas"} onClick={() => onNavigate("bloc-notas")} />
+        <Item icon={IconProgressCheck} label="Seguimiento" active={vista === "seguimiento"} onClick={() => onNavigate("seguimiento")} />
         <Item icon={IconAlarm} label="Avisos programados" active={vista === "programaciones"} onClick={() => onNavigate("programaciones")} />
         <Item
           icon={IconCategory}

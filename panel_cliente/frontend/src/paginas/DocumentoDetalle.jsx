@@ -37,6 +37,7 @@ import CompartirDocumento from "../componentes/CompartirDocumento"
 import ActividadDocumento from "../componentes/ActividadDocumento"
 import ProgramacionesDocumento from "../componentes/ProgramacionesDocumento"
 import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
+import ControlSeguimiento from "../componentes/Seguimiento"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
 
@@ -273,6 +274,7 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
                       Archivado
                     </Badge>
                   )}
+                  <ControlSeguimiento proyecto={proyecto} tipo="documento" idObjeto={idDocumento} />
                 </Group>
               </div>
               <Group gap="8" wrap="nowrap">

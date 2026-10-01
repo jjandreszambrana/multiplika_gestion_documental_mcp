@@ -647,4 +647,19 @@ export const api = {
   desenlazarNotaBloc: (idProyecto, id, tipo, idDestino) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/bloc-notas/${id}/enlaces/${tipo}/${idDestino}`),
   eliminarNotaBloc: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/bloc-notas/${id}`),
+
+  // tipo: "nota_bloc" | "documento" | "nota_documento". Filtros: estados
+  // (lista), tipo, solo_mios, sin_responsable, incluir_archivados
+  listarSeguimiento: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (Array.isArray(valor) ? valor.length : valor) parametros.set(clave, Array.isArray(valor) ? valor.join(",") : valor)
+    }
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/seguimiento${query ? `?${query}` : ""}`)
+  },
+  obtenerSeguimiento: (idProyecto, tipo, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/seguimiento/${tipo}/${id}`),
+  // datos: { estado (null = sin estado), id_usuario_responsable (null = nadie), aplazado_hasta }
+  cambiarSeguimiento: (idProyecto, tipo, id, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/seguimiento/${tipo}/${id}`, datos),
 }

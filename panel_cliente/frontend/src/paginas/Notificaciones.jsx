@@ -4,7 +4,7 @@ import { IconArrowLeft, IconCheck, IconChecks } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
-export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, onCambiadas }) {
+export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, onVerSeguimiento, onCambiadas }) {
   const [notificaciones, setNotificaciones] = useState(null)
   const [error, setError] = useState(null)
   const [trabajando, setTrabajando] = useState(null)
@@ -35,6 +35,7 @@ export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, 
   function abrir(n) {
     if (!n.leida) api.leerNotificacion(proyecto.id, n.id).then(onCambiadas).catch(() => {})
     if (n.id_programacion) onVerProgramacion(n.id_programacion)
+    else if (n.origen === "seguimiento") onVerSeguimiento()
   }
 
   const noLeidas = (notificaciones || []).filter((n) => !n.leida).length
@@ -73,13 +74,13 @@ export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, 
           {notificaciones.map((n) => (
             <Paper
               key={n.id} withBorder radius="md" p="md"
-              style={{ cursor: n.id_programacion ? "pointer" : undefined, borderLeft: n.leida ? undefined : "3px solid var(--mantine-color-acento-6)" }}
+              style={{ cursor: n.id_programacion || n.origen === "seguimiento" ? "pointer" : undefined, borderLeft: n.leida ? undefined : "3px solid var(--mantine-color-acento-6)" }}
               onClick={() => abrir(n)}
             >
               <Group justify="space-between" align="flex-start" wrap="nowrap">
                 <div style={{ minWidth: 0 }}>
                   <Text fw={n.leida ? 400 : 600} size="sm">{n.titulo}</Text>
-                  {n.texto && <Text size="13px" c="dimmed" lineClamp={2} style={{ whiteSpace: "pre-wrap" }}>{n.texto}</Text>}
+                  {n.texto && <Text size="13px" c="dimmed" lineClamp={n.origen === "seguimiento" ? 12 : 2} style={{ whiteSpace: "pre-wrap" }}>{n.texto}</Text>}
                   <Group gap={8} mt={4}>
                     <Text size="12px" c="dimmed">{formatearFecha(n.fecha)}</Text>
                     {n.estado_email === "fallido" && (

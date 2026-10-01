@@ -33,7 +33,8 @@ mantienes de dos formas:
   IA").
 
 El menú del panel sigue el mismo orden que esta ayuda: primero lo del día \
-a día (documentos, tipos, estilos de informe, registros de datos, reglas, \
+a día (documentos, notificaciones, bloc de notas, seguimiento, avisos \
+programados, tipos, estilos de informe, registros de datos, reglas, \
 grupos, entidades, scripts, actividad, chat) y, en "Administración", lo \
 que solo ve el administrador.
 
@@ -43,7 +44,8 @@ que solo ve el administrador.
   (usuarios, claves, credenciales, cuenta de correo...).
 - **Operador**: lee y cambia documentos y datos, pero no ve \
   "Administración".
-- **Invitado**: solo lectura. No puede cambiar nada ni ve la actividad.
+- **Invitado**: solo lectura. No puede cambiar nada ni ve la actividad, \
+  y no se le puede encargar nada en el seguimiento.
 
 Un usuario puede tener un rol distinto en cada proyecto de tu empresa. Las \
 claves de la IA también llevan permiso: "lectura y escritura" o "solo \
@@ -195,6 +197,12 @@ Botón "PDF..." en la ficha: descarga el documento con el mismo formato que \
 se ve en pantalla (títulos, negritas, tablas...), para imprimir o mandarlo \
 fuera. Para informes que redacta la IA, ver "Estilos de informe".
 
+### Estado de seguimiento
+
+Arriba de cada documento, junto a su nombre, está su estado de \
+seguimiento (Sin estado, Pendiente, En curso, Realizado o Aplazado) y \
+quién se encarga. Pulsa la etiqueta para cambiarlo. Ver "Seguimiento".
+
 ### Archivar y borrar
 
 Un documento que ya no aplica (anulado, subido por error) se **archiva**: \
@@ -248,6 +256,12 @@ enlazada a esa solución. También puedes relacionar unos con otros (p.ej. \
 
 Van sobre el documento, no sobre una versión: si subes una versión nueva, \
 siguen ahí.
+
+**Estado de seguimiento**: cada comentario o incidencia tiene también su \
+etiqueta de estado (Pendiente, En curso, Realizado, Aplazado), con su \
+propio encargado, que sí es un usuario del panel. Ojo, no es lo mismo que \
+el "Responsable" de texto libre de arriba: ese sirve para el aviso de \
+incidencias por email y puede ser alguien de fuera. Ver "Seguimiento".
 
 **Aviso por email**: si el responsable tiene email, le llega a él; si no, \
 llega al correo de avisos del proyecto (el mismo de "Avisos de \
@@ -364,7 +378,15 @@ pulse. Basta con que lo pulse una de las personas avisadas.
 mientras estuvo pausado no se manda de golpe.
 
 Las horas son de Madrid. En la ficha de cada aviso ves cuándo avisó, a \
-quién le llegó y si falló algún email.""",
+quién le llegó y si falló algún email.
+
+En "Notificaciones" también te llegan:
+
+- **El resumen diario de seguimiento**, cada mañana a las 8:00, con lo \
+pendiente y en curso que te toca. Púlsalo para ir a "Seguimiento".
+- **El fin de un aplazamiento**: al aplazar algo en el seguimiento se crea \
+solo un aviso programado ("Vuelve a estar pendiente: ..."). Lo verás \
+también en "Avisos programados".""",
     },
     {
         "id": "bloc-notas",
@@ -387,12 +409,52 @@ verde, azul, morado, rosa o gris) para distinguirla de un vistazo y \
 filtrar por él.
 - **Fijar y archivar**: una nota fijada sale la primera. Archivarla la \
 quita de la lista sin borrarla.
+- **Estado de seguimiento**: debajo del título, pulsa la etiqueta para \
+marcarla como Pendiente, En curso, Realizado o Aplazado y elegir quién se \
+encarga (tiene que poder ver la nota). En la lista se ve el estado de cada \
+una. Ver "Seguimiento".
 - **Recordatorio**: desde la nota, "Nuevo recordatorio" crea un aviso \
 programado. Si borras la nota, se borra también su recordatorio.
 - **Con tu IA**: "apunta que el proveedor baja un 5 % en enero", "¿qué \
 anoté de la reunión con Frutas García?". Ojo: con una clave "de todos", \
 la IA solo ve y crea notas para todos. Para que vea tus notas privadas, \
 pide al administrador una clave a tu nombre.""",
+    },
+    {
+        "id": "seguimiento",
+        "titulo": "Seguimiento",
+        "resumen": "Estado (pendiente, en curso, realizado, aplazado) de notas y documentos, y resumen diario.",
+        "markdown": """\
+El seguimiento sirve para no perder de vista lo que hay que hacer. A una \
+nota del bloc, a un documento o a un comentario o incidencia de un \
+documento le puedes poner un estado:
+
+- **Pendiente**, **En curso** o **Realizado**.
+- **Aplazado**: eliges hasta cuándo. Ese día llega un aviso y vuelve solo \
+a pendiente.
+- **Sin estado**: lo normal. Lo que no tiene estado no entra en el \
+seguimiento.
+
+Para cambiarlo, pulsa la etiqueta del estado (en la ficha de la nota, \
+arriba del documento o en cada comentario). Ahí eliges también **quién se \
+encarga**.
+
+**Resumen diario**: cada mañana a las 8:00 te llega, en Notificaciones y \
+por email, lo pendiente y en curso que tienes encargado, más lo que no \
+tiene a nadie. Si no tienes nada, no te llega nada.
+
+**Quién se encarga**: un usuario del proyecto (no un invitado). Si no \
+eliges a nadie, el resumen les llega a todos. El aviso del aplazado le \
+llega a quien se encarga o, si no hay nadie, a quien lo aplazó.
+
+Lo archivado no entra en el resumen. Si quitas el estado ("Sin estado"), \
+sale del seguimiento.
+
+En el menú, **Seguimiento** lo enseña todo junto, con filtros (estado, \
+tipo, "Lo que llevo yo", "Sin nadie encargado"). Pulsa una fila para \
+abrir la nota o el documento. Con tu IA: \
+"¿qué tengo pendiente?", "pon en curso el plan APPCC", "aplaza lo de \
+Envases Sur hasta el lunes".""",
     },
     {
         "id": "tipos-documento",

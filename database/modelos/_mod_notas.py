@@ -10,6 +10,7 @@ from ..dependencias._dep_notas import (
     TABLA_NOTAS_RELACIONES,
     TIPOS_NOTA_CREABLES,
 )
+from ._mod_seguimiento import seguimientos_de
 
 
 class NotasCRUD(AsyncCrudBase):
@@ -135,8 +136,9 @@ async def resolver_incidencia(config: dict, id_incidencia: int, texto_resolucion
 
 
 async def listar_notas_documento(config: dict, id_documento: int, tipo: str | None = None) -> list[dict]:
-    """Notas del documento con sus relaciones ya compuestas (evita N+1
-    consultas) — usado tanto por la tool MCP como por el panel."""
+    """Notas del documento con sus relaciones y su estado de seguimiento
+    (None = sin estado) ya compuestos (evita N+1 consultas) — usado tanto
+    por la tool MCP como por el panel."""
     notas = await NotasCRUD(config).listar_de_documento(id_documento, tipo)
     ids = [n["id"] for n in notas]
     relaciones = await NotasRelacionesCRUD(config).listar_de_notas(ids)
@@ -156,4 +158,7 @@ async def listar_notas_documento(config: dict, id_documento: int, tipo: str | No
                 "direccion": "desde",
             })
 
-    return [{**nota, "relaciones": por_nota[nota["id"]]} for nota in notas]
+    seguimiento = await seguimientos_de(config, "nota_documento", ids)
+    return [
+        {**nota, "relaciones": por_nota[nota["id"]], "seguimiento": seguimiento.get(nota["id"])} for nota in notas
+    ]

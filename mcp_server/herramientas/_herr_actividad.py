@@ -112,6 +112,7 @@ ACCIONES_MCP = {
     "enlazar_nota_bloc_gd": ("enlazó la nota del bloc", "nota_bloc", "id_nota", None),
     "desenlazar_nota_bloc_gd": ("quitó un enlace de la nota del bloc", "nota_bloc", "id_nota", None),
     "eliminar_nota_bloc_gd": ("eliminó la nota del bloc", "nota_bloc", "id_nota", None),
+    "cambiar_seguimiento_gd": ("cambió el estado de seguimiento", None, None, None),
 }
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))

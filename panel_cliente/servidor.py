@@ -120,6 +120,7 @@ from ..database.modelos._mod_programaciones import (
 )
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 from ..database.modelos import _mod_bloc_notas as bloc
+from ..database.modelos import _mod_seguimiento as seguimiento
 from ..database.modelos._mod_notas import (
     NotasCRUD,
     NotasRelacionesCRUD,
@@ -2954,7 +2955,12 @@ class DatosProgramacion(BaseModel):
 async def listar_usuarios_para_avisar(
     id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> list[dict]:
-    return [{"id": u["id"], "nombre": u["nombre"]} for u in await usuarios_del_proyecto(proyecto["id"])]
+    """`puede_editar`: si no es invitado (los invitados no pueden encargarse
+    de nada en el seguimiento)."""
+    return [
+        {"id": u["id"], "nombre": u["nombre"], "puede_editar": await puede_editar_proyecto(u["id"], proyecto["id"])}
+        for u in await usuarios_del_proyecto(proyecto["id"])
+    ]
 
 
 @app.get("/v1/proyectos/{id_proyecto}/programaciones")
@@ -3143,14 +3149,17 @@ async def listar_notas_bloc_endpoint(
     identidad: Identidad = Depends(identidad_actual),
 ) -> list[dict]:
     _, id_usuario = await _quien_panel(identidad)
+    config = get_db_config(proyecto["id"])
     try:
-        return await bloc.buscar_notas(
-            get_db_config(proyecto["id"]), id_usuario, texto, etiqueta, desde, hasta,
+        notas = await bloc.buscar_notas(
+            config, id_usuario, texto, etiqueta, desde, hasta,
             id_documento, id_registro, id_nota, {"no": False, "si": True, "todas": None}[archivadas],
             solo_mias, limite=500, color=color,
         )
     except (ValueError, LookupError) as e:
         raise _error_bloc(e) from e
+    estados = await seguimiento.seguimientos_de(config, "nota_bloc", [n["id"] for n in notas])
+    return [{**n, "seguimiento": estados.get(n["id"])} for n in notas]
 
 
 @app.get("/v1/proyectos/{id_proyecto}/bloc-notas/etiquetas")
@@ -3242,6 +3251,72 @@ async def eliminar_nota_bloc_endpoint(
     try:
         await bloc.eliminar_nota(get_db_config(proyecto["id"]), id_usuario, id_nota)
     except (LookupError, PermissionError) as e:
+        raise _error_bloc(e) from e
+
+
+# ---------- Seguimiento (ver docs/gestion-documental.md → "Seguimiento") ----------
+# Estado de notas del bloc, documentos y notas de documentos. Verlo,
+# cualquiera con acceso (de las notas del bloc, las que ve); cambiarlo,
+# cualquiera salvo invitado.
+
+TipoSeguimiento = Literal["nota_bloc", "documento", "nota_documento"]
+
+
+class DatosSeguimiento(BaseModel):
+    estado: Literal["pendiente", "en_curso", "realizado", "aplazado"] | None = None  # null = sin estado
+    id_usuario_responsable: int | None = None  # null = nadie
+    aplazado_hasta: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/seguimiento")
+async def listar_seguimiento_endpoint(
+    id_proyecto: int, estados: str | None = None, tipo: TipoSeguimiento | None = None,
+    solo_mios: bool = False, sin_responsable: bool = False, incluir_archivados: bool = False,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> list[dict]:
+    """`estados`: separados por comas (pendiente,en_curso...)."""
+    _, id_usuario = await _quien_panel(identidad)
+    if solo_mios and not id_usuario:
+        return []
+    try:
+        return await seguimiento.listar_seguimiento(
+            get_db_config(proyecto["id"]), proyecto["id"], id_usuario,
+            [e for e in (estados or "").split(",") if e], tipo,
+            id_usuario if solo_mios else None, sin_responsable, incluir_archivados,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/seguimiento/{tipo}/{id_objeto}")
+async def obtener_seguimiento_endpoint(
+    id_proyecto: int, tipo: TipoSeguimiento, id_objeto: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    _, id_usuario = await _quien_panel(identidad)
+    try:
+        return await seguimiento.obtener_seguimiento(get_db_config(proyecto["id"]), proyecto["id"], id_usuario, tipo, id_objeto)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/seguimiento/{tipo}/{id_objeto}")
+async def cambiar_seguimiento_endpoint(
+    id_proyecto: int, tipo: TipoSeguimiento, id_objeto: int, datos: DatosSeguimiento,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Manda siempre el estado y el responsable (el formulario los tiene
+    los dos); `aplazado_hasta` solo al aplazar."""
+    quien, id_usuario = await _quien_panel(identidad)
+    try:
+        return await seguimiento.cambiar_seguimiento(
+            get_db_config(proyecto["id"]), proyecto["id"], id_usuario, quien, tipo, id_objeto,
+            estado=datos.estado, id_responsable=datos.id_usuario_responsable, aplazado_hasta=datos.aplazado_hasta,
+        )
+    except (ValueError, LookupError) as e:
         raise _error_bloc(e) from e
 
 

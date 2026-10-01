@@ -28,6 +28,7 @@ from ..database.modelos._mod_bloc_notas import (
     etiquetas_en_uso,
     obtener_nota,
 )
+from ..database.modelos._mod_seguimiento import obtener_seguimiento
 
 Visibilidad = Literal["privada", "personas", "todos"]
 TipoEnlace = Literal["nota", "documento", "registro"]
@@ -102,10 +103,11 @@ async def buscar_notas_bloc_gd(
 @mcp_app.tool(annotations=SOLO_LECTURA)
 async def obtener_nota_bloc_gd(id_nota: int) -> dict:
     """Una nota del bloc entera: contenido, etiquetas, con quién se
-    comparte, y lo que tiene enlazado (otras notas, documentos, registros
-    de datos y sus recordatorios)."""
+    comparte, lo que tiene enlazado (otras notas, documentos, registros
+    de datos y sus recordatorios) y su estado de seguimiento."""
     config, id_proyecto, id_usuario, _ = await _contexto()
-    return await _ejecutar(obtener_nota(config, id_usuario, id_nota, id_proyecto))
+    nota = await _ejecutar(obtener_nota(config, id_usuario, id_nota, id_proyecto))
+    return {**nota, "seguimiento": await obtener_seguimiento(config, id_proyecto, id_usuario, "nota_bloc", id_nota)}
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA)

@@ -63,6 +63,7 @@ import ProgramacionDetalle from "./paginas/ProgramacionDetalle"
 import Notificaciones from "./paginas/Notificaciones"
 import BlocNotas from "./paginas/BlocNotas"
 import NotaBlocDetalle from "./paginas/NotaBlocDetalle"
+import Seguimiento from "./paginas/Seguimiento"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
 // del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
@@ -412,7 +413,16 @@ export default function App() {
               proyecto={proyecto}
               onVolver={() => navegar("documentos")}
               onVerProgramacion={verProgramacion}
+              onVerSeguimiento={() => navegar("seguimiento")}
               onCambiadas={contarNoLeidas}
+            />
+          ) : vista === "seguimiento" ? (
+            <Seguimiento
+              proyecto={proyecto}
+              esSuperadmin={esSuperadmin}
+              onVolver={() => navegar("documentos")}
+              onVerNota={verNota}
+              onVerDocumento={verDocumento}
             />
           ) : vista === "bloc-notas" && notaActiva ? (
             <NotaBlocDetalle

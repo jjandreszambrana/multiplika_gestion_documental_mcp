@@ -1,6 +1,7 @@
 import { Badge, Group, Paper, Text, Tooltip } from "@mantine/core"
 import { IconLock, IconPinFilled, IconUsers, IconWorld } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
+import { BadgeSeguimiento } from "./Seguimiento"
 
 export const VISIBILIDADES = {
   privada: { etiqueta: "Solo yo", icono: IconLock, ayuda: "Solo la ve quien la escribió" },
@@ -58,6 +59,7 @@ export default function TarjetaNotaBloc({ nota, onClick, compacta = false }) {
           )}
         </div>
         <Group gap="6" wrap="nowrap" style={{ flexShrink: 0 }}>
+          <BadgeSeguimiento seguimiento={nota.seguimiento} />
           <Text size="12px" c="dimmed" style={{ whiteSpace: "nowrap" }}>
             {formatearFecha(nota.fecha).slice(0, 16)}
           </Text>

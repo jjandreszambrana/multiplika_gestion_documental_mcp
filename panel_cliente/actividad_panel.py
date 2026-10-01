@@ -118,6 +118,7 @@ ACCIONES_PANEL = {
     "actualizar_nota_bloc_endpoint": ("modificó la nota del bloc", "nota_bloc", "id_nota"),
     "enlazar_nota_bloc_endpoint": ("enlazó la nota del bloc", "nota_bloc", "id_nota"),
     "desenlazar_nota_bloc_endpoint": ("quitó un enlace de la nota del bloc", "nota_bloc", "id_nota"),
+    "cambiar_seguimiento_endpoint": ("cambió el estado de seguimiento", None, None),
     "eliminar_nota_bloc_endpoint": ("eliminó la nota del bloc", "nota_bloc", "id_nota"),
 }
 

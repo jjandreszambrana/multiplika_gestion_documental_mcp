@@ -28,6 +28,7 @@ from ..dependencias._dep_programaciones import (
     TABLA_PROGRAMACIONES_DESTINATARIOS,
     TABLA_PROGRAMACIONES_DOCUMENTOS,
 )
+from ..dependencias._dep_seguimiento import TABLA_SEGUIMIENTO
 from ._mod_configuracion import ConfiguracionCRUD
 from ._mod_envios import mandar_correo
 from ._repeticiones import ahora_madrid, describir_regla, siguiente_ejecucion, validar_regla
@@ -431,6 +432,14 @@ async def _saltar(config: dict, id_proyecto: int, programacion: dict, ahora: dat
     })
     resumen = await _avisar(config, id_proyecto, programacion, id_ejecucion, programacion["titulo"], ahora)
     await ejecuciones.update(id_ejecucion, {"resumen": resumen})
+    # Si es el aviso de un aplazado (ver _mod_seguimiento.py), lo aplazado
+    # vuelve a pendiente. Aquí y no en _mod_seguimiento: ese módulo ya
+    # importa este.
+    await AsyncDatabase(**config).query(
+        f'UPDATE "{TABLA_SEGUIMIENTO.nombre}" SET estado = %s, aplazado_hasta = NULL, id_programacion = NULL, '
+        "fecha_cambio = %s, cambiado_por = %s WHERE estado = 'aplazado' AND id_programacion = %s",
+        ("pendiente", ahora, "Fin del aplazamiento", programacion["id"]),
+    )
 
 
 async def _recordar(config: dict, id_proyecto: int, ejecucion: dict, programacion: dict, ahora: datetime) -> None:
