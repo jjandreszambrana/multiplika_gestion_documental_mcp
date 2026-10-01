@@ -107,6 +107,11 @@ ACCIONES_MCP = {
     "reanudar_programacion_gd": ("reanudó el aviso programado", "programacion", "id_programacion", None),
     "eliminar_programacion_gd": ("eliminó el aviso programado", "programacion", "id_programacion", None),
     "marcar_hecho_gd": ("marcó como hecho un aviso", None, None, None),
+    "crear_nota_bloc_gd": ("escribió la nota del bloc", "nota_bloc", None, None),
+    "actualizar_nota_bloc_gd": ("modificó la nota del bloc", "nota_bloc", "id_nota", None),
+    "enlazar_nota_bloc_gd": ("enlazó la nota del bloc", "nota_bloc", "id_nota", None),
+    "desenlazar_nota_bloc_gd": ("quitó un enlace de la nota del bloc", "nota_bloc", "id_nota", None),
+    "eliminar_nota_bloc_gd": ("eliminó la nota del bloc", "nota_bloc", "id_nota", None),
 }
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
@@ -193,7 +198,7 @@ async def consultar_actividad_gd(
       p.ej. tipo_objeto="documento", id_objeto=12. Tipos: documento,
       documento_pendiente, entidad, grupo, script, regla, modelo_registro,
       registro, estilo, credencial, tipo_documento, envio, compartido, nota, enlace,
-      pregunta_pendiente, programacion.
+      pregunta_pendiente, programacion, nota_bloc.
     - `desde` / `hasta`: fechas AAAA-MM-DD (hasta incluye el día entero).
     - `texto`: busca en la frase y en el nombre del elemento.
     - `limite`: máximo 100; vienen los más recientes primero.

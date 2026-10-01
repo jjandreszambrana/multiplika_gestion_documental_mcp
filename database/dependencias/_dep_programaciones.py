@@ -16,6 +16,7 @@ from database.config_db import get_db_name
 from mtpk_postgres import Columna, ForeignKey, Index, Tabla
 from mtpk_postgres.core_sync import SQLLiteral
 
+from ._dep_bloc_notas import NOMBRE_TABLA_BLOC_NOTAS
 from ._dep_documentos import NOMBRE_TABLA_DOCUMENTOS
 
 NOMBRE_TABLA_PROGRAMACIONES = "gd_programaciones"
@@ -57,6 +58,9 @@ CAMPOS_PROGRAMACIONES = [
             comentario="Nombre de la persona o de la API key — copia, como en gd_actividad"),
     Columna(nombre="id_usuario_creador", tipo="INT",
             comentario="→ mcpc_usuarios.id, sin FK entre bases — NULL si vino de una API key"),
+    Columna(nombre="id_nota_bloc", tipo="INT",
+            comentario="→ gd_bloc_notas.id: el recordatorio de una nota del bloc de notas. Si se "
+                       "borra la nota, se borra con ella"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
             protegido_actualizar=True),
 ]
@@ -65,10 +69,17 @@ CAMPOS_PROGRAMACIONES = [
 # chocan con los de otras tablas (en Postgres son únicos por esquema).
 INDICES_PROGRAMACIONES = [
     Index(columnas=["estado", "proxima_ejecucion"], nombre="gd_programaciones_proxima_idx"),
+    Index(columnas=["id_nota_bloc"], nombre="gd_programaciones_nota_bloc_idx"),
+]
+
+FKS_PROGRAMACIONES = [
+    ForeignKey(columna="id_nota_bloc", referencia_tabla=NOMBRE_TABLA_BLOC_NOTAS,
+               referencia_columna="id", on_delete="CASCADE"),
 ]
 
 TABLA_PROGRAMACIONES = Tabla(
     nombre=NOMBRE_TABLA_PROGRAMACIONES, columnas=CAMPOS_PROGRAMACIONES, indices=INDICES_PROGRAMACIONES,
+    foreign_keys=FKS_PROGRAMACIONES,
     comentario="Avisos puntuales o repetidos para usuarios concretos",
     db_name=__DB_NAME__,
 )

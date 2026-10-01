@@ -3,9 +3,10 @@ import {
   ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, MultiSelect, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconHistory, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconArrowLeft, IconHistory, IconNotebook, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
+import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
 
 const PERIODICIDADES = ["diaria", "semanal", "mensual", "puntual"]
 const TODOS = "__todos__"
@@ -346,7 +347,7 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
   )
 }
 
-function PestanaRegistros({ proyecto, modelos }) {
+function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
   const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [idModelo, setIdModelo] = useState(null)
   const [desde, setDesde] = useState("")
@@ -358,6 +359,7 @@ function PestanaRegistros({ proyecto, modelos }) {
   const [registroEditando, setRegistroEditando] = useState(null)
   const [modeloDelRegistro, setModeloDelRegistro] = useState(null)
   const [documentos, setDocumentos] = useState([])
+  const [idRegistroNotas, setIdRegistroNotas] = useState(null)
 
   useEffect(() => {
     api.listarOBuscarDocumentos(proyecto.id, "").then(setDocumentos).catch(() => setDocumentos([]))
@@ -530,6 +532,14 @@ function PestanaRegistros({ proyecto, modelos }) {
                       <Text fz="11.5px" c="dimmed">
                         v{r.version_modelo}
                       </Text>
+                      <Tooltip label="Notas del bloc de notas">
+                        <ActionIcon
+                          variant="subtle" color="gray" size="xs" aria-label="Notas del bloc"
+                          onClick={() => setIdRegistroNotas(r.id)}
+                        >
+                          <IconNotebook size={13} />
+                        </ActionIcon>
+                      </Tooltip>
                       {r.archivo_original_nombre && (
                         <Tooltip label={`Descargar ${r.archivo_original_nombre}`}>
                           <ActionIcon
@@ -617,6 +627,17 @@ function PestanaRegistros({ proyecto, modelos }) {
         onClose={() => setModalAbierto(false)}
         onGuardar={guardar}
       />
+      <Modal
+        opened={idRegistroNotas !== null} onClose={() => setIdRegistroNotas(null)}
+        title={`Bloc de notas · registro n.º ${idRegistroNotas}`} size="lg"
+      >
+        {idRegistroNotas !== null && (
+          <NotasBlocVinculadas
+            proyecto={proyecto} enlace={{ tipo: "registro", id: idRegistroNotas }}
+            onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+          />
+        )}
+      </Modal>
     </>
   )
 }
@@ -911,7 +932,7 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
   )
 }
 
-export default function Registros({ proyecto, onVolver }) {
+export default function Registros({ proyecto, onVolver, onVerNota, onNuevaNota }) {
   const [modelos, setModelos] = useState(null)
   const [error, setError] = useState(null)
 
@@ -964,7 +985,10 @@ export default function Registros({ proyecto, onVolver }) {
             <Tabs.Tab value="modelos">Modelos ({modelos.length})</Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="registros">
-            <PestanaRegistros proyecto={proyecto} modelos={modelos.filter((m) => m.activo || m.tiene_registros)} />
+            <PestanaRegistros
+              proyecto={proyecto} modelos={modelos.filter((m) => m.activo || m.tiene_registros)}
+              onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+            />
           </Tabs.Panel>
           <Tabs.Panel value="modelos">
             <PestanaModelos proyecto={proyecto} modelos={modelos} onCambio={cargar} />

@@ -22,7 +22,7 @@ from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.jwt_tokens import decodificar_token
 
-from ..database.modelos._mod_actividad import componer_descripcion, nombre_objeto, registrar_sin_fallar
+from ..database.modelos._mod_actividad import TIPOS_PRIVADOS, componer_descripcion, nombre_objeto, registrar_sin_fallar
 
 # nombre del endpoint -> (verbo, tipo_objeto, parámetro de ruta con su id)
 ACCIONES_PANEL = {
@@ -114,6 +114,11 @@ ACCIONES_PANEL = {
     "reanudar_programacion_endpoint": ("reanudó el aviso programado", "programacion", "id_programacion"),
     "eliminar_programacion_endpoint": ("eliminó el aviso programado", "programacion", "id_programacion"),
     "marcar_hecho_endpoint": ("marcó como hecho un aviso", None, None),
+    "crear_nota_bloc_endpoint": ("escribió la nota del bloc", "nota_bloc", None),
+    "actualizar_nota_bloc_endpoint": ("modificó la nota del bloc", "nota_bloc", "id_nota"),
+    "enlazar_nota_bloc_endpoint": ("enlazó la nota del bloc", "nota_bloc", "id_nota"),
+    "desenlazar_nota_bloc_endpoint": ("quitó un enlace de la nota del bloc", "nota_bloc", "id_nota"),
+    "eliminar_nota_bloc_endpoint": ("eliminó la nota del bloc", "nota_bloc", "id_nota"),
 }
 
 # Su cuerpo no se guarda nunca en el detalle, ni recortado: son secretos.
@@ -230,10 +235,9 @@ class ActividadPanelMiddleware:
         peticion = _json_o_none(bytes(cuerpo_peticion)) if es_json else None
         respuesta = _json_o_none(bytes(cuerpo_respuesta))
         id_objeto = id_objeto or _id_creado(respuesta, tipo)
-        nombre = (
-            await nombre_objeto(config, tipo, id_objeto) or nombre_antes
-            or _nombre_en(respuesta) or _nombre_en(peticion)
-        )
+        nombre = await nombre_objeto(config, tipo, id_objeto) or nombre_antes
+        if tipo not in TIPOS_PRIVADOS:  # de una nota privada no se dice ni el título
+            nombre = nombre or _nombre_en(respuesta) or _nombre_en(peticion)
         detalle = {k: v for k, v in parametros.items() if k != "id_proyecto"}
         if accion not in _SIN_DETALLE and isinstance(peticion, dict):
             detalle.update(peticion)

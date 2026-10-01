@@ -60,7 +60,9 @@ Necesitas dos cosas:
   ejemplo `https://mcp.tuempresa.com/mcp`). Sale en el panel, pantalla \
   "API keys", o te la da quien te dio de alta.
 - **Tu clave**: la emite el administrador en "API keys". Se ve una sola \
-  vez al crearla; nunca la compartas ni la pegues en un sitio público.
+  vez al crearla; nunca la compartas ni la pegues en un sitio público. \
+  Puede ser "de todos" o a nombre de una persona: con una a tu nombre, la \
+  IA ve también lo tuyo, como tus notas privadas del bloc de notas.
 
 ### Claude Desktop
 
@@ -363,6 +365,34 @@ mientras estuvo pausado no se manda de golpe.
 
 Las horas son de Madrid. En la ficha de cada aviso ves cuándo avisó, a \
 quién le llegó y si falló algún email.""",
+    },
+    {
+        "id": "bloc-notas",
+        "titulo": "Bloc de notas",
+        "resumen": "Notas de reuniones, llamadas o ideas, enlazables con otras notas, documentos y registros.",
+        "markdown": """\
+El bloc de notas es para lo que apuntas tú: lo que se habló en una \
+reunión, una llamada, una idea. Cada nota tiene fecha y hora, título, \
+una descripción corta, el texto y etiquetas para encontrarla luego.
+
+- **Enlaces**: una nota se enlaza con otras notas, con documentos y con \
+registros de datos. El enlace se ve desde los dos lados: en la ficha de \
+un documento, la pestaña "Bloc de notas" enseña sus notas.
+- **Quién la ve**: lo eliges al escribirla. "Solo yo", "Algunas personas" \
+(las que elijas) o "Todos" los del proyecto. Cambiarlo, archivarla o \
+borrarla solo lo puede hacer quien la escribió; el texto lo puede cambiar \
+cualquiera que la vea.
+- **Color**: puedes darle a una nota un color (rojo, naranja, amarillo, \
+verde, azul, morado, rosa o gris) para distinguirla de un vistazo y \
+filtrar por él.
+- **Fijar y archivar**: una nota fijada sale la primera. Archivarla la \
+quita de la lista sin borrarla.
+- **Recordatorio**: desde la nota, "Nuevo recordatorio" crea un aviso \
+programado. Si borras la nota, se borra también su recordatorio.
+- **Con tu IA**: "apunta que el proveedor baja un 5 % en enero", "¿qué \
+anoté de la reunión con Frutas García?". Ojo: con una clave "de todos", \
+la IA solo ve y crea notas para todos. Para que vea tus notas privadas, \
+pide al administrador una clave a tu nombre.""",
     },
     {
         "id": "tipos-documento",

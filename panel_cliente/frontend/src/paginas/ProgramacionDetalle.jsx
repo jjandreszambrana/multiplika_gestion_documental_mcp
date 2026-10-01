@@ -14,7 +14,7 @@ function Dato({ etiqueta, children }) {
   )
 }
 
-export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver, onVerDocumento }) {
+export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver, onVerDocumento, onVerNota }) {
   const [programacion, setProgramacion] = useState(null)
   const [error, setError] = useState(null)
   const [editando, setEditando] = useState(false)
@@ -137,6 +137,13 @@ export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver
               </Group>
             )}
           </Dato>
+          {p.id_nota_bloc && (
+            <Dato etiqueta="Nota del bloc">
+              <Anchor component="button" type="button" fz="14px" onClick={() => onVerNota(p.id_nota_bloc)}>
+                Ver la nota
+              </Anchor>
+            </Dato>
+          )}
           <Dato etiqueta="Creado por">{p.creado_por} · {formatearFecha(p.fecha_alta)}</Dato>
         </Stack>
       </Paper>

@@ -73,6 +73,10 @@ def _limpiar_datos(datos: dict) -> dict:
     for campo in ("avisar_por_email", "requiere_hecho"):
         if datos.get(campo) is not None:
             limpios[campo] = bool(datos[campo])
+    if "id_nota_bloc" in datos:
+        # Que la nota exista y la pueda ver quien crea el aviso lo comprueba
+        # quien llama (depende de quién es), con obtener_nota del bloc.
+        limpios["id_nota_bloc"] = datos["id_nota_bloc"]
     if "max_recordatorios" in datos:
         maximo = datos["max_recordatorios"]
         if maximo is not None and (not isinstance(maximo, int) or not 0 <= maximo <= 365):
@@ -123,7 +127,8 @@ async def crear_programacion(
     creado_por: str, id_usuario_creador: int | None,
 ) -> dict:
     """`datos`: titulo, descripcion, regla (ver _repeticiones.py),
-    avisar_por_email, requiere_hecho, max_recordatorios, cada_dias_recordatorio."""
+    avisar_por_email, requiere_hecho, max_recordatorios, cada_dias_recordatorio
+    e id_nota_bloc (si es el recordatorio de una nota del bloc de notas)."""
     limpios = _limpiar_datos({"titulo": datos.get("titulo"), "regla": datos.get("regla"), **datos})
     await _comprobar_destinatarios(id_proyecto, ids_usuarios)
     await _comprobar_documentos(config, ids_documentos)
@@ -240,11 +245,15 @@ async def obtener_programacion(config: dict, id_proyecto: int, id_programacion: 
 
 async def listar_programaciones(
     config: dict, id_proyecto: int, estado: str | None = None, id_documento: int | None = None,
+    id_nota_bloc: int | None = None,
 ) -> list[dict]:
     condiciones, params = [], []
     if estado:
         condiciones.append("p.estado = %s")
         params.append(estado)
+    if id_nota_bloc:
+        condiciones.append("p.id_nota_bloc = %s")
+        params.append(id_nota_bloc)
     if id_documento:
         condiciones.append(f'p.id IN (SELECT id_programacion FROM "{_T_DOCS}" WHERE id_documento = %s)')
         params.append(id_documento)

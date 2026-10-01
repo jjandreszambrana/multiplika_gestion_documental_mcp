@@ -61,6 +61,8 @@ import Actividad from "./paginas/Actividad"
 import Programaciones from "./paginas/Programaciones"
 import ProgramacionDetalle from "./paginas/ProgramacionDetalle"
 import Notificaciones from "./paginas/Notificaciones"
+import BlocNotas from "./paginas/BlocNotas"
+import NotaBlocDetalle from "./paginas/NotaBlocDetalle"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
 // del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
@@ -78,6 +80,9 @@ export default function App() {
   const [entidadActiva, setEntidadActiva] = useState(null)
   const [scriptActivo, setScriptActivo] = useState(null)
   const [idProgramacionActiva, setIdProgramacionActiva] = useState(null)
+  // { id } de la nota abierta, o { id: null, enlace } para escribir una nueva
+  // (ya enlazada al documento o registro desde el que se pidió)
+  const [notaActiva, setNotaActiva] = useState(null)
   const [noLeidas, setNoLeidas] = useState(0)
   const [vista, setVista] = useState("documentos")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
@@ -219,6 +224,7 @@ export default function App() {
     setEntidadActiva(null)
     setScriptActivo(null)
     setIdProgramacionActiva(null)
+    setNotaActiva(null)
     setVista("documentos")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -230,12 +236,28 @@ export default function App() {
     setEntidadActiva(null)
     setScriptActivo(null)
     setIdProgramacionActiva(null)
+    setNotaActiva(null)
     setVista(nuevaVista)
   }
 
   function verProgramacion(idProgramacion) {
     navegar("programaciones")
     setIdProgramacionActiva(idProgramacion)
+  }
+
+  function verNota(idNota) {
+    navegar("bloc-notas")
+    setNotaActiva({ id: idNota })
+  }
+
+  function nuevaNota(enlace) {
+    navegar("bloc-notas")
+    setNotaActiva({ id: null, enlace })
+  }
+
+  function verDocumento(idDocumento) {
+    navegar("documentos")
+    setIdDocumentoActivo(idDocumento)
   }
 
   if (comprobandoEnlace) {
@@ -317,6 +339,8 @@ export default function App() {
               idDocumento={idDocumentoActivo}
               onVolver={() => setIdDocumentoActivo(null)}
               onVerProgramacion={verProgramacion}
+              onVerNota={verNota}
+              onNuevaNota={nuevaNota}
             />
           ) : vista === "api-keys" ? (
             <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
@@ -343,7 +367,7 @@ export default function App() {
           ) : vista === "reglas" ? (
             <Reglas proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "registros" ? (
-            <Registros proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Registros proyecto={proyecto} onVolver={() => navegar("documentos")} onVerNota={verNota} onNuevaNota={nuevaNota} />
           ) : vista === "tipos-documento" ? (
             <TiposDocumento proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "grupos" && grupoActivo ? (
@@ -379,6 +403,7 @@ export default function App() {
               idProgramacion={idProgramacionActiva}
               onVolver={() => setIdProgramacionActiva(null)}
               onVerDocumento={setIdDocumentoActivo}
+              onVerNota={verNota}
             />
           ) : vista === "programaciones" ? (
             <Programaciones proyecto={proyecto} onVolver={() => navegar("documentos")} onVerProgramacion={setIdProgramacionActiva} />
@@ -388,6 +413,27 @@ export default function App() {
               onVolver={() => navegar("documentos")}
               onVerProgramacion={verProgramacion}
               onCambiadas={contarNoLeidas}
+            />
+          ) : vista === "bloc-notas" && notaActiva ? (
+            <NotaBlocDetalle
+              key={notaActiva.id ?? "nueva"}
+              proyecto={proyecto}
+              esSuperadmin={esSuperadmin}
+              idNota={notaActiva.id}
+              enlaceInicial={notaActiva.enlace}
+              onVolver={() => setNotaActiva(null)}
+              onCreada={(id) => setNotaActiva({ id })}
+              onVerNota={verNota}
+              onVerDocumento={verDocumento}
+              onVerProgramacion={verProgramacion}
+            />
+          ) : vista === "bloc-notas" ? (
+            <BlocNotas
+              proyecto={proyecto}
+              esSuperadmin={esSuperadmin}
+              onVolver={() => navegar("documentos")}
+              onVerNota={verNota}
+              onNuevaNota={nuevaNota}
             />
           ) : vista === "actividad" ? (
             <Actividad proyecto={proyecto} onVolver={() => navegar("documentos")} onVerDocumento={setIdDocumentoActivo} />

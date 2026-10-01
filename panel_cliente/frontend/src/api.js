@@ -229,8 +229,8 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/preferencias`, { texto }),
 
   listarApiKeys: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/api-keys`),
-  emitirApiKey: (idProyecto, nombre, idRol) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre, id_rol: idRol }),
+  emitirApiKey: (idProyecto, nombre, idRol, idUsuario) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/api-keys`, { nombre, id_rol: idRol, id_usuario: idUsuario }),
   renombrarApiKey: (idApiKey, nombre) => peticion(BASE_CLIENTE, "PUT", `/api-keys/${idApiKey}`, { nombre }),
   revocarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "POST", `/api-keys/${idApiKey}/revocar`),
   eliminarApiKey: (idApiKey) => peticion(BASE_CLIENTE, "DELETE", `/api-keys/${idApiKey}`),
@@ -626,4 +626,25 @@ export const api = {
   leerTodasNotificaciones: (idProyecto) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/leer-todas`),
   marcarAvisoHecho: (idProyecto, idEjecucion) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/avisos/${idEjecucion}/hecho`),
+
+  // Filtros: texto, etiqueta, desde, hasta, id_documento, id_registro,
+  // id_nota, archivadas ("no" | "si" | "todas"), solo_mias
+  listarNotasBloc: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (valor !== null && valor !== undefined && valor !== "" && valor !== false) parametros.set(clave, valor)
+    }
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/bloc-notas${query ? `?${query}` : ""}`)
+  },
+  listarEtiquetasBloc: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/bloc-notas/etiquetas`),
+  obtenerNotaBloc: (idProyecto, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/bloc-notas/${id}`),
+  crearNotaBloc: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/bloc-notas`, datos),
+  actualizarNotaBloc: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/bloc-notas/${id}`, datos),
+  enlazarNotaBloc: (idProyecto, id, tipo, idDestino) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/bloc-notas/${id}/enlaces`, { tipo, id_destino: idDestino }),
+  desenlazarNotaBloc: (idProyecto, id, tipo, idDestino) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/bloc-notas/${id}/enlaces/${tipo}/${idDestino}`),
+  eliminarNotaBloc: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/bloc-notas/${id}`),
 }

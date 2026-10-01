@@ -18,10 +18,10 @@ function hoy() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
-function estadoInicial(programacion, idDocumentoInicial) {
+function estadoInicial(programacion, idDocumentoInicial, tituloInicial) {
   const regla = programacion?.regla
   return {
-    titulo: programacion?.titulo || "",
+    titulo: programacion?.titulo || tituloInicial || "",
     descripcion: programacion?.descripcion || "",
     tipo: regla?.tipo || "una_vez",
     fecha: regla?.fecha || hoy(),
@@ -41,9 +41,12 @@ function estadoInicial(programacion, idDocumentoInicial) {
   }
 }
 
-// Alta y edición de una programación (aviso puntual o repetido).
-export default function FormularioProgramacion({ opened, onClose, proyecto, programacion, idDocumentoInicial, onGuardado }) {
-  const [datos, setDatos] = useState(() => estadoInicial(programacion, idDocumentoInicial))
+// Alta y edición de una programación (aviso puntual o repetido). Con
+// `idNotaBloc`, el aviso nuevo es el recordatorio de esa nota del bloc.
+export default function FormularioProgramacion({
+  opened, onClose, proyecto, programacion, idDocumentoInicial, idNotaBloc, tituloInicial, onGuardado,
+}) {
+  const [datos, setDatos] = useState(() => estadoInicial(programacion, idDocumentoInicial, tituloInicial))
   const [usuarios, setUsuarios] = useState([])
   const [documentos, setDocumentos] = useState([])
   const [guardando, setGuardando] = useState(false)
@@ -51,11 +54,11 @@ export default function FormularioProgramacion({ opened, onClose, proyecto, prog
 
   useEffect(() => {
     if (!opened) return
-    setDatos(estadoInicial(programacion, idDocumentoInicial))
+    setDatos(estadoInicial(programacion, idDocumentoInicial, tituloInicial))
     setError(null)
     api.listarUsuariosProyecto(proyecto.id).then(setUsuarios).catch(() => setUsuarios([]))
     api.listarOBuscarDocumentos(proyecto.id, "").then(setDocumentos).catch(() => setDocumentos([]))
-  }, [opened, programacion, idDocumentoInicial, proyecto.id])
+  }, [opened, programacion, idDocumentoInicial, tituloInicial, proyecto.id])
 
   const cambiar = (campo) => (valor) => setDatos((d) => ({ ...d, [campo]: valor }))
 
@@ -79,6 +82,7 @@ export default function FormularioProgramacion({ opened, onClose, proyecto, prog
       max_recordatorios: datos.maxRecordatorios === "" ? null : Number(datos.maxRecordatorios),
       cada_dias_recordatorio: Number(datos.cadaDiasRecordatorio) || 1,
     }
+    if (!programacion && idNotaBloc) cuerpo.id_nota_bloc = idNotaBloc
     // Al editar, la repetición solo se manda si cambió: si no, se recalcularía
     // la próxima fecha (y un aviso ya terminado daría "esa fecha ya pasó").
     if (programacion && JSON.stringify(cuerpo.regla) === JSON.stringify(programacion.regla)) delete cuerpo.regla

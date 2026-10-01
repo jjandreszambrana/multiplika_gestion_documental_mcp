@@ -844,3 +844,17 @@ Avisos puntuales o repetidos para personas concretas del proyecto, enlazables a 
 
 Quién decidió: usuario (avisos a personas concretas, "Hecho" con número de recordatorios elegible, scripts aplazados). El asistente: horas de Madrid sin zona, una sola ejecución tras una parada, cron como módulo.
 Reversible: sí — tablas nuevas sin tocar ninguna existente; quitar el cron desactiva los avisos.
+
+### Bloc de notas (2026-10-01)
+
+Notas sueltas de los usuarios (reuniones, llamadas, ideas) enlazables entre sí, con documentos y con registros de datos. Nada que ver con las notas de seguimiento (`gd_notas`), que cuelgan siempre de un documento y siguen igual. Plan y decisiones: `docs/planificacion/bloc-de-notas.md`.
+
+- **Tablas** (`database/dependencias/_dep_bloc_notas.py`): `gd_bloc_notas` (fecha editable, título, descripción, contenido markdown, visibilidad `privada`/`personas`/`todos`, color opcional, fijada, archivada, autor sin FK) y, con FK y `ON DELETE CASCADE`, `gd_bloc_notas_personas`, `gd_bloc_notas_etiquetas`, `gd_bloc_notas_relaciones` (nota↔nota sin dirección, una fila con el id menor en `id_nota_a`), `gd_bloc_notas_documentos` y `gd_bloc_notas_registros`. Además `gd_programaciones.id_nota_bloc` (el recordatorio de una nota; se borra con ella).
+- **Quién ve qué** (`database/modelos/_mod_bloc_notas.py`, común a tools y panel): cada función recibe la persona que pregunta o `None`. Con `None` solo existen las notas de todos. Una nota que no ves es como si no existiera (mismo error que un id que no está), y los enlaces a notas que no ves no salen. Editar: cualquiera que la vea (salvo invitado). Cambiar visibilidad, archivar y borrar: el autor, o cualquiera si no tiene autor.
+- **Quién es "yo"**: en el panel, el usuario (soporte = `None`). Por MCP, el usuario del chat del panel; si no, el dueño de la API key (`mcpc_api_keys.id_usuario`, nueva en el núcleo: NULL = clave de todos, lo de siempre); si no, `None`. Las dos pantallas de API keys (núcleo y GD) dejan elegir "De todos" o una persona al emitirla.
+- **Tools MCP** (`_herr_bloc_notas.py`): `buscar_notas_bloc_gd`, `obtener_nota_bloc_gd`, `listar_etiquetas_bloc_gd` (solo lectura), `crear/actualizar/enlazar/desenlazar/eliminar_nota_bloc_gd`; archivar es `actualizar_nota_bloc_gd(archivada=True)`. El recordatorio, `crear_programacion_gd(id_nota_bloc=...)`, que además avisa por defecto al dueño de la key si la key es de una persona. Búsqueda por texto (cada palabra en título, descripción, contenido o etiquetas), no semántica. El color se guarda con el nombre de Mantine (`red`, `grape`...) y la IA lo pide en español (`rojo`, `morado`...; "ninguno" lo quita).
+- **Panel**: "Bloc de notas" en el menú (lista con filtros y ficha de cada nota con enlaces y recordatorios), pestaña "Bloc de notas" en la ficha del documento y botón en cada fila de registros de datos.
+- **Registro de actividad**: tipo `nota_bloc` en `ACCIONES_MCP`/`ACCIONES_PANEL`. Como el registro lo ve todo el proyecto, de una nota que no es de todos no se guarda ni el título ni el detalle (`TIPOS_PRIVADOS` en `_mod_actividad.py`).
+
+Quién decidió: usuario (visibilidad por nota, claves de una persona o de todos, etiquetas, IA, recordatorio, fijar/archivar, notas de seguimiento aparte). El asistente: permisos de edición, búsqueda por texto, privacidad en el registro de actividad.
+Reversible: sí — tablas nuevas y dos columnas que admiten NULL (`gd_programaciones.id_nota_bloc`, `mcpc_api_keys.id_usuario`).

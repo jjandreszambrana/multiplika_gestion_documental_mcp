@@ -54,6 +54,7 @@ from database.dependencias._dep_aprendizajes import TABLA_APRENDIZAJES
 from database.dependencias._dep_reglas import TABLA_REGLAS
 from database.dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS, TABLA_REGISTROS_DOCUMENTOS
 from database.dependencias._dep_actividad import TABLA_ACTIVIDAD
+from database.dependencias._dep_bloc_notas import __TABLAS__ as TABLAS_BLOC_NOTAS
 from database.dependencias._dep_programaciones import __TABLAS__ as TABLAS_PROGRAMACIONES
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
@@ -114,6 +115,7 @@ def main():
         TABLA_REGISTROS,
         TABLA_REGISTROS_DOCUMENTOS,
         TABLA_ACTIVIDAD,
+        *TABLAS_BLOC_NOTAS,
         *TABLAS_PROGRAMACIONES,
     ]
 

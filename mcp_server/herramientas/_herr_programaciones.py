@@ -2,10 +2,10 @@
 usuarios concretos, enlazables a documentos — ver
 docs/gestion-documental.md → "Programaciones y notificaciones".
 
-La API key es del proyecto, no de una persona: con una key normal no se
-sabe quién está detrás, así que hay que decir a quién avisar. Desde el
-chat del panel sí se sabe (ver _quien en _herr_actividad.py) y, si no se
-dice otra cosa, se avisa a esa persona."""
+Con una API key de todos no se sabe quién está detrás, así que hay que
+decir a quién avisar. Desde el chat del panel (ver _quien en
+_herr_actividad.py) o con una key a nombre de una persona sí se sabe y,
+si no se dice otra cosa, se avisa a esa persona."""
 
 from typing import Literal
 
@@ -16,6 +16,8 @@ from fastmcp.exceptions import ToolError
 
 from ._anotaciones import SOLO_LECTURA
 from ._herr_actividad import _quien
+from ._herr_bloc_notas import _contexto as _contexto_bloc
+from ..database.modelos._mod_bloc_notas import obtener_nota
 from ..database.modelos._mod_programaciones import (
     actualizar_programacion,
     cambiar_pausa,
@@ -70,6 +72,7 @@ async def crear_programacion_gd(
     requiere_hecho: bool = False,
     max_recordatorios: int | None = None,
     cada_dias_recordatorio: int = 1,
+    id_nota_bloc: int | None = None,
 ) -> dict:
     """Programa un aviso para una o varias personas del proyecto, una sola
     vez o repetido: "recuérdale a Ana el 15 de octubre que renueve el
@@ -99,17 +102,25 @@ async def crear_programacion_gd(
     lo pulse, como mucho `max_recordatorios` veces (vacío = sin límite,
     hasta que se pulse). Pregunta cuántas veces si el usuario no lo dice.
 
+    `id_nota_bloc`: si es el recordatorio de una nota del bloc de notas
+    ("recuérdame esta nota el lunes"). Si se borra la nota, se borra el aviso.
+
     Confirma con el usuario el resumen (qué, cuándo, a quién) antes de
     crearla, y luego repítele `descripcion_repeticion` y `proxima_ejecucion`."""
     proyecto = await resolver_proyecto_actual()
     quien = await _quien(proyecto)
+    _, _, id_usuario, _ = await _contexto_bloc()
+    if id_nota_bloc:
+        # Solo sobre una nota que puede ver quien lo pide
+        await _ejecutar(obtener_nota(get_db_config(proyecto["id"]), id_usuario, id_nota_bloc))
     if not ids_usuarios:
-        if not quien.get("id_usuario"):
+        # Sabiendo quién es (chat del panel o key a su nombre), a esa persona
+        if not id_usuario:
             raise ToolError(
                 "Falta a quién avisar: pregunta al usuario y pasa sus ids en ids_usuarios "
                 "(los tienes en listar_usuarios_proyecto_gd)."
             )
-        ids_usuarios = [quien["id_usuario"]]
+        ids_usuarios = [id_usuario]
     return await _ejecutar(crear_programacion(
         get_db_config(proyecto["id"]), proyecto["id"],
         {
@@ -117,6 +128,7 @@ async def crear_programacion_gd(
             "regla": _regla(repeticion, fecha, hora, cada_dias, dias_semana, hasta),
             "avisar_por_email": avisar_por_email, "requiere_hecho": requiere_hecho,
             "max_recordatorios": max_recordatorios, "cada_dias_recordatorio": cada_dias_recordatorio,
+            "id_nota_bloc": id_nota_bloc,
         },
         ids_usuarios, ids_documentos or [], quien["quien"], quien.get("id_usuario"),
     ))

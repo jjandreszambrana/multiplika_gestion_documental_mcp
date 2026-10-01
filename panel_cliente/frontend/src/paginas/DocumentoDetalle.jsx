@@ -18,6 +18,7 @@ import {
   IconFileText,
   IconHistory,
   IconMessageCircle,
+  IconNotebook,
   IconSend,
   IconShare,
   IconTrash,
@@ -35,6 +36,7 @@ import EnviosDocumento from "../componentes/EnviosDocumento"
 import CompartirDocumento from "../componentes/CompartirDocumento"
 import ActividadDocumento from "../componentes/ActividadDocumento"
 import ProgramacionesDocumento from "../componentes/ProgramacionesDocumento"
+import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
 
 const CLAVE_PDF_METADATOS = "gd_pdf_incluir_metadatos"
 
@@ -51,7 +53,7 @@ function CampoMeta({ etiqueta, valor }) {
   )
 }
 
-export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVerProgramacion }) {
+export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVerProgramacion, onVerNota, onNuevaNota }) {
   const [documento, setDocumento] = useState(null)
   const [error, setError] = useState(null)
   const [cambiandoArchivo, setCambiandoArchivo] = useState(false)
@@ -432,6 +434,9 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
                 <Tabs.Tab value="avisos" leftSection={<IconBell size={15} stroke={1.8} />}>
                   Avisos
                 </Tabs.Tab>
+                <Tabs.Tab value="bloc" leftSection={<IconNotebook size={15} stroke={1.8} />}>
+                  Bloc de notas
+                </Tabs.Tab>
                 {/* Invitado no ve la actividad (ver listar_actividad en servidor.py);
                     soporte sí — llega con es_admin */}
                 {(proyecto.puede_editar || proyecto.es_admin) && (
@@ -526,6 +531,15 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
               <Tabs.Panel value="avisos" pt="lg">
                 {vista === "avisos" && (
                   <ProgramacionesDocumento proyecto={proyecto} idDocumento={idDocumento} onVerProgramacion={onVerProgramacion} />
+                )}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="bloc" pt="lg">
+                {vista === "bloc" && (
+                  <NotasBlocVinculadas
+                    proyecto={proyecto} enlace={{ tipo: "documento", id: idDocumento }}
+                    onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+                  />
                 )}
               </Tabs.Panel>
 

@@ -40,7 +40,13 @@ NOMBRE_POR_TIPO = {
     "aprendizaje": ("gd_aprendizajes", "nombre"),
     "pregunta_pendiente": ("gd_preguntas_pendientes", "pregunta"),
     "programacion": ("gd_programaciones", "titulo"),
+    "nota_bloc": ("gd_bloc_notas", "titulo"),
 }
+
+# Tipos que pueden ser privados: el registro lo ve todo el proyecto, así que
+# solo se nombran si son de todos, y nunca se guarda su detalle (llevaría
+# el texto). Ver docs/gestion-documental.md → "Bloc de notas".
+TIPOS_PRIVADOS = {"nota_bloc"}
 
 # Nunca se guarda el valor de un campo cuyo nombre encaje aquí: claves,
 # contraseñas, tokens, archivos en base64...
@@ -78,7 +84,10 @@ async def nombre_objeto(config: dict, tipo: str | None, id_objeto: int | None) -
     if tipo not in NOMBRE_POR_TIPO or not isinstance(id_objeto, int):
         return None
     tabla, columna = NOMBRE_POR_TIPO[tipo]
-    filas = await AsyncDatabase(**config).query(f'SELECT "{columna}" AS nombre FROM "{tabla}" WHERE id = %s', (id_objeto,))
+    solo_si_publico = " AND visibilidad = 'todos'" if tipo in TIPOS_PRIVADOS else ""
+    filas = await AsyncDatabase(**config).query(
+        f'SELECT "{columna}" AS nombre FROM "{tabla}" WHERE id = %s{solo_si_publico}', (id_objeto,)
+    )
     if not filas or not filas[0]["nombre"]:
         return None
     return _recortar(" ".join(str(filas[0]["nombre"]).split()), _MAX_NOMBRE)
@@ -108,7 +117,7 @@ class ActividadCRUD(AsyncCrudBase):
             "id_usuario": id_usuario, "id_api_key": id_api_key,
             "tipo_objeto": tipo_objeto, "id_objeto": id_objeto,
             "nombre_objeto": _recortar(nombre_objeto, 255) if nombre_objeto else None,
-            "detalle": limpiar_detalle(detalle),
+            "detalle": None if tipo_objeto in TIPOS_PRIVADOS else limpiar_detalle(detalle),
         })
 
     async def buscar(

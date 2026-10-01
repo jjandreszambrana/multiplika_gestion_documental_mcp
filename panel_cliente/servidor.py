@@ -47,7 +47,7 @@ from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from database.control.dependencias._dep_roles import ID_ROL_OPERADOR
 from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
-from lib.api_keys import generar_api_key, nombre_api_key_disponible
+from lib.api_keys import comprobar_dueno_api_key, generar_api_key, nombre_api_key_disponible
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import indice_ayuda, obtener_seccion
@@ -119,6 +119,7 @@ from ..database.modelos._mod_programaciones import (
     usuarios_del_proyecto,
 )
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
+from ..database.modelos import _mod_bloc_notas as bloc
 from ..database.modelos._mod_notas import (
     NotasCRUD,
     NotasRelacionesCRUD,
@@ -2060,6 +2061,7 @@ _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
 class NuevaApiKey(BaseModel):
     nombre: str  # obligatorio: ver lib/api_keys.py::nombre_api_key_disponible del núcleo
     id_rol: int = ID_ROL_OPERADOR
+    id_usuario: int | None = None  # de quién es; None = de todos (ver _dep_api_keys.py del núcleo)
 
 
 class RenombrarApiKey(BaseModel):
@@ -2072,7 +2074,16 @@ async def listar_api_keys(id_proyecto: int, proyecto: dict = Depends(admin_gesti
     filas, _ = await _api_keys.listar(
         filtros={"id_proyecto": {"op": "=", "valor": id_proyecto}}, orden="id DESC", limit=100,
     )
-    return [{k: v for k, v in fila.items() if k != "api_key_cifrada"} for fila in filas]
+    nombres = {}
+    for id_usuario in {f.get("id_usuario") for f in filas} - {None}:
+        nombres[id_usuario] = await _nombre_usuario(id_usuario)
+    return [
+        {
+            **{k: v for k, v in fila.items() if k != "api_key_cifrada"},
+            "nombre_usuario": nombres.get(fila.get("id_usuario")),
+        }
+        for fila in filas
+    ]
 
 
 @app.post("/v1/proyectos/{id_proyecto}/api-keys")
@@ -2082,16 +2093,21 @@ async def emitir_api_key(
     if datos.id_rol not in ROLES_API_KEY:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una API key solo puede ser operador, invitado o GD enlazada")
     nombre = await _nombre_api_key_o_400(id_proyecto, datos.nombre)
+    try:
+        await comprobar_dueno_api_key(id_proyecto, datos.id_usuario, datos.id_rol)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     key = generar_api_key()
     id_api_key = await _api_keys.insert({
         "id_proyecto": id_proyecto,
         "nombre": nombre,
         "id_rol": datos.id_rol,
+        "id_usuario": datos.id_usuario,
         "prefijo": key["prefijo"],
         "api_key_cifrada": key["api_key_cifrada"],
     })
     return {
-        "id": id_api_key, "nombre": nombre, "id_rol": datos.id_rol,
+        "id": id_api_key, "nombre": nombre, "id_rol": datos.id_rol, "id_usuario": datos.id_usuario,
         "prefijo": key["prefijo"], "api_key": key["api_key"],
     }
 
@@ -2931,6 +2947,7 @@ class DatosProgramacion(BaseModel):
     requiere_hecho: bool | None = None
     max_recordatorios: int | None = None
     cada_dias_recordatorio: int | None = None
+    id_nota_bloc: int | None = None  # recordatorio de una nota del bloc de notas
 
 
 @app.get("/v1/proyectos/{id_proyecto}/usuarios-proyecto")
@@ -2943,9 +2960,12 @@ async def listar_usuarios_para_avisar(
 @app.get("/v1/proyectos/{id_proyecto}/programaciones")
 async def listar_programaciones_endpoint(
     id_proyecto: int, estado: Literal["activa", "pausada", "terminada"] | None = None,
-    id_documento: int | None = None, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    id_documento: int | None = None, id_nota_bloc: int | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> list[dict]:
-    return await listar_programaciones(get_db_config(proyecto["id"]), proyecto["id"], estado, id_documento)
+    return await listar_programaciones(
+        get_db_config(proyecto["id"]), proyecto["id"], estado, id_documento, id_nota_bloc,
+    )
 
 
 @app.post("/v1/proyectos/{id_proyecto}/programaciones")
@@ -2958,6 +2978,8 @@ async def crear_programacion_endpoint(
     campos = datos.model_dump(exclude={"ids_usuarios", "ids_documentos"}, exclude_none=True)
     campos["max_recordatorios"] = datos.max_recordatorios
     try:
+        if datos.id_nota_bloc:  # solo sobre una nota que ve quien lo pide
+            await bloc.obtener_nota(get_db_config(proyecto["id"]), id_usuario, datos.id_nota_bloc)
         return await crear_programacion(
             get_db_config(proyecto["id"]), proyecto["id"], campos,
             datos.ids_usuarios or ([id_usuario] if id_usuario else []), datos.ids_documentos or [],
@@ -3077,6 +3099,150 @@ async def marcar_hecho_endpoint(
         return await marcar_hecho(config, id_ejecucion, quien)
     except (ValueError, LookupError) as e:
         raise _error_programacion(e) from e
+
+
+# ---------- Bloc de notas (ver docs/gestion-documental.md → "Bloc de notas") ----------
+# Verlas, cualquiera con acceso (cada uno las suyas, las compartidas con
+# él y las de todos; soporte solo las de todos); escribir, cualquiera
+# salvo invitado.
+
+def _error_bloc(e: Exception) -> HTTPException:
+    if isinstance(e, PermissionError):
+        return HTTPException(status.HTTP_403_FORBIDDEN, str(e))
+    return HTTPException(404 if isinstance(e, LookupError) else 400, str(e))
+
+
+class DatosNotaBloc(BaseModel):
+    titulo: str | None = None
+    descripcion: str | None = None
+    contenido: str | None = None
+    fecha: str | None = None
+    fijada: bool | None = None
+    archivada: bool | None = None
+    color: str | None = None  # ver COLORES en _dep_bloc_notas.py; null lo quita
+    visibilidad: Literal["privada", "personas", "todos"] | None = None
+    ids_personas: list[int] | None = None
+    etiquetas: list[str] | None = None
+    ids_notas: list[int] | None = None
+    ids_documentos: list[int] | None = None
+    ids_registros: list[int] | None = None
+
+
+class EnlaceNotaBloc(BaseModel):
+    tipo: Literal["nota", "documento", "registro"]
+    id_destino: int
+
+
+@app.get("/v1/proyectos/{id_proyecto}/bloc-notas")
+async def listar_notas_bloc_endpoint(
+    id_proyecto: int, texto: str | None = None, etiqueta: str | None = None,
+    desde: str | None = None, hasta: str | None = None, id_documento: int | None = None,
+    id_registro: int | None = None, id_nota: int | None = None,
+    archivadas: Literal["no", "si", "todas"] = "no", solo_mias: bool = False, color: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> list[dict]:
+    _, id_usuario = await _quien_panel(identidad)
+    try:
+        return await bloc.buscar_notas(
+            get_db_config(proyecto["id"]), id_usuario, texto, etiqueta, desde, hasta,
+            id_documento, id_registro, id_nota, {"no": False, "si": True, "todas": None}[archivadas],
+            solo_mias, limite=500, color=color,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/bloc-notas/etiquetas")
+async def listar_etiquetas_bloc_endpoint(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> list[dict]:
+    _, id_usuario = await _quien_panel(identidad)
+    return await bloc.etiquetas_en_uso(get_db_config(proyecto["id"]), id_usuario)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}")
+async def obtener_nota_bloc_endpoint(
+    id_proyecto: int, id_nota: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    _, id_usuario = await _quien_panel(identidad)
+    try:
+        return await bloc.obtener_nota(get_db_config(proyecto["id"]), id_usuario, id_nota, proyecto["id"])
+    except LookupError as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/bloc-notas")
+async def crear_nota_bloc_endpoint(
+    id_proyecto: int, datos: DatosNotaBloc, proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    try:
+        return await bloc.crear_nota(
+            get_db_config(proyecto["id"]), proyecto["id"], id_usuario, quien, datos.model_dump(exclude_none=True),
+        )
+    except (ValueError, LookupError, PermissionError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}")
+async def actualizar_nota_bloc_endpoint(
+    id_proyecto: int, id_nota: int, datos: DatosNotaBloc,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    # exclude_unset: descripcion=null (vaciarla) no es lo mismo que no mandarla
+    campos = datos.model_dump(exclude_unset=True, exclude={"ids_notas", "ids_documentos", "ids_registros"})
+    try:
+        return await bloc.actualizar_nota(get_db_config(proyecto["id"]), proyecto["id"], id_usuario, quien, id_nota, campos)
+    except (ValueError, LookupError, PermissionError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}/enlaces")
+async def enlazar_nota_bloc_endpoint(
+    id_proyecto: int, id_nota: int, datos: EnlaceNotaBloc,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    try:
+        return await bloc.enlazar(
+            get_db_config(proyecto["id"]), id_usuario, quien, id_nota, datos.tipo, datos.id_destino, proyecto["id"],
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}/enlaces/{tipo}/{id_destino}")
+async def desenlazar_nota_bloc_endpoint(
+    id_proyecto: int, id_nota: int, tipo: Literal["nota", "documento", "registro"], id_destino: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    try:
+        return await bloc.desenlazar(
+            get_db_config(proyecto["id"]), id_usuario, quien, id_nota, tipo, id_destino, proyecto["id"],
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_nota_bloc_endpoint(
+    id_proyecto: int, id_nota: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> None:
+    _, id_usuario = await _quien_panel(identidad)
+    try:
+        await bloc.eliminar_nota(get_db_config(proyecto["id"]), id_usuario, id_nota)
+    except (LookupError, PermissionError) as e:
+        raise _error_bloc(e) from e
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

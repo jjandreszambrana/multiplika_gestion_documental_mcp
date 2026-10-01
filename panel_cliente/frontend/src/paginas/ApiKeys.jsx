@@ -12,6 +12,11 @@ const ROLES_API_KEY = [
   { value: "5", label: "GD enlazada (otra gestión documental que consulta esta)" },
 ]
 
+// De quién es la key: de todos (lo normal) o de una persona, que entonces
+// ve con ella también lo suyo — p.ej. sus notas privadas del bloc de notas.
+const DE_TODOS = ""
+const ID_ROL_GD_ENLAZADA = "5"
+
 // El nombre es lo ÚNICO por lo que se puede reconocer una key una vez
 // emitida (el valor no se vuelve a enseñar y el prefijo no dice nada), así
 // que además de pedirlo al emitirla se puede cambiar aquí mismo — las keys
@@ -78,6 +83,8 @@ export default function ApiKeys({ proyecto, onVolver }) {
   const [error, setError] = useState(null)
   const [nombreNueva, setNombreNueva] = useState("")
   const [idRolNueva, setIdRolNueva] = useState(ID_ROL_OPERADOR)
+  const [personas, setPersonas] = useState([])
+  const [idUsuarioNueva, setIdUsuarioNueva] = useState(DE_TODOS)
   const [emitiendo, setEmitiendo] = useState(false)
   const [keyRecienEmitida, setKeyRecienEmitida] = useState(null)
 
@@ -95,6 +102,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
 
   useEffect(() => {
     recargar()
+    api.listarUsuariosProyecto(proyecto.id).then(setPersonas).catch(() => setPersonas([]))
   }, [proyecto.id])
 
   async function emitir(evento) {
@@ -102,9 +110,11 @@ export default function ApiKeys({ proyecto, onVolver }) {
     setEmitiendo(true)
     setError(null)
     try {
-      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva.trim(), Number(idRolNueva))
+      const idUsuario = idRolNueva === ID_ROL_GD_ENLAZADA || !idUsuarioNueva ? null : Number(idUsuarioNueva)
+      const nueva = await api.emitirApiKey(proyecto.id, nombreNueva.trim(), Number(idRolNueva), idUsuario)
       setKeyRecienEmitida(nueva.api_key)
       setNombreNueva("")
+      setIdUsuarioNueva(DE_TODOS)
       await recargar()
     } catch (err) {
       setError(err.message)
@@ -177,6 +187,15 @@ export default function ApiKeys({ proyecto, onVolver }) {
           onChange={setIdRolNueva}
           allowDeselect={false}
         />
+        {idRolNueva !== ID_ROL_GD_ENLAZADA && (
+          <Select
+            aria-label="De quién es la key"
+            data={[{ value: DE_TODOS, label: "De todos" }, ...personas.map((p) => ({ value: String(p.id), label: p.nombre }))]}
+            value={idUsuarioNueva}
+            onChange={setIdUsuarioNueva}
+            allowDeselect={false}
+          />
+        )}
         <Button type="submit" loading={emitiendo}>
           Emitir API key nueva
         </Button>
@@ -276,6 +295,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
               <Table.Th>Nombre</Table.Th>
               <Table.Th>Prefijo</Table.Th>
               <Table.Th>Permisos</Table.Th>
+              <Table.Th>De quién es</Table.Th>
               <Table.Th>Estado</Table.Th>
               <Table.Th>Emitida</Table.Th>
               <Table.Th></Table.Th>
@@ -290,6 +310,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
                 </Table.Td>
                 <Table.Td>{k.prefijo}</Table.Td>
                 <Table.Td>{ROLES_API_KEY.find((r) => r.value === String(k.id_rol))?.label}</Table.Td>
+                <Table.Td>{k.id_usuario ? k.nombre_usuario || `Usuario n.º ${k.id_usuario}` : "De todos"}</Table.Td>
                 <Table.Td>
                   <Badge color={k.estado ? "green" : "gray"} variant="light">
                     {k.estado ? "activa" : "revocada"}
@@ -312,7 +333,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
             ))}
             {keys.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={7}>Este proyecto no tiene ninguna API key todavía.</Table.Td>
+                <Table.Td colSpan={8}>Este proyecto no tiene ninguna API key todavía.</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>
