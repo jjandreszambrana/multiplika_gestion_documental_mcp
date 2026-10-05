@@ -2,12 +2,13 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, SegmentedControl, Table, Text, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconPlus, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import { COLOR_ESTADO, formatearFecha } from "../formato"
 import FormularioProgramacion from "../componentes/FormularioProgramacion"
 
 export default function Programaciones({ proyecto, onVolver, onVerProgramacion }) {
   const [programaciones, setProgramaciones] = useState(null)
-  const [estado, setEstado] = useState("")
+  const [estado, setEstado] = useEstadoPersistente(`filtros:${proyecto.id}:programaciones:estado`, "")
   const [error, setError] = useState(null)
   const [refrescando, setRefrescando] = useState(false)
   const [formularioAbierto, setFormularioAbierto] = useState(false)
@@ -22,7 +23,7 @@ export default function Programaciones({ proyecto, onVolver, onVerProgramacion }
   }
 
   useEffect(() => {
-    cargar("")
+    cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 

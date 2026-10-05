@@ -5,6 +5,7 @@ import {
 } from "@mantine/core"
 import { IconArrowLeft, IconDownload, IconPlugConnected, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
 import Aprendizajes from "../componentes/Aprendizajes"
 
@@ -186,7 +187,7 @@ function PestanaEnlaces({ proyecto }) {
 
 function PestanaPreguntas({ proyecto }) {
   const [preguntas, setPreguntas] = useState(null)
-  const [estado, setEstado] = useState("pendiente")
+  const [estado, setEstado] = useEstadoPersistente(`filtros:${proyecto.id}:preguntas:estado`, "pendiente")
   const [error, setError] = useState(null)
 
   function cargar(estadoConsulta = estado) {
@@ -194,7 +195,7 @@ function PestanaPreguntas({ proyecto }) {
   }
 
   useEffect(() => {
-    cargar("pendiente")
+    cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 

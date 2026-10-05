@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Checkbox, Group, Paper, SegmentedControl, Select, Stack, Text, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
 import ControlSeguimiento, { TIPOS_SEGUIMIENTO } from "../componentes/Seguimiento"
 
@@ -16,10 +17,10 @@ const VISTAS = {
 // notas de documentos, en una sola lista.
 export default function Seguimiento({ proyecto, esSuperadmin, onVolver, onVerNota, onVerDocumento }) {
   const [filas, setFilas] = useState(null)
-  const [vista, setVista] = useState("abiertos")
-  const [tipo, setTipo] = useState(null)
-  const [quien, setQuien] = useState("todos")
-  const [archivados, setArchivados] = useState(false)
+  const [vista, setVista] = useEstadoPersistente(`filtros:${proyecto.id}:seguimiento:vista`, "abiertos")
+  const [tipo, setTipo] = useEstadoPersistente(`filtros:${proyecto.id}:seguimiento:tipo`, null)
+  const [quien, setQuien] = useEstadoPersistente(`filtros:${proyecto.id}:seguimiento:quien`, "todos")
+  const [archivados, setArchivados] = useEstadoPersistente(`filtros:${proyecto.id}:seguimiento:archivados`, false)
   const [error, setError] = useState(null)
   const [refrescando, setRefrescando] = useState(false)
 

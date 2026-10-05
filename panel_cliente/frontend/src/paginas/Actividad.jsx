@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Group, Pagination, Select, Text, TextInput, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconRefresh, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import TablaActividad from "../componentes/TablaActividad"
 
 const POR_PAGINA = 50
@@ -10,8 +11,8 @@ const FILTROS_VACIOS = { quien: "", origen: "", desde: "", hasta: "", q: "" }
 export default function Actividad({ proyecto, onVolver, onVerDocumento }) {
   const [datos, setDatos] = useState(null)
   const [quienes, setQuienes] = useState([])
-  const [filtros, setFiltros] = useState(FILTROS_VACIOS)
-  const [pagina, setPagina] = useState(1)
+  const [filtros, setFiltros] = useEstadoPersistente(`filtros:${proyecto.id}:actividad:filtros`, FILTROS_VACIOS)
+  const [pagina, setPagina] = useEstadoPersistente(`filtros:${proyecto.id}:actividad:pagina`, 1)
   const [error, setError] = useState(null)
   const [refrescando, setRefrescando] = useState(false)
 
@@ -26,7 +27,7 @@ export default function Actividad({ proyecto, onVolver, onVerDocumento }) {
   }
 
   useEffect(() => {
-    cargar(FILTROS_VACIOS, 1)
+    cargar()
     api.listarQuienesActividad(proyecto.id).then(setQuienes).catch(() => setQuienes([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])

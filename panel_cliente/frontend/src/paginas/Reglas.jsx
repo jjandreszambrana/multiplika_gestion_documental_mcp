@@ -5,6 +5,7 @@ import {
 } from "@mantine/core"
 import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 
 const TODAS = "__todas__"
 
@@ -169,8 +170,8 @@ export default function Reglas({ proyecto, onVolver }) {
   const [reglas, setReglas] = useState(null)
   const [heredadas, setHeredadas] = useState([])
   const [peso, setPeso] = useState(null)
-  const [ambito, setAmbito] = useState("propia")
-  const [categoria, setCategoria] = useState(TODAS)
+  const [ambito, setAmbito] = useEstadoPersistente(`filtros:${proyecto.id}:reglas:ambito`, "propia")
+  const [categoria, setCategoria] = useEstadoPersistente(`filtros:${proyecto.id}:reglas:categoria`, TODAS)
   const [error, setError] = useState(null)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [reglaEditando, setReglaEditando] = useState(null)

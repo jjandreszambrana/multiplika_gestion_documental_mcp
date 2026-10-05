@@ -2,13 +2,14 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconPlus, IconRefresh, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import FormularioEntidad from "../componentes/FormularioEntidad"
 
 export default function Entidades({ proyecto, onVolver, onVerEntidad }) {
   const [entidades, setEntidades] = useState(null)
   const [error, setError] = useState(null)
-  const [q, setQ] = useState("")
-  const [tipo, setTipo] = useState("")
+  const [q, setQ] = useEstadoPersistente(`filtros:${proyecto.id}:entidades:q`, "")
+  const [tipo, setTipo] = useEstadoPersistente(`filtros:${proyecto.id}:entidades:tipo`, "")
   const [modalAbierto, setModalAbierto] = useState(false)
   const [nueva, setNueva] = useState({})
   const [creando, setCreando] = useState(false)
@@ -25,7 +26,7 @@ export default function Entidades({ proyecto, onVolver, onVerEntidad }) {
   }
 
   useEffect(() => {
-    cargar("", "")
+    cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 

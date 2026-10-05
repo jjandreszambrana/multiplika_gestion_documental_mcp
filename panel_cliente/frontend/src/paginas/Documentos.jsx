@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Badge, Button, Group, Modal, Paper, Select, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
 import { IconArchive, IconAlertTriangle, IconCircleCheck, IconClock, IconFilePlus, IconMessageCircle, IconRefresh, IconSearch, IconUpload } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import NuevoDocumentoModal from "../componentes/NuevoDocumentoModal"
 import NotasDocumento from "../componentes/NotasDocumento"
 import SubirDocumentosModal from "../componentes/SubirDocumentosModal"
@@ -35,10 +36,10 @@ function BadgesEstado({ doc }) {
 }
 
 export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento, onPendientesCambiaron }) {
-  const [q, setQ] = useState("")
-  const [tipoDocumento, setTipoDocumento] = useState("")
-  const [fechaDesde, setFechaDesde] = useState("")
-  const [fechaHasta, setFechaHasta] = useState("")
+  const [q, setQ] = useEstadoPersistente(`filtros:${proyecto.id}:documentos:q`, "")
+  const [tipoDocumento, setTipoDocumento] = useEstadoPersistente(`filtros:${proyecto.id}:documentos:tipoDocumento`, "")
+  const [fechaDesde, setFechaDesde] = useEstadoPersistente(`filtros:${proyecto.id}:documentos:fechaDesde`, "")
+  const [fechaHasta, setFechaHasta] = useEstadoPersistente(`filtros:${proyecto.id}:documentos:fechaHasta`, "")
   const [resultados, setResultados] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -110,8 +111,11 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
     }
   }
 
+  // Vuelve con la última búsqueda o los últimos filtros (ver estadoPersistente.js)
   useEffect(() => {
-    cargar("")
+    if (q) cargar(q)
+    else cargar("", { tipoDocumento, fechaDesde, fechaHasta })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 
   // Los filtros solo aplican al listado simple, no a la búsqueda por

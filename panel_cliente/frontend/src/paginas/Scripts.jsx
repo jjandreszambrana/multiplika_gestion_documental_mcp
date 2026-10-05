@@ -2,13 +2,14 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Badge, Group, Paper, Select, Switch, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconRefresh, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 
 export default function Scripts({ proyecto, onVolver, onVerScript }) {
   const [scripts, setScripts] = useState(null)
   const [error, setError] = useState(null)
-  const [q, setQ] = useState("")
-  const [lenguaje, setLenguaje] = useState("")
-  const [incluirArchivados, setIncluirArchivados] = useState(false)
+  const [q, setQ] = useEstadoPersistente(`filtros:${proyecto.id}:scripts:q`, "")
+  const [lenguaje, setLenguaje] = useEstadoPersistente(`filtros:${proyecto.id}:scripts:lenguaje`, "")
+  const [incluirArchivados, setIncluirArchivados] = useEstadoPersistente(`filtros:${proyecto.id}:scripts:incluirArchivados`, false)
   const [refrescando, setRefrescando] = useState(false)
 
   function cargar(consultaQ = q, consultaLenguaje = lenguaje, consultaArchivados = incluirArchivados) {
@@ -21,7 +22,7 @@ export default function Scripts({ proyecto, onVolver, onVerScript }) {
   }
 
   useEffect(() => {
-    cargar("", "", false)
+    cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 

@@ -5,6 +5,7 @@ import {
 } from "@mantine/core"
 import { IconArrowLeft, IconHistory, IconNotebook, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
 import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
 
@@ -349,10 +350,10 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
 
 function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
   const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
-  const [idModelo, setIdModelo] = useState(null)
-  const [desde, setDesde] = useState("")
-  const [hasta, setHasta] = useState("")
-  const [conforme, setConforme] = useState(TODOS)
+  const [idModelo, setIdModelo] = useEstadoPersistente(`filtros:${proyecto.id}:registros:idModelo`, null)
+  const [desde, setDesde] = useEstadoPersistente(`filtros:${proyecto.id}:registros:desde`, "")
+  const [hasta, setHasta] = useEstadoPersistente(`filtros:${proyecto.id}:registros:hasta`, "")
+  const [conforme, setConforme] = useEstadoPersistente(`filtros:${proyecto.id}:registros:conforme`, TODOS)
   const [registros, setRegistros] = useState(null)
   const [error, setError] = useState(null)
   const [modalAbierto, setModalAbierto] = useState(false)

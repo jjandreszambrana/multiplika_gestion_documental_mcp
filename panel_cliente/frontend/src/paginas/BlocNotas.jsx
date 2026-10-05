@@ -2,16 +2,17 @@ import { useEffect, useState } from "react"
 import { ActionIcon, Alert, Anchor, Button, Checkbox, ColorSwatch, Group, SegmentedControl, Select, Stack, Text, TextInput, Title, Tooltip } from "@mantine/core"
 import { IconArrowLeft, IconPlus, IconRefresh, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import TarjetaNotaBloc, { COLORES } from "../componentes/TarjetaNotaBloc"
 
 export default function BlocNotas({ proyecto, esSuperadmin, onVolver, onVerNota, onNuevaNota }) {
   const [notas, setNotas] = useState(null)
   const [etiquetas, setEtiquetas] = useState([])
-  const [texto, setTexto] = useState("")
-  const [etiqueta, setEtiqueta] = useState(null)
-  const [color, setColor] = useState(null)
-  const [archivadas, setArchivadas] = useState("no")
-  const [soloMias, setSoloMias] = useState(false)
+  const [texto, setTexto] = useEstadoPersistente(`filtros:${proyecto.id}:bloc:texto`, "")
+  const [etiqueta, setEtiqueta] = useEstadoPersistente(`filtros:${proyecto.id}:bloc:etiqueta`, null)
+  const [color, setColor] = useEstadoPersistente(`filtros:${proyecto.id}:bloc:color`, null)
+  const [archivadas, setArchivadas] = useEstadoPersistente(`filtros:${proyecto.id}:bloc:archivadas`, "no")
+  const [soloMias, setSoloMias] = useEstadoPersistente(`filtros:${proyecto.id}:bloc:soloMias`, false)
   const [error, setError] = useState(null)
   const [refrescando, setRefrescando] = useState(false)
 

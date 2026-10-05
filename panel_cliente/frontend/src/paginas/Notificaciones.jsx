@@ -2,13 +2,14 @@ import { useEffect, useState } from "react"
 import { Alert, Anchor, Badge, Button, Checkbox, Group, Paper, SegmentedControl, Stack, Text, Title } from "@mantine/core"
 import { IconArchive, IconArchiveOff, IconArrowLeft, IconCheck, IconChecks, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
+import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
 
 export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, onVerSeguimiento, onCambiadas }) {
   const [notificaciones, setNotificaciones] = useState(null)
   const [error, setError] = useState(null)
   const [trabajando, setTrabajando] = useState(null)
-  const [archivadas, setArchivadas] = useState(false)
+  const [archivadas, setArchivadas] = useEstadoPersistente(`filtros:${proyecto.id}:notificaciones:archivadas`, false)
   const [seleccion, setSeleccion] = useState([])
 
   function cargar() {
