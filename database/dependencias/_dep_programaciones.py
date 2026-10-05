@@ -189,6 +189,8 @@ CAMPOS_NOTIFICACIONES = [
     Columna(nombre="fecha", tipo="TIMESTAMP", not_null=True, comentario="Hora de Madrid"),
     Columna(nombre="leida", tipo="BOOLEAN", not_null=True, default=False),
     Columna(nombre="fecha_leida", tipo="TIMESTAMP"),
+    Columna(nombre="archivada", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="Fuera de la lista normal; solo las archivadas se pueden purgar"),
     Columna(nombre="estado_email", tipo="VARCHAR", longitud=20, not_null=True, default="no_aplica",
             enum_opciones=ESTADOS_EMAIL_NOTIFICACION),
     Columna(nombre="error_email", tipo="MEDIUMTEXT"),

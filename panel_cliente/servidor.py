@@ -40,7 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database.config_db import get_anthropic_api_key, get_anthropic_modelo, get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
@@ -107,6 +107,7 @@ from ..database.modelos._mod_reglas import (
 )
 from ..database.modelos._mod_programaciones import (
     actualizar_programacion,
+    archivar_notificaciones,
     cambiar_pausa,
     contar_no_leidas,
     crear_programacion,
@@ -116,6 +117,7 @@ from ..database.modelos._mod_programaciones import (
     marcar_hecho,
     marcar_leidas,
     obtener_programacion,
+    purgar_notificaciones,
     usuarios_del_proyecto,
 )
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
@@ -3051,13 +3053,15 @@ async def eliminar_programacion_endpoint(
 
 @app.get("/v1/proyectos/{id_proyecto}/notificaciones")
 async def listar_notificaciones_endpoint(
-    id_proyecto: int, solo_no_leidas: bool = False,
+    id_proyecto: int, solo_no_leidas: bool = False, archivadas: bool = False,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     identidad: Identidad = Depends(identidad_actual),
 ) -> list[dict]:
     if identidad.tipo != "usuario":
         return []
-    return await listar_notificaciones(get_db_config(proyecto["id"]), identidad.id, solo_no_leidas)
+    return await listar_notificaciones(
+        get_db_config(proyecto["id"]), identidad.id, solo_no_leidas, archivadas=archivadas,
+    )
 
 
 @app.get("/v1/proyectos/{id_proyecto}/notificaciones/no-leidas")
@@ -3079,6 +3083,35 @@ async def leer_todas_notificaciones(
         await marcar_leidas(get_db_config(proyecto["id"]), identidad.id)
 
 
+class SeleccionNotificaciones(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=1000)
+    archivada: bool = True
+
+
+@app.post("/v1/proyectos/{id_proyecto}/notificaciones/archivar")
+async def archivar_notificaciones_endpoint(
+    id_proyecto: int, datos: SeleccionNotificaciones, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Archivar (archivada=true) o sacar del archivo (false). Solo las suyas."""
+    if identidad.tipo != "usuario":
+        return {"cambiadas": 0}
+    return {"cambiadas": await archivar_notificaciones(
+        get_db_config(proyecto["id"]), identidad.id, datos.ids, datos.archivada,
+    )}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/notificaciones/purgar")
+async def purgar_notificaciones_endpoint(
+    id_proyecto: int, datos: SeleccionNotificaciones, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Borrado definitivo; solo de las archivadas y solo las suyas."""
+    if identidad.tipo != "usuario":
+        return {"borradas": 0}
+    return {"borradas": await purgar_notificaciones(get_db_config(proyecto["id"]), identidad.id, datos.ids)}
+
+
 @app.post("/v1/proyectos/{id_proyecto}/notificaciones/{id_notificacion}/leida", status_code=status.HTTP_204_NO_CONTENT)
 async def leer_notificacion(
     id_proyecto: int, id_notificacion: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
@@ -3097,7 +3130,7 @@ async def marcar_hecho_endpoint(
     cualquiera que pueda escribir en el proyecto."""
     config = get_db_config(proyecto["id"])
     if identidad.tipo == "usuario" and not await puede_editar_proyecto(identidad.id, proyecto["id"]):
-        mias = await listar_notificaciones(config, identidad.id, limite=1000)
+        mias = await listar_notificaciones(config, identidad.id, limite=1000, archivadas=None)
         if not any(n["id_ejecucion"] == id_ejecucion for n in mias):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Este aviso no es tuyo")
     quien, _ = await _quien_panel(identidad)

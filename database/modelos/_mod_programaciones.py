@@ -320,9 +320,16 @@ async def listar_pendientes_hecho(config: dict) -> list[dict]:
 
 # ---------- Notificaciones de cada usuario ----------
 
-async def listar_notificaciones(config: dict, id_usuario: int, solo_no_leidas: bool = False, limite: int = 100) -> list[dict]:
-    """Con el estado del "Hecho" de su aviso, para saber si enseñar el botón."""
+async def listar_notificaciones(
+    config: dict, id_usuario: int, solo_no_leidas: bool = False, limite: int = 100, archivadas: bool | None = False,
+) -> list[dict]:
+    """Con el estado del "Hecho" de su aviso, para saber si enseñar el botón.
+    archivadas: False las normales, True solo las archivadas, None todas."""
     filtro = "AND NOT n.leida" if solo_no_leidas else ""
+    params = [id_usuario]
+    if archivadas is not None:
+        filtro += " AND n.archivada = %s"
+        params.append(archivadas)
     return await AsyncDatabase(**config).query(
         f"""
         SELECT n.*, e.pendiente_hecho, e.hecho_por, e.fecha_hecho
@@ -331,13 +338,13 @@ async def listar_notificaciones(config: dict, id_usuario: int, solo_no_leidas: b
         ORDER BY n.fecha DESC, n.id DESC
         LIMIT %s
         """,
-        (id_usuario, limite),
+        (*params, limite),
     )
 
 
 async def contar_no_leidas(config: dict, id_usuario: int) -> int:
     filas = await AsyncDatabase(**config).query(
-        f'SELECT COUNT(*) AS total FROM "{_T_NOTIF}" WHERE id_usuario = %s AND NOT leida', (id_usuario,)
+        f'SELECT COUNT(*) AS total FROM "{_T_NOTIF}" WHERE id_usuario = %s AND NOT leida AND NOT archivada', (id_usuario,)
     )
     return filas[0]["total"]
 
@@ -350,6 +357,30 @@ async def marcar_leidas(config: dict, id_usuario: int, id_notificacion: int | No
         sql += " AND id = %s"
         params.append(id_notificacion)
     await AsyncDatabase(**config).query(sql, tuple(params))
+
+
+async def archivar_notificaciones(config: dict, id_usuario: int, ids: list[int], archivada: bool) -> int:
+    """Archiva (y da por leídas) o desarchiva. Solo las suyas."""
+    if not ids:
+        return 0
+    marcadores = ", ".join(["%s"] * len(ids))
+    return await AsyncDatabase(**config).query(
+        f'UPDATE "{_T_NOTIF}" SET archivada = %s, leida = leida OR %s, '
+        "fecha_leida = COALESCE(fecha_leida, CASE WHEN %s THEN %s::timestamp END) "
+        f"WHERE id_usuario = %s AND id IN ({marcadores})",
+        (archivada, archivada, archivada, ahora_madrid(), id_usuario, *ids),
+    ) or 0
+
+
+async def purgar_notificaciones(config: dict, id_usuario: int, ids: list[int]) -> int:
+    """Borra para siempre. Solo las suyas y solo si están archivadas."""
+    if not ids:
+        return 0
+    marcadores = ", ".join(["%s"] * len(ids))
+    return await AsyncDatabase(**config).query(
+        f'DELETE FROM "{_T_NOTIF}" WHERE id_usuario = %s AND archivada AND id IN ({marcadores})',
+        (id_usuario, *ids),
+    ) or 0
 
 
 # ---------- Hacer saltar lo que toca (cron) ----------

@@ -361,15 +361,9 @@ async def volver_a_pendiente(config: dict, ahora: datetime) -> int:
     ) or 0
 
 
-def _correo_resumen(nombre: str, mios: list[dict], de_todos: list[dict]) -> tuple[str, str, str]:
+def _correo_resumen(nombre: str, mios: list[dict], de_todos: list[dict], hoy: date) -> tuple[str, str, str]:
     """(título, texto, html) del resumen de una persona."""
-    elementos = mios + de_todos
-    pendientes = sum(1 for e in elementos if e["estado"] == "pendiente")
-    en_curso = len(elementos) - pendientes
-    partes = [f"{pendientes} pendiente{'s' if pendientes != 1 else ''}"] if pendientes else []
-    if en_curso:
-        partes.append(f"{en_curso} en curso")
-    titulo = f"Seguimiento de hoy: {' y '.join(partes)}"
+    titulo = f"Seguimiento de hoy {hoy:%d/%m/%Y}"
 
     def lineas(lista: list[dict]) -> list[str]:
         salida = [f"- [{e['nombre_estado']}] {NOMBRES_TIPO[e['tipo']]}: {e['titulo']}" for e in lista[:MAX_EN_RESUMEN]]
@@ -418,7 +412,7 @@ async def mandar_resumen_diario(config: dict, id_proyecto: int, ahora: datetime)
             de_todos = []
         if not mios and not de_todos:
             continue
-        titulo, texto, cuerpo_html = _correo_resumen(usuario["nombre"], mios, de_todos)
+        titulo, texto, cuerpo_html = _correo_resumen(usuario["nombre"], mios, de_todos, ahora.date())
         estado_email, error_email = "fallido", "el proyecto no tiene cuenta de correo configurada"
         if cuenta:
             try:

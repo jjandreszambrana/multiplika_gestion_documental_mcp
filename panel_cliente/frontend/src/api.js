@@ -619,7 +619,12 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/programaciones/${id}/reanudar`),
   eliminarProgramacion: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/programaciones/${id}`),
 
-  listarNotificaciones: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/notificaciones`),
+  listarNotificaciones: (idProyecto, archivadas = false) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/notificaciones?archivadas=${archivadas}`),
+  archivarNotificaciones: (idProyecto, ids, archivada = true) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/archivar`, { ids, archivada }),
+  purgarNotificaciones: (idProyecto, ids) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/purgar`, { ids }),
   contarNotificacionesNoLeidas: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/notificaciones/no-leidas`),
   leerNotificacion: (idProyecto, id) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/notificaciones/${id}/leida`),
