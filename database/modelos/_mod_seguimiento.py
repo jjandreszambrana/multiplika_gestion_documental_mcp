@@ -31,6 +31,7 @@ from ..dependencias._dep_seguimiento import (
 )
 from ._mod_bloc_notas import _nota_visible, _visible
 from ._mod_configuracion import ConfiguracionCRUD
+from ._mod_crm import ventas_para_resumen
 from ._mod_envios import mandar_correo
 from ._mod_programaciones import crear_programacion, eliminar_programacion, usuarios_del_proyecto
 from ._repeticiones import ahora_madrid
@@ -361,8 +362,11 @@ async def volver_a_pendiente(config: dict, ahora: datetime) -> int:
     ) or 0
 
 
-def _correo_resumen(nombre: str, mios: list[dict], de_todos: list[dict], hoy: date) -> tuple[str, str, str]:
-    """(título, texto, html) del resumen de una persona."""
+def _correo_resumen(
+    nombre: str, mios: list[dict], de_todos: list[dict], hoy: date, ventas: list[dict] | None = None,
+) -> tuple[str, str, str]:
+    """(título, texto, html) del resumen de una persona. `ventas`: las
+    oportunidades que piden atención (ver ventas_para_resumen en _mod_crm.py)."""
     titulo = f"Seguimiento de hoy {hoy:%d/%m/%Y}"
 
     def lineas(lista: list[dict]) -> list[str]:
@@ -376,6 +380,11 @@ def _correo_resumen(nombre: str, mios: list[dict], de_todos: list[dict], hoy: da
         texto += ["De lo que te encargas tú:", *lineas(mios), ""]
     if de_todos:
         texto += ["Sin nadie encargado:", *lineas(de_todos), ""]
+    if ventas:
+        texto += ["Ventas:", *[
+            f"- {v['titulo']}: {v['motivo']}{' (sin nadie que la lleve)' if v['de_nadie'] else ''}"
+            for v in ventas[:MAX_EN_RESUMEN]
+        ], ""]
     url = os.environ.get("GD_URL_PUBLICA")
     if url:
         texto.append(f"Para cambiar el estado, entra en Seguimiento del panel: {url.rstrip('/')}/")
@@ -408,11 +417,13 @@ async def mandar_resumen_diario(config: dict, id_proyecto: int, ahora: datetime)
         abiertos = await listar_seguimiento(config, id_proyecto, usuario["id"], list(ESTADOS_ABIERTOS))
         mios = [e for e in abiertos if e["id_usuario_responsable"] == usuario["id"]]
         de_todos = [e for e in abiertos if not e["id_usuario_responsable"]]
-        if de_todos and not await puede_editar_proyecto(usuario["id"], id_proyecto):
+        puede_editar = await puede_editar_proyecto(usuario["id"], id_proyecto)
+        if de_todos and not puede_editar:
             de_todos = []
-        if not mios and not de_todos:
+        ventas = await ventas_para_resumen(config, id_proyecto, usuario["id"], ahora.date(), puede_editar) if puede_editar else []
+        if not mios and not de_todos and not ventas:
             continue
-        titulo, texto, cuerpo_html = _correo_resumen(usuario["nombre"], mios, de_todos, ahora.date())
+        titulo, texto, cuerpo_html = _correo_resumen(usuario["nombre"], mios, de_todos, ahora.date(), ventas)
         estado_email, error_email = "fallido", "el proyecto no tiene cuenta de correo configurada"
         if cuenta:
             try:
@@ -426,7 +437,7 @@ async def mandar_resumen_diario(config: dict, id_proyecto: int, ahora: datetime)
             (usuario["id"], "seguimiento", titulo[:255], texto, ahora, estado_email, error_email),
         )
         vias = "panel y email" if estado_email == "enviado" else f"panel; email falló: {error_email}"
-        partes.append(f"{usuario['nombre']}: {len(mios) + len(de_todos)} ({vias})")
+        partes.append(f"{usuario['nombre']}: {len(mios) + len(de_todos) + len(ventas)} ({vias})")
 
     resumen = "; ".join(partes) if partes else "Nadie tenía nada pendiente"
     await db.query(

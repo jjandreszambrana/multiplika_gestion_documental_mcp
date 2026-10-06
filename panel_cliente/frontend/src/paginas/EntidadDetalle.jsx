@@ -4,14 +4,16 @@ import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import FormularioEntidad from "../componentes/FormularioEntidad"
 import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
+import ContactosEntidad from "../componentes/ContactosEntidad"
+import { FacturacionEntidad, HistorialEntidad, OportunidadesEntidad } from "../componentes/VentasEntidad"
 
 const ETIQUETAS = {
   direccion: "Dirección", localidad: "Localidad", provincia: "Provincia",
   codigo_postal: "Código postal", pais: "País", telefono: "Teléfono",
-  email: "Email", codigo: "Código (ERP)", observaciones: "Observaciones",
+  email: "Email", nif: "NIF", codigo: "Código (ERP)", observaciones: "Observaciones",
 }
 
-export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminada, onVerNota, onNuevaNota }) {
+export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminada, onVerNota, onNuevaNota, onVerDocumento }) {
   const [datos, setDatos] = useState(entidad)
   const [editando, setEditando] = useState(false)
   const [valoresEdicion, setValoresEdicion] = useState(entidad)
@@ -21,6 +23,8 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
   const [candidatos, setCandidatos] = useState([])
   const [idDocumentoNuevo, setIdDocumentoNuevo] = useState(null)
   const [anadiendo, setAnadiendo] = useState(false)
+  // Sube al cambiar una oportunidad, para que el historial se recargue
+  const [versionHistorial, setVersionHistorial] = useState(0)
 
   function recargarDocumentos() {
     return api
@@ -150,6 +154,24 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
       )}
 
       <Title order={4} fz="16px" mb="10">
+        Personas de contacto
+      </Title>
+      <ContactosEntidad proyecto={proyecto} idEntidad={entidad.id} />
+
+      <Title order={4} fz="16px" mt="xl" mb="10">
+        Oportunidades de venta
+      </Title>
+      <OportunidadesEntidad
+        proyecto={proyecto} idEntidad={entidad.id} onVerDocumento={onVerDocumento}
+        onCambiadas={() => setVersionHistorial((v) => v + 1)}
+      />
+
+      <Title order={4} fz="16px" mt="xl" mb="10">
+        Facturación
+      </Title>
+      <FacturacionEntidad proyecto={proyecto} idEntidad={entidad.id} />
+
+      <Title order={4} fz="16px" mt="xl" mb="10">
         Documentos relacionados
       </Title>
 
@@ -210,6 +232,11 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
         proyecto={proyecto} enlace={{ tipo: "entidad", id: entidad.id }}
         onVerNota={onVerNota} onNuevaNota={onNuevaNota}
       />
+
+      <Title order={4} fz="16px" mt="xl" mb="10">
+        Historial
+      </Title>
+      <HistorialEntidad proyecto={proyecto} idEntidad={entidad.id} version={versionHistorial} />
     </>
   )
 }

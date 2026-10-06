@@ -63,6 +63,9 @@ from database.dependencias._dep_seo import __TABLAS__ as TABLAS_SEO
 from database.dependencias._dep_bases_datos import __TABLAS__ as TABLAS_BASES_DATOS
 from database.dependencias._dep_publicaciones import __TABLAS__ as TABLAS_PUBLICACIONES
 from database.dependencias._dep_geo import __TABLAS__ as TABLAS_GEO
+from database.dependencias._dep_crm import __TABLAS__ as TABLAS_CRM
+from database.dependencias._dep_erp import __TABLAS__ as TABLAS_ERP
+from database.modelos._mod_crm import sembrar_etapas
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -131,6 +134,8 @@ def main():
         *TABLAS_BASES_DATOS,
         *TABLAS_PUBLICACIONES,
         *TABLAS_GEO,
+        *TABLAS_CRM,
+        *TABLAS_ERP,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))
@@ -145,6 +150,8 @@ def main():
         sys.exit(1)
 
     asyncio.run(_sembrar_tipos_documento_por_defecto(get_db_config(args.alias)))
+    if asyncio.run(sembrar_etapas(get_db_config(args.alias))):
+        print("Etapas del embudo de ventas por defecto creadas")
 
 
 if __name__ == "__main__":

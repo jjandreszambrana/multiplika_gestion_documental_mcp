@@ -26,3 +26,9 @@ export function formatearFecha(valor) {
 
 // Color del estado de un aviso programado (Programaciones y su ficha).
 export const COLOR_ESTADO = { activa: "green", pausada: "yellow", terminada: "gray" }
+
+// Importes del CRM: 12.000,50 € (null → "—").
+const FORMATO_EUROS = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" })
+export function formatearImporte(valor) {
+  return valor == null ? "—" : FORMATO_EUROS.format(valor)
+}

@@ -9,7 +9,7 @@ from ..dependencias._dep_entidades import TABLA_DOCUMENTOS_ENTIDADES, TABLA_ENTI
 
 _CAMPOS_EDITABLES = [
     "nombre", "tipo", "direccion", "localidad", "provincia", "codigo_postal",
-    "pais", "telefono", "email", "observaciones", "codigo",
+    "pais", "telefono", "email", "observaciones", "codigo", "nif",
 ]
 
 

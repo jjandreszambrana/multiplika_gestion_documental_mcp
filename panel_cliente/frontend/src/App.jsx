@@ -64,6 +64,7 @@ import Notificaciones from "./paginas/Notificaciones"
 import BlocNotas from "./paginas/BlocNotas"
 import NotaBlocDetalle from "./paginas/NotaBlocDetalle"
 import Seguimiento from "./paginas/Seguimiento"
+import Ventas from "./paginas/Ventas"
 import Webs from "./paginas/Webs"
 import WebDetalle from "./paginas/WebDetalle"
 import Publicaciones from "./paginas/Publicaciones"
@@ -402,6 +403,7 @@ export default function App() {
               onEliminada={() => setEntidadActiva(null)}
               onVerNota={verNota}
               onNuevaNota={nuevaNota}
+              onVerDocumento={verDocumento}
             />
           ) : vista === "entidades" ? (
             <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
@@ -438,6 +440,14 @@ export default function App() {
               onVerSeguimiento={() => navegar("seguimiento")}
               onVerWebs={() => navegar("webs")}
               onCambiadas={contarNoLeidas}
+            />
+          ) : vista === "ventas" ? (
+            <Ventas
+              proyecto={proyecto}
+              esSuperadmin={esSuperadmin}
+              onVolver={() => navegar("documentos")}
+              onVerEntidad={verEntidad}
+              onVerDocumento={verDocumento}
             />
           ) : vista === "seguimiento" ? (
             <Seguimiento

@@ -457,6 +457,67 @@ abrir la nota o el documento. Con tu IA: \
 Envases Sur hasta el lunes".""",
     },
     {
+        "id": "ventas",
+        "titulo": "Ventas (CRM)",
+        "resumen": "Personas de contacto, embudo de ventas con oportunidades e historial de cada cliente.",
+        "markdown": """\
+**Ventas** convierte las entidades en un CRM: lleva cada posible venta \
+desde el primer contacto hasta que se gana o se pierde.
+
+**Oportunidades**: cada posible venta ("Reforma oficinas, 12.000 €"), de \
+una entidad, con su importe sin impuestos, la etapa en que está, la fecha \
+prevista de cierre, quién la lleva y de dónde vino (web, recomendación...). \
+En el menú, **Ventas** las enseña en un tablero con una columna por etapa: \
+arrastra una tarjeta a otra columna para cambiarla de etapa. Arriba ves lo \
+que hay en el embudo y lo ponderado por la probabilidad de cada etapa.
+
+**Ganar o perder**: suelta la tarjeta en «Ganada» o «Perdida». Al perderla \
+se pregunta el motivo (precio, plazo...), que sirve luego para ver por qué \
+se pierden ventas. Si se vuelve a mover a una etapa abierta, se reabre.
+
+**Próximo paso**: lo siguiente que hay que hacer y cuándo ("Llamar para \
+cerrar la visita", el jueves). Ese día, y mientras una oportunidad abierta \
+no tenga ninguno, sale en el resumen de las 8:00 de quien la lleva (si no \
+la lleva nadie, en el de todos). Así no se queda ninguna parada.
+
+**Etapas**: por defecto Contacto (10 %), Propuesta (30 %), Negociación \
+(60 %), Ganada y Perdida. El botón **Etapas** deja renombrarlas, \
+reordenarlas, añadir otras y cambiar la probabilidad. Una etapa con \
+oportunidades no se puede quitar.
+
+**Ficha de la entidad**: además de sus documentos y notas del bloc, enseña \
+sus **personas de contacto** (nombre, cargo, email, teléfono; una puede \
+ser la principal), sus **oportunidades** y un **historial** con todo lo \
+que ha pasado: documentos, notas, envíos, oportunidades y cambios de etapa.
+
+**Facturación (conexión con el ERP)**: el botón **Conexión con el ERP** \
+de Ventas trae los clientes, las facturas y lo pendiente de cobro del \
+programa de facturación, y la ficha de cada entidad enseña lo facturado \
+este año y el anterior, lo que debe y sus últimas facturas. Dos formas:
+
+- **Multiplika SIF**: se guarda en Credenciales el usuario y la \
+contraseña de la empresa en SIF y se conecta. Cada noche se sincroniza \
+sola; también con «Sincronizar ahora». Solo se lee: no se cambia nada en \
+SIF. Si un día falla (p.ej. cambiaron la contraseña), llega un aviso a la \
+campanita.
+- **Importar desde Excel**, para cualquier otro programa: se exporta de \
+él el listado de clientes, de facturas o de cobros (.xlsx o .csv) y se \
+sube. La primera vez se propone qué columna es cada dato y una vista \
+previa dice cuántos se crearán, cuántos se actualizarán y qué filas \
+fallan; se recuerda para la próxima. Volver a subir el mismo listado no \
+duplica. Con «Son todos mis clientes», los que falten se marcan como baja \
+(no se borran).
+
+Los clientes se cruzan por su código del ERP, por NIF o por el nombre \
+exacto. Una factura de un cliente que no existe lo da de alta si trae NIF.
+
+A una oportunidad se le pueden enlazar documentos (el presupuesto, la \
+propuesta). Con tu IA: "¿qué tenemos abierto este mes?", "crea una \
+oportunidad de 4.500 € para García", "pasa lo de García a negociación", \
+"prepárame la reunión con García", "¿por qué hemos perdido ventas este \
+año?", "¿cuánto nos debe García?", "importa este Excel de facturas".""",
+    },
+    {
         "id": "tipos-documento",
         "titulo": "Tipos de documento",
         "resumen": "El catálogo de tipos, y el formato o normativa que debe cumplir cada uno.",

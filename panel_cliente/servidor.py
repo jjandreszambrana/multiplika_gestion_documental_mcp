@@ -139,6 +139,9 @@ from ..database.modelos._mod_programaciones import (
 from ..database.modelos._mod_scripts import DocumentosScriptsCRUD, ScriptsCRUD
 from ..database.modelos import _mod_bloc_notas as bloc
 from ..database.modelos import _mod_seguimiento as seguimiento
+from ..database.modelos import _mod_crm as crm
+from ..database.modelos import _mod_erp as erp
+from ..database.modelos import _mod_sif as sif
 from ..database.modelos._mod_notas import (
     NotasCRUD,
     NotasRelacionesCRUD,
@@ -1111,6 +1114,7 @@ class DatosEntidad(BaseModel):
     email: str | None = None
     observaciones: str | None = None
     codigo: str | None = None
+    nif: str | None = None
 
 
 class ActualizarEntidad(BaseModel):
@@ -1125,6 +1129,7 @@ class ActualizarEntidad(BaseModel):
     email: str | None = None
     observaciones: str | None = None
     codigo: str | None = None
+    nif: str | None = None
 
 
 class RelacionarDocumentoEntidad(BaseModel):
@@ -3378,6 +3383,353 @@ async def cambiar_seguimiento_endpoint(
         )
     except (ValueError, LookupError) as e:
         raise _error_bloc(e) from e
+
+
+# ---------- Ventas (CRM): contactos, etapas y oportunidades ----------
+# Ver docs → "Ventas (CRM)". Mismas reglas que las herramientas MCP (viven
+# en _mod_crm.py). Leer: todo el proyecto; cambiar: cualquiera salvo invitado.
+
+
+class DatosContacto(BaseModel):
+    nombre: str | None = None
+    cargo: str | None = None
+    email: str | None = None
+    telefono: str | None = None
+    observaciones: str | None = None
+    principal: bool | None = None
+
+
+class DatosEtapas(BaseModel):
+    etapas: list[dict]
+
+
+class DatosOportunidad(BaseModel):
+    titulo: str | None = None
+    id_entidad: int | None = None
+    id_contacto: int | None = None
+    importe: float | None = None
+    id_etapa: int | None = None
+    fecha_prevista_cierre: str | None = None
+    id_usuario_responsable: int | None = None
+    origen: str | None = None
+    descripcion: str | None = None
+    proximo_paso: str | None = None
+    fecha_proximo_paso: str | None = None
+    motivo_perdida: str | None = None
+    fecha_cierre: str | None = None
+
+
+class DocumentoOportunidad(BaseModel):
+    id_documento: int
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/contactos")
+async def listar_contactos_endpoint(
+    id_proyecto: int, id_entidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    try:
+        return await crm.listar_contactos(get_db_config(proyecto["id"]), id_entidad)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/contactos")
+async def crear_contacto_endpoint(
+    id_proyecto: int, id_entidad: int, datos: DatosContacto,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await crm.crear_contacto(get_db_config(proyecto["id"]), id_entidad, datos.model_dump(exclude_unset=True))
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/contactos/{id_contacto}")
+async def actualizar_contacto_endpoint(
+    id_proyecto: int, id_contacto: int, datos: DatosContacto,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await crm.actualizar_contacto(get_db_config(proyecto["id"]), id_contacto, datos.model_dump(exclude_unset=True))
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/contactos/{id_contacto}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_contacto_endpoint(
+    id_proyecto: int, id_contacto: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> None:
+    try:
+        await crm.eliminar_contacto(get_db_config(proyecto["id"]), id_contacto)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/historial")
+async def historial_entidad_endpoint(
+    id_proyecto: int, id_entidad: int, limite: int = 100,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> list[dict]:
+    _, id_usuario = await _quien_panel(identidad)
+    try:
+        return await crm.historial_entidad(get_db_config(proyecto["id"]), proyecto["id"], id_usuario, id_entidad, limite)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/crm/etapas")
+async def listar_etapas_endpoint(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> list[dict]:
+    return await crm.listar_etapas(get_db_config(proyecto["id"]))
+
+
+@app.put("/v1/proyectos/{id_proyecto}/crm/etapas")
+async def guardar_etapas_endpoint(
+    id_proyecto: int, datos: DatosEtapas, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    try:
+        return await crm.guardar_etapas(get_db_config(proyecto["id"]), datos.etapas)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/crm/oportunidades")
+async def listar_oportunidades_endpoint(
+    id_proyecto: int, estado: str = "abiertas", id_entidad: int | None = None,
+    id_responsable: int | None = None, solo_mias: bool = False, sin_responsable: bool = False,
+    texto: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Las oportunidades y el resumen por etapa (para las cabeceras del tablero)."""
+    _, id_usuario = await _quien_panel(identidad)
+    if solo_mias:
+        if not id_usuario:
+            return {"oportunidades": [], "resumen": []}
+        id_responsable = id_usuario
+    config = get_db_config(proyecto["id"])
+    try:
+        oportunidades = await crm.listar_oportunidades(
+            config, proyecto["id"], estado, id_entidad, None, id_responsable, sin_responsable, texto,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+    return {"oportunidades": oportunidades, "resumen": await crm.resumen_embudo(config, proyecto["id"], id_responsable)}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/crm/oportunidades/{id_oportunidad}")
+async def obtener_oportunidad_endpoint(
+    id_proyecto: int, id_oportunidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> dict:
+    try:
+        return await crm.obtener_oportunidad(get_db_config(proyecto["id"]), proyecto["id"], id_oportunidad)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/oportunidades")
+async def crear_oportunidad_endpoint(
+    id_proyecto: int, datos: DatosOportunidad,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await crm.crear_oportunidad(
+            get_db_config(proyecto["id"]), proyecto["id"], quien, datos.model_dump(exclude_unset=True),
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/crm/oportunidades/{id_oportunidad}")
+async def actualizar_oportunidad_endpoint(
+    id_proyecto: int, id_oportunidad: int, datos: DatosOportunidad,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Solo cambia lo que viene en el cuerpo (null vacía el campo)."""
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await crm.actualizar_oportunidad(
+            get_db_config(proyecto["id"]), proyecto["id"], quien, id_oportunidad, datos.model_dump(exclude_unset=True),
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/crm/oportunidades/{id_oportunidad}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_oportunidad_endpoint(
+    id_proyecto: int, id_oportunidad: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> None:
+    try:
+        await crm.eliminar_oportunidad(get_db_config(proyecto["id"]), proyecto["id"], id_oportunidad)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/oportunidades/{id_oportunidad}/documentos")
+async def relacionar_documento_oportunidad_endpoint(
+    id_proyecto: int, id_oportunidad: int, datos: DocumentoOportunidad,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        await crm.relacionar_documento(get_db_config(proyecto["id"]), proyecto["id"], id_oportunidad, datos.id_documento)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+    return {"id_oportunidad": id_oportunidad, "id_documento": datos.id_documento}
+
+
+@app.delete(
+    "/v1/proyectos/{id_proyecto}/crm/oportunidades/{id_oportunidad}/documentos/{id_documento}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def quitar_documento_oportunidad_endpoint(
+    id_proyecto: int, id_oportunidad: int, id_documento: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> None:
+    await crm.quitar_documento(get_db_config(proyecto["id"]), id_oportunidad, id_documento)
+
+
+# ---------- Conexión con el ERP: Multiplika SIF e importación desde Excel ----------
+# Ver docs → "Ventas (CRM)". Dar de alta o quitar la conexión con SIF: solo
+# admin (lleva una credencial). Sincronizar e importar: cualquiera que pueda
+# escribir. Leer: todo el proyecto.
+
+
+class DatosConexionSIF(BaseModel):
+    nombre_credencial: str
+    url: str = sif.URL_POR_DEFECTO
+    nombre: str = "Multiplika SIF"
+
+
+class CambiosConexionSIF(BaseModel):
+    activa: bool | None = None
+    nombre: str | None = None
+
+
+class DatosRevisionImportacion(BaseModel):
+    mapeo: dict[str, int | None] | None = None
+    formato_fecha: str | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/crm/erp/conexiones")
+async def listar_conexiones_erp(id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> list[dict]:
+    return await sif.listar_conexiones(get_db_config(proyecto["id"]))
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/conexiones")
+async def crear_conexion_erp(
+    id_proyecto: int, datos: DatosConexionSIF, proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    try:
+        return await sif.crear_conexion(get_db_config(proyecto["id"]), datos.nombre, datos.url, datos.nombre_credencial)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/crm/erp/conexiones/{id_conexion}")
+async def actualizar_conexion_erp(
+    id_proyecto: int, id_conexion: int, datos: CambiosConexionSIF, proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    try:
+        return await sif.actualizar_conexion(get_db_config(proyecto["id"]), id_conexion, datos.model_dump(exclude_unset=True))
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/crm/erp/conexiones/{id_conexion}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_conexion_erp(
+    id_proyecto: int, id_conexion: int, proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> None:
+    try:
+        await sif.eliminar_conexion(get_db_config(proyecto["id"]), id_conexion)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/conexiones/{id_conexion}/sincronizar")
+async def sincronizar_conexion_erp(
+    id_proyecto: int, id_conexion: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await sif.sincronizar(get_db_config(proyecto["id"]), id_conexion)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/crm/erp/importaciones")
+async def listar_importaciones_erp(id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> list[dict]:
+    return await erp.listar_importaciones(get_db_config(proyecto["id"]))
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/importaciones")
+async def crear_importacion_erp(
+    id_proyecto: int,
+    archivo: UploadFile = File(...),
+    objeto: str = Form(...),
+    todos_los_clientes: bool = Form(default=False),
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Guarda el fichero para revisarlo; no aplica nada (ver aplicar)."""
+    quien, _ = await _quien_panel(identidad)
+    contenido = await archivo.read()
+    if len(contenido) > 20 * 1024 * 1024:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El fichero pasa de 20 MB")
+    try:
+        return await erp.crear_importacion(
+            get_db_config(proyecto["id"]), objeto, archivo.filename or "fichero.csv", contenido, quien, todos_los_clientes,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/importaciones/{id_importacion}/revisar")
+async def revisar_importacion_erp(
+    id_proyecto: int, id_importacion: int, datos: DatosRevisionImportacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        return await erp.vista_importacion(get_db_config(proyecto["id"]), id_importacion, datos.mapeo, datos.formato_fecha)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/importaciones/{id_importacion}/aplicar")
+async def aplicar_importacion_erp(
+    id_proyecto: int, id_importacion: int, datos: DatosRevisionImportacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await erp.aplicar_importacion(
+            get_db_config(proyecto["id"]), id_importacion, quien, datos.mapeo, datos.formato_fecha,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/crm/erp/importaciones/{id_importacion}/descartar")
+async def descartar_importacion_erp(
+    id_proyecto: int, id_importacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        await erp.descartar_importacion(get_db_config(proyecto["id"]), id_importacion)
+    except (ValueError, LookupError) as e:
+        raise _error_bloc(e) from e
+    return {"id": id_importacion, "descartada": True}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/entidades/{id_entidad}/erp")
+async def datos_erp_entidad(
+    id_proyecto: int, id_entidad: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    return {"resumen": await erp.resumen_economico(config, id_entidad), "facturas": await erp.facturas_entidad(config, id_entidad)}
 
 
 # ---------- Webs y redes sociales (ver docs → "Webs y redes sociales") ----------

@@ -7,7 +7,7 @@ const TIPOS_SUGERIDOS = [
 ]
 
 // Formulario compartido entre "crear entidad" (Entidades.jsx) y "editar
-// entidad" (EntidadDetalle.jsx) — mismos 11 campos en los dos sitios.
+// entidad" (EntidadDetalle.jsx) — mismos 12 campos en los dos sitios.
 // "Tipo" es texto libre con sugerencias (Autocomplete), no una lista
 // cerrada — mismo catálogo abierto que tipo_documento en documentos.
 export default function FormularioEntidad({ valores, onChange, tiposConocidos = [] }) {
@@ -40,8 +40,9 @@ export default function FormularioEntidad({ valores, onChange, tiposConocidos = 
         <TextInput label="Provincia" {...campo("provincia")} />
         <TextInput label="Código postal" {...campo("codigo_postal")} />
       </SimpleGrid>
-      <SimpleGrid cols={2} spacing="10" mb="10">
+      <SimpleGrid cols={3} spacing="10" mb="10">
         <TextInput label="País" {...campo("pais")} />
+        <TextInput label="NIF/CIF" {...campo("nif")} />
         <TextInput label="Código (ERP)" description="Para vincular con el ERP, si aplica" {...campo("codigo")} />
       </SimpleGrid>
       <Textarea label="Observaciones" autosize minRows={2} {...campo("observaciones")} />

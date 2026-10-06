@@ -31,6 +31,7 @@ async def crear_entidad_gd(
     email: str | None = None,
     observaciones: str | None = None,
     codigo: str | None = None,
+    nif: str | None = None,
 ) -> dict:
     """Da de alta un cliente, proveedor, empleado... ANTES de llamarla,
     busca con listar_entidades_gd que no exista ya (por nombre y sus
@@ -50,7 +51,7 @@ async def crear_entidad_gd(
     id_entidad = await entidades.crear({
         "nombre": nombre, "tipo": tipo, "direccion": direccion, "localidad": localidad,
         "provincia": provincia, "codigo_postal": codigo_postal, "pais": pais,
-        "telefono": telefono, "email": email, "observaciones": observaciones, "codigo": codigo,
+        "telefono": telefono, "email": email, "observaciones": observaciones, "codigo": codigo, "nif": nif,
     })
     return await entidades.obtener(id_entidad)
 
@@ -78,6 +79,7 @@ async def actualizar_entidad_gd(
     email: str | None = None,
     observaciones: str | None = None,
     codigo: str | None = None,
+    nif: str | None = None,
 ) -> dict:
     """Actualiza los campos que se pasen de una entidad ya existente
     (los que se dejen en blanco no se tocan — esta tool no sirve para
@@ -86,7 +88,7 @@ async def actualizar_entidad_gd(
     entidad = await EntidadesCRUD(config).actualizar_campos(id_entidad, {
         "nombre": nombre, "tipo": tipo, "direccion": direccion, "localidad": localidad,
         "provincia": provincia, "codigo_postal": codigo_postal, "pais": pais,
-        "telefono": telefono, "email": email, "observaciones": observaciones, "codigo": codigo,
+        "telefono": telefono, "email": email, "observaciones": observaciones, "codigo": codigo, "nif": nif,
     })
     if not entidad:
         raise ToolError(f"No existe ninguna entidad con id {id_entidad}")

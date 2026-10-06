@@ -44,6 +44,8 @@ NOMBRE_POR_TIPO = {
     "activo_digital": ("gd_activos_digitales", "nombre"),
     "cambio_externo": ("gd_cambios_externos", "resumen"),
     "publicacion": ("gd_publicaciones", "titulo"),
+    "oportunidad": ("gd_oportunidades", "titulo"),
+    "contacto": ("gd_entidades_contactos", "nombre"),
 }
 
 # Tipos que pueden ser privados: el registro lo ve todo el proyecto, así que

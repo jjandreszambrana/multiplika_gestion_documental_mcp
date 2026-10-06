@@ -667,6 +667,61 @@ export const api = {
   // datos: { estado (null = sin estado), id_usuario_responsable (null = nadie), aplazado_hasta }
   cambiarSeguimiento: (idProyecto, tipo, id, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/seguimiento/${tipo}/${id}`, datos),
+  // Ventas (CRM): contactos, etapas y oportunidades (ver docs → "Ventas (CRM)")
+  listarContactos: (idProyecto, idEntidad) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/contactos`),
+  crearContacto: (idProyecto, idEntidad, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/entidades/${idEntidad}/contactos`, datos),
+  actualizarContacto: (idProyecto, idContacto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contactos/${idContacto}`, datos),
+  eliminarContacto: (idProyecto, idContacto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contactos/${idContacto}`),
+  historialEntidad: (idProyecto, idEntidad) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/historial`),
+  listarEtapas: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/crm/etapas`),
+  guardarEtapas: (idProyecto, etapas) => peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/crm/etapas`, { etapas }),
+  // filtros: estado (abiertas | ganadas | perdidas | todas), id_entidad, solo_mias, sin_responsable, texto
+  // Devuelve { oportunidades, resumen }
+  listarOportunidades: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams()
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (valor) parametros.set(clave, valor)
+    }
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/crm/oportunidades${query ? `?${query}` : ""}`)
+  },
+  obtenerOportunidad: (idProyecto, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/crm/oportunidades/${id}`),
+  crearOportunidad: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/oportunidades`, datos),
+  // Solo cambia lo que va en `datos` (null vacía el campo)
+  actualizarOportunidad: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/crm/oportunidades/${id}`, datos),
+  eliminarOportunidad: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/crm/oportunidades/${id}`),
+  relacionarDocumentoOportunidad: (idProyecto, id, idDocumento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/oportunidades/${id}/documentos`, { id_documento: idDocumento }),
+  quitarDocumentoOportunidad: (idProyecto, id, idDocumento) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/crm/oportunidades/${id}/documentos/${idDocumento}`),
+  // Conexión con el ERP: Multiplika SIF e importación desde Excel
+  listarConexionesErp: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/crm/erp/conexiones`),
+  crearConexionErp: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/erp/conexiones`, datos),
+  actualizarConexionErp: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/crm/erp/conexiones/${id}`, datos),
+  eliminarConexionErp: (idProyecto, id) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/crm/erp/conexiones/${id}`),
+  sincronizarConexionErp: (idProyecto, id) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/erp/conexiones/${id}/sincronizar`),
+  listarImportacionesErp: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/crm/erp/importaciones`),
+  crearImportacionErp: (idProyecto, { archivo, objeto, todosLosClientes }) => {
+    const formData = new FormData()
+    formData.append("archivo", archivo)
+    formData.append("objeto", objeto)
+    formData.append("todos_los_clientes", todosLosClientes ? "true" : "false")
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/crm/erp/importaciones`, formData)
+  },
+  revisarImportacionErp: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/erp/importaciones/${id}/revisar`, datos),
+  aplicarImportacionErp: (idProyecto, id, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/erp/importaciones/${id}/aplicar`, datos),
+  descartarImportacionErp: (idProyecto, id) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/crm/erp/importaciones/${id}/descartar`),
+  datosErpEntidad: (idProyecto, idEntidad) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/erp`),
   // Webs y redes sociales (ver docs → "Webs y redes sociales")
   catalogoActivos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/catalogo`),
   listarActivos: (idProyecto, q, incluirArchivados = false) => {

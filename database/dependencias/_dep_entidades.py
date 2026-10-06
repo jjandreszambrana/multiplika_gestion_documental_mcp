@@ -38,12 +38,20 @@ CAMPOS_ENTIDADES = [
                        "opcional, único si se rellena (varias entidades pueden no tener ninguno)"),
     Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
             protegido_actualizar=True),
+    Columna(nombre="nif", tipo="VARCHAR", longitud=20,
+            comentario="NIF/CIF — opcional. Sirve para cruzar con el ERP cuando no hay código"),
+    Columna(nombre="baja_erp", tipo="BOOLEAN", not_null=True, default=False,
+            comentario="True si ya no está en el ERP (la importación con «son todos mis clientes» no la "
+                       "encontró): no se borra, solo se marca"),
+    Columna(nombre="fecha_sync_erp", tipo="TIMESTAMP",
+            comentario="Última vez que sus datos llegaron del ERP (SIF o Excel). Hora de Madrid"),
 ]
 
 INDICES_ENTIDADES = [
     Index(columnas=["nombre"]),
     Index(columnas=["tipo"]),
     Index(columnas=["codigo"], unico=True),
+    Index(columnas=["nif"], nombre="gd_entidades_nif_idx"),
 ]
 
 TABLA_ENTIDADES = Tabla(

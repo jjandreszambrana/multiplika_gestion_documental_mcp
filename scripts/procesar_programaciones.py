@@ -34,6 +34,7 @@ from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
 from ..database.modelos._mod_programaciones import procesar_pendientes
 from ..database.modelos._mod_seguimiento import procesar_seguimiento
 from ..database.modelos._mod_publicaciones import procesar_publicaciones
+from ..database.modelos._mod_sif import procesar_nocturno as sincronizar_erp
 
 
 async def _proyectos_gestion_documental_activos() -> list[dict]:
@@ -57,6 +58,7 @@ async def main() -> int:
             resultado = await procesar_pendientes(config, proyecto["id"])
             seguimiento = await procesar_seguimiento(config, proyecto["id"])
             publicaciones = await procesar_publicaciones(config, proyecto["id"])
+            erp = await sincronizar_erp(config, proyecto["id"])
         except Exception as e:  # tabla aún sin crear, base caída... sigue con el resto
             errores += 1
             print(f"[{proyecto['nombre']}] error: {e}", file=sys.stderr)
@@ -67,6 +69,8 @@ async def main() -> int:
             print(f"[{proyecto['nombre']}] aplazados vueltos a pendiente: {seguimiento['vueltos_a_pendiente']}")
         if publicaciones["publicadas"]:
             print(f"[{proyecto['nombre']}] publicaciones en redes: {publicaciones['publicadas']}")
+        for linea in erp:
+            print(f"[{proyecto['nombre']}] ERP: {linea}")
         if seguimiento["resumen"]:
             print(f"[{proyecto['nombre']}] resumen de seguimiento: {seguimiento['resumen']}")
     return 1 if errores else 0

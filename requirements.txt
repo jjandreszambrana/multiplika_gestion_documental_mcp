@@ -13,3 +13,4 @@ pytesseract
 paramiko
 pymysql
 PyJWT
+openpyxl
