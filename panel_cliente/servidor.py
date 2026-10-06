@@ -3385,8 +3385,8 @@ async def cambiar_seguimiento_endpoint(
         raise _error_bloc(e) from e
 
 
-# ---------- Ventas (CRM): contactos, etapas y oportunidades ----------
-# Ver docs → "Ventas (CRM)". Mismas reglas que las herramientas MCP (viven
+# ---------- CRM: contactos, etapas y oportunidades ----------
+# Ver docs → "CRM". Mismas reglas que las herramientas MCP (viven
 # en _mod_crm.py). Leer: todo el proyecto; cambiar: cualquiera salvo invitado.
 
 
@@ -3594,7 +3594,7 @@ async def quitar_documento_oportunidad_endpoint(
 
 
 # ---------- Conexión con el ERP: Multiplika SIF e importación desde Excel ----------
-# Ver docs → "Ventas (CRM)". Dar de alta o quitar la conexión con SIF: solo
+# Ver docs → "CRM". Dar de alta o quitar la conexión con SIF: solo
 # admin (lleva una credencial). Sincronizar e importar: cualquiera que pueda
 # escribir. Leer: todo el proyecto.
 

@@ -1,6 +1,6 @@
 """Datos del ERP en la GD: clientes y facturas que llegan de Multiplika SIF
 (_mod_sif.py) o de un Excel/CSV exportado de cualquier otro ERP — ver
-docs/gestion-documental.md → "Ventas (CRM)".
+docs/gestion-documental.md → "CRM".
 
 Lo común a las dos vías está aquí: cómo se cruza un cliente con
 gd_entidades (código, luego NIF, luego nombre exacto), cómo se guarda una

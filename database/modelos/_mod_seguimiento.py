@@ -381,7 +381,7 @@ def _correo_resumen(
     if de_todos:
         texto += ["Sin nadie encargado:", *lineas(de_todos), ""]
     if ventas:
-        texto += ["Ventas:", *[
+        texto += ["CRM (oportunidades de venta):", *[
             f"- {v['titulo']}: {v['motivo']}{' (sin nadie que la lleve)' if v['de_nadie'] else ''}"
             for v in ventas[:MAX_EN_RESUMEN]
         ], ""]

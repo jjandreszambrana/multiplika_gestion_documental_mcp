@@ -127,7 +127,7 @@ export default function Sidebar({
           />
         )}
         <Item icon={IconNotebook} label="Bloc de notas" active={vista === "bloc-notas"} onClick={() => onNavigate("bloc-notas")} />
-        <Item icon={IconChartFunnel} label="Ventas" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
+        <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
         <Item icon={IconProgressCheck} label="Seguimiento" active={vista === "seguimiento"} onClick={() => onNavigate("seguimiento")} />
         <Item icon={IconAlarm} label="Avisos programados" active={vista === "programaciones"} onClick={() => onNavigate("programaciones")} />
         <Item

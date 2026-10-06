@@ -1,6 +1,6 @@
 # CRM dentro de la gestión documental
 
-Plan, 2026-10-06. **Fases 1 y 2 (lectura) implementadas el mismo día** (ver docs/gestion-documental.md → "Ventas (CRM)"; cambios respecto al plan abajo). Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
+Plan, 2026-10-06. **Fases 1 y 2 (lectura) implementadas el mismo día** (ver docs/gestion-documental.md → "CRM"; cambios respecto al plan abajo). Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
 
 ## Cambios respecto a este plan al implementar la fase 1
 

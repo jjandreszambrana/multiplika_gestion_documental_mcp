@@ -272,7 +272,7 @@ function Importar({ proyecto, onImportado }) {
   )
 }
 
-// Ventas → "Conexión con el ERP": Multiplika SIF o importar desde Excel.
+// CRM → "Conexión con el ERP": Multiplika SIF o importar desde Excel.
 export default function ConexionErp({ opened, onClose, proyecto, onImportado }) {
   return (
     <Modal opened={opened} onClose={onClose} size="xl" title="Conexión con el programa de facturación">

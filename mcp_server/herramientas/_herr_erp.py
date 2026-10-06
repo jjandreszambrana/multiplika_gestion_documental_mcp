@@ -1,6 +1,6 @@
 """Herramientas MCP de la conexión con el ERP: importar clientes, facturas y
 cobros desde un Excel/CSV, sincronizar con Multiplika SIF y consultar lo
-facturado a cada entidad — ver docs/gestion-documental.md → "Ventas (CRM)".
+facturado a cada entidad — ver docs/gestion-documental.md → "CRM".
 Las reglas viven en _mod_erp.py y _mod_sif.py (las comparte el panel)."""
 
 import base64

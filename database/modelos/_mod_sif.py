@@ -1,5 +1,5 @@
 """Conexión con Multiplika SIF (el programa de facturación de Multiplika) —
-ver docs/gestion-documental.md → "Ventas (CRM)" y docs/planificacion/crm.md.
+ver docs/gestion-documental.md → "CRM" y docs/planificacion/crm.md.
 
 Se entra con usuario y contraseña de un obligado (la empresa que factura):
 una sesión abierta con api_key solo llega a las rutas de la pasarela
@@ -322,7 +322,7 @@ async def procesar_nocturno(config: dict, id_proyecto: int, ahora=None) -> list[
                         "VALUES (%s, 'erp', %s, %s, %s)",
                         (usuario["id"], f"No se pudo sincronizar con {conexion['nombre']}"[:255],
                          f"{e}\n\nLos datos de clientes y facturas siguen siendo los de la última vez. "
-                         "Se volverá a intentar mañana; también puedes hacerlo desde Ventas → Conexión con el ERP.", ahora),
+                         "Se volverá a intentar mañana; también puedes hacerlo desde CRM → Conexión con el ERP.", ahora),
                     )
     return salida
 

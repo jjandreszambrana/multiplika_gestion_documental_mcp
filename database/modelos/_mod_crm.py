@@ -1,5 +1,5 @@
 """CRM: contactos, etapas del embudo y oportunidades de venta — ver
-docs/gestion-documental.md → "Ventas (CRM)". Lo usan las tools MCP, el
+docs/gestion-documental.md → "CRM". Lo usan las tools MCP, el
 panel y el resumen diario de seguimiento, para que los tres compartan las
 mismas reglas.
 

@@ -458,16 +458,16 @@ Envases Sur hasta el lunes".""",
     },
     {
         "id": "ventas",
-        "titulo": "Ventas (CRM)",
+        "titulo": "CRM",
         "resumen": "Personas de contacto, embudo de ventas con oportunidades e historial de cada cliente.",
         "markdown": """\
-**Ventas** convierte las entidades en un CRM: lleva cada posible venta \
+El **CRM** (gestión de clientes y ventas) lleva cada posible venta \
 desde el primer contacto hasta que se gana o se pierde.
 
 **Oportunidades**: cada posible venta ("Reforma oficinas, 12.000 €"), de \
 una entidad, con su importe sin impuestos, la etapa en que está, la fecha \
 prevista de cierre, quién la lleva y de dónde vino (web, recomendación...). \
-En el menú, **Ventas** las enseña en un tablero con una columna por etapa: \
+En el menú, **CRM** las enseña en un tablero con una columna por etapa: \
 arrastra una tarjeta a otra columna para cambiarla de etapa. Arriba ves lo \
 que hay en el embudo y lo ponderado por la probabilidad de cada etapa.
 
@@ -491,7 +491,7 @@ ser la principal), sus **oportunidades** y un **historial** con todo lo \
 que ha pasado: documentos, notas, envíos, oportunidades y cambios de etapa.
 
 **Facturación (conexión con el ERP)**: el botón **Conexión con el ERP** \
-de Ventas trae los clientes, las facturas y lo pendiente de cobro del \
+del CRM trae los clientes, las facturas y lo pendiente de cobro del \
 programa de facturación, y la ficha de cada entidad enseña lo facturado \
 este año y el anterior, lo que debe y sus últimas facturas. Dos formas:
 

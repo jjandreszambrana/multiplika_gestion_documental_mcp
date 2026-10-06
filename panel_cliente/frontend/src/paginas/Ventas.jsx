@@ -117,7 +117,7 @@ export default function Ventas({ proyecto, esSuperadmin, onVolver, onVerEntidad,
       </Anchor>
 
       <Group justify="space-between" align="flex-start" mb="6">
-        <Title order={2}>Ventas</Title>
+        <Title order={2}>CRM</Title>
         {editable && (
           <Group gap="8">
             <Button variant="default" leftSection={<IconPlugConnected size={15} />} onClick={() => setViendoErp(true)}>Conexión con el ERP</Button>

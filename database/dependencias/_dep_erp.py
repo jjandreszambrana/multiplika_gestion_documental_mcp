@@ -1,5 +1,5 @@
 """Conexión con el ERP del cliente — ver docs/gestion-documental.md →
-"Ventas (CRM)" y docs/planificacion/crm.md (fase 2).
+"CRM" y docs/planificacion/crm.md (fase 2).
 
 Dos vías, que rellenan las mismas tablas:
 - Multiplika SIF, por su API con usuario y contraseña de un obligado

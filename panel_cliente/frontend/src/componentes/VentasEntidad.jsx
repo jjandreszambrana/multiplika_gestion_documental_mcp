@@ -98,7 +98,7 @@ export function FacturacionEntidad({ proyecto, idEntidad }) {
 
   if (!datos) return <Text>Cargando...</Text>
   const r = datos.resumen
-  if (!r) return <Text c="dimmed">Sin facturas del ERP. Llegan de Multiplika SIF o importando un Excel desde Ventas.</Text>
+  if (!r) return <Text c="dimmed">Sin facturas del ERP. Llegan de Multiplika SIF o importando un Excel desde el CRM.</Text>
   const origen = r.origenes.includes("sif") ? "Multiplika SIF" : "el Excel importado"
   return (
     <>

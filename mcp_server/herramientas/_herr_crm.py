@@ -1,6 +1,6 @@
 """Herramientas MCP del CRM: personas de contacto de cada entidad, etapas
 del embudo de ventas y oportunidades — ver docs/gestion-documental.md →
-"Ventas (CRM)". Las reglas viven en _mod_crm.py (las comparte el panel).
+"CRM". Las reglas viven en _mod_crm.py (las comparte el panel).
 
 Quién es "yo": como en el bloc de notas (ver _contexto en
 _herr_bloc_notas.py)."""

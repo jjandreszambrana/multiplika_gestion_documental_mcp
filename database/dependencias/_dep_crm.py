@@ -1,5 +1,5 @@
 """CRM: personas de contacto de cada entidad, etapas del embudo de ventas y
-oportunidades — ver docs/gestion-documental.md → "Ventas (CRM)" y
+oportunidades — ver docs/gestion-documental.md → "CRM" y
 docs/planificacion/crm.md (fase 1).
 
 - gd_entidades_contactos: las personas dentro de una entidad ("Ana,

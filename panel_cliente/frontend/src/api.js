@@ -667,7 +667,7 @@ export const api = {
   // datos: { estado (null = sin estado), id_usuario_responsable (null = nadie), aplazado_hasta }
   cambiarSeguimiento: (idProyecto, tipo, id, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/seguimiento/${tipo}/${id}`, datos),
-  // Ventas (CRM): contactos, etapas y oportunidades (ver docs → "Ventas (CRM)")
+  // CRM: contactos, etapas y oportunidades (ver docs → "CRM")
   listarContactos: (idProyecto, idEntidad) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/entidades/${idEntidad}/contactos`),
   crearContacto: (idProyecto, idEntidad, datos) =>
