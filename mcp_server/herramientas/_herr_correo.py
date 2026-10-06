@@ -111,7 +111,10 @@ async def guardar_adjunto_correo_gd(credencial: str, uid: int, nombre_adjunto: s
         raise ToolError(str(e)) from e
     if not contenido:
         raise ToolError("El adjunto está vacío")
-    id_pendiente = await DocumentosPendientesCRUD(config).crear(contenido, tipo_mime, nombre, "email")
+    try:
+        id_pendiente = await DocumentosPendientesCRUD(config).crear(contenido, tipo_mime, nombre, "email")
+    except ValueError as e:
+        raise ToolError(str(e)) from e
     return {"id_documento_pendiente": id_pendiente, "nombre": nombre, "tipo_mime": tipo_mime, "bytes": len(contenido)}
 
 

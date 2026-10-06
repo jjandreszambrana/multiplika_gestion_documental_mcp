@@ -4,6 +4,7 @@
 from mtpk_postgres import AsyncCrudBase
 
 from ..dependencias._dep_documentos_pendientes import TABLA_DOCUMENTOS_PENDIENTES
+from ._tipos_archivo import comprobar_tipo_archivo
 
 
 class DocumentosPendientesCRUD(AsyncCrudBase):
@@ -16,6 +17,7 @@ class DocumentosPendientesCRUD(AsyncCrudBase):
         return [{k: v for k, v in fila.items() if k != "archivo"} for fila in filas]
 
     async def crear(self, archivo: bytes, tipo_mime: str, nombre_original: str, origen: str) -> int:
+        comprobar_tipo_archivo(tipo_mime, nombre_original)
         return await self.insert({
             "archivo": archivo, "tipo_mime": tipo_mime,
             "nombre_original": nombre_original, "origen": origen,

@@ -21,6 +21,7 @@ from mtpk_postgres.async_adapter import AsyncDatabase
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
 from ..dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS, TABLA_REGISTROS_DOCUMENTOS
 from ._mod_documentos_pendientes import DocumentosPendientesCRUD
+from ._tipos_archivo import comprobar_tipo_archivo
 
 # minimo: sin paginar — un cliente anota decenas de registros al día, no miles
 LIMITE_REGISTROS = 500
@@ -267,6 +268,7 @@ class RegistrosCRUD(AsyncCrudBase):
     ) -> None:
         """Adjunta (o sustituye) el archivo del que salen los datos — se
         guarda tal cual, solo como referencia/descarga."""
+        comprobar_tipo_archivo(tipo_mime, nombre)
         await self.update(
             id_registro,
             {"archivo_original": contenido, "archivo_original_tipo_mime": tipo_mime, "archivo_original_nombre": nombre},

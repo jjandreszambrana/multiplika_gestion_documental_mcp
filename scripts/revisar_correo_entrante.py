@@ -43,7 +43,18 @@ from database.config_db import get_db_config  # noqa: E402
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS  # noqa: E402
 from lib.cifrado import descifrar  # noqa: E402
 
-TIPOS_MIME_VALIDOS_EXACTOS = ("application/pdf",)  # + cualquier "image/*", ver _es_adjunto_valido
+# Misma lista que database/modelos/_tipos_archivo.py — este script importa el
+# `database` del núcleo, no el del proyecto, así que no puede usarla directamente.
+TIPOS_MIME_VALIDOS_EXACTOS = (  # + cualquier "image/*", ver _es_adjunto_valido
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "text/csv",
+)
 
 
 async def _proyectos_gestion_documental_activos() -> list[dict]:

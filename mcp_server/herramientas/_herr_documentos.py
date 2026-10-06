@@ -28,6 +28,7 @@ from ..database.modelos._mod_estilos import EstilosCRUD
 from ..database.modelos._mod_registros import RegistrosCRUD
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, guardar_documento
+from ..database.modelos._tipos_archivo import comprobar_tipo_archivo
 
 
 async def _contexto_actual() -> tuple[dict, int]:
@@ -525,6 +526,7 @@ async def adjuntar_archivo_original_gd(
     `archivo_base64`: el contenido del archivo codificado en base64; aquí se
     pasa a binario y se guarda así. Solo viable si tienes el archivo al
     alcance (p.ej. en Claude Code o con ejecución de código). Hasta 20 MB.
+    Solo PDF, imágenes, Word o Excel: vídeos, audios y demás se rechazan.
     `nombre`: el nombre de fichero con su extensión, p.ej. "analisis.pdf".
 
     Es solo para consultar/descargar el original: lo que se busca y lo que
@@ -542,6 +544,11 @@ async def adjuntar_archivo_original_gd(
         raise ToolError("El archivo está vacío")
     if len(contenido) > LIMITE_BYTES_ARCHIVO_ORIGINAL:
         raise ToolError(f"El archivo pesa más de {LIMITE_BYTES_ARCHIVO_ORIGINAL // (1024 * 1024)} MB")
+
+    try:
+        comprobar_tipo_archivo(tipo_mime, nombre)
+    except ValueError as e:
+        raise ToolError(str(e)) from e
 
     config, _ = await _contexto_actual()
     if id_registro is not None:

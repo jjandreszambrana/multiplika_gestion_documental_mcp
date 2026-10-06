@@ -13,6 +13,7 @@ from ..dependencias._dep_versiones import PATRON_SIGLAS, TABLA_VERSIONES
 from ._mod_documentos import DocumentosCRUD
 from ._mod_historial_ediciones import HistorialEdicionesCRUD
 from ._mod_tipos_documento import TiposDocumentoCRUD
+from ._tipos_archivo import comprobar_tipo_archivo
 
 
 class VersionesCRUD(AsyncCrudBase):
@@ -102,6 +103,7 @@ class VersionesCRUD(AsyncCrudBase):
         """Adjunta el PDF original subido al crear el documento a mano
         desde el panel (ver 'Alta manual desde el panel') — se guarda tal
         cual, sin convertir, solo como referencia/descarga."""
+        comprobar_tipo_archivo(tipo_mime, nombre)
         await self.update(
             id_version,
             {"archivo_original": contenido, "archivo_original_tipo_mime": tipo_mime, "archivo_original_nombre": nombre},

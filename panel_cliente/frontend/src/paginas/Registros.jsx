@@ -325,6 +325,7 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
         />
         <FileInput
           label="Archivo original" clearable
+          accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.odt,.ods,.csv"
           placeholder={registro?.archivo_original_nombre || "La foto del parte, el PDF del análisis..."}
           description={registro?.archivo_original_nombre ? "Si eliges otro, sustituye al que ya tiene" : "Opcional, se guarda tal cual"}
           value={archivo}
