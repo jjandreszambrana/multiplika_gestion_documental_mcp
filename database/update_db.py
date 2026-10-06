@@ -57,6 +57,12 @@ from database.dependencias._dep_actividad import TABLA_ACTIVIDAD
 from database.dependencias._dep_bloc_notas import __TABLAS__ as TABLAS_BLOC_NOTAS
 from database.dependencias._dep_programaciones import __TABLAS__ as TABLAS_PROGRAMACIONES
 from database.dependencias._dep_seguimiento import __TABLAS__ as TABLAS_SEGUIMIENTO
+from database.dependencias._dep_activos_digitales import __TABLAS__ as TABLAS_ACTIVOS_DIGITALES
+from database.dependencias._dep_vigilancia import __TABLAS__ as TABLAS_VIGILANCIA
+from database.dependencias._dep_seo import __TABLAS__ as TABLAS_SEO
+from database.dependencias._dep_bases_datos import __TABLAS__ as TABLAS_BASES_DATOS
+from database.dependencias._dep_publicaciones import __TABLAS__ as TABLAS_PUBLICACIONES
+from database.dependencias._dep_geo import __TABLAS__ as TABLAS_GEO
 from database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 
 
@@ -119,6 +125,12 @@ def main():
         *TABLAS_BLOC_NOTAS,
         *TABLAS_PROGRAMACIONES,
         *TABLAS_SEGUIMIENTO,
+        *TABLAS_ACTIVOS_DIGITALES,
+        *TABLAS_VIGILANCIA,
+        *TABLAS_SEO,
+        *TABLAS_BASES_DATOS,
+        *TABLAS_PUBLICACIONES,
+        *TABLAS_GEO,
     ]
 
     manager = ManagerDB(**get_db_config(args.alias))

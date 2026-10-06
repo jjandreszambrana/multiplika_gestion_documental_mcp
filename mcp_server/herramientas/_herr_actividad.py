@@ -113,6 +113,29 @@ ACCIONES_MCP = {
     "desenlazar_nota_bloc_gd": ("quitó un enlace de la nota del bloc", "nota_bloc", "id_nota", None),
     "eliminar_nota_bloc_gd": ("eliminó la nota del bloc", "nota_bloc", "id_nota", None),
     "cambiar_seguimiento_gd": ("cambió el estado de seguimiento", None, None, None),
+    "crear_activo_digital_gd": ("dio de alta la web o cuenta", "activo_digital", None, "nombre"),
+    "actualizar_activo_digital_gd": ("modificó la web o cuenta", "activo_digital", "id_activo", None),
+    "cambiar_ajustes_activo_gd": ("cambió los ajustes de la web o cuenta", "activo_digital", "id_activo", None),
+    "proponer_cambio_web_gd": ("propuso el cambio", "cambio_externo", None, None),
+    "aplicar_cambio_web_gd": ("aplicó el cambio", "cambio_externo", "id_cambio", None),
+    "rechazar_cambio_web_gd": ("rechazó el cambio", "cambio_externo", "id_cambio", None),
+    "deshacer_cambio_web_gd": ("deshizo el cambio", "cambio_externo", "id_cambio", None),
+    "configurar_vigilancia_gd": ("cambió la vigilancia de la web o cuenta", "activo_digital", "id_activo", None),
+    "aceptar_administradores_web_gd": ("dio por buenos los administradores de la web", "activo_digital", "id_activo", None),
+    "hacer_copia_web_gd": ("hizo una copia de seguridad de la web", "activo_digital", "id_activo", None),
+    "marcar_hallazgo_seo_gd": ("cambió el estado de un problema SEO", None, None, None),
+    "hallazgo_a_tarea_gd": ("convirtió en tarea un problema SEO", None, None, None),
+    "guardar_informe_seo_gd": ("guardó el informe SEO de la web", "activo_digital", "id_activo", None),
+    "guardar_consulta_bd_gd": ("guardó una consulta de la base de datos", "activo_digital", "id_activo", "nombre"),
+    "borrar_consulta_bd_gd": ("borró una consulta guardada de la base de datos", None, None, None),
+    "crear_publicacion_gd": ("preparó la publicación", "publicacion", None, "titulo"),
+    "actualizar_publicacion_gd": ("cambió la publicación", "publicacion", "id_publicacion", None),
+    "aprobar_publicacion_gd": ("aprobó la publicación", "publicacion", "id_publicacion", None),
+    "cancelar_publicacion_gd": ("canceló la publicación", "publicacion", "id_publicacion", None),
+    "retirar_publicacion_gd": ("retiró de las redes la publicación", "publicacion", "id_publicacion", None),
+    "anadir_preguntas_geo_gd": ("añadió preguntas de GEO a la web", "activo_digital", "id_activo", None),
+    "quitar_pregunta_geo_gd": ("quitó una pregunta de GEO", None, None, None),
+    "medir_geo_gd": ("midió la presencia en las IAs de la web", "activo_digital", "id_activo", None),
 }
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
@@ -199,7 +222,8 @@ async def consultar_actividad_gd(
       p.ej. tipo_objeto="documento", id_objeto=12. Tipos: documento,
       documento_pendiente, entidad, grupo, script, regla, modelo_registro,
       registro, estilo, credencial, tipo_documento, envio, compartido, nota, enlace,
-      pregunta_pendiente, programacion, nota_bloc.
+      pregunta_pendiente, programacion, nota_bloc, activo_digital
+      (webs y redes), cambio_externo (cambios en webs), publicacion (redes sociales).
     - `desde` / `hasta`: fechas AAAA-MM-DD (hasta incluye el día entero).
     - `texto`: busca en la frase y en el nombre del elemento.
     - `limite`: máximo 100; vienen los más recientes primero.

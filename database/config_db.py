@@ -22,3 +22,12 @@ def get_db_config(alias: str) -> dict:
         "password": os.environ.get("GD_DB_PASSWORD", ""),
         "db": os.environ.get("GD_DB_NAME", get_db_name(alias)),
     }
+
+
+async def get_anthropic_api_key(id_proyecto: int) -> str | None:
+    """En producción la da el núcleo (clave de Anthropic del tenant); aquí, el entorno."""
+    return os.environ.get("GD_ANTHROPIC_API_KEY") or None
+
+
+async def get_anthropic_modelo(id_proyecto: int) -> str:
+    return os.environ.get("GD_ANTHROPIC_MODELO", "claude-sonnet-5")

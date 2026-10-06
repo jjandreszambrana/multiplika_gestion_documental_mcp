@@ -15,6 +15,7 @@ import {
   IconInbox,
   IconMessageCircle,
   IconCode,
+  IconWorld,
   IconGavel,
   IconClipboardList,
   IconLink,
@@ -139,6 +140,10 @@ export default function Sidebar({
         <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
         <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
         <Item icon={IconCode} label="Scripts" active={vista === "scripts"} onClick={() => onNavigate("scripts")} />
+        {/* Invitado no ve nada de webs y redes, ni para leer */}
+        {(proyecto.puede_editar || proyecto.es_admin) && (
+          <Item icon={IconWorld} label="Webs y redes" active={vista === "webs" || vista === "publicaciones"} onClick={() => onNavigate("webs")} />
+        )}
         {/* Invitado no ve la actividad; soporte sí (llega con es_admin) */}
         {(proyecto.puede_editar || proyecto.es_admin) && (
           <Item icon={IconActivity} label="Actividad" active={vista === "actividad"} onClick={() => onNavigate("actividad")} />

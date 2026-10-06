@@ -667,4 +667,118 @@ export const api = {
   // datos: { estado (null = sin estado), id_usuario_responsable (null = nadie), aplazado_hasta }
   cambiarSeguimiento: (idProyecto, tipo, id, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/seguimiento/${tipo}/${id}`, datos),
+  // Webs y redes sociales (ver docs → "Webs y redes sociales")
+  catalogoActivos: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/catalogo`),
+  listarActivos: (idProyecto, q, incluirArchivados = false) => {
+    const parametros = new URLSearchParams()
+    if (q) parametros.set("q", q)
+    if (incluirArchivados) parametros.set("incluir_archivados", "true")
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos${query ? `?${query}` : ""}`)
+  },
+  obtenerActivo: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}`),
+  crearActivo: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos`, datos),
+  actualizarActivo: (idProyecto, idActivo, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/activos/${idActivo}`, datos),
+  actualizarAjustesActivo: (idProyecto, idActivo, ajustes) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/activos/${idActivo}/ajustes`, ajustes),
+  probarConexionActivo: (idProyecto, idActivo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/probar`),
+  listarContenidoWeb: (idProyecto, idActivo, tipo, buscar, estado, pagina = 1) => {
+    const parametros = new URLSearchParams({ tipo, pagina: String(pagina) })
+    if (buscar) parametros.set("buscar", buscar)
+    if (estado) parametros.set("estado", estado)
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/contenido?${parametros}`)
+  },
+  obtenerContenidoWeb: (idProyecto, idActivo, tipo, idObjeto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/contenido/${tipo}/${idObjeto}`),
+  // propuesta: { operacion, datos, id_objeto, motivo } — no cambia nada en la web
+  proponerCambioWeb: (idProyecto, idActivo, propuesta) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/propuestas`, propuesta),
+  listarCambiosWeb: (idProyecto, idActivo, estado) => {
+    const parametros = new URLSearchParams()
+    if (idActivo) parametros.set("id_activo", String(idActivo))
+    if (estado) parametros.set("estado", estado)
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/cambios-web${query ? `?${query}` : ""}`)
+  },
+  obtenerCambioWeb: (idProyecto, idCambio) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/cambios-web/${idCambio}`),
+  aplicarCambioWeb: (idProyecto, idCambio) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/cambios-web/${idCambio}/aplicar`),
+  rechazarCambioWeb: (idProyecto, idCambio, motivo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/cambios-web/${idCambio}/rechazar`, { motivo: motivo || null }),
+  deshacerCambioWeb: (idProyecto, idCambio) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/cambios-web/${idCambio}/deshacer`),
+  estadoVigilancia: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/vigilancia`),
+  historialVigilancia: (idProyecto, idActivo, soloProblemas = true, dias = 30) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/vigilancia/historial?dias=${dias}&solo_problemas=${soloProblemas}`),
+  comprobarAhora: (idProyecto, idActivo, tipo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/vigilancia/comprobar${tipo ? `?tipo=${tipo}` : ""}`),
+  configurarVigilancia: (idProyecto, idActivo, tipo, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/activos/${idActivo}/vigilancia/${tipo}`, datos),
+  aceptarAdministradores: (idProyecto, idActivo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/vigilancia/aceptar-administradores`),
+  listarCopiasWeb: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/copias`),
+  hacerCopiaWeb: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/copias`),
+  leerErroresWeb: (idProyecto, idActivo, lineas = 50) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/errores?lineas=${lineas}`),
+  descargarConectorBlob: async (idProyecto) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/conector-wordpress.zip`, { headers })
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    return res.blob()
+  },
+  cuentaGoogleSeo: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/seo/google`),
+  rendimientoGoogle: (idProyecto, idActivo, dias = 28) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/seo/rendimiento?dias=${dias}`),
+  velocidadWeb: (idProyecto, idActivo, estrategia = "mobile") =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/seo/velocidad?estrategia=${estrategia}`),
+  auditarSeo: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/seo/auditar`),
+  hallazgosSeo: (idProyecto, idActivo, estado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/seo/hallazgos${estado ? `?estado=${estado}` : ""}`),
+  marcarHallazgoSeo: (idProyecto, idHallazgo, estado) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/seo/hallazgos/${idHallazgo}`, { estado }),
+  hallazgoSeoATarea: (idProyecto, idHallazgo) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/seo/hallazgos/${idHallazgo}/tarea`),
+  leerSeoPagina: (idProyecto, idActivo, idObjeto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/seo/pagina/${idObjeto}`),
+  guardarInformeSeo: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/seo/informe`, {}),
+  esquemaBd: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/bd/esquema`),
+  consultarBd: (idProyecto, idActivo, sql, limite = 200) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/bd/consulta`, { sql, limite }),
+  listarConsultasBd: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/bd/consultas`),
+  guardarConsultaBd: (idProyecto, idActivo, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/bd/consultas`, datos),
+  ejecutarConsultaBd: (idProyecto, idConsulta) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/bd/consultas/${idConsulta}/ejecutar`),
+  borrarConsultaBd: (idProyecto, idConsulta) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/bd/consultas/${idConsulta}`),
+  listarPublicaciones: (idProyecto, filtros = {}) => {
+    const parametros = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v != null && v !== ""))
+    const query = parametros.toString()
+    return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/publicaciones${query ? `?${query}` : ""}`)
+  },
+  obtenerPublicacion: (idProyecto, id) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/publicaciones/${id}`),
+  crearPublicacion: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/publicaciones`, datos),
+  actualizarPublicacion: (idProyecto, id, datos) => peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/publicaciones/${id}`, datos),
+  accionPublicacion: (idProyecto, id, accion, cuerpo) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/publicaciones/${id}/${accion}`, cuerpo),
+  comentariosPublicacion: (idProyecto, id, idActivo) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/publicaciones/${id}/comentarios/${idActivo}`),
+  estadoGeo: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/geo`),
+  anadirPreguntasGeo: (idProyecto, idActivo, preguntas) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/geo/preguntas`, { preguntas }),
+  cambiarPreguntaGeo: (idProyecto, idPregunta, datos) => peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/geo/preguntas/${idPregunta}`, datos),
+  medirGeo: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/activos/${idActivo}/geo/medir`),
+  leerGeoWeb: (idProyecto, idActivo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/geo/web`),
+  listarFicherosWeb: (idProyecto, idActivo, ruta = ".") =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/ficheros?ruta=${encodeURIComponent(ruta)}`),
+  leerFicheroWeb: (idProyecto, idActivo, ruta) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/activos/${idActivo}/ficheros/contenido?ruta=${encodeURIComponent(ruta)}`),
 }

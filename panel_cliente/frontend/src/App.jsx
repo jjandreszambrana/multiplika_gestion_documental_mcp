@@ -64,6 +64,9 @@ import Notificaciones from "./paginas/Notificaciones"
 import BlocNotas from "./paginas/BlocNotas"
 import NotaBlocDetalle from "./paginas/NotaBlocDetalle"
 import Seguimiento from "./paginas/Seguimiento"
+import Webs from "./paginas/Webs"
+import WebDetalle from "./paginas/WebDetalle"
+import Publicaciones from "./paginas/Publicaciones"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
 // del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
@@ -80,6 +83,7 @@ export default function App() {
   const [grupoActivo, setGrupoActivo] = useState(null)
   const [entidadActiva, setEntidadActiva] = useState(null)
   const [scriptActivo, setScriptActivo] = useState(null)
+  const [idActivoActivo, setIdActivoActivo] = useState(null)
   const [idProgramacionActiva, setIdProgramacionActiva] = useState(null)
   // { id } de la nota abierta, o { id: null, enlace } para escribir una nueva
   // (ya enlazada al documento o registro desde el que se pidió)
@@ -224,6 +228,7 @@ export default function App() {
     setGrupoActivo(null)
     setEntidadActiva(null)
     setScriptActivo(null)
+    setIdActivoActivo(null)
     setIdProgramacionActiva(null)
     setNotaActiva(null)
     setVista("documentos")
@@ -236,6 +241,7 @@ export default function App() {
     setGrupoActivo(null)
     setEntidadActiva(null)
     setScriptActivo(null)
+    setIdActivoActivo(null)
     setIdProgramacionActiva(null)
     setNotaActiva(null)
     setVista(nuevaVista)
@@ -408,6 +414,12 @@ export default function App() {
             />
           ) : vista === "scripts" ? (
             <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
+          ) : vista === "webs" && idActivoActivo ? (
+            <WebDetalle proyecto={proyecto} idActivo={idActivoActivo} onVolver={() => setIdActivoActivo(null)} />
+          ) : vista === "webs" ? (
+            <Webs proyecto={proyecto} onVolver={() => navegar("documentos")} onVerActivo={setIdActivoActivo} onVerCalendario={() => navegar("publicaciones")} />
+          ) : vista === "publicaciones" ? (
+            <Publicaciones proyecto={proyecto} onVolver={() => navegar("webs")} />
           ) : vista === "programaciones" && idProgramacionActiva ? (
             <ProgramacionDetalle
               proyecto={proyecto}
@@ -424,6 +436,7 @@ export default function App() {
               onVolver={() => navegar("documentos")}
               onVerProgramacion={verProgramacion}
               onVerSeguimiento={() => navegar("seguimiento")}
+              onVerWebs={() => navegar("webs")}
               onCambiadas={contarNoLeidas}
             />
           ) : vista === "seguimiento" ? (

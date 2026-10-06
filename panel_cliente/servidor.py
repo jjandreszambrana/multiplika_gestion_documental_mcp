@@ -28,8 +28,10 @@ absolutos a database.config_db / lib.*). Para probar en local antes de
 desplegar, ver guia_nuevo_proyecto.md sobre cómo simular el árbol final."""
 
 import html
+import io
 import json
 import os
+import zipfile
 from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import quote
@@ -60,6 +62,7 @@ from ..database.modelos._mod_compartidos import CompartidosCRUD, anular_comparti
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
+from ..database.modelos._tipos_archivo import comprobar_tipo_archivo
 from ..database.modelos._mod_credenciales_campos import CredencialesCamposCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
 from ..database.modelos._mod_pdf import pdf_de_documento
@@ -79,7 +82,20 @@ from ..database.modelos._mod_enlaces import (
     revocar_key,
     url_mcp_propia,
 )
+from ..database.dependencias._dep_activos_digitales import CAPACIDAD_POR_PLATAFORMA, NIVELES_PERMISO, PLATAFORMAS, PLATAFORMAS_CONECTABLES, TIPOS_ACTIVO
+from ..database.modelos._mod_activos_digitales import ActivosDigitalesCRUD, catalogo_ajustes
+from ..database.modelos._mod_cambios_externos import OPERACIONES, CambiosExternosCRUD
+from ..database.modelos import _mod_vigilancia as vigilancia
+from ..database.modelos import _mod_google as google_seo
+from ..database.modelos import _mod_seo as seo
+from ..database.modelos import _mod_bases_datos as bd
+from ..database.modelos import _mod_geo as geo
+from ..database.modelos._mod_ficheros import FicherosError, ficheros_de
+from ..database.modelos._mod_publicaciones import PublicacionError, PublicacionesCRUD, medio_publico
+from ..database.modelos._mod_activos_digitales import ajustes_efectivos
+from ..database.modelos._mod_conector import ClienteConector, ConectorError, listar_remoto
 from ..database.modelos._mod_entidades import DocumentosEntidadesCRUD, EntidadesCRUD
+from ..database.modelos._mod_wordpress import WordPressError
 from ..database.modelos._mod_envios import (
     EnviosCRUD,
     cancelar_envio,
@@ -307,6 +323,8 @@ async def crear_documento_manual(
 ) -> dict:
     config = get_db_config(proyecto["id"])
     try:
+        if archivo_original is not None:
+            comprobar_tipo_archivo(archivo_original.content_type, archivo_original.filename)
         resultado = await guardar_documento(
             config, nombre, tipo_documento, markdown, fecha_documento,
             todas_versiones_buscables=todas_versiones_buscables,
@@ -410,6 +428,11 @@ async def subir_documentos_pendientes(
     fila nueva en la cola de pendientes. No se procesan aquí — eso lo hace
     la IA en una conversación posterior (ver guardar_documento_gd)."""
     config = get_db_config(proyecto["id"])
+    try:
+        for archivo in archivos:
+            comprobar_tipo_archivo(archivo.content_type, archivo.filename)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     pendientes = DocumentosPendientesCRUD(config)
     creados = []
     for archivo in archivos:
@@ -2821,10 +2844,13 @@ async def subir_archivo_original_registro(
     registros = RegistrosCRUD(config)
     if not await registros.obtener(id_registro):
         raise HTTPException(404, "Registro no encontrado")
-    await registros.guardar_archivo_original(
-        id_registro, await archivo.read(),
-        archivo.content_type or "application/octet-stream", archivo.filename or "archivo",
-    )
+    try:
+        await registros.guardar_archivo_original(
+            id_registro, await archivo.read(),
+            archivo.content_type or "application/octet-stream", archivo.filename or "archivo",
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     return sin_archivo(await registros.obtener(id_registro))
 
 
@@ -3352,6 +3378,727 @@ async def cambiar_seguimiento_endpoint(
         )
     except (ValueError, LookupError) as e:
         raise _error_bloc(e) from e
+
+
+# ---------- Webs y redes sociales (ver docs → "Webs y redes sociales") ----------
+# Mismas reglas que las herramientas MCP (viven en los modelos). Nada para
+# invitados, ni leer. Dar de alta, cambiar datos, nivel de permiso o ajustes:
+# solo admin (lleva credenciales y decide cuánto puede hacer la IA); el
+# contenido y las propuestas (proponer, aplicar, rechazar, deshacer):
+# cualquiera que pueda escribir. Desde aquí la vía es siempre "panel": es la
+# única que puede aprobar en activos con nivel «proponer».
+
+
+class DatosActivo(BaseModel):
+    nombre: str | None = None
+    tipo: str | None = None
+    plataforma: str | None = None
+    url: str | None = None
+    descripcion: str | None = None
+    id_credencial: int | None = None
+    id_entidad: int | None = None
+    nivel_permiso: str | None = None
+    estado: str | None = None
+    archivado: bool | None = None
+    # Para poder vaciar credencial o entidad (None ya significa "no tocar")
+    quitar_credencial: bool = False
+    quitar_entidad: bool = False
+
+
+class NuevaPropuesta(BaseModel):
+    operacion: str
+    datos: dict = {}
+    id_objeto: int | None = None
+    motivo: str | None = None
+
+
+class MotivoRechazo(BaseModel):
+    motivo: str | None = None
+
+
+def _error_webs(e: Exception) -> HTTPException:
+    return HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/catalogo")
+async def catalogo_activos(id_proyecto: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    """Las opciones de los formularios, sacadas del mismo sitio que valida."""
+    return {"tipos": TIPOS_ACTIVO, "plataformas": PLATAFORMAS, "plataformas_conectables": PLATAFORMAS_CONECTABLES,
+            "capacidades": CAPACIDAD_POR_PLATAFORMA,
+            "niveles": NIVELES_PERMISO, "ajustes": catalogo_ajustes(), "operaciones": list(OPERACIONES)}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos")
+async def listar_activos(
+    id_proyecto: int, q: str | None = None, tipo: str | None = None, incluir_archivados: bool = False,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    peor = await vigilancia.peor_estado_por_activo(config)
+    return [{**a, "vigilancia": peor.get(a["id"])}
+            for a in await ActivosDigitalesCRUD(config).buscar(q, tipo, None, incluir_archivados)]
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}")
+async def obtener_activo(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    activos = ActivosDigitalesCRUD(get_db_config(proyecto["id"]))
+    try:
+        return await activos.con_nombres(await activos.obtener_o_error(id_activo))
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos")
+async def crear_activo_digital(
+    id_proyecto: int, datos: DatosActivo, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    try:
+        return await ActivosDigitalesCRUD(get_db_config(proyecto["id"])).crear(
+            datos.model_dump(exclude={"quitar_credencial", "quitar_entidad"}))
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/activos/{id_activo}")
+async def actualizar_activo_digital(
+    id_proyecto: int, id_activo: int, datos: DatosActivo, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    activos = ActivosDigitalesCRUD(get_db_config(proyecto["id"]))
+    try:
+        await activos.obtener_o_error(id_activo)
+        vaciar = {k: None for k, quitar in (("id_credencial", datos.quitar_credencial),
+                                             ("id_entidad", datos.quitar_entidad)) if quitar}
+        if vaciar:
+            await activos.update(id_activo, vaciar)
+        return await activos.actualizar(id_activo, datos.model_dump(exclude={"quitar_credencial", "quitar_entidad"}),
+                                        puede_subir_nivel=True)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/activos/{id_activo}/ajustes")
+async def actualizar_ajustes_activo(
+    id_proyecto: int, id_activo: int, ajustes: dict, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    try:
+        return await ActivosDigitalesCRUD(get_db_config(proyecto["id"])).actualizar_ajustes(id_activo, ajustes)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/probar")
+async def probar_conexion_activo(
+    id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await ActivosDigitalesCRUD(get_db_config(proyecto["id"])).probar_conexion(id_activo)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/contenido")
+async def listar_contenido_web(
+    id_proyecto: int, id_activo: int, tipo: str, buscar: str | None = None, estado: str | None = None,
+    pagina: int = 1, proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    activos = ActivosDigitalesCRUD(get_db_config(proyecto["id"]))
+    try:
+        cliente = await activos.cliente_wordpress(await activos.obtener_o_error(id_activo))
+        return await cliente.listar(tipo, buscar, estado, pagina)
+    except (ValueError, WordPressError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/contenido/{tipo}/{id_objeto}")
+async def obtener_contenido_web(
+    id_proyecto: int, id_activo: int, tipo: str, id_objeto: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    activos = ActivosDigitalesCRUD(get_db_config(proyecto["id"]))
+    try:
+        cliente = await activos.cliente_wordpress(await activos.obtener_o_error(id_activo))
+        return await cliente.obtener(tipo, id_objeto)
+    except (ValueError, WordPressError) as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/propuestas")
+async def proponer_cambio_web(
+    id_proyecto: int, id_activo: int, datos: NuevaPropuesta,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await CambiosExternosCRUD(get_db_config(proyecto["id"])).proponer(
+            id_activo, datos.operacion, datos.datos, "panel", quien, id_objeto=datos.id_objeto, motivo=datos.motivo)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/cambios-web")
+async def listar_cambios_web(
+    id_proyecto: int, id_activo: int | None = None, estado: str | None = None, limite: int = 100,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    return await CambiosExternosCRUD(get_db_config(proyecto["id"])).buscar(id_activo, estado, limite)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/cambios-web/{id_cambio}")
+async def obtener_cambio_web(
+    id_proyecto: int, id_cambio: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await CambiosExternosCRUD(get_db_config(proyecto["id"])).obtener_salida(id_cambio)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/cambios-web/{id_cambio}/aplicar")
+async def aplicar_cambio_web(
+    id_proyecto: int, id_cambio: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await CambiosExternosCRUD(get_db_config(proyecto["id"])).aplicar(id_cambio, "panel", quien)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/cambios-web/{id_cambio}/rechazar")
+async def rechazar_cambio_web(
+    id_proyecto: int, id_cambio: int, datos: MotivoRechazo,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await CambiosExternosCRUD(get_db_config(proyecto["id"])).rechazar(id_cambio, "panel", quien, datos.motivo)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/cambios-web/{id_cambio}/deshacer")
+async def deshacer_cambio_web(
+    id_proyecto: int, id_cambio: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await CambiosExternosCRUD(get_db_config(proyecto["id"])).deshacer(id_cambio, "panel", quien)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+class DatosVigilancia(BaseModel):
+    activa: bool | None = None
+    cada_minutos: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/vigilancia")
+async def estado_vigilancia_web(
+    id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> list[dict]:
+    try:
+        return await vigilancia.listar_estado(get_db_config(proyecto["id"]), id_activo)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/vigilancia/historial")
+async def historial_vigilancia_web(
+    id_proyecto: int, id_activo: int, tipo: str | None = None, dias: int = 30, solo_problemas: bool = False,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    return await vigilancia.historial(get_db_config(proyecto["id"]), id_activo, tipo, dias, solo_problemas)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/vigilancia/comprobar")
+async def comprobar_ahora_web(
+    id_proyecto: int, id_activo: int, tipo: str | None = None,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    try:
+        return await vigilancia.comprobar_ahora(get_db_config(proyecto["id"]), proyecto["id"], id_activo, tipo)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/activos/{id_activo}/vigilancia/{tipo}")
+async def configurar_vigilancia_web(
+    id_proyecto: int, id_activo: int, tipo: str, datos: DatosVigilancia,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    try:
+        return await vigilancia.configurar(get_db_config(proyecto["id"]), id_activo, tipo, datos.activa, datos.cada_minutos)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/vigilancia/aceptar-administradores")
+async def aceptar_administradores_web(
+    id_proyecto: int, id_activo: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await vigilancia.aceptar_administradores(get_db_config(proyecto["id"]), id_activo, quien)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+async def _conector_de(config: dict, id_activo: int) -> ClienteConector:
+    activos = ActivosDigitalesCRUD(config)
+    activo = await activos.obtener_o_error(id_activo)
+    if not activo["conector_instalado"]:
+        raise ValueError("Esta web no tiene el conector de Multiplika instalado (o falta probar la conexión)")
+    return ClienteConector(await activos.cliente_wordpress(activo))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/copias")
+async def listar_copias_web(
+    id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        locales = await (await _conector_de(config, id_activo)).listar_copias()
+        ajustes = ajustes_efectivos(await ActivosDigitalesCRUD(config).obtener(id_activo))
+        remotas, error_remoto = None, None
+        if ajustes["copias_credencial_remota"]:
+            try:
+                remotas = await listar_remoto(config, ajustes["copias_credencial_remota"], ajustes["copias_carpeta_remota"])
+            except Exception as e:  # servidor remoto caído: se enseña lo local igualmente
+                error_remoto = str(e)
+    except (ValueError, ConectorError) as e:
+        raise _error_webs(e) from e
+    return {**locales, "remotas": remotas, "error_remoto": error_remoto}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/copias")
+async def hacer_copia_web(
+    id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await (await _conector_de(get_db_config(proyecto["id"]), id_activo)).crear_copia()
+    except (ValueError, ConectorError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/errores")
+async def leer_errores_web(
+    id_proyecto: int, id_activo: int, lineas: int = 50, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await (await _conector_de(get_db_config(proyecto["id"]), id_activo)).errores(max(1, min(lineas, 300)))
+    except (ValueError, ConectorError) as e:
+        raise _error_webs(e) from e
+
+
+# El plugin se sirve comprimido tal cual está en conector_wordpress/ del repo
+# (hay que desplegar esa carpeta junto al panel: ver docs/despliegue).
+_DIR_CONECTOR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "conector_wordpress")
+
+
+@app.get("/v1/proyectos/{id_proyecto}/conector-wordpress.zip")
+async def descargar_conector_wordpress(
+    id_proyecto: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> Response:
+    carpeta = os.path.join(_DIR_CONECTOR, "multiplika-conector")
+    if not os.path.isdir(carpeta):
+        raise HTTPException(404, "El conector no está disponible en este servidor")
+    memoria = io.BytesIO()
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as z:
+        for raiz, _, archivos in os.walk(carpeta):
+            for nombre in archivos:
+                ruta = os.path.join(raiz, nombre)
+                z.write(ruta, os.path.join("multiplika-conector", os.path.relpath(ruta, carpeta)))
+    return Response(content=memoria.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="multiplika-conector.zip"'})
+
+
+# ---------- SEO (fase 3 de webs y redes) ----------
+
+class EstadoHallazgo(BaseModel):
+    estado: str
+
+
+class MesInforme(BaseModel):
+    anio: int | None = None
+    mes: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/seo/google")
+async def cuenta_google_seo(id_proyecto: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    """Si hay Search Console y PageSpeed en este servidor, y el correo que el
+    cliente tiene que añadir en su Search Console."""
+    return {"correo": google_seo.correo_cuenta_servicio(), "pagespeed": bool(os.environ.get("GD_GOOGLE_API_KEY"))}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/rendimiento")
+async def rendimiento_google_web(
+    id_proyecto: int, id_activo: int, dias: int = 28, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await seo.rendimiento_google(get_db_config(proyecto["id"]), id_activo, max(7, min(dias, 480)))
+    except (ValueError, google_seo.GoogleError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/velocidad")
+async def velocidad_web(
+    id_proyecto: int, id_activo: int, estrategia: str = "mobile", url: str | None = None,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    try:
+        activo = await ActivosDigitalesCRUD(get_db_config(proyecto["id"])).obtener_o_error(id_activo)
+        return await google_seo.velocidad(url or activo["url"] + "/", "desktop" if estrategia == "desktop" else "mobile")
+    except (ValueError, google_seo.GoogleError) as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/auditar")
+async def auditar_seo_web(
+    id_proyecto: int, id_activo: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await seo.auditar(get_db_config(proyecto["id"]), id_activo, quien)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/hallazgos")
+async def hallazgos_seo_web(
+    id_proyecto: int, id_activo: int, estado: str | None = None, gravedad: str | None = None,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    return {"auditoria": await seo.ultima_auditoria(config, id_activo),
+            "hallazgos": await seo.hallazgos(config, id_activo, estado, gravedad, 500)}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/seo/hallazgos/{id_hallazgo}")
+async def marcar_hallazgo_seo(
+    id_proyecto: int, id_hallazgo: int, datos: EstadoHallazgo, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await seo.marcar_hallazgo(get_db_config(proyecto["id"]), id_hallazgo, datos.estado)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/seo/hallazgos/{id_hallazgo}/tarea")
+async def hallazgo_seo_a_tarea(
+    id_proyecto: int, id_hallazgo: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, id_usuario = await _quien_panel(identidad)
+    try:
+        return await seo.hallazgo_a_tarea(get_db_config(proyecto["id"]), proyecto["id"], id_hallazgo, id_usuario, quien)
+    except (ValueError, LookupError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/pagina/{id_objeto}")
+async def leer_seo_pagina(
+    id_proyecto: int, id_activo: int, id_objeto: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await (await _conector_de(get_db_config(proyecto["id"]), id_activo)).leer_seo(id_objeto)
+    except (ValueError, ConectorError) as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/seo/informe")
+async def guardar_informe_seo(
+    id_proyecto: int, id_activo: int, datos: MesInforme, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    anio, mes = seo.mes_anterior(seo.ahora_madrid())
+    try:
+        r = await seo.guardar_informe(get_db_config(proyecto["id"]), id_activo, datos.anio or anio, datos.mes or mes)
+    except ValueError as e:
+        raise _error_webs(e) from e
+    return {"id_documento": r["id_documento"], "nombre": r["nombre"]}
+
+
+# ---------- Bases de datos (fase 4 de webs y redes) ----------
+
+class ConsultaBd(BaseModel):
+    sql: str
+    limite: int = 200
+
+
+class ConsultaGuardada(BaseModel):
+    nombre: str
+    sql: str
+    descripcion: str | None = None
+    id_consulta: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/bd/esquema")
+async def esquema_bd(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> list[dict]:
+    try:
+        return await bd.esquema(get_db_config(proyecto["id"]), id_activo)
+    except (ValueError, bd.BaseDatosError) as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/bd/consulta")
+async def consultar_bd(
+    id_proyecto: int, id_activo: int, datos: ConsultaBd, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    """Solo lectura (la base de datos lo garantiza con una transacción de
+    solo lectura): POST porque el SQL puede ser largo, no porque cambie nada."""
+    try:
+        return await bd.consultar(get_db_config(proyecto["id"]), id_activo, datos.sql, datos.limite)
+    except (ValueError, bd.BaseDatosError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/bd/consultas")
+async def listar_consultas_bd(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> list[dict]:
+    return await bd.listar_consultas(get_db_config(proyecto["id"]), id_activo)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/bd/consultas")
+async def guardar_consulta_bd(
+    id_proyecto: int, id_activo: int, datos: ConsultaGuardada,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await bd.guardar_consulta(get_db_config(proyecto["id"]), id_activo, datos.nombre, datos.sql, datos.descripcion,
+                                         quien, datos.id_consulta)
+    except (ValueError, bd.BaseDatosError) as e:
+        raise _error_webs(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/bd/consultas/{id_consulta}/ejecutar")
+async def ejecutar_consulta_bd(id_proyecto: int, id_consulta: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await bd.ejecutar_consulta_guardada(get_db_config(proyecto["id"]), id_consulta)
+    except (ValueError, bd.BaseDatosError) as e:
+        raise _error_webs(e) from e
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/bd/consultas/{id_consulta}", status_code=status.HTTP_204_NO_CONTENT)
+async def borrar_consulta_bd(id_proyecto: int, id_consulta: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> None:
+    await bd.borrar_consulta(get_db_config(proyecto["id"]), id_consulta)
+
+
+# ---------- Redes sociales: calendario editorial (fase 5 de webs y redes) ----------
+
+class DatosPublicacion(BaseModel):
+    texto: str | None = None
+    titulo: str | None = None
+    ids_activos: list[int] | None = None
+    ids_documentos: list[int] | None = None
+    enlace: str | None = None
+    fecha_prevista: str | None = None
+    textos_por_red: dict | None = None
+    pedir_aprobacion: bool = False
+
+
+class AprobarPublicacion(BaseModel):
+    publicar_ya: bool = False
+
+
+def _error_publicacion(e: Exception) -> HTTPException:
+    return HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+
+
+@app.get("/v1/proyectos/{id_proyecto}/publicaciones")
+async def listar_publicaciones(
+    id_proyecto: int, desde: str | None = None, hasta: str | None = None, estado: str | None = None, id_activo: int | None = None,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> list[dict]:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).listar(desde, hasta, estado, id_activo)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}")
+async def obtener_publicacion(id_proyecto: int, id_publicacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).obtener_salida(id_publicacion)
+    except PublicacionError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones")
+async def crear_publicacion(
+    id_proyecto: int, datos: DatosPublicacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).crear(
+            datos.model_dump(exclude={"pedir_aprobacion"}), "panel", quien, datos.pedir_aprobacion)
+    except (ValueError, PublicacionError) as e:
+        raise _error_publicacion(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}")
+async def actualizar_publicacion(
+    id_proyecto: int, id_publicacion: int, datos: DatosPublicacion, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).actualizar(
+            id_publicacion, {k: v for k, v in datos.model_dump(exclude={"pedir_aprobacion"}).items() if v is not None})
+    except (ValueError, PublicacionError) as e:
+        raise _error_publicacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/pedir-aprobacion")
+async def pedir_aprobacion_publicacion(id_proyecto: int, id_publicacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).pedir_aprobacion(id_publicacion)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/aprobar")
+async def aprobar_publicacion(
+    id_proyecto: int, id_publicacion: int, datos: AprobarPublicacion,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    crud = PublicacionesCRUD(get_db_config(proyecto["id"]))
+    try:
+        p = await crud.aprobar(id_publicacion, "panel", quien)
+        return await crud.publicar(proyecto["id"], id_publicacion, "panel", quien) if datos.publicar_ya else p
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/cancelar")
+async def cancelar_publicacion(id_proyecto: int, id_publicacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).cancelar(id_publicacion)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/retirar")
+async def retirar_publicacion(
+    id_proyecto: int, id_publicacion: int,
+    proyecto: dict = Depends(escritor_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    quien, _ = await _quien_panel(identidad)
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).retirar(id_publicacion, "panel", quien)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/metricas")
+async def metricas_publicacion(id_proyecto: int, id_publicacion: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).actualizar_metricas(id_publicacion)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/publicaciones/{id_publicacion}/comentarios/{id_activo}")
+async def comentarios_publicacion(
+    id_proyecto: int, id_publicacion: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> list[dict]:
+    try:
+        return await PublicacionesCRUD(get_db_config(proyecto["id"])).comentarios(id_publicacion, id_activo)
+    except PublicacionError as e:
+        raise _error_publicacion(e) from e
+
+
+@app.get("/v1/medio-publico/{id_proyecto}/{nombre}")
+async def descargar_medio_publico(id_proyecto: int, nombre: str) -> Response:
+    """Pública y sin sesión: la imagen de una publicación, para que la red
+    social la descargue. Solo con un token vigente (caduca a los 7 días)."""
+    try:
+        config = get_db_config(id_proyecto)
+        medio = await medio_publico(config, os.path.splitext(nombre)[0])
+    except Exception:  # proyecto que no existe, tabla sin crear...
+        medio = None
+    if not medio:
+        raise HTTPException(404, "No encontrado")
+    contenido, tipo, _ = medio
+    return Response(content=contenido, media_type=tipo, headers={"Cache-Control": "public, max-age=3600"})
+
+
+# ---------- GEO y webs a medida (fase 6 de webs y redes) ----------
+
+class PreguntasGeo(BaseModel):
+    preguntas: list[str]
+
+
+class CambioPreguntaGeo(BaseModel):
+    activa: bool | None = None
+    borrar: bool = False
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/geo")
+async def estado_geo(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    config = get_db_config(proyecto["id"])
+    motores = await geo.motores_disponibles(config, proyecto["id"])
+    return {"preguntas": await geo.preguntas(config, id_activo), "resultados": await geo.resultados(config, id_activo),
+            "motores": list(motores)}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/geo/preguntas")
+async def anadir_preguntas_geo(
+    id_proyecto: int, id_activo: int, datos: PreguntasGeo, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> list[dict]:
+    try:
+        return await geo.anadir_preguntas(get_db_config(proyecto["id"]), id_activo, datos.preguntas)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/geo/preguntas/{id_pregunta}")
+async def cambiar_pregunta_geo(
+    id_proyecto: int, id_pregunta: int, datos: CambioPreguntaGeo, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    await geo.cambiar_pregunta(get_db_config(proyecto["id"]), id_pregunta, datos.activa, datos.borrar)
+    return {"id_pregunta": id_pregunta}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/activos/{id_activo}/geo/medir")
+async def medir_geo(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await geo.medir(get_db_config(proyecto["id"]), proyecto["id"], id_activo)
+    except ValueError as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/geo/web")
+async def leer_geo_web(id_proyecto: int, id_activo: int, proyecto: dict = Depends(escritor_gestion_documental_actual)) -> dict:
+    try:
+        return await (await _conector_de(get_db_config(proyecto["id"]), id_activo)).leer_geo()
+    except (ValueError, ConectorError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/ficheros")
+async def listar_ficheros_web(
+    id_proyecto: int, id_activo: int, ruta: str = ".", proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> list[dict]:
+    config = get_db_config(proyecto["id"])
+    try:
+        return await (await ficheros_de(config, await ActivosDigitalesCRUD(config).obtener_o_error(id_activo))).listar(ruta)
+    except (ValueError, FicherosError) as e:
+        raise _error_webs(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/activos/{id_activo}/ficheros/contenido")
+async def leer_fichero_web(
+    id_proyecto: int, id_activo: int, ruta: str, proyecto: dict = Depends(escritor_gestion_documental_actual)
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    try:
+        contenido = await (await ficheros_de(config, await ActivosDigitalesCRUD(config).obtener_o_error(id_activo))).leer(ruta)
+    except (ValueError, FicherosError) as e:
+        raise _error_webs(e) from e
+    return {"ruta": ruta, "contenido": contenido, "existe": contenido is not None}
 
 
 # El frontend compilado se sirve si existe (ver README de este repo sobre

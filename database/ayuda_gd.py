@@ -35,7 +35,7 @@ mantienes de dos formas:
 El menú del panel sigue el mismo orden que esta ayuda: primero lo del día \
 a día (documentos, notificaciones, bloc de notas, seguimiento, avisos \
 programados, tipos, estilos de informe, registros de datos, reglas, \
-grupos, entidades, scripts, actividad, chat) y, en "Administración", lo \
+grupos, entidades, scripts, webs y redes, actividad, chat) y, en "Administración", lo \
 que solo ve el administrador.
 
 ### Qué puede hacer cada usuario
@@ -627,6 +627,177 @@ tu IA.
 
 Un script se puede relacionar con los documentos para los que se escribió \
 o en los que se usó, desde la ficha del documento o desde la del script.""",
+    },
+    {
+        "id": "webs-y-redes",
+        "titulo": "Webs y redes",
+        "resumen": "Webs, bases de datos y redes sociales desde la IA o el panel: cambios con vista previa y deshacer, vigilancia, copias, SEO, GEO y publicaciones.",
+        "markdown": """\
+En "Webs y redes" están las webs, redes sociales y bases de datos de tu \
+empresa. De momento la gestión documental se conecta con **WordPress** \
+(también WooCommerce): ver y editar entradas y páginas, moderar \
+comentarios, subir fotos de tus documentos a la web y consultar plugins y \
+usuarios. El resto de plataformas se pueden apuntar en la lista para \
+tenerlo todo en un sitio, y se irán conectando más adelante.
+
+### Dar de alta tu web
+
+1. En tu WordPress, entra en Usuarios → tu perfil → **Contraseñas de \
+   aplicación**, escribe un nombre (p. ej. "Gestión documental") y copia la \
+   contraseña que te da. No uses tu contraseña normal: esta se puede anular \
+   en cualquier momento sin afectar a nada más.
+2. En la gestión documental, un administrador la guarda en \
+   Administración → Credenciales (usuario = tu usuario de WordPress, valor = \
+   esa contraseña).
+3. En "Webs y redes" → Añadir: nombre, dirección de la web y esa \
+   credencial. Pulsa "Probar conexión".
+
+También se lo puedes pedir a tu IA.
+
+### Qué puede hacer la IA
+
+Lo decide un administrador en cada web:
+
+- **Solo lectura**: consultar, nada más (así nace toda web nueva).
+- **Proponer**: la IA prepara cambios, pero solo se aprueban en el panel.
+- **Aplicar confirmando**: la IA los aplica cuando le dices que sí.
+- **Autónomo acotado**: además, hace sola tareas pequeñas (de momento, \
+  moderar comentarios, p. ej. mandar el spam a la papelera).
+
+La IA puede bajar este permiso si se lo pides, pero nunca subirlo.
+
+### Cómo se hace un cambio
+
+Ningún cambio llega a la web sin pasar por aquí: se prepara una \
+**propuesta** con cómo estaba y cómo quedará → alguien la aprueba (en la \
+conversación con la IA o con el botón "Aplicar en la web") → se aplica → \
+se comprueba que la web sigue funcionando. Puedes pedirlo a la IA y \
+aprobarlo luego en el panel, o al revés.
+
+Antes de aplicar se vuelve a mirar la web: si alguien la ha cambiado \
+entretanto, no se toca nada y hay que volver a proponerlo. Una propuesta \
+sin aprobar caduca a los 7 días (se puede cambiar en los ajustes de cada \
+web).
+
+### Deshacer
+
+En la pestaña "Cambios" de cada web está todo lo propuesto y hecho. Un \
+cambio aplicado se puede **deshacer**: una edición vuelve a su texto \
+anterior, una entrada nueva va a la papelera de WordPress, una foto subida \
+se borra. Si después alguien volvió a tocar lo mismo, no se deshace, para \
+no pisarlo. La copia de cada cambio se guarda 365 días (se puede cambiar); \
+pasado ese plazo queda el resumen, pero ya no se puede deshacer.
+
+### Vigilancia
+
+Cada web se comprueba sola cada cierto tiempo: que responde, el \
+certificado (candado), la caducidad del dominio, las protecciones básicas \
+del servidor, archivos que no deberían verse desde fuera, administradores \
+nuevos, plugins con fallos de seguridad conocidos y comentarios \
+pendientes. Si algo **grave** falla (la web se cae, aparece un \
+administrador que nadie conoce, un archivo con contraseñas a la vista...) \
+avisa en el momento por notificación y correo a quienes pueden editar; lo \
+demás llega en el **resumen de los lunes**. Para buscar fallos de \
+seguridad conocidos en los plugins hace falta una credencial llamada \
+«wpscan» con tu token de WPScan (tienen un plan gratuito).
+
+### El conector de Multiplika (opcional)
+
+Es un plugin de WordPress que se descarga desde la pestaña "Vigilancia" \
+de la web. Con él, además: copias de seguridad, aviso si alguien modifica \
+los archivos de WordPress (señal de hackeo), errores graves de la web y \
+actualizar plugins y temas. Solo atiende a usuarios administradores, así \
+que la credencial de la web tiene que ser de un administrador.
+
+### Copias de seguridad
+
+Se activan en "Datos y ajustes": cada cuántas horas, cuántas se guardan en \
+el propio servidor de la web y, si quieres, en un servidor remoto tuyo \
+(SFTP). Nunca se guardan en servidores de Multiplika. Se vigila el espacio \
+libre y, si no cabe una copia, se borra la más antigua (si lo permites) o \
+se avisa. Si solo guardas copias en el propio servidor, ten en cuenta que \
+si el servidor se estropea o lo hackean se pierden la web y las copias a \
+la vez. Restaurar una copia es un cambio más (vista previa, aprobar, y se \
+puede deshacer).
+
+### Actualizaciones
+
+En los ajustes eliges entre **solo avisar** o **actualizar \
+automáticamente**: se hace una copia, se actualiza, se comprueba que la \
+web sigue bien y, si no, se vuelve a la copia y se avisa. Puedes excluir \
+plugins concretos (p. ej. la tienda) para que de esos solo avise.
+
+### SEO: salir mejor en Google
+
+En la pestaña "SEO" de cada web:
+
+- **Google**: visitas que llegan desde Google, veces que sale, posición \
+  media, páginas y búsquedas que más traen, comparado con el periodo \
+  anterior. Para verlo, añade en tu Search Console (Configuración → \
+  Usuarios y permisos) el correo que te indica el panel, con permiso \
+  restringido.
+- **Velocidad**: la puntuación de Google para móvil y ordenador y lo que \
+  más la aceleraría.
+- **Auditoría**: la gestión documental recorre tu web como Google cada \
+  semana y lista lo que conviene mejorar (páginas sin descripción, títulos \
+  repetidos, enlaces rotos, imágenes sin texto alternativo...), **primero \
+  lo que afecta a las páginas que más visitas traen**. Cada problema se \
+  puede arreglar (el título y la descripción para Google, con vista \
+  previa y deshacer), convertir en tarea del seguimiento o ignorar.
+- **Informe mensual**: el día 1 se guarda en tus documentos el informe del \
+  mes anterior (visitas, búsquedas, cambios hechos y su efecto, lo que \
+  falta por arreglar), listo para sacarlo en PDF con tu estilo.
+
+### Salir en las respuestas de las IAs (GEO)
+
+En la pestaña "SEO", añade las preguntas que haría un cliente real a una IA \
+(«mejor laboratorio de análisis de alimentos en Sevilla»). Una vez al mes \
+se le preguntan a las IAs disponibles (Claude con la clave de tu empresa; \
+ChatGPT, Gemini o Perplexity si das de alta su clave como credencial \
+«openai», «gemini» o «perplexity») y se ve en cuántas respuestas sale tu \
+empresa y qué competidores salen. Cada pregunta cuesta una consulta a cada \
+IA. Con el conector, ahí mismo decides qué robots de IA pueden leer tu web \
+y el texto de /llms.txt; tu IA puede preparar los datos estructurados de \
+tu empresa.
+
+### Bases de datos
+
+Da de alta la base de datos de tu tienda o programa como «Base de datos» \
+(MySQL o PostgreSQL), conectando directamente, por un túnel SSH o, si es \
+la de tu WordPress, a través del conector. Puedes preguntarle a tu IA \
+(«¿cuántos pedidos hubo en septiembre por provincia?») y guardar las \
+preguntas útiles para ejecutarlas tú con un botón. Las consultas nunca \
+cambian nada. Para cambiar datos, tu IA prepara el cambio (qué filas y cómo \
+quedan), se aprueba y se puede deshacer; nunca se cambian más filas de las \
+del ajuste «Filas como máximo» ni la estructura de las tablas.
+
+### Redes sociales
+
+Da de alta cada red (Facebook, Instagram, LinkedIn, Google Business...) en \
+"Webs y redes". En "Calendario de publicaciones" preparas lo que sale \
+(texto, fotos de tus documentos, fecha): nada se publica sin aprobarlo, y \
+lo aprobado sale solo a su hora. Ves las métricas, los comentarios (tu IA \
+puede proponer la respuesta) y puedes retirar lo publicado. Se conecta por \
+un servicio intermediario (Ayrshare) o, para Facebook e Instagram, \
+directamente con una aplicación de Meta tuya; la pestaña de cada red \
+explica los pasos.
+
+### Webs hechas a medida
+
+Si tu web no es WordPress, se conecta a sus archivos por SFTP o a su \
+repositorio Git. La vigilancia, el SEO y el GEO funcionan igual; los \
+cambios en archivos (por ejemplo robots.txt o una página) se proponen con \
+vista previa y se deshacen igual que el resto. Por Git, cada cambio es un \
+commit.
+
+### Cloudflare
+
+Si tu web usa Cloudflare, pon en los ajustes una credencial con su token \
+de API: se vigila que el escudo esté bien puesto y, si la web sufre un \
+ataque, se puede activar el modo «estoy siendo atacado» (y quitarlo \
+después) como cualquier otro cambio.
+
+Todo queda también en "Actividad". Los invitados no ven esta parte.""",
     },
     {
         "id": "actividad",

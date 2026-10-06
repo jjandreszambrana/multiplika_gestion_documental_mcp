@@ -10,3 +10,4 @@ cryptography
 pdfplumber
 jsonschema
 pytesseract
+paramiko

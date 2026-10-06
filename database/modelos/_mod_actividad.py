@@ -41,6 +41,9 @@ NOMBRE_POR_TIPO = {
     "pregunta_pendiente": ("gd_preguntas_pendientes", "pregunta"),
     "programacion": ("gd_programaciones", "titulo"),
     "nota_bloc": ("gd_bloc_notas", "titulo"),
+    "activo_digital": ("gd_activos_digitales", "nombre"),
+    "cambio_externo": ("gd_cambios_externos", "resumen"),
+    "publicacion": ("gd_publicaciones", "titulo"),
 }
 
 # Tipos que pueden ser privados: el registro lo ve todo el proyecto, así que
