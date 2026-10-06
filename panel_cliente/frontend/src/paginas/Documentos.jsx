@@ -281,21 +281,28 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
               <Table.Tr>
                 <Table.Th>Documento</Table.Th>
                 <Table.Th>Tipo</Table.Th>
-                <Table.Th>{q ? "Fragmento" : "Fecha de alta"}</Table.Th>
+                <Table.Th>Fecha de alta</Table.Th>
                 <Table.Th>Estado</Table.Th>
                 <Table.Th></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {resultados.map((r) => {
-                const idDocumento = r.id ?? r.id_documento
+                const idDocumento = r.id
                 return (
                   <Table.Tr
-                    key={`${idDocumento}-${r.id_version ?? ""}`}
+                    key={idDocumento}
                     onClick={() => onVerDocumento(idDocumento)}
                     style={{ cursor: "pointer", opacity: r.archivado ? 0.55 : 1 }}
                   >
-                    <Table.Td fw={500}>{r.nombre}</Table.Td>
+                    <Table.Td>
+                      <Text fw={500} size="sm">{r.nombre}</Text>
+                      {r.fragmento && (
+                        <Text c="dimmed" size="xs" lineClamp={2}>
+                          {r.fragmento.replace(/<\/?b>/g, "")}
+                        </Text>
+                      )}
+                    </Table.Td>
                     <Table.Td>
                       <Badge color="gray" variant="light" radius="sm" tt="none" fw={500}>
                         {r.tipo_documento}
@@ -307,15 +314,9 @@ export default function Documentos({ proyecto, onCambiarProyecto, onVerDocumento
                       )}
                     </Table.Td>
                     <Table.Td>
-                      {q ? (
-                        <Text c="dimmed" size="sm">
-                          {r.fragmento}
-                        </Text>
-                      ) : (
-                        <Text size="13px" c="dimmed">
-                          {formatearFecha(r.fecha_alta)}
-                        </Text>
-                      )}
+                      <Text size="13px" c="dimmed">
+                        {formatearFecha(r.fecha_alta)}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Group gap="6" wrap="nowrap">

@@ -290,14 +290,24 @@ async def listar_o_buscar_documentos(
     configuracion = ConfiguracionCRUD(config)
     modo = await configuracion.obtener_modo_busqueda()
     if modo == "fulltext":
-        return await VersionesCRUD(config).buscar_fulltext(q, limite=30)
+        coincidencias = await VersionesCRUD(config).buscar_fulltext(q, limite=30)
+    else:
+        proveedor_embedding = await configuracion.obtener_proveedor_embedding()
+        api_key = await obtener_api_key(proveedor_embedding, proyecto["id"])
+        if not api_key:
+            raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
+        (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
+        coincidencias = await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
 
-    proveedor_embedding = await configuracion.obtener_proveedor_embedding()
-    api_key = await obtener_api_key(proveedor_embedding, proyecto["id"])
-    if not api_key:
-        raise HTTPException(503, "La búsqueda semántica no tiene una clave de API configurada")
-    (embedding_pregunta,) = await generar_embeddings(proveedor_embedding, api_key, [q])
-    return await ChunksCRUD(config).buscar_semantico(embedding_pregunta, limite=30)
+    # Una fila por documento (el fragmento más relevante), con los mismos
+    # campos que el listado simple para que el panel pinte las mismas columnas.
+    fragmentos = {}
+    for c in coincidencias:
+        fragmentos.setdefault(c["id_documento"], c["fragmento"])
+    documentos = {
+        d["id"]: d for d in await DocumentosCRUD(config).buscar(ids=list(fragmentos), limite=len(fragmentos))
+    }
+    return [{**documentos[i], "fragmento": f} for i, f in fragmentos.items() if i in documentos]
 
 
 # --- Alta manual desde el panel: a diferencia de guardar_documento_gd

@@ -25,6 +25,7 @@ class DocumentosCRUD(AsyncCrudBase):
         fecha_desde: str | None = None,
         fecha_hasta: str | None = None,
         solo_compartidos: bool = False,
+        ids: list[int] | None = None,
     ) -> list[dict]:
         """Búsqueda por metadatos (nombre, tipo, fecha de alta), no por
         contenido — para exploración del cliente y para evitar duplicados
@@ -40,6 +41,9 @@ class DocumentosCRUD(AsyncCrudBase):
         if referencia:
             condiciones.append("d.nombre LIKE %s")
             params.append(f"%{referencia}%")
+        if ids is not None:
+            condiciones.append("d.id = ANY(%s)")
+            params.append(list(ids))
         if tipo_documento:
             condiciones.append("d.tipo_documento = %s")
             params.append(tipo_documento)
