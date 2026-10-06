@@ -856,6 +856,8 @@ Notas sueltas de los usuarios (reuniones, llamadas, ideas) enlazables entre sí,
 - **Panel**: "Bloc de notas" en el menú (lista con filtros y ficha de cada nota con enlaces y recordatorios), pestaña "Bloc de notas" en la ficha del documento y botón en cada fila de registros de datos.
 - **Registro de actividad**: tipo `nota_bloc` en `ACCIONES_MCP`/`ACCIONES_PANEL`. Como el registro lo ve todo el proyecto, de una nota que no es de todos no se guarda ni el título ni el detalle (`TIPOS_PRIVADOS` en `_mod_actividad.py`).
 
+**Enlace con entidades (2026-10-06, petición del usuario)**: `gd_bloc_notas_entidades`, mismo patrón que `gd_bloc_notas_documentos` (FK `ON DELETE CASCADE` a los dos lados: borrar la entidad quita el enlace, la nota sigue). Tipo de enlace `entidad` en `enlazar/desenlazar_nota_bloc_gd`, `ids_entidades` al crear y filtro `id_entidad` al buscar. Panel: "Entidad" en el modal de enlazar de la nota (el badge abre la ficha de la entidad) y sección "Bloc de notas" en la ficha de la entidad, con "Nueva nota" ya enlazada. Al desplegar, la FK hacia `gd_entidades` obliga a registrar también `TABLA_ENTIDADES` si se aplica con un script `ManagerDB` ad hoc (`update_db.py` ya la lleva).
+
 Quién decidió: usuario (visibilidad por nota, claves de una persona o de todos, etiquetas, IA, recordatorio, fijar/archivar, notas de seguimiento aparte). El asistente: permisos de edición, búsqueda por texto, privacidad en el registro de actividad.
 Reversible: sí — tablas nuevas y dos columnas que admiten NULL (`gd_programaciones.id_nota_bloc`, `mcpc_api_keys.id_usuario`).
 

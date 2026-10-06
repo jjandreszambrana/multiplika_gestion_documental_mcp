@@ -3165,10 +3165,11 @@ class DatosNotaBloc(BaseModel):
     ids_notas: list[int] | None = None
     ids_documentos: list[int] | None = None
     ids_registros: list[int] | None = None
+    ids_entidades: list[int] | None = None
 
 
 class EnlaceNotaBloc(BaseModel):
-    tipo: Literal["nota", "documento", "registro"]
+    tipo: Literal["nota", "documento", "registro", "entidad"]
     id_destino: int
 
 
@@ -3176,7 +3177,7 @@ class EnlaceNotaBloc(BaseModel):
 async def listar_notas_bloc_endpoint(
     id_proyecto: int, texto: str | None = None, etiqueta: str | None = None,
     desde: str | None = None, hasta: str | None = None, id_documento: int | None = None,
-    id_registro: int | None = None, id_nota: int | None = None,
+    id_registro: int | None = None, id_nota: int | None = None, id_entidad: int | None = None,
     archivadas: Literal["no", "si", "todas"] = "no", solo_mias: bool = False, color: str | None = None,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
     identidad: Identidad = Depends(identidad_actual),
@@ -3187,7 +3188,7 @@ async def listar_notas_bloc_endpoint(
         notas = await bloc.buscar_notas(
             config, id_usuario, texto, etiqueta, desde, hasta,
             id_documento, id_registro, id_nota, {"no": False, "si": True, "todas": None}[archivadas],
-            solo_mias, limite=500, color=color,
+            solo_mias, limite=500, color=color, id_entidad=id_entidad,
         )
     except (ValueError, LookupError) as e:
         raise _error_bloc(e) from e
@@ -3238,7 +3239,7 @@ async def actualizar_nota_bloc_endpoint(
 ) -> dict:
     quien, id_usuario = await _quien_panel(identidad)
     # exclude_unset: descripcion=null (vaciarla) no es lo mismo que no mandarla
-    campos = datos.model_dump(exclude_unset=True, exclude={"ids_notas", "ids_documentos", "ids_registros"})
+    campos = datos.model_dump(exclude_unset=True, exclude={"ids_notas", "ids_documentos", "ids_registros", "ids_entidades"})
     try:
         return await bloc.actualizar_nota(get_db_config(proyecto["id"]), proyecto["id"], id_usuario, quien, id_nota, campos)
     except (ValueError, LookupError, PermissionError) as e:
@@ -3262,7 +3263,7 @@ async def enlazar_nota_bloc_endpoint(
 
 @app.delete("/v1/proyectos/{id_proyecto}/bloc-notas/{id_nota}/enlaces/{tipo}/{id_destino}")
 async def desenlazar_nota_bloc_endpoint(
-    id_proyecto: int, id_nota: int, tipo: Literal["nota", "documento", "registro"], id_destino: int,
+    id_proyecto: int, id_nota: int, tipo: Literal["nota", "documento", "registro", "entidad"], id_destino: int,
     proyecto: dict = Depends(escritor_gestion_documental_actual),
     identidad: Identidad = Depends(identidad_actual),
 ) -> dict:

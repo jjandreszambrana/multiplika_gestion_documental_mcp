@@ -3,6 +3,7 @@ import { Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Title 
 import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import FormularioEntidad from "../componentes/FormularioEntidad"
+import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
 
 const ETIQUETAS = {
   direccion: "Dirección", localidad: "Localidad", provincia: "Provincia",
@@ -10,7 +11,7 @@ const ETIQUETAS = {
   email: "Email", codigo: "Código (ERP)", observaciones: "Observaciones",
 }
 
-export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminada }) {
+export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminada, onVerNota, onNuevaNota }) {
   const [datos, setDatos] = useState(entidad)
   const [editando, setEditando] = useState(false)
   const [valoresEdicion, setValoresEdicion] = useState(entidad)
@@ -201,6 +202,14 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
           </Table>
         </Paper>
       )}
+
+      <Title order={4} fz="16px" mt="xl" mb="10">
+        Bloc de notas
+      </Title>
+      <NotasBlocVinculadas
+        proyecto={proyecto} enlace={{ tipo: "entidad", id: entidad.id }}
+        onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+      />
     </>
   )
 }

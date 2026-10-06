@@ -1,5 +1,6 @@
 """Herramientas MCP del bloc de notas: notas sueltas de los usuarios,
-enlazables entre sí, con documentos y con registros de datos — ver
+enlazables entre sí, con documentos, con registros de datos y con
+entidades — ver
 docs/gestion-documental.md → "Bloc de notas".
 
 Quién es "yo": el usuario del chat del panel (ver _quien en
@@ -31,7 +32,7 @@ from ..database.modelos._mod_bloc_notas import (
 from ..database.modelos._mod_seguimiento import obtener_seguimiento
 
 Visibilidad = Literal["privada", "personas", "todos"]
-TipoEnlace = Literal["nota", "documento", "registro"]
+TipoEnlace = Literal["nota", "documento", "registro", "entidad"]
 Color = Literal["rojo", "naranja", "amarillo", "verde", "azul", "morado", "rosa", "gris"]
 
 
@@ -63,6 +64,7 @@ async def buscar_notas_bloc_gd(
     id_documento: int | None = None,
     id_registro: int | None = None,
     id_nota: int | None = None,
+    id_entidad: int | None = None,
     archivadas: Literal["no", "si", "todas"] = "no",
     solo_mias: bool = False,
     color: Color | None = None,
@@ -80,8 +82,9 @@ async def buscar_notas_bloc_gd(
     - `etiqueta`: notas con esa etiqueta (ver listar_etiquetas_bloc_gd).
     - `desde` / `hasta`: AAAA-MM-DD (hasta incluye el día entero), sobre
       la fecha de la nota.
-    - `id_documento` / `id_registro` / `id_nota`: notas enlazadas a ese
-      documento, registro de datos u otra nota.
+    - `id_documento` / `id_registro` / `id_nota` / `id_entidad`: notas
+      enlazadas a ese documento, registro de datos, otra nota o entidad
+      (p.ej. todo lo apuntado sobre un cliente).
     - `archivadas`: "no" (lo normal), "si" o "todas".
     - `solo_mias`: solo las que escribió quien pregunta.
     - `color`: notas con ese distintivo de color.
@@ -96,7 +99,7 @@ async def buscar_notas_bloc_gd(
     return await _ejecutar(buscar_notas(
         config, id_usuario, texto, etiqueta, desde, hasta, id_documento, id_registro, id_nota,
         {"no": False, "si": True, "todas": None}[archivadas], solo_mias, limite,
-        COLORES_ES[color] if color else None,
+        COLORES_ES[color] if color else None, id_entidad,
     ))
 
 
@@ -104,7 +107,7 @@ async def buscar_notas_bloc_gd(
 async def obtener_nota_bloc_gd(id_nota: int) -> dict:
     """Una nota del bloc entera: contenido, etiquetas, con quién se
     comparte, lo que tiene enlazado (otras notas, documentos, registros
-    de datos y sus recordatorios) y su estado de seguimiento."""
+    de datos, entidades y sus recordatorios) y su estado de seguimiento."""
     config, id_proyecto, id_usuario, _ = await _contexto()
     nota = await _ejecutar(obtener_nota(config, id_usuario, id_nota, id_proyecto))
     return {**nota, "seguimiento": await obtener_seguimiento(config, id_proyecto, id_usuario, "nota_bloc", id_nota)}
@@ -133,6 +136,7 @@ async def crear_nota_bloc_gd(
     ids_notas: list[int] | None = None,
     ids_documentos: list[int] | None = None,
     ids_registros: list[int] | None = None,
+    ids_entidades: list[int] | None = None,
 ) -> dict:
     """Escribe una nota en el bloc de notas: "apunta que hemos quedado con
     el proveedor en revisar el precio en enero".
@@ -147,8 +151,10 @@ async def crear_nota_bloc_gd(
       "privada" (solo quien la escribe) o "personas" (quien la escribe y
       `ids_personas`, ver listar_usuarios_proyecto_gd). Si la conexión no
       sabe quién eres (API key de todos), solo puede ser "todos".
-    - `ids_notas` / `ids_documentos` / `ids_registros`: lo que se enlaza
-      ya al crearla (también luego con enlazar_nota_bloc_gd).
+    - `ids_notas` / `ids_documentos` / `ids_registros` / `ids_entidades`:
+      lo que se enlaza ya al crearla (también luego con
+      enlazar_nota_bloc_gd). Si la nota trata de un cliente, proveedor...,
+      enlázala con su entidad (búscala con listar_entidades_gd).
 
     Para un recordatorio sobre la nota, crea después un aviso con
     crear_programacion_gd(id_nota_bloc=...)."""
@@ -157,6 +163,7 @@ async def crear_nota_bloc_gd(
         "titulo": titulo, "contenido": contenido, "descripcion": descripcion, "fecha": fecha,
         "etiquetas": etiquetas, "visibilidad": visibilidad, "ids_personas": ids_personas, "fijada": fijada,
         "color": COLORES_ES[color] if color else None, "ids_notas": ids_notas, "ids_documentos": ids_documentos, "ids_registros": ids_registros,
+        "ids_entidades": ids_entidades,
     }))
 
 
@@ -196,9 +203,10 @@ async def actualizar_nota_bloc_gd(
 
 @mcp_app.tool()
 async def enlazar_nota_bloc_gd(id_nota: int, tipo: TipoEnlace, id_destino: int) -> dict:
-    """Enlaza una nota del bloc con otra nota, con un documento o con un
-    registro de datos (`tipo` + su id en `id_destino`). El enlace se ve
-    desde los dos lados: abriendo el documento salen sus notas."""
+    """Enlaza una nota del bloc con otra nota, con un documento, con un
+    registro de datos o con una entidad (`tipo` + su id en `id_destino`).
+    El enlace se ve desde los dos lados: abriendo el documento o la
+    entidad salen sus notas."""
     config, id_proyecto, id_usuario, nombre = await _contexto()
     return await _ejecutar(enlazar(config, id_usuario, nombre, id_nota, tipo, id_destino, id_proyecto))
 

@@ -21,6 +21,7 @@ from mtpk_postgres.async_adapter import AsyncDatabase
 from ..dependencias._dep_bloc_notas import (
     TABLA_BLOC_NOTAS,
     TABLA_BLOC_NOTAS_DOCUMENTOS,
+    TABLA_BLOC_NOTAS_ENTIDADES,
     TABLA_BLOC_NOTAS_ETIQUETAS,
     TABLA_BLOC_NOTAS_PERSONAS,
     TABLA_BLOC_NOTAS_REGISTROS,
@@ -29,6 +30,7 @@ from ..dependencias._dep_bloc_notas import (
     VISIBILIDADES,
 )
 from ..dependencias._dep_documentos import TABLA_DOCUMENTOS
+from ..dependencias._dep_entidades import TABLA_ENTIDADES
 from ..dependencias._dep_programaciones import TABLA_PROGRAMACIONES
 from ..dependencias._dep_registros import TABLA_MODELOS_REGISTRO, TABLA_REGISTROS
 from ._mod_programaciones import usuarios_del_proyecto
@@ -40,8 +42,15 @@ _T_ETIQUETAS = TABLA_BLOC_NOTAS_ETIQUETAS.nombre
 _T_RELACIONES = TABLA_BLOC_NOTAS_RELACIONES.nombre
 _T_DOCUMENTOS = TABLA_BLOC_NOTAS_DOCUMENTOS.nombre
 _T_REGISTROS = TABLA_BLOC_NOTAS_REGISTROS.nombre
+_T_ENTIDADES = TABLA_BLOC_NOTAS_ENTIDADES.nombre
 
-TIPOS_ENLACE = ("nota", "documento", "registro")
+TIPOS_ENLACE = ("nota", "documento", "registro", "entidad")
+#: Tabla de enlaces, columna del destino y tabla del destino de cada tipo (salvo "nota")
+_ENLACES = {
+    "documento": (_T_DOCUMENTOS, "id_documento", TABLA_DOCUMENTOS.nombre),
+    "registro": (_T_REGISTROS, "id_registro", TABLA_REGISTROS.nombre),
+    "entidad": (_T_ENTIDADES, "id_entidad", TABLA_ENTIDADES.nombre),
+}
 MAX_CONTENIDO_LISTADO = 300
 
 
@@ -175,9 +184,8 @@ async def _comprobar_destino(db: AsyncDatabase, id_usuario: int | None, tipo: st
     if tipo == "nota":
         await _nota_visible(db, id_usuario, id_destino)
         return
-    tabla = TABLA_DOCUMENTOS.nombre if tipo == "documento" else TABLA_REGISTROS.nombre
-    if not await db.query(f'SELECT 1 FROM "{tabla}" WHERE id = %s', (id_destino,)):
-        raise LookupError(f"No existe ningún {tipo} con id {id_destino}")
+    if not await db.query(f'SELECT 1 FROM "{_ENLACES[tipo][2]}" WHERE id = %s', (id_destino,)):
+        raise LookupError(f"No existe {'ninguna' if tipo == 'entidad' else 'ningún'} {tipo} con id {id_destino}")
 
 
 def _sql_enlace(tipo: str, id_nota: int, id_destino: int) -> tuple[str, str, tuple]:
@@ -185,14 +193,13 @@ def _sql_enlace(tipo: str, id_nota: int, id_destino: int) -> tuple[str, str, tup
     if tipo == "nota":
         a, b = sorted((id_nota, id_destino))
         return _T_RELACIONES, "id_nota_a = %s AND id_nota_b = %s", (a, b)
-    if tipo == "documento":
-        return _T_DOCUMENTOS, "id_nota = %s AND id_documento = %s", (id_nota, id_destino)
-    return _T_REGISTROS, "id_nota = %s AND id_registro = %s", (id_nota, id_destino)
+    tabla, columna, _ = _ENLACES[tipo]
+    return tabla, f"id_nota = %s AND {columna} = %s", (id_nota, id_destino)
 
 
 async def _enlazar(db: AsyncDatabase, id_usuario: int | None, id_nota: int, tipo: str, id_destino: int) -> None:
     if tipo not in TIPOS_ENLACE:
-        raise ValueError(f"Tipo de enlace no válido: '{tipo}' (nota, documento o registro)")
+        raise ValueError(f"Tipo de enlace no válido: '{tipo}' (nota, documento, registro o entidad)")
     if tipo == "nota" and id_destino == id_nota:
         raise ValueError("Una nota no se puede enlazar consigo misma")
     await _comprobar_destino(db, id_usuario, tipo, id_destino)
@@ -219,7 +226,7 @@ async def desenlazar(
     id_proyecto: int | None = None,
 ) -> dict:
     if tipo not in TIPOS_ENLACE:
-        raise ValueError(f"Tipo de enlace no válido: '{tipo}' (nota, documento o registro)")
+        raise ValueError(f"Tipo de enlace no válido: '{tipo}' (nota, documento, registro o entidad)")
     db = AsyncDatabase(**config)
     await _nota_visible(db, id_usuario, id_nota)
     if tipo == "nota":
@@ -244,7 +251,7 @@ async def crear_nota(
     config: dict, id_proyecto: int, id_usuario: int | None, quien: str, datos: dict,
 ) -> dict:
     """`datos`: titulo, descripcion, contenido, fecha, fijada, color, visibilidad,
-    ids_personas, etiquetas, ids_notas, ids_documentos, ids_registros.
+    ids_personas, etiquetas, ids_notas, ids_documentos, ids_registros, ids_entidades.
     Sin `id_usuario` la nota es de todos y no tiene autor."""
     limpios = _limpiar({"titulo": datos.get("titulo"), **datos})
     visibilidad = datos.get("visibilidad") or "todos"
@@ -252,7 +259,7 @@ async def crear_nota(
     db = AsyncDatabase(**config)
     enlaces = [
         (tipo, id_destino)
-        for tipo, clave in (("nota", "ids_notas"), ("documento", "ids_documentos"), ("registro", "ids_registros"))
+        for tipo, clave in (("nota", "ids_notas"), ("documento", "ids_documentos"), ("registro", "ids_registros"), ("entidad", "ids_entidades"))
         for id_destino in sorted(set(datos.get(clave) or []))
     ]
     for tipo, id_destino in enlaces:
@@ -358,6 +365,11 @@ async def obtener_nota(config: dict, id_usuario: int | None, id_nota: int, id_pr
         "WHERE nr.id_nota = %s ORDER BY r.fecha DESC, r.id DESC",
         (id_nota,),
     )
+    entidades = await db.query(
+        f'SELECT e.id, e.nombre, e.tipo FROM "{_T_ENTIDADES}" ne '
+        f'JOIN "{TABLA_ENTIDADES.nombre}" e ON e.id = ne.id_entidad WHERE ne.id_nota = %s ORDER BY e.nombre',
+        (id_nota,),
+    )
     recordatorios = await db.query(
         f'SELECT id, titulo, estado, proxima_ejecucion FROM "{TABLA_PROGRAMACIONES.nombre}" '
         "WHERE id_nota_bloc = %s ORDER BY proxima_ejecucion ASC NULLS LAST, id DESC",
@@ -376,6 +388,7 @@ async def obtener_nota(config: dict, id_usuario: int | None, id_nota: int, id_pr
         "notas": notas,
         "documentos": documentos,
         "registros": registros,
+        "entidades": entidades,
         "recordatorios": recordatorios,
     }
 
@@ -384,7 +397,7 @@ async def buscar_notas(
     config: dict, id_usuario: int | None, texto: str | None = None, etiqueta: str | None = None,
     desde: str | None = None, hasta: str | None = None, id_documento: int | None = None,
     id_registro: int | None = None, id_nota: int | None = None, archivadas: bool | None = False,
-    solo_mias: bool = False, limite: int = 50, color: str | None = None,
+    solo_mias: bool = False, limite: int = 50, color: str | None = None, id_entidad: int | None = None,
 ) -> list[dict]:
     """Las notas que ve `id_usuario`, fijadas primero y luego de la más
     reciente a la más antigua. `texto`: cada palabra tiene que salir en el
@@ -420,6 +433,9 @@ async def buscar_notas(
     if id_registro:
         condiciones.append(f'n.id IN (SELECT id_nota FROM "{_T_REGISTROS}" WHERE id_registro = %s)')
         params.append(id_registro)
+    if id_entidad:
+        condiciones.append(f'n.id IN (SELECT id_nota FROM "{_T_ENTIDADES}" WHERE id_entidad = %s)')
+        params.append(id_entidad)
     if id_nota:
         condiciones.append(
             f'n.id IN (SELECT CASE WHEN id_nota_a = %s THEN id_nota_b ELSE id_nota_a END FROM "{_T_RELACIONES}" '

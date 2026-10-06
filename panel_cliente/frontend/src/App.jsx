@@ -256,6 +256,14 @@ export default function App() {
     setNotaActiva({ id: null, enlace })
   }
 
+  // La ficha de la entidad trabaja con la fila entera: se pide antes de ir
+  function verEntidad(idEntidad) {
+    api.obtenerEntidad(proyecto.id, idEntidad).then((entidad) => {
+      navegar("entidades")
+      setEntidadActiva(entidad)
+    }).catch(() => {})
+  }
+
   function verDocumento(idDocumento) {
     navegar("documentos")
     setIdDocumentoActivo(idDocumento)
@@ -386,6 +394,8 @@ export default function App() {
               entidad={entidadActiva}
               onVolver={() => setEntidadActiva(null)}
               onEliminada={() => setEntidadActiva(null)}
+              onVerNota={verNota}
+              onNuevaNota={nuevaNota}
             />
           ) : vista === "entidades" ? (
             <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
@@ -435,6 +445,7 @@ export default function App() {
               onCreada={(id) => setNotaActiva({ id })}
               onVerNota={verNota}
               onVerDocumento={verDocumento}
+              onVerEntidad={verEntidad}
               onVerProgramacion={verProgramacion}
             />
           ) : vista === "bloc-notas" ? (

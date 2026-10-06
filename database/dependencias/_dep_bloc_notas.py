@@ -1,6 +1,6 @@
 """Bloc de notas: notas sueltas de los usuarios (una reunión, una llamada,
-una idea) que se enlazan entre sí, con documentos y con registros de
-datos — ver docs/gestion-documental.md → "Bloc de notas" y
+una idea) que se enlazan entre sí, con documentos, con registros de
+datos y con entidades — ver docs/gestion-documental.md → "Bloc de notas" y
 docs/planificacion/bloc-de-notas.md.
 
 Nada que ver con gd_notas (comentarios, observaciones e incidencias que
@@ -19,6 +19,7 @@ from database.config_db import get_db_name
 from mtpk_postgres import Columna, ForeignKey, Index, Tabla
 
 from ._dep_documentos import NOMBRE_TABLA_DOCUMENTOS
+from ._dep_entidades import NOMBRE_TABLA_ENTIDADES
 from ._dep_registros import NOMBRE_TABLA_REGISTROS
 
 NOMBRE_TABLA_BLOC_NOTAS = "gd_bloc_notas"
@@ -27,6 +28,7 @@ NOMBRE_TABLA_BLOC_NOTAS_ETIQUETAS = "gd_bloc_notas_etiquetas"
 NOMBRE_TABLA_BLOC_NOTAS_RELACIONES = "gd_bloc_notas_relaciones"
 NOMBRE_TABLA_BLOC_NOTAS_DOCUMENTOS = "gd_bloc_notas_documentos"
 NOMBRE_TABLA_BLOC_NOTAS_REGISTROS = "gd_bloc_notas_registros"
+NOMBRE_TABLA_BLOC_NOTAS_ENTIDADES = "gd_bloc_notas_entidades"
 __DB_NAME__ = get_db_name("gestion_documental")
 
 VISIBILIDADES = ["privada", "personas", "todos"]
@@ -81,7 +83,7 @@ INDICES_BLOC_NOTAS = [
 TABLA_BLOC_NOTAS = Tabla(
     nombre=NOMBRE_TABLA_BLOC_NOTAS, columnas=CAMPOS_BLOC_NOTAS, indices=INDICES_BLOC_NOTAS,
     comentario="Bloc de notas: notas sueltas de los usuarios, enlazables entre sí y con "
-               "documentos y registros",
+               "documentos, registros y entidades",
     db_name=__DB_NAME__,
 )
 
@@ -185,6 +187,26 @@ TABLA_BLOC_NOTAS_REGISTROS = Tabla(
     db_name=__DB_NAME__,
 )
 
+TABLA_BLOC_NOTAS_ENTIDADES = Tabla(
+    nombre=NOMBRE_TABLA_BLOC_NOTAS_ENTIDADES,
+    columnas=[
+        Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True),
+        Columna(nombre="id_nota", tipo="INT", not_null=True, comentario="→ gd_bloc_notas.id"),
+        Columna(nombre="id_entidad", tipo="INT", not_null=True, comentario="→ gd_entidades.id"),
+    ],
+    indices=[
+        Index(columnas=["id_nota", "id_entidad"], unico=True, nombre="gd_bloc_notas_entidades_uk"),
+        Index(columnas=["id_entidad"], nombre="gd_bloc_notas_entidades_ent_idx"),
+    ],
+    foreign_keys=[
+        _fk_nota(),
+        ForeignKey(columna="id_entidad", referencia_tabla=NOMBRE_TABLA_ENTIDADES,
+                   referencia_columna="id", on_delete="CASCADE"),
+    ],
+    comentario="Entidades (clientes, proveedores...) enlazadas a cada nota del bloc",
+    db_name=__DB_NAME__,
+)
+
 __TABLAS__ = [
     TABLA_BLOC_NOTAS,
     TABLA_BLOC_NOTAS_PERSONAS,
@@ -192,4 +214,5 @@ __TABLAS__ = [
     TABLA_BLOC_NOTAS_RELACIONES,
     TABLA_BLOC_NOTAS_DOCUMENTOS,
     TABLA_BLOC_NOTAS_REGISTROS,
+    TABLA_BLOC_NOTAS_ENTIDADES,
 ]

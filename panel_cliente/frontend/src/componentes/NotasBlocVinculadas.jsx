@@ -4,9 +4,11 @@ import { IconPlus } from "@tabler/icons-react"
 import { api } from "../api"
 import TarjetaNotaBloc from "./TarjetaNotaBloc"
 
-// Notas del bloc enlazadas a un documento o a un registro de datos (las que
-// puede ver quien mira), y escribir una nueva ya enlazada.
-// `enlace`: { tipo: "documento" | "registro", id }
+// Notas del bloc enlazadas a un documento, a un registro de datos o a una
+// entidad (las que puede ver quien mira), y escribir una nueva ya enlazada.
+// `enlace`: { tipo: "documento" | "registro" | "entidad", id }
+
+const CON_ESTE = { documento: "este documento", registro: "este registro", entidad: "esta entidad" }
 export default function NotasBlocVinculadas({ proyecto, enlace, onVerNota, onNuevaNota }) {
   const [notas, setNotas] = useState(null)
   const [error, setError] = useState(null)
@@ -22,7 +24,7 @@ export default function NotasBlocVinculadas({ proyecto, enlace, onVerNota, onNue
     <>
       <Group justify="space-between" mb="md">
         <Text size="sm" c="dimmed">
-          Notas del bloc de notas que tienen que ver con este {enlace.tipo}.
+          Notas del bloc de notas que tienen que ver con {CON_ESTE[enlace.tipo]}.
         </Text>
         {proyecto.puede_editar && (
           <Button size="xs" leftSection={<IconPlus size={14} />} onClick={() => onNuevaNota(enlace)}>

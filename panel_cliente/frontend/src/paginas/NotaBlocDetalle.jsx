@@ -19,7 +19,11 @@ const TIPOS_ENLACE = [
   { value: "nota", label: "Otra nota" },
   { value: "documento", label: "Documento" },
   { value: "registro", label: "Registro de datos" },
+  { value: "entidad", label: "Entidad" },
 ]
+
+// Nombre del campo con el que se enlaza ya al crear la nota
+const CAMPO_ENLACE = { nota: "ids_notas", documento: "ids_documentos", registro: "ids_registros", entidad: "ids_entidades" }
 
 // "2026-10-01T09:30:00" → "2026-10-01T09:30", lo que pide un <input type="datetime-local">
 function paraInputFecha(valor) {
@@ -73,7 +77,7 @@ function SelectorColor({ valor, onChange }) {
   )
 }
 
-// Añadir un enlace: a otra nota, a un documento o a un registro de datos.
+// Añadir un enlace: a otra nota, a un documento, a un registro de datos o a una entidad.
 function ModalEnlace({ opened, proyecto, idNota, onClose, onEnlazar }) {
   const [tipo, setTipo] = useState("nota")
   const [opciones, setOpciones] = useState([])
@@ -97,6 +101,10 @@ function ModalEnlace({ opened, proyecto, idNota, onClose, onEnlazar }) {
     } else if (tipo === "documento") {
       api.listarOBuscarDocumentos(proyecto.id, "")
         .then((docs) => setOpciones(docs.map((d) => ({ value: String(d.id), label: `${d.nombre} (${d.tipo_documento})` }))))
+        .catch((err) => setError(err.message))
+    } else if (tipo === "entidad") {
+      api.listarEntidades(proyecto.id)
+        .then((filas) => setOpciones(filas.map((e) => ({ value: String(e.id), label: `${e.nombre} (${e.tipo})` }))))
         .catch((err) => setError(err.message))
     } else {
       api.listarModelosRegistro(proyecto.id)
@@ -183,7 +191,7 @@ function GrupoEnlaces({ titulo, elementos, puedeQuitar, onAbrir, onQuitar, etiqu
 }
 
 export default function NotaBlocDetalle({
-  proyecto, esSuperadmin, idNota, enlaceInicial, onVolver, onCreada, onVerNota, onVerDocumento, onVerProgramacion,
+  proyecto, esSuperadmin, idNota, enlaceInicial, onVolver, onCreada, onVerNota, onVerDocumento, onVerEntidad, onVerProgramacion,
 }) {
   const esNueva = !idNota
   const puedeEscribir = proyecto.puede_editar
@@ -239,7 +247,7 @@ export default function NotaBlocDetalle({
     }
     try {
       if (esNueva) {
-        if (enlaceInicial) cuerpo[`ids_${enlaceInicial.tipo}s`] = [enlaceInicial.id]
+        if (enlaceInicial) cuerpo[CAMPO_ENLACE[enlaceInicial.tipo]] = [enlaceInicial.id]
         const creada = await api.crearNotaBloc(proyecto.id, cuerpo)
         onCreada(creada.id)
       } else {
@@ -358,7 +366,7 @@ export default function NotaBlocDetalle({
 
   const visibilidad = VISIBILIDADES[nota.visibilidad]
   const IconoVisibilidad = visibilidad.icono
-  const hayEnlaces = nota.notas.length + nota.documentos.length + nota.registros.length > 0
+  const hayEnlaces = nota.notas.length + nota.documentos.length + nota.registros.length + nota.entidades.length > 0
 
   return (
     <>
@@ -466,6 +474,11 @@ export default function NotaBlocDetalle({
             titulo="Documentos" elementos={nota.documentos} puedeQuitar={puedeEscribir} onAbrir={onVerDocumento}
             onQuitar={(id) => accion(() => api.desenlazarNotaBloc(proyecto.id, idNota, "documento", id))}
             etiqueta={(d) => d.nombre}
+          />
+          <GrupoEnlaces
+            titulo="Entidades" elementos={nota.entidades} puedeQuitar={puedeEscribir} onAbrir={onVerEntidad}
+            onQuitar={(id) => accion(() => api.desenlazarNotaBloc(proyecto.id, idNota, "entidad", id))}
+            etiqueta={(e) => `${e.nombre} (${e.tipo})`}
           />
           <GrupoEnlaces
             titulo="Registros de datos" elementos={nota.registros} puedeQuitar={puedeEscribir}
