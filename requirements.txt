@@ -11,3 +11,5 @@ pdfplumber
 jsonschema
 pytesseract
 paramiko
+pymysql
+PyJWT
