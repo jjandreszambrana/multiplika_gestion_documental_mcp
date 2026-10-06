@@ -32,6 +32,43 @@ REGLA_META = (
     "documental."
 )
 
+#: Reglas del producto, iguales para cualquier cliente: van siempre en el
+#: bloque global, antes de la regla meta. Cómo encaja todo en una GD y no
+#: duplicar lo que ya existe.
+REGLAS_PRODUCTO = (
+    "Antes de crear algo nuevo, comprueba que no exista ya y reutilízalo si existe: una entidad "
+    "(listar_entidades_gd por nombre, y por código si lo tienes; prueba también variantes del "
+    "nombre: con y sin S.L., abreviaturas, sin tildes), un grupo (listar_grupos_gd), un modelo de "
+    "registro (listar_modelos_registro_gd), un script (buscar_scripts_gd), una nota del bloc "
+    "(buscar_notas_bloc_gd), una regla (listar_reglas_gd) o un documento (buscar_documentos_gd). "
+    "Si encuentras uno parecido pero no estás seguro de que sea el mismo, pregunta al cliente antes "
+    "de crear otro.\n\n"
+    "Cómo se vincula todo en esta gestión documental:\n"
+    "- Documento: la pieza central. Tiene versiones (la vigente es la que vale) y puede llevar el "
+    "archivo original adjunto.\n"
+    "- Entidad (cliente, proveedor, empleado...): se relaciona con documentos (un documento puede "
+    "tener varias entidades y una entidad varios documentos). Los envíos por email van a entidades, "
+    "y los registros de datos pueden indicar una.\n"
+    "- Grupo: junta documentos para un fin (una auditoría, un expediente). Un documento puede estar "
+    "en varios grupos. Borrar un grupo no borra sus documentos.\n"
+    "- Notas de un documento (comentario, anotación, observación, incidencia): cuelgan siempre de un "
+    "documento y siguen ahí en todas sus versiones; se pueden relacionar entre sí. Una incidencia se "
+    "cierra con resolver_incidencia_gd, que crea la resolución enlazada.\n"
+    "- Registro de datos: una anotación con forma fija (temperaturas, partes...) según un modelo de "
+    "registro. Puede indicar una entidad y vincularse a varios documentos.\n"
+    "- Bloc de notas: notas sueltas de los usuarios (reuniones, llamadas, ideas), enlazables con "
+    "otras notas del bloc, con documentos, con registros y con entidades (lo apuntado sobre un "
+    "cliente o proveedor, enlázalo con su entidad).\n"
+    "- Script: código guardado para reutilizar; se puede relacionar con documentos.\n"
+    "- Envío: un documento usado como plantilla ({{variables}}) mandado por email a entidades.\n"
+    "- Seguimiento (pendiente, en curso, realizado, aplazado): se pone a un documento, a una nota de "
+    "documento o a una nota del bloc.\n"
+    "- Programación: aviso o recordatorio en una fecha; puede colgar de una nota del bloc.\n"
+    "Borrar una entidad, un grupo o un script solo quita sus vínculos: los documentos no se tocan. "
+    "Cuando crees algo que tiene que ver con otra cosa que ya existe, vincúlalos en el mismo paso "
+    "(p.ej. al guardar una factura, relaciónala con su proveedor)."
+)
+
 CAMPOS_REGLAS = [
     Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True,
             comentario="Identificador interno de la regla"),

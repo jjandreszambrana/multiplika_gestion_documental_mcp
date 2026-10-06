@@ -32,7 +32,9 @@ async def crear_entidad_gd(
     observaciones: str | None = None,
     codigo: str | None = None,
 ) -> dict:
-    """Da de alta un cliente, proveedor, empleado... `tipo` es texto
+    """Da de alta un cliente, proveedor, empleado... ANTES de llamarla,
+    busca con listar_entidades_gd que no exista ya (por nombre y sus
+    variantes, y por código si lo tienes): si existe, usa esa. `tipo` es texto
     libre (p.ej. "cliente", "proveedor", "empleado") — consulta
     listar_entidades_gd antes para reutilizar uno ya usado en vez de
     crear una variación del nombre. El resto de campos son opcionales;

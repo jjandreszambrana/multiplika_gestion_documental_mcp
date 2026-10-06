@@ -11,7 +11,7 @@ import asyncio
 from mtpk_postgres import AsyncCrudBase
 
 from ..dependencias._dep_enlaces import SENTIDO_CENTRAL
-from ..dependencias._dep_reglas import AMBITO_HEREDADA, AMBITO_PROPIA, REGLA_META, TABLA_REGLAS
+from ..dependencias._dep_reglas import AMBITO_HEREDADA, AMBITO_PROPIA, REGLA_META, REGLAS_PRODUCTO, TABLA_REGLAS
 from ._mod_enlaces import EnlaceError, EnlacesCRUD, llamar_enlace
 
 #: Nombre de la tool con la que una GD le pide sus reglas compartibles a su
@@ -158,8 +158,9 @@ def _linea(regla: dict) -> str:
 
 async def texto_reglas_globales(config: dict) -> str:
     """Bloque de texto con las reglas globales (propias y heredadas) más la
-    regla meta, listo para meter en el contexto inicial de la IA. La regla
-    meta va siempre, aunque el cliente no tenga ninguna regla todavía."""
+    regla meta, listo para meter en el contexto inicial de la IA. Las reglas
+    del producto y la regla meta van siempre, aunque el cliente no tenga
+    ninguna regla todavía."""
     reglas = await reglas_con_heredadas(config, solo_globales=True)
     partes = []
 
@@ -173,5 +174,6 @@ async def texto_reglas_globales(config: dict) -> str:
         lineas = "\n".join(_linea(r) for r in heredadas if r["origen"] == origen)
         partes.append(f'Heredadas de la GD central "{origen}" (las de arriba mandan sobre estas):\n{lineas}')
 
+    partes.append(REGLAS_PRODUCTO)
     partes.append(REGLA_META)
     return "\n\n".join(partes)
