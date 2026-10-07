@@ -10,6 +10,14 @@ from ..dependencias._dep_credenciales import TABLA_CREDENCIALES
 from ._mod_credenciales_campos import CredencialesCamposCRUD
 
 
+# La contraseña con la que se cifran las copias de seguridad de la base
+# (ver _mod_copias_bd.py). Vive aquí, en el almacén cifrado, pero apartada:
+# ninguna otra función que busque credenciales por nombre (conexiones a
+# webs, bases de datos, SFTP... que la IA puede configurar contra cualquier
+# servidor) la encuentra, y nadie más puede crear una con ese nombre.
+NOMBRE_CREDENCIAL_COPIAS_BD = "Contraseña de las copias de seguridad"
+
+
 class CredencialesCRUD(AsyncCrudBase):
     def __init__(self, config: dict):
         super().__init__(TABLA_CREDENCIALES, config)
@@ -25,14 +33,18 @@ class CredencialesCRUD(AsyncCrudBase):
             for fila in filas
         ]
 
-    async def obtener_por_nombre(self, nombre: str) -> dict | None:
+    async def obtener_por_nombre(self, nombre: str, permitir_reservada: bool = False) -> dict | None:
+        if nombre == NOMBRE_CREDENCIAL_COPIAS_BD and not permitir_reservada:
+            return None
         filas, _ = await self.listar(filtros={"nombre": {"op": "=", "valor": nombre}}, limit=1)
         return filas[0] if filas else None
 
     async def crear(
         self, nombre: str, descripcion: str, valor: str, usuario: str | None = None,
-        campos_extra: list[dict] | None = None,
+        campos_extra: list[dict] | None = None, permitir_reservada: bool = False,
     ) -> int:
+        if nombre == NOMBRE_CREDENCIAL_COPIAS_BD and not permitir_reservada:
+            raise ValueError(f"«{nombre}» es un nombre reservado: se pone desde la pantalla de copias de seguridad")
         id_credencial = await self.insert({
             "nombre": nombre,
             "descripcion": descripcion,

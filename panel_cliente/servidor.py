@@ -1521,10 +1521,13 @@ async def crear_credencial(
     credenciales = CredencialesCRUD(config)
     if await credenciales.obtener_por_nombre(datos.nombre):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ya existe una credencial llamada "{datos.nombre}"')
-    id_credencial = await credenciales.crear(
-        datos.nombre, datos.descripcion, datos.valor, datos.usuario,
-        campos_extra=[c.model_dump() for c in datos.campos_extra],
-    )
+    try:
+        id_credencial = await credenciales.crear(
+            datos.nombre, datos.descripcion, datos.valor, datos.usuario,
+            campos_extra=[c.model_dump() for c in datos.campos_extra],
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     fila = await credenciales.obtener(id_credencial)
     return await _con_campos_extra(config, fila)
 
@@ -1657,44 +1660,40 @@ async def listar_log_certificado(
 # "Copias de seguridad de la base de datos"). Todo de administración: una
 # copia es la base entera, y restaurar machaca todo lo actual.
 
-class NuevaCopiaBD(BaseModel):
-    cifrar: bool = False
-    contrasena: str | None = None
-
-
 class RestaurarCopiaBD(BaseModel):
     contrasena: str | None = None
     confirmacion: str
 
 
+class PeriodoCopiasBD(BaseModel):
+    id: int | None = None
+    regla: dict
+    conservar_modo: Literal["copias", "dias"] = "copias"
+    conservar: int
+
+
 class AjustesCopiasBD(BaseModel):
     programada: bool | None = None
-    regla: dict | None = None
-    conservar: int | None = None
+    periodos: list[PeriodoCopiasBD] | None = None
     cifrar: bool | None = None
     contrasena: str | None = None
     sftp_credencial: str | None = None
     sftp_carpeta: str | None = None
-    sftp_conservar: int | None = None
 
 
 @app.get("/v1/proyectos/{id_proyecto}/copias-bd")
 async def listar_copias_bd(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> dict:
     return {
         "copias": copias_bd.listar_copias(proyecto["id"]),
-        "ajustes": copias_bd.ajustes_publicos(copias_bd.leer_ajustes(proyecto["id"])),
+        "ajustes": await copias_bd.ajustes_publicos(copias_bd.leer_ajustes(proyecto["id"]), get_db_config(proyecto["id"])),
         "espacio_libre": copias_bd.espacio_libre(),
     }
 
 
 @app.post("/v1/proyectos/{id_proyecto}/copias-bd")
-async def crear_copia_bd(
-    id_proyecto: int, datos: NuevaCopiaBD, proyecto: dict = Depends(admin_gestion_documental_actual)
-) -> dict:
+async def crear_copia_bd(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> dict:
     try:
-        return await copias_bd.crear_copia(
-            proyecto["id"], get_db_config(proyecto["id"]), "manual", datos.contrasena if datos.cifrar else None,
-        )
+        return await copias_bd.crear_copia(proyecto["id"], get_db_config(proyecto["id"]), "manual")
     except copias_bd.CopiaBDError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
@@ -1704,10 +1703,11 @@ async def actualizar_ajustes_copias_bd(
     id_proyecto: int, datos: AjustesCopiasBD, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> dict:
     try:
-        ajustes = copias_bd.guardar_ajustes(proyecto["id"], datos.model_dump(exclude_unset=True))
+        config = get_db_config(proyecto["id"])
+        ajustes = await copias_bd.guardar_ajustes(proyecto["id"], config, datos.model_dump(exclude_unset=True))
     except copias_bd.CopiaBDError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
-    return copias_bd.ajustes_publicos(ajustes)
+    return await copias_bd.ajustes_publicos(ajustes, config)
 
 
 @app.get("/v1/proyectos/{id_proyecto}/copias-bd/{nombre}/archivo")
@@ -1733,7 +1733,7 @@ async def borrar_copia_bd(
     id_proyecto: int, nombre: str, proyecto: dict = Depends(admin_gestion_documental_actual)
 ) -> None:
     try:
-        copias_bd.borrar_copia(proyecto["id"], nombre)
+        await copias_bd.borrar_copia(proyecto["id"], get_db_config(proyecto["id"]), nombre)
     except copias_bd.CopiaBDError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
 

@@ -1005,13 +1005,17 @@ En la pantalla "Copias de seguridad" (solo administradores) se hacen copias \
 de todo lo que hay en tu gestión documental: documentos, archivos \
 originales, entidades, notas, ajustes...
 
-- **Hacer una copia ahora** y **descargarla**. Si marcas "cifrar", pones \
-  una contraseña: el archivo descargado solo se abre con ella (con 7-Zip o \
-  WinRAR). Esa contraseña no se guarda en ningún sitio: si se pierde, la \
-  copia no sirve.
-- **Programarlas**: todos los días, algunos días de la semana o una vez al \
-  mes, a la hora que elijas. Se guardan las últimas que digas y la más \
-  antigua se borra sola. También se pueden cifrar.
+- **Contraseña de las copias**: se pone una vez (mínimo 12 caracteres; \
+  mejor una frase de varias palabras) y se guarda cifrada en el almacén de \
+  credenciales, sin volver a enseñarse. Apúntala en un sitio seguro: los \
+  archivos descargados (.7z) solo se abren con ella, con 7-Zip o WinRAR.
+- **Hacer una copia ahora** y **descargarla**: se puede en cuanto las \
+  copias estén programadas y la contraseña guardada; va siempre cifrada.
+- **Programarlas por periodos**: cada periodo es diario, de algunos días \
+  de la semana o de un día al mes, a la hora que elijas, y guarda sus \
+  propias copias: las N últimas o las de los últimos N días. Por ejemplo: \
+  diaria guardando 7, semanal guardando 10 y mensual guardando 12. Lo que \
+  sobra se borra solo. Se pueden cifrar también.
 - **Guardarlas además en otro servidor** (SFTP), con una credencial que \
   tenga usuario, contraseña y un campo `host`.
 - **Volver a una copia**: todo lo de ahora se sustituye por lo de esa \

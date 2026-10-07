@@ -49,25 +49,39 @@ function tamano(bytes) {
 
 // La regla de repetición es la misma que la de los avisos programados
 // (database/modelos/_repeticiones.py); aquí solo se ofrecen tres formas.
+function periodoDesdeAjustes(p) {
+  const regla = p.regla
+  return {
+    id: p.id,
+    frecuencia: regla.tipo === "semanal" ? "semanal" : regla.tipo === "mensual" ? "mensual" : "diaria",
+    diasSemana: (regla.dias_semana || []).map(String),
+    diaMes: regla.tipo === "mensual" ? Number(regla.fecha.slice(8, 10)) : 1,
+    hora: regla.hora,
+    conservarModo: p.conservar_modo,
+    conservar: p.conservar,
+  }
+}
+
+// Al añadir uno: el primero diario, el segundo semanal, el tercero mensual.
+const PERIODOS_SUGERIDOS = [
+  { frecuencia: "diaria", diasSemana: [], diaMes: 1, hora: "03:00", conservarModo: "copias", conservar: 7 },
+  { frecuencia: "semanal", diasSemana: ["7"], diaMes: 1, hora: "03:00", conservarModo: "copias", conservar: 10 },
+  { frecuencia: "mensual", diasSemana: [], diaMes: 1, hora: "03:00", conservarModo: "copias", conservar: 12 },
+]
+
 function formularioDesdeAjustes(a) {
-  const regla = a.regla
   return {
     programada: a.programada,
-    frecuencia: regla?.tipo === "semanal" ? "semanal" : regla?.tipo === "mensual" ? "mensual" : "diaria",
-    diasSemana: (regla?.dias_semana || []).map(String),
-    diaMes: regla?.tipo === "mensual" ? Number(regla.fecha.slice(8, 10)) : 1,
-    hora: regla?.hora || "03:00",
-    conservar: a.conservar,
+    periodos: a.periodos.map(periodoDesdeAjustes),
     cifrar: a.cifrar,
     contrasena: "",
     contrasena2: "",
     sftpCredencial: a.sftp_credencial,
     sftpCarpeta: a.sftp_carpeta,
-    sftpConservar: a.sftp_conservar,
   }
 }
 
-function reglaDesdeFormulario(f) {
+function reglaDesdePeriodo(f) {
   if (f.frecuencia === "semanal") {
     return { tipo: "semanal", fecha: hoy(), hora: f.hora, dias_semana: f.diasSemana.map(Number) }
   }
@@ -76,6 +90,8 @@ function reglaDesdeFormulario(f) {
   }
   return { tipo: "cada_dias", fecha: hoy(), hora: f.hora, cada_dias: 1 }
 }
+
+const ETIQUETA_FRECUENCIA = { cada_dias: "Diaria", semanal: "Semanal", mensual: "Mensual" }
 
 function descargarBlob(blob, nombre) {
   const url = URL.createObjectURL(blob)
@@ -96,9 +112,6 @@ export default function CopiasBD({ proyecto, onVolver }) {
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(null)
 
-  const [cifrarAhora, setCifrarAhora] = useState(false)
-  const [contrasenaAhora, setContrasenaAhora] = useState("")
-  const [contrasenaAhora2, setContrasenaAhora2] = useState("")
   const [haciendo, setHaciendo] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [descargando, setDescargando] = useState(null)
@@ -130,24 +143,29 @@ export default function CopiasBD({ proyecto, onVolver }) {
   }, [proyecto.id])
 
   const cambiar = (campo) => (valor) => setFormulario((f) => ({ ...f, [campo]: valor }))
+  const cambiarPeriodo = (indice, campo) => (valor) =>
+    setFormulario((f) => ({ ...f, periodos: f.periodos.map((p, i) => (i === indice ? { ...p, [campo]: valor } : p)) }))
+  const anadirPeriodo = () =>
+    setFormulario((f) => ({
+      ...f,
+      periodos: [...f.periodos, { id: null, ...PERIODOS_SUGERIDOS[Math.min(f.periodos.length, PERIODOS_SUGERIDOS.length - 1)] }],
+    }))
+  const quitarPeriodo = (indice) => setFormulario((f) => ({ ...f, periodos: f.periodos.filter((_, i) => i !== indice) }))
 
-  async function hacerCopia(evento) {
-    evento.preventDefault()
+  // Para la columna "Tipo": a qué periodos pertenece cada copia programada.
+  const nombrePeriodo = Object.fromEntries((ajustes?.periodos || []).map((p) => [p.id, ETIQUETA_FRECUENCIA[p.regla.tipo]]))
+  const tipoDeCopia = (c) =>
+    c.origen === "programada" && c.periodos.length
+      ? `Programada (${c.periodos.map((id) => nombrePeriodo[id] || "periodo quitado").join(", ")})`
+      : ORIGENES[c.origen] || c.origen
+
+  async function hacerCopia() {
     setError(null)
     setAviso(null)
-    if (cifrarAhora && contrasenaAhora !== contrasenaAhora2) {
-      setError("Las dos contraseñas no coinciden")
-      return
-    }
     setHaciendo(true)
     try {
-      const copia = await api.crearCopiaBD(proyecto.id, { cifrar: cifrarAhora, contrasena: cifrarAhora ? contrasenaAhora : null })
-      setContrasenaAhora("")
-      setContrasenaAhora2("")
-      setAviso(
-        `Copia hecha.${copia.remoto ? ` ${copia.remoto.detalle}.` : ""}` +
-          (cifrarAhora ? " Guarda bien la contraseña: sin ella la copia no se puede abrir." : ""),
-      )
+      const copia = await api.crearCopiaBD(proyecto.id)
+      setAviso(`Copia hecha y cifrada con la contraseña guardada.${copia.remoto ? ` ${copia.remoto.detalle}.` : ""}`)
       await recargar()
     } catch (err) {
       setError(err.message)
@@ -165,21 +183,21 @@ export default function CopiasBD({ proyecto, onVolver }) {
       setError("Las dos contraseñas de las copias programadas no coinciden")
       return
     }
-    if (f.programada && f.frecuencia === "semanal" && f.diasSemana.length === 0) {
-      setError("Elige al menos un día de la semana")
+    if (f.programada && f.periodos.some((p) => p.frecuencia === "semanal" && p.diasSemana.length === 0)) {
+      setError("En los periodos semanales elige al menos un día de la semana")
       return
     }
     setGuardando(true)
     try {
       const nuevos = await api.actualizarAjustesCopiasBD(proyecto.id, {
         programada: f.programada,
-        regla: reglaDesdeFormulario(f),
-        conservar: Number(f.conservar),
+        periodos: f.periodos.map((p) => ({
+          id: p.id, regla: reglaDesdePeriodo(p), conservar_modo: p.conservarModo, conservar: Number(p.conservar),
+        })),
         cifrar: f.cifrar,
-        contrasena: f.cifrar && f.contrasena ? f.contrasena : null,
+        contrasena: f.contrasena || null,
         sftp_credencial: f.sftpCredencial || null,
         sftp_carpeta: f.sftpCarpeta,
-        sftp_conservar: Number(f.sftpConservar),
       })
       setAjustes(nuevos)
       setFormulario(formularioDesdeAjustes(nuevos))
@@ -227,7 +245,7 @@ export default function CopiasBD({ proyecto, onVolver }) {
     setAviso(null)
     try {
       const r = await api.restaurarCopiaBD(proyecto.id, aRestaurar.nombre, {
-        contrasena: aRestaurar.cifrada ? contrasenaRestaurar : null,
+        contrasena: aRestaurar.cifrada && contrasenaRestaurar ? contrasenaRestaurar : null,
         confirmacion,
       })
       setARestaurar(null)
@@ -289,26 +307,12 @@ export default function CopiasBD({ proyecto, onVolver }) {
           <Title order={4} mb="sm">
             Hacer una copia ahora
           </Title>
-          <Stack component="form" onSubmit={hacerCopia} autoComplete="off">
-            <Checkbox
-              label="Cifrarla con una contraseña"
-              description="El archivo descargado solo se abre con esa contraseña (con 7-Zip, WinRAR o similar). No se guarda en ningún sitio: si se olvida, la copia no sirve."
-              checked={cifrarAhora}
-              onChange={(e) => setCifrarAhora(e.currentTarget.checked)}
-            />
-            {cifrarAhora && (
-              <>
-                <PasswordInput
-                  placeholder="Contraseña (mínimo 8 caracteres)" value={contrasenaAhora}
-                  onChange={(e) => setContrasenaAhora(e.target.value)} required minLength={8} {...SIN_PASSWORD_MANAGER}
-                />
-                <PasswordInput
-                  placeholder="Repite la contraseña" value={contrasenaAhora2}
-                  onChange={(e) => setContrasenaAhora2(e.target.value)} required {...SIN_PASSWORD_MANAGER}
-                />
-              </>
-            )}
-            <Button type="submit" loading={haciendo}>
+          <Stack>
+            <Text size="sm" c="dimmed">
+              Se cifra siempre con la contraseña de las copias, guardada en el almacén de credenciales. Para poder
+              hacerla, antes hay que programar las copias y guardar esa contraseña.
+            </Text>
+            <Button onClick={hacerCopia} loading={haciendo} disabled={!ajustes?.puede_copia_manual}>
               Hacer copia
             </Button>
             {espacioLibre != null && (
@@ -332,60 +336,99 @@ export default function CopiasBD({ proyecto, onVolver }) {
               />
               {formulario.programada && (
                 <>
-                  <Group grow>
-                    <Select
-                      label="Cuándo" data={FRECUENCIAS} value={formulario.frecuencia}
-                      onChange={(v) => cambiar("frecuencia")(v || "diaria")} allowDeselect={false}
-                    />
-                    <TextInput
-                      label="Hora" type="time" value={formulario.hora}
-                      onChange={(e) => cambiar("hora")(e.target.value)} required
-                    />
-                  </Group>
-                  {formulario.frecuencia === "semanal" && (
-                    <Chip.Group multiple value={formulario.diasSemana} onChange={cambiar("diasSemana")}>
-                      <Group gap="4">
-                        {DIAS.map((d, i) => (
-                          <Chip key={d} value={String(i + 1)} size="xs">
-                            {d}
-                          </Chip>
-                        ))}
-                      </Group>
-                    </Chip.Group>
+                  <Text size="sm" c="dimmed">
+                    Cada periodo guarda sus propias copias. Por ejemplo: diaria guardando 7, semanal guardando 10 y
+                    mensual guardando 12. Si dos coinciden a la misma hora se hace una sola copia que cuenta para los dos.
+                  </Text>
+                  {formulario.periodos.map((p, i) => {
+                    const guardado = ajustes.periodos.find((g) => g.id === p.id)
+                    return (
+                      <Paper key={p.id ?? `nuevo-${i}`} withBorder p="sm" radius="md">
+                        <Stack gap="xs">
+                          <Group grow align="flex-end">
+                            <Select
+                              label="Cuándo" data={FRECUENCIAS} value={p.frecuencia}
+                              onChange={(v) => cambiarPeriodo(i, "frecuencia")(v || "diaria")} allowDeselect={false}
+                            />
+                            <TextInput
+                              label="Hora" type="time" value={p.hora}
+                              onChange={(e) => cambiarPeriodo(i, "hora")(e.target.value)} required
+                            />
+                          </Group>
+                          {p.frecuencia === "semanal" && (
+                            <Chip.Group multiple value={p.diasSemana} onChange={cambiarPeriodo(i, "diasSemana")}>
+                              <Group gap="4">
+                                {DIAS.map((d, n) => (
+                                  <Chip key={d} value={String(n + 1)} size="xs">
+                                    {d}
+                                  </Chip>
+                                ))}
+                              </Group>
+                            </Chip.Group>
+                          )}
+                          {p.frecuencia === "mensual" && (
+                            <NumberInput
+                              label="Día del mes" description="Si el mes es más corto, se hace el último día"
+                              min={1} max={31} value={p.diaMes} onChange={cambiarPeriodo(i, "diaMes")} allowDecimal={false}
+                            />
+                          )}
+                          <Group grow align="flex-end">
+                            <NumberInput
+                              label="Guardar" min={1} max={p.conservarModo === "copias" ? 365 : 3650}
+                              value={p.conservar} onChange={cambiarPeriodo(i, "conservar")} allowDecimal={false}
+                            />
+                            <Select
+                              data={[
+                                { value: "copias", label: "últimas copias" },
+                                { value: "dias", label: "días" },
+                              ]}
+                              value={p.conservarModo} onChange={(v) => cambiarPeriodo(i, "conservarModo")(v || "copias")}
+                              allowDeselect={false}
+                            />
+                          </Group>
+                          <Group justify="space-between">
+                            <Text size="xs" c={guardado?.ultimo_resultado && !guardado.ultimo_resultado.ok ? "red" : "dimmed"}>
+                              {guardado?.proxima && `Próxima: ${formatearFecha(guardado.proxima)}`}
+                              {guardado?.ultimo_resultado &&
+                                ` · Última (${formatearFecha(guardado.ultimo_resultado.fecha)}): ${guardado.ultimo_resultado.detalle}`}
+                            </Text>
+                            <Anchor component="button" type="button" c="red" fz="13px" onClick={() => quitarPeriodo(i)}>
+                              Quitar
+                            </Anchor>
+                          </Group>
+                        </Stack>
+                      </Paper>
+                    )
+                  })}
+                  {formulario.periodos.length < 10 && (
+                    <Button variant="default" size="xs" onClick={anadirPeriodo} style={{ alignSelf: "flex-start" }}>
+                      Añadir periodo
+                    </Button>
                   )}
-                  {formulario.frecuencia === "mensual" && (
-                    <NumberInput
-                      label="Día del mes" description="Si el mes es más corto, se hace el último día"
-                      min={1} max={31} value={formulario.diaMes} onChange={cambiar("diaMes")} allowDecimal={false}
-                    />
-                  )}
-                  <NumberInput
-                    label="Copias programadas que se guardan"
-                    description="Al pasar de este número se borra la más antigua. Las manuales no se borran solas."
-                    min={1} max={365} value={formulario.conservar} onChange={cambiar("conservar")} allowDecimal={false}
-                  />
                   <Checkbox
-                    label="Cifrarlas con una contraseña"
-                    description="Se guarda cifrada en el servidor para poder hacer las copias solas."
+                    label="Cifrar también las copias programadas"
+                    description="Las copias manuales van siempre cifradas."
                     checked={formulario.cifrar}
                     onChange={(e) => cambiar("cifrar")(e.currentTarget.checked)}
                   />
-                  {formulario.cifrar && (
-                    <>
-                      <PasswordInput
-                        placeholder={ajustes.tiene_contrasena ? "Nueva contraseña (en blanco, se queda la de ahora)" : "Contraseña (mínimo 8 caracteres)"}
-                        value={formulario.contrasena} onChange={(e) => cambiar("contrasena")(e.target.value)}
-                        required={!ajustes.tiene_contrasena} {...SIN_PASSWORD_MANAGER}
-                      />
-                      {formulario.contrasena && (
-                        <PasswordInput
-                          placeholder="Repite la contraseña" value={formulario.contrasena2}
-                          onChange={(e) => cambiar("contrasena2")(e.target.value)} required {...SIN_PASSWORD_MANAGER}
-                        />
-                      )}
-                    </>
-                  )}
                 </>
+              )}
+              <PasswordInput
+                label="Contraseña de las copias"
+                description={
+                  "Mínimo 12 caracteres; mejor una frase de varias palabras (mesa-tren-azul-faro). Se guarda cifrada en el " +
+                  "almacén de credenciales y no se vuelve a enseñar: apúntala en un sitio seguro, sin ella las copias " +
+                  "descargadas no se abren. Si la cambias, las copias anteriores siguen con la de antes."
+                }
+                placeholder={ajustes.tiene_contrasena ? "Guardada. Escribe otra solo para cambiarla" : "Contraseña nueva"}
+                value={formulario.contrasena} onChange={(e) => cambiar("contrasena")(e.target.value)}
+                minLength={12} {...SIN_PASSWORD_MANAGER}
+              />
+              {formulario.contrasena && (
+                <PasswordInput
+                  placeholder="Repite la contraseña" value={formulario.contrasena2}
+                  onChange={(e) => cambiar("contrasena2")(e.target.value)} required {...SIN_PASSWORD_MANAGER}
+                />
               )}
               <Select
                 label="Guardar también en otro servidor (SFTP)"
@@ -394,26 +437,10 @@ export default function CopiasBD({ proyecto, onVolver }) {
                 value={formulario.sftpCredencial} onChange={cambiar("sftpCredencial")} clearable searchable
               />
               {formulario.sftpCredencial && (
-                <Group grow>
-                  <TextInput
-                    label="Carpeta remota" value={formulario.sftpCarpeta}
-                    onChange={(e) => cambiar("sftpCarpeta")(e.target.value)} required
-                  />
-                  <NumberInput
-                    label="Copias que se guardan allí" min={1} max={365}
-                    value={formulario.sftpConservar} onChange={cambiar("sftpConservar")} allowDecimal={false}
-                  />
-                </Group>
-              )}
-              {ajustes.programada && ajustes.proxima && (
-                <Text size="sm" c="dimmed">
-                  {ajustes.descripcion}. Próxima: {formatearFecha(ajustes.proxima)}
-                </Text>
-              )}
-              {ajustes.ultimo_resultado && (
-                <Text size="sm" c={ajustes.ultimo_resultado.ok ? "dimmed" : "red"}>
-                  Última programada ({formatearFecha(ajustes.ultimo_resultado.fecha)}): {ajustes.ultimo_resultado.detalle}
-                </Text>
+                <TextInput
+                  label="Carpeta remota" description="Allí se guarda lo mismo que aquí: lo que se borra aquí, se borra allí."
+                  value={formulario.sftpCarpeta} onChange={(e) => cambiar("sftpCarpeta")(e.target.value)} required
+                />
               )}
               <Button type="submit" loading={guardando} variant="light">
                 Guardar ajustes
@@ -441,7 +468,7 @@ export default function CopiasBD({ proyecto, onVolver }) {
             {copias.map((c) => (
               <Table.Tr key={c.nombre}>
                 <Table.Td>{formatearFecha(c.fecha)}</Table.Td>
-                <Table.Td>{ORIGENES[c.origen] || c.origen}</Table.Td>
+                <Table.Td>{tipoDeCopia(c)}</Table.Td>
                 <Table.Td>{c.cifrada ? <Badge size="sm" color="acento">Sí</Badge> : <Text size="sm" c="dimmed">No</Text>}</Table.Td>
                 <Table.Td>{tamano(c.tamano)}</Table.Td>
                 <Table.Td>
@@ -494,7 +521,9 @@ export default function CopiasBD({ proyecto, onVolver }) {
             </Alert>
             {aRestaurar.cifrada && (
               <PasswordInput
-                label="Contraseña de la copia" value={contrasenaRestaurar}
+                label="Contraseña de la copia (opcional)"
+                description="Se usa la guardada. Escríbela solo si esta copia se hizo con una contraseña anterior."
+                value={contrasenaRestaurar}
                 onChange={(e) => setContrasenaRestaurar(e.target.value)} {...SIN_PASSWORD_MANAGER}
               />
             )}
@@ -508,7 +537,7 @@ export default function CopiasBD({ proyecto, onVolver }) {
               </Button>
               <Button
                 color="red" onClick={restaurar} loading={restaurando}
-                disabled={confirmacion.trim() !== CONFIRMACION || (aRestaurar.cifrada && !contrasenaRestaurar)}
+                disabled={confirmacion.trim() !== CONFIRMACION}
               >
                 Restaurar
               </Button>

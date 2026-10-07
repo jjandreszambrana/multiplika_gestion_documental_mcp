@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from ._anotaciones import SOLO_LECTURA
 from ._capacidades_elicitacion import puede_elicitar_formulario
-from ..database.modelos._mod_credenciales import CredencialesCRUD
+from ..database.modelos._mod_credenciales import NOMBRE_CREDENCIAL_COPIAS_BD, CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD, generar_token
 
 
@@ -93,7 +93,7 @@ async def crear_credencial_gd(
             if resultado.action != "accept":
                 raise ToolError("El cliente no ha rellenado el formulario — no se ha creado ninguna credencial.")
             datos = resultado.data
-            if await credenciales.obtener_por_nombre(datos.nombre):
+            if datos.nombre == NOMBRE_CREDENCIAL_COPIAS_BD or await credenciales.obtener_por_nombre(datos.nombre):
                 raise ToolError(f'Ya existe una credencial llamada "{datos.nombre}"')
             id_credencial = await credenciales.crear(datos.nombre, datos.descripcion, datos.valor, datos.usuario or None)
             fila = await credenciales.obtener(id_credencial)
@@ -107,7 +107,7 @@ async def crear_credencial_gd(
             "vuelve a llamar a crear_credencial_gd con esos datos ya rellenos en sus parámetros. "
             "El valor de la credencial en sí no lo pidas aquí — esta tool te dará un enlace para eso."
         )
-    if await credenciales.obtener_por_nombre(nombre):
+    if nombre == NOMBRE_CREDENCIAL_COPIAS_BD or await credenciales.obtener_por_nombre(nombre):
         raise ToolError(f'Ya existe una credencial llamada "{nombre}"')
 
     url_publica = os.environ.get("GD_URL_PUBLICA")

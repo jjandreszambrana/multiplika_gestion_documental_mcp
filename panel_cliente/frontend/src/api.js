@@ -284,7 +284,7 @@ export const api = {
   },
 
   listarCopiasBD: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/copias-bd`),
-  crearCopiaBD: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/copias-bd`, datos),
+  crearCopiaBD: (idProyecto) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/copias-bd`),
   actualizarAjustesCopiasBD: (idProyecto, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/copias-bd/ajustes`, datos),
   borrarCopiaBD: (idProyecto, nombre) =>
