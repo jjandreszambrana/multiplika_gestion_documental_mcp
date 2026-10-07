@@ -26,6 +26,10 @@ from ..database.modelos._mod_actividad import TIPOS_PRIVADOS, componer_descripci
 
 # nombre del endpoint -> (verbo, tipo_objeto, parámetro de ruta con su id)
 ACCIONES_PANEL = {
+    "crear_copia_bd": ("hizo una copia de seguridad de la base", None, None),
+    "borrar_copia_bd": ("borró una copia de seguridad de la base", None, None),
+    "restaurar_copia_bd": ("restauró una copia de seguridad de la base", None, None),
+    "actualizar_ajustes_copias_bd": ("cambió la programación de las copias de la base", None, None),
     "crear_documento_manual": ("creó a mano el documento", "documento", None),
     "actualizar_contexto_negocio": ("actualizó el contexto de negocio", None, None),
     "actualizar_preferencias_negocio": ("actualizó las preferencias de la IA", None, None),
@@ -167,6 +171,7 @@ _SIN_DETALLE = {
     "crear_credencial", "actualizar_credencial", "rellenar_formulario_credencial",
     "crear_certificado", "actualizar_certificado", "actualizar_cuenta_email",
     "enlazar_con_central", "emitir_api_key",
+    "crear_copia_bd", "restaurar_copia_bd", "actualizar_ajustes_copias_bd",  # llevan contraseña
 }
 _MAX_CUERPO = 64 * 1024
 _METODOS_QUE_ESCRIBEN = {"POST", "PUT", "PATCH", "DELETE"}

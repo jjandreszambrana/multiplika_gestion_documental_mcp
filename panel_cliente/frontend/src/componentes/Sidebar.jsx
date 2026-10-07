@@ -9,6 +9,7 @@ import {
   IconKey,
   IconLock,
   IconCertificate,
+  IconDatabaseExport,
   IconBellRinging,
   IconMail,
   IconHelpCircle,
@@ -168,6 +169,7 @@ export default function Sidebar({
             <Item icon={IconLink} label="GDs enlazadas" active={vista === "enlaces"} onClick={() => onNavigate("enlaces")} />
             <Item icon={IconLock} label="Credenciales" active={vista === "credenciales"} onClick={() => onNavigate("credenciales")} />
             <Item icon={IconCertificate} label="Certificados" active={vista === "certificados"} onClick={() => onNavigate("certificados")} />
+            <Item icon={IconDatabaseExport} label="Copias de seguridad" active={vista === "copias-bd"} onClick={() => onNavigate("copias-bd")} />
             <Item
               icon={IconBellRinging}
               label="Avisos de caducidad"

@@ -283,6 +283,33 @@ export const api = {
     return { blob: await res.blob(), nombreFichero }
   },
 
+  listarCopiasBD: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/copias-bd`),
+  crearCopiaBD: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/copias-bd`, datos),
+  actualizarAjustesCopiasBD: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/copias-bd/ajustes`, datos),
+  borrarCopiaBD: (idProyecto, nombre) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/copias-bd/${encodeURIComponent(nombre)}`),
+  restaurarCopiaBD: (idProyecto, nombre, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/copias-bd/${encodeURIComponent(nombre)}/restaurar`, datos),
+  // Igual que descargarCertificadoBlob: necesita la cabecera Authorization.
+  descargarCopiaBDBlob: async (idProyecto, nombre) => {
+    const headers = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(
+      `${BASE_CLIENTE}/proyectos/${idProyecto}/copias-bd/${encodeURIComponent(nombre)}/archivo`, { headers },
+    )
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        detalle = (await res.json()).detail || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(detalle)
+    }
+    return res.blob()
+  },
+
   listarDocumentosPendientes: (idProyecto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/documentos-pendientes`),
   subirDocumentosPendientes: (idProyecto, archivos) => {

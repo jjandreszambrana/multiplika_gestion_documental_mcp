@@ -40,6 +40,7 @@ import ApiKeys from "./paginas/ApiKeys"
 import Contexto from "./paginas/Contexto"
 import Credenciales from "./paginas/Credenciales"
 import Certificados from "./paginas/Certificados"
+import CopiasBD from "./paginas/CopiasBD"
 import Estilos from "./paginas/Estilos"
 import Reglas from "./paginas/Reglas"
 import Registros from "./paginas/Registros"
@@ -368,6 +369,8 @@ export default function App() {
             <Credenciales proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "certificados" ? (
             <Certificados proyecto={proyecto} onVolver={() => navegar("documentos")} />
+          ) : vista === "copias-bd" ? (
+            <CopiasBD proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "usuarios" ? (
             <Usuarios proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "avisos" ? (

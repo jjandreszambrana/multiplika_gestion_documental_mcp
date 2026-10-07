@@ -37,9 +37,9 @@ from typing import Literal
 from urllib.parse import quote
 
 import anthropic
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
 from pydantic import BaseModel, Field
@@ -53,7 +53,7 @@ from lib.api_keys import comprobar_dueno_api_key, generar_api_key, nombre_api_ke
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
 from ..database.ayuda_gd import indice_ayuda, obtener_seccion
-from ..database.modelos._mod_actividad import ActividadCRUD
+from ..database.modelos._mod_actividad import ActividadCRUD, registrar_sin_fallar
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
 from ..database.modelos._mod_chat import ChatConversacionesCRUD
 from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestra_chat
@@ -142,6 +142,7 @@ from ..database.modelos import _mod_seguimiento as seguimiento
 from ..database.modelos import _mod_crm as crm
 from ..database.modelos import _mod_erp as erp
 from ..database.modelos import _mod_sif as sif
+from ..database.modelos import _mod_copias_bd as copias_bd
 from ..database.modelos._mod_notas import (
     NotasCRUD,
     NotasRelacionesCRUD,
@@ -152,7 +153,7 @@ from ..database.modelos._mod_notas import (
 from ..database.modelos._mod_tipos_documento import TiposDocumentoCRUD
 from ..database.modelos._mod_versiones import VersionesCRUD, confirmar_edicion, guardar_documento, revertir_edicion
 from . import chat_ia
-from .actividad_panel import ActividadPanelMiddleware
+from .actividad_panel import ActividadPanelMiddleware, _quien
 from .extraccion_pdf import extraer_texto, texto_unido
 from .dependencias import (
     Identidad,
@@ -1650,6 +1651,106 @@ async def listar_log_certificado(
          "usuario": await _nombre_usuario(r["id_usuario"])}
         for r in registros
     ]
+
+
+# ---------- Copias de seguridad de la base (ver docs/gestion-documental.md →
+# "Copias de seguridad de la base de datos"). Todo de administración: una
+# copia es la base entera, y restaurar machaca todo lo actual.
+
+class NuevaCopiaBD(BaseModel):
+    cifrar: bool = False
+    contrasena: str | None = None
+
+
+class RestaurarCopiaBD(BaseModel):
+    contrasena: str | None = None
+    confirmacion: str
+
+
+class AjustesCopiasBD(BaseModel):
+    programada: bool | None = None
+    regla: dict | None = None
+    conservar: int | None = None
+    cifrar: bool | None = None
+    contrasena: str | None = None
+    sftp_credencial: str | None = None
+    sftp_carpeta: str | None = None
+    sftp_conservar: int | None = None
+
+
+@app.get("/v1/proyectos/{id_proyecto}/copias-bd")
+async def listar_copias_bd(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> dict:
+    return {
+        "copias": copias_bd.listar_copias(proyecto["id"]),
+        "ajustes": copias_bd.ajustes_publicos(copias_bd.leer_ajustes(proyecto["id"])),
+        "espacio_libre": copias_bd.espacio_libre(),
+    }
+
+
+@app.post("/v1/proyectos/{id_proyecto}/copias-bd")
+async def crear_copia_bd(
+    id_proyecto: int, datos: NuevaCopiaBD, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    try:
+        return await copias_bd.crear_copia(
+            proyecto["id"], get_db_config(proyecto["id"]), "manual", datos.contrasena if datos.cifrar else None,
+        )
+    except copias_bd.CopiaBDError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.put("/v1/proyectos/{id_proyecto}/copias-bd/ajustes")
+async def actualizar_ajustes_copias_bd(
+    id_proyecto: int, datos: AjustesCopiasBD, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    try:
+        ajustes = copias_bd.guardar_ajustes(proyecto["id"], datos.model_dump(exclude_unset=True))
+    except copias_bd.CopiaBDError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+    return copias_bd.ajustes_publicos(ajustes)
+
+
+@app.get("/v1/proyectos/{id_proyecto}/copias-bd/{nombre}/archivo")
+async def descargar_copia_bd(
+    id_proyecto: int, nombre: str, request: Request, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> FileResponse:
+    try:
+        ruta = copias_bd.ruta_copia(proyecto["id"], nombre)
+    except copias_bd.CopiaBDError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
+    # El middleware de actividad solo mira lo que escribe; llevarse la base
+    # entera también tiene que quedar apuntado.
+    await registrar_sin_fallar(
+        get_db_config(proyecto["id"]), **await _quien(request.scope, "descargar_copia_bd"), origen="panel",
+        accion="descargar_copia_bd", descripcion=f"descargó la copia de seguridad de la base «{nombre}»",
+        tipo_objeto=None, id_objeto=None, nombre_objeto=nombre, detalle=None,
+    )
+    return FileResponse(ruta, media_type="application/octet-stream", filename=nombre)
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/copias-bd/{nombre}", status_code=status.HTTP_204_NO_CONTENT)
+async def borrar_copia_bd(
+    id_proyecto: int, nombre: str, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> None:
+    try:
+        copias_bd.borrar_copia(proyecto["id"], nombre)
+    except copias_bd.CopiaBDError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/copias-bd/{nombre}/restaurar")
+async def restaurar_copia_bd(
+    id_proyecto: int, nombre: str, datos: RestaurarCopiaBD,
+    proyecto: dict = Depends(admin_gestion_documental_actual),
+) -> dict:
+    if datos.confirmacion.strip() != copias_bd.CONFIRMACION_RESTAURAR:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, f"Para restaurar hay que escribir {copias_bd.CONFIRMACION_RESTAURAR}",
+        )
+    try:
+        return await copias_bd.restaurar_copia(proyecto["id"], get_db_config(proyecto["id"]), nombre, datos.contrasena)
+    except copias_bd.CopiaBDError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
 
 async def _nombre_api_key_o_400(id_proyecto: int, nombre: str, id_excluir: int | None = None) -> str:

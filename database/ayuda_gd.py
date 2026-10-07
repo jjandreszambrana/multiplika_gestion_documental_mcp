@@ -997,6 +997,30 @@ salvo que se lo pidas.
   es el 993 con SSL).""",
     },
     {
+        "id": "copias-seguridad",
+        "titulo": "Copias de seguridad",
+        "resumen": "Copias de toda la base: hacerlas, cifrarlas, descargarlas, programarlas y volver a una.",
+        "markdown": """\
+En la pantalla "Copias de seguridad" (solo administradores) se hacen copias \
+de todo lo que hay en tu gestión documental: documentos, archivos \
+originales, entidades, notas, ajustes...
+
+- **Hacer una copia ahora** y **descargarla**. Si marcas "cifrar", pones \
+  una contraseña: el archivo descargado solo se abre con ella (con 7-Zip o \
+  WinRAR). Esa contraseña no se guarda en ningún sitio: si se pierde, la \
+  copia no sirve.
+- **Programarlas**: todos los días, algunos días de la semana o una vez al \
+  mes, a la hora que elijas. Se guardan las últimas que digas y la más \
+  antigua se borra sola. También se pueden cifrar.
+- **Guardarlas además en otro servidor** (SFTP), con una credencial que \
+  tenga usuario, contraseña y un campo `host`.
+- **Volver a una copia**: todo lo de ahora se sustituye por lo de esa \
+  copia. Antes se guarda sola una copia del estado actual, por si hay que \
+  deshacerlo.
+
+La IA no puede hacer ni restaurar copias: solo se hace desde esta pantalla.""",
+    },
+    {
         "id": "gds-enlazadas",
         "titulo": "GDs enlazadas",
         "resumen": "Consultar una gestión documental central (p.ej. tu asesoría) y aprender de las que te consultan.",
