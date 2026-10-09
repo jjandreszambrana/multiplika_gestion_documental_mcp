@@ -2835,8 +2835,8 @@ async def corregir_modelo_registro(
     id_proyecto: int, id_modelo: int, datos: CorreccionModeloRegistro,
     proyecto: dict = Depends(escritor_gestion_documental_actual),
 ) -> dict:
-    """Solo mientras no tenga registros — si los tiene, 400 pidiendo una
-    versión nueva."""
+    """Solo mientras no tenga registros (o si solo cambian las leyendas de
+    los campos) — si no, 400 pidiendo una versión nueva."""
     config = get_db_config(proyecto["id"])
     try:
         modelo = await ModelosRegistroCRUD(config).actualizar(id_modelo, datos.model_dump())

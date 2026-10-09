@@ -8,7 +8,8 @@ igual por MCP y desde el panel:
    siempre un registro válido.
 2. Un modelo con registros no se modifica. Para cambiarlo se crea la versión
    siguiente (`nueva_version`), que desactiva la anterior — los registros
-   viejos siguen apuntando a la versión con la que nacieron."""
+   viejos siguen apuntando a la versión con la que nacieron. La excepción son
+   las leyendas de los campos (`title`), que no cambian qué se valida."""
 
 import json
 from decimal import Decimal
@@ -83,6 +84,20 @@ def comprobar_valores(esquema: dict, valores) -> dict:
         donde = ".".join(str(p) for p in fallo.absolute_path) or "(el registro)"
         raise ValueError(f"Los valores no encajan con el modelo → {donde}: {fallo.message}")
     return valores
+
+
+def _sin_leyendas(esquema):
+    """El esquema sin los `title` (las leyendas de los campos), para ver si dos
+    esquemas validan lo mismo. Las claves de `properties` son nombres de
+    campo, no palabras del esquema: un campo que se llame "title" se queda."""
+    if isinstance(esquema, list):
+        return [_sin_leyendas(x) for x in esquema]
+    if not isinstance(esquema, dict):
+        return esquema
+    return {
+        k: {c: _sin_leyendas(d) for c, d in v.items()} if k == "properties" and isinstance(v, dict) else _sin_leyendas(v)
+        for k, v in esquema.items() if k != "title"
+    }
 
 
 def plantilla_de_valores(esquema: dict) -> dict:
@@ -181,17 +196,32 @@ class ModelosRegistroCRUD(AsyncCrudBase):
         modelo = await self.obtener(id_modelo)
         if not modelo:
             return None
-        if await self.tiene_registros(id_modelo):
-            raise ValueError(
-                f'El modelo "{modelo["nombre"]}" (versión {modelo["version"]}) ya tiene registros, así que no se '
-                f"toca: crea la versión siguiente con el esquema nuevo"
-            )
         cambios = {k: v for k, v in datos.items() if k in _CAMPOS_MODELO and v is not None}
         if "esquema" in cambios:
-            cambios["esquema"] = json.dumps(comprobar_esquema(cambios["esquema"]), ensure_ascii=False)
+            cambios["esquema"] = comprobar_esquema(cambios["esquema"])
+        if await self.tiene_registros(id_modelo) and not self._solo_leyendas(modelo, cambios):
+            raise ValueError(
+                f'El modelo "{modelo["nombre"]}" (versión {modelo["version"]}) ya tiene registros, así que no se '
+                f"toca: crea la versión siguiente con el esquema nuevo (solo las leyendas de los campos se "
+                f"pueden cambiar sin versionar)"
+            )
+        if "esquema" in cambios:
+            cambios["esquema"] = json.dumps(cambios["esquema"], ensure_ascii=False)
         if cambios:
             await self.update(id_modelo, cambios)
         return await self.obtener(id_modelo)
+
+    @staticmethod
+    def _solo_leyendas(modelo: dict, cambios: dict) -> bool:
+        """Si lo único que cambia son las leyendas (`title`) de los campos: no
+        cambia qué se valida, así que vale también con registros."""
+        for campo, valor in cambios.items():
+            if campo == "esquema":
+                if _sin_leyendas(valor) != _sin_leyendas(json.loads(modelo["esquema"])):
+                    return False
+            elif valor != modelo[campo]:
+                return False
+        return True
 
     async def nueva_version(self, id_modelo: int, esquema, motivo: str, cambios: dict | None = None) -> dict:
         """Crea la versión siguiente y desactiva la anterior. Los registros ya

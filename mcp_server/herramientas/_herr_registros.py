@@ -150,15 +150,20 @@ async def crear_modelo_registro_gd(
     campo y `required` con los obligatorios. Usa `enum` cuando las opciones
     sean cerradas y `minimum`/`maximum` cuando haya límites: eso es lo que
     después impide anotar un disparate. Pon `"additionalProperties": false`
-    para que no se cuelen campos inventados. Ejemplo completo:
+    para que no se cuelen campos inventados. Pon a cada campo un `title`: es
+    la leyenda que ve la persona en el formulario y en los listados en vez
+    del nombre técnico del campo. Ejemplo completo:
 
         {"type": "object",
          "required": ["camara", "temperatura"],
          "additionalProperties": false,
          "properties": {
-           "camara": {"type": "string", "enum": ["Cámara 1", "Cámara 2", "Congelador"]},
-           "temperatura": {"type": "number", "minimum": -30, "maximum": 15},
-           "termometro": {"type": "string"}}}
+           "camara": {"type": "string", "title": "Cámara", "enum": ["Cámara 1", "Cámara 2", "Congelador"]},
+           "temperatura": {"type": "number", "title": "Temperatura (°C)", "minimum": -30, "maximum": 15},
+           "termometro": {"type": "string", "title": "Termómetro usado"}}}
+
+    Al enseñar registros a una persona, usa también esas leyendas, no los
+    nombres de los campos.
 
     Lo que NO va en el esquema, porque ya son columnas del registro: la fecha
     y la hora a la que se refiere, quién lo anota, si es conforme, las
@@ -185,7 +190,9 @@ async def corregir_modelo_registro_gd(
 ) -> dict:
     """Corrige un modelo que TODAVÍA NO tiene ningún registro (un borrador que
     nadie ha usado). En cuanto tiene el primero, esta tool falla y hay que
-    usar nueva_version_modelo_registro_gd."""
+    usar nueva_version_modelo_registro_gd — salvo que lo único que cambie
+    sean las leyendas (`title`) de los campos del esquema: eso no cambia qué
+    se valida y se corrige aquí, sin versión nueva."""
     config = await _config_actual()
     try:
         modelo = await ModelosRegistroCRUD(config).actualizar(id_modelo, {
