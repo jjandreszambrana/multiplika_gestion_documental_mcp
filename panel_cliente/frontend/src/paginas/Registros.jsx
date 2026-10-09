@@ -12,6 +12,15 @@ import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
 const PERIODICIDADES = ["diaria", "semanal", "mensual", "puntual"]
 const TODOS = "__todos__"
 
+// Botones de un modal largo siempre a la vista, sin bajar hasta el final.
+const PIE_FIJO = {
+  position: "sticky", bottom: 0, zIndex: 2, paddingBlock: 12,
+  background: "var(--mantine-color-body)", borderTop: "1px solid var(--mantine-color-default-border)",
+}
+
+// La columna de acciones queda pegada a la derecha aunque la tabla sea ancha.
+const COLUMNA_ACCIONES = { position: "sticky", right: 0, zIndex: 1, background: "var(--mantine-color-body)" }
+
 const ESQUEMA_DE_MUESTRA = `{
   "type": "object",
   "required": ["camara", "temperatura"],
@@ -352,18 +361,20 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
           onChange={setArchivo}
         />
 
-        {error && <Alert color="red">{error}</Alert>}
         <Text c="dimmed" fz="12.5px">
           Lo que anotes se comprueba contra el modelo antes de guardarse: si algo no encaja, te dirá qué campo.
         </Text>
-        <Group justify="flex-end">
-          <Button variant="subtle" color="gray" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={guardando}>
-            {registro ? "Guardar" : "Anotar"}
-          </Button>
-        </Group>
+        <Stack gap="xs" style={PIE_FIJO}>
+          {error && <Alert color="red">{error}</Alert>}
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={guardando}>
+              {registro ? "Guardar" : "Anotar"}
+            </Button>
+          </Group>
+        </Stack>
       </Stack>
     </Modal>
   )
@@ -526,8 +537,8 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
       {!registros ? (
         <Text>Cargando...</Text>
       ) : (
-        <Paper withBorder radius="lg" style={{ overflowX: "auto" }}>
-          <Table striped highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+        <Paper withBorder radius="lg" style={{ overflow: "auto", maxHeight: "calc(100vh - 220px)" }}>
+          <Table striped highlightOnHover stickyHeader verticalSpacing="sm" horizontalSpacing="md">
             <Table.Thead>
               <Table.Tr>
                 <Table.Th w={150}>Fecha</Table.Th>
@@ -537,7 +548,7 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
                 <Table.Th w={130}>Conformidad</Table.Th>
                 <Table.Th>Documentos</Table.Th>
                 <Table.Th w={160}>Anotado por</Table.Th>
-                {puedeEscribir && <Table.Th w={80} />}
+                {puedeEscribir && <Table.Th w={80} style={COLUMNA_ACCIONES} />}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -607,7 +618,7 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
                     </Text>
                   </Table.Td>
                   {puedeEscribir && (
-                    <Table.Td>
+                    <Table.Td style={COLUMNA_ACCIONES}>
                       <Group gap="4" wrap="nowrap">
                         <Tooltip label="Corregir">
                           <ActionIcon
@@ -777,18 +788,20 @@ function ModalModelo({ opened, modelo, onClose, onGuardar }) {
           />
         )}
 
-        {error && <Alert color="red">{error}</Alert>}
-        <Group justify="flex-end">
-          <Button variant="subtle" color="gray" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit" loading={guardando}
-            disabled={!datos.nombre.trim() || !datos.titulo.trim() || !datos.descripcion.trim() || (versionando && !motivo.trim())}
-          >
-            {!modelo ? "Crear modelo" : versionando ? "Crear versión" : "Guardar"}
-          </Button>
-        </Group>
+        <Stack gap="xs" style={PIE_FIJO}>
+          {error && <Alert color="red">{error}</Alert>}
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit" loading={guardando}
+              disabled={!datos.nombre.trim() || !datos.titulo.trim() || !datos.descripcion.trim() || (versionando && !motivo.trim())}
+            >
+              {!modelo ? "Crear modelo" : versionando ? "Crear versión" : "Guardar"}
+            </Button>
+          </Group>
+        </Stack>
       </Stack>
     </Modal>
   )
