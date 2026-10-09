@@ -3,7 +3,7 @@ import {
   ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, MultiSelect, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconHistory, IconNotebook, IconPaperclip, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconArrowLeft, IconHistory, IconNotebook, IconPaperclip, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
@@ -17,13 +17,33 @@ const ESQUEMA_DE_MUESTRA = `{
   "required": ["camara", "temperatura"],
   "additionalProperties": false,
   "properties": {
-    "camara": {"type": "string", "enum": ["Cámara 1", "Cámara 2"]},
-    "temperatura": {"type": "number", "minimum": -30, "maximum": 15}
+    "camara": {"type": "string", "title": "Cámara", "enum": ["Cámara 1", "Cámara 2"]},
+    "temperatura": {"type": "number", "title": "Temperatura (°C)", "minimum": -30, "maximum": 15}
   }
 }`
 
 function campos(modelo) {
   return Object.entries(modelo?.esquema?.properties || {})
+}
+
+// La leyenda (`title` del esquema) es lo que ve la persona; el nombre del
+// campo, solo si el modelo no la trae.
+function leyenda(nombre, definicion) {
+  return definicion?.title || nombre
+}
+
+// El esquema sin leyendas: si dos esquemas son iguales así, validan lo mismo
+// y cambiar solo las leyendas no necesita versión nueva.
+function sinLeyendas(nodo) {
+  if (Array.isArray(nodo)) return nodo.map(sinLeyendas)
+  if (!nodo || typeof nodo !== "object") return nodo
+  return Object.fromEntries(
+    Object.entries(nodo)
+      .filter(([k]) => k !== "title")
+      .map(([k, v]) => [k, k === "properties" && v && typeof v === "object" && !Array.isArray(v)
+        ? Object.fromEntries(Object.entries(v).map(([c, d]) => [c, sinLeyendas(d)]))
+        : sinLeyendas(v)]),
+  )
 }
 
 // Listas y objetos (p.ej. todos los parámetros de un análisis) no caben en
@@ -82,7 +102,7 @@ function TablaDeObjetos({ etiqueta, definicion, valor, onChange }) {
             <Table.Tr>
               {columnas.map((c) => (
                 <Table.Th key={c} fz="12px" miw={120}>
-                  {c}
+                  {leyenda(c, propiedades[c])}
                   {(definicion.items?.required || []).includes(c) ? " *" : ""}
                 </Table.Th>
               ))}
@@ -153,7 +173,7 @@ function TablaDeObjetos({ etiqueta, definicion, valor, onChange }) {
 // Un campo del formulario por cada campo del esquema: la forma de lo que se
 // anota la decide el modelo, no esta pantalla.
 function CampoDeEsquema({ nombre, definicion, requerido, valor, onChange }) {
-  const etiqueta = requerido ? `${nombre} *` : nombre
+  const etiqueta = requerido ? `${leyenda(nombre, definicion)} *` : leyenda(nombre, definicion)
   if (definicion.enum) {
     return (
       <Select
@@ -349,7 +369,7 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
   )
 }
 
-function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
+function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota }) {
   const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [idModelo, setIdModelo] = useEstadoPersistente(`filtros:${proyecto.id}:registros:idModelo`, null)
   const [desde, setDesde] = useEstadoPersistente(`filtros:${proyecto.id}:registros:desde`, "")
@@ -365,7 +385,7 @@ function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
 
   useEffect(() => {
     api.listarOBuscarDocumentos(proyecto.id, "").then(setDocumentos).catch(() => setDocumentos([]))
-  }, [proyecto.id])
+  }, [proyecto.id, refresco])
 
   const modelo = modelos.find((m) => String(m.id) === String(idModelo)) || null
 
@@ -404,7 +424,7 @@ function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idModelo, desde, hasta, conforme])
+  }, [idModelo, desde, hasta, conforme, refresco])
 
   async function guardar(datos, archivo, idsDocumentos) {
     const fila = registroEditando
@@ -511,8 +531,8 @@ function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th w={150}>Fecha</Table.Th>
-                {camposDeTabla(modelo).map(([nombre]) => (
-                  <Table.Th key={nombre}>{nombre}</Table.Th>
+                {camposDeTabla(modelo).map(([nombre, definicion]) => (
+                  <Table.Th key={nombre}>{leyenda(nombre, definicion)}</Table.Th>
                 ))}
                 <Table.Th w={130}>Conformidad</Table.Th>
                 <Table.Th>Documentos</Table.Th>
@@ -645,12 +665,23 @@ function PestanaRegistros({ proyecto, modelos, onVerNota, onNuevaNota }) {
 }
 
 function ModalModelo({ opened, modelo, onClose, onGuardar }) {
-  const versionando = !!modelo?.tiene_registros
   const [datos, setDatos] = useState({ nombre: "", titulo: "", descripcion: "", periodicidad: null })
   const [esquema, setEsquema] = useState(ESQUEMA_DE_MUESTRA)
   const [motivo, setMotivo] = useState("")
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  const versionando = !!modelo?.tiene_registros && !soloCambianLeyendas()
+
+  function soloCambianLeyendas() {
+    if (datos.titulo !== modelo.titulo || datos.descripcion !== modelo.descripcion || datos.periodicidad !== (modelo.periodicidad || null)) {
+      return false
+    }
+    try {
+      return JSON.stringify(sinLeyendas(JSON.parse(esquema))) === JSON.stringify(sinLeyendas(modelo.esquema))
+    } catch {
+      return false
+    }
+  }
 
   useEffect(() => {
     if (!opened) return
@@ -698,6 +729,12 @@ function ModalModelo({ opened, modelo, onClose, onGuardar }) {
             actual se retira. Los registros ya anotados se quedan como están, con su versión.
           </Alert>
         )}
+        {modelo?.tiene_registros && !versionando && (
+          <Alert color="gray">
+            Este modelo ya tiene registros. Puedes cambiar las leyendas de los campos (<code>"title"</code>) sin
+            crear una versión nueva; cualquier otro cambio creará la versión siguiente.
+          </Alert>
+        )}
         <Group grow align="flex-start">
           <TextInput
             label="Nombre" required placeholder="temperaturas_camaras"
@@ -726,7 +763,7 @@ function ModalModelo({ opened, modelo, onClose, onGuardar }) {
         />
         <Textarea
           label="Esquema (JSON Schema)" required autosize minRows={8} maxRows={20}
-          description="Qué campos lleva y cómo deben ser. Si prefieres no escribirlo a mano, pídeselo a tu IA en conversación."
+          description='Qué campos lleva y cómo deben ser; "title" es la leyenda que se ve en vez del nombre del campo. Si prefieres no escribirlo a mano, pídeselo a tu IA en conversación.'
           styles={{ input: { fontFamily: "monospace", fontSize: "12.5px" } }}
           value={esquema}
           onChange={(e) => setEsquema(e.currentTarget.value)}
@@ -841,7 +878,7 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
                 </Table.Td>
                 <Table.Td>
                   <Text fz="12.5px" c="dimmed">
-                    {campos(m).map(([nombre]) => nombre).join(", ")}
+                    {campos(m).map(([nombre, definicion]) => leyenda(nombre, definicion)).join(", ")}
                   </Text>
                 </Table.Td>
                 <Table.Td>
@@ -924,7 +961,7 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
                 {v.motivo_version || "Primera versión"}
               </Text>
               <Text fz="12px" c="dimmed" mt="4">
-                Campos: {campos(v).map(([nombre]) => nombre).join(", ")}
+                Campos: {campos(v).map(([nombre, definicion]) => leyenda(nombre, definicion)).join(", ")}
               </Text>
             </Paper>
           ))}
@@ -937,6 +974,14 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
 export default function Registros({ proyecto, onVolver, onVerNota, onNuevaNota }) {
   const [modelos, setModelos] = useState(null)
   const [error, setError] = useState(null)
+  const [refrescando, setRefrescando] = useState(false)
+  const [refresco, setRefresco] = useState(0)
+
+  function recargar() {
+    setRefrescando(true)
+    setRefresco((n) => n + 1)
+    cargar().finally(() => setRefrescando(false))
+  }
 
   function cargar() {
     setError(null)
@@ -961,16 +1006,25 @@ export default function Registros({ proyecto, onVolver, onVerNota, onNuevaNota }
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="6">
-        Registros de datos
-      </Title>
-      <Text c="dimmed" mb="lg" maw={680} fz="13.5px">
-        Lo que se anota una y otra vez con la misma forma: temperaturas, partes de limpieza, resultados de
-        un análisis. Cada tipo tiene un <b>modelo</b> que dice qué campos lleva y entre qué valores son
-        correctos, y lo que anotas se comprueba contra él antes de guardarse. Un modelo que ya tiene
-        registros no se cambia: se crea una versión nueva y la anterior se retira, para que siempre se sepa
-        qué forma tenía el parte el día que se rellenó.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="6">
+            Registros de datos
+          </Title>
+          <Text c="dimmed" maw={680} fz="13.5px">
+            Lo que se anota una y otra vez con la misma forma: temperaturas, partes de limpieza, resultados de
+            un análisis. Cada tipo tiene un <b>modelo</b> que dice qué campos lleva y entre qué valores son
+            correctos, y lo que anotas se comprueba contra él antes de guardarse. Un modelo que ya tiene
+            registros no se cambia: se crea una versión nueva y la anterior se retira, para que siempre se sepa
+            qué forma tenía el parte el día que se rellenó.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       {error && (
         <Alert color="red" mb="md">
@@ -988,7 +1042,7 @@ export default function Registros({ proyecto, onVolver, onVerNota, onNuevaNota }
           </Tabs.List>
           <Tabs.Panel value="registros">
             <PestanaRegistros
-              proyecto={proyecto} modelos={modelos.filter((m) => m.activo || m.tiene_registros)}
+              proyecto={proyecto} modelos={modelos.filter((m) => m.activo || m.tiene_registros)} refresco={refresco}
               onVerNota={onVerNota} onNuevaNota={onNuevaNota}
             />
           </Tabs.Panel>

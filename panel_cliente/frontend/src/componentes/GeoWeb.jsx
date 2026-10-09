@@ -51,7 +51,7 @@ function LoQueVenLasIAs({ proyecto, activo, onPropuesta }) {
   )
 }
 
-export default function GeoWeb({ proyecto, activo, onPropuesta }) {
+export default function GeoWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [datos, setDatos] = useState(null)
   const [nuevas, setNuevas] = useState("")
   const [midiendo, setMidiendo] = useState(false)
@@ -64,7 +64,7 @@ export default function GeoWeb({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   async function anadir() {
     try {

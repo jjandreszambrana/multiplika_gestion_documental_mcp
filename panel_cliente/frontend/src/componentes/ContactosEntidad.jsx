@@ -6,7 +6,7 @@ import { api } from "../api"
 const VACIO = { nombre: "", cargo: "", email: "", telefono: "", observaciones: "", principal: false }
 
 // Personas de contacto de una entidad (ficha de la entidad).
-export default function ContactosEntidad({ proyecto, idEntidad }) {
+export default function ContactosEntidad({ proyecto, idEntidad, refresco }) {
   const [contactos, setContactos] = useState(null)
   const [editando, setEditando] = useState(null) // null = cerrado; {} = nuevo; contacto = ese
   const [valores, setValores] = useState(VACIO)
@@ -20,7 +20,7 @@ export default function ContactosEntidad({ proyecto, idEntidad }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idEntidad])
+  }, [proyecto.id, idEntidad, refresco])
 
   function abrir(contacto) {
     setValores(contacto ? Object.fromEntries(Object.keys(VACIO).map((k) => [k, contacto[k] ?? VACIO[k]])) : VACIO)

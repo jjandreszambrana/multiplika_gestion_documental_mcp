@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Textarea, TextInput, Title, Tooltip } from "@mantine/core"
 import { CodeHighlight } from "@mantine/code-highlight"
-import { IconArchive, IconArchiveOff, IconArrowLeft, IconPlus } from "@tabler/icons-react"
+import { IconArchive, IconArchiveOff, IconArrowLeft, IconPlus, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -15,6 +15,7 @@ export default function ScriptDetalle({ proyecto, script, onVolver, onCambiado }
   const [candidatos, setCandidatos] = useState([])
   const [idDocumentoNuevo, setIdDocumentoNuevo] = useState(null)
   const [anadiendo, setAnadiendo] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
 
   function recargarDocumentos() {
     return api
@@ -23,11 +24,24 @@ export default function ScriptDetalle({ proyecto, script, onVolver, onCambiado }
       .catch((err) => setError(err.message))
   }
 
+  function cargarCandidatos() {
+    return api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+  }
+
   useEffect(() => {
     recargarDocumentos()
-    api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+    cargarCandidatos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, script.id])
+
+  function recargar() {
+    setRefrescando(true)
+    Promise.all([
+      api.obtenerScript(proyecto.id, script.id).then(setDatos).catch((err) => setError(err.message)),
+      recargarDocumentos(),
+      cargarCandidatos(),
+    ]).finally(() => setRefrescando(false))
+  }
 
   async function anadirDocumento() {
     if (!idDocumentoNuevo) return
@@ -122,20 +136,27 @@ export default function ScriptDetalle({ proyecto, script, onVolver, onCambiado }
               {datos.fecha_ultimo_uso ? ` · último uso ${formatearFecha(datos.fecha_ultimo_uso)}` : ""}
             </Text>
           </div>
-          {proyecto.puede_editar && (
-            <Group gap="8" wrap="nowrap">
-              <Button variant="default" onClick={() => { setValoresEdicion(datos); setEditando(true) }}>
-                Editar
-              </Button>
-              <Button
-                variant="subtle" color={datos.archivado ? "green" : "orange"}
-                leftSection={datos.archivado ? <IconArchiveOff size={15} stroke={1.8} /> : <IconArchive size={15} stroke={1.8} />}
-                onClick={alternarArchivado}
-              >
-                {datos.archivado ? "Desarchivar" : "Archivar"}
-              </Button>
-            </Group>
-          )}
+          <Group gap="8" wrap="nowrap">
+            <Tooltip label="Refrescar">
+              <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+                <IconRefresh size={17} stroke={1.8} />
+              </ActionIcon>
+            </Tooltip>
+            {proyecto.puede_editar && (
+              <>
+                <Button variant="default" onClick={() => { setValoresEdicion(datos); setEditando(true) }}>
+                  Editar
+                </Button>
+                <Button
+                  variant="subtle" color={datos.archivado ? "green" : "orange"}
+                  leftSection={datos.archivado ? <IconArchiveOff size={15} stroke={1.8} /> : <IconArchive size={15} stroke={1.8} />}
+                  onClick={alternarArchivado}
+                >
+                  {datos.archivado ? "Desarchivar" : "Archivar"}
+                </Button>
+              </>
+            )}
+          </Group>
         </Group>
       ) : (
         <Paper withBorder radius="lg" p="16" mb="lg">

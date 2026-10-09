@@ -3,7 +3,7 @@ import {
   ActionIcon, Alert, Anchor, Autocomplete, Badge, Button, Group, Modal, NumberInput, Paper,
   SegmentedControl, Select, Stack, Switch, Table, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconArrowLeft, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { useEstadoPersistente } from "../estadoPersistente"
 
@@ -175,6 +175,7 @@ export default function Reglas({ proyecto, onVolver }) {
   const [error, setError] = useState(null)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [reglaEditando, setReglaEditando] = useState(null)
+  const [refrescando, setRefrescando] = useState(false)
 
   function cargar() {
     setError(null)
@@ -185,6 +186,11 @@ export default function Reglas({ proyecto, onVolver }) {
       // enlazada o no responden, simplemente no hay nada que enseñar.
       api.listarReglasHeredadas(proyecto.id).then(setHeredadas).catch(() => setHeredadas([])),
     ]).catch((err) => setError(err.message))
+  }
+
+  function recargar() {
+    setRefrescando(true)
+    cargar().finally(() => setRefrescando(false))
   }
 
   useEffect(() => {
@@ -243,11 +249,18 @@ export default function Reglas({ proyecto, onVolver }) {
 
       <Group justify="space-between" align="flex-start" mb="6">
         <Title order={2}>Reglas de comportamiento</Title>
-        {puedeEscribir && (
-          <Button leftSection={<IconPlus size={15} stroke={2.2} />} onClick={abrirNueva}>
-            Nueva regla
-          </Button>
-        )}
+        <Group gap="xs">
+          {puedeEscribir && (
+            <Button leftSection={<IconPlus size={15} stroke={2.2} />} onClick={abrirNueva}>
+              Nueva regla
+            </Button>
+          )}
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
       <Text c="dimmed" mb="lg" maw={640} fz="13.5px">
         Cómo debe trabajar la IA en esta gestión documental: datos fijos de la empresa, criterios,

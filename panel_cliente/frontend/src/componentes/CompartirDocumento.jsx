@@ -96,7 +96,7 @@ function FilaCompartido({ proyecto, compartido, onCambiado }) {
   )
 }
 
-export default function CompartirDocumento({ proyecto, idDocumento, documento }) {
+export default function CompartirDocumento({ proyecto, idDocumento, documento, refresco }) {
   const [compartidos, setCompartidos] = useState(null)
   const [error, setError] = useState(null)
   const [dias, setDias] = useState("7")
@@ -113,7 +113,7 @@ export default function CompartirDocumento({ proyecto, idDocumento, documento })
   useEffect(() => {
     recargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function crear(evento) {
     evento.preventDefault()

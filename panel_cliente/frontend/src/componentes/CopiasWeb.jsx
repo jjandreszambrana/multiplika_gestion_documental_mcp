@@ -13,7 +13,7 @@ function tamano(bytes) {
 // Copias de seguridad de una web con el conector instalado: las del propio
 // servidor y las del remoto. Restaurar es una propuesta más (vista previa y
 // aprobación), y se puede deshacer volviendo a la copia que se hace antes.
-export default function CopiasWeb({ proyecto, activo, onPropuesta }) {
+export default function CopiasWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState(null)
   const [haciendo, setHaciendo] = useState(false)
@@ -26,7 +26,7 @@ export default function CopiasWeb({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   async function hacer() {
     setHaciendo(true)

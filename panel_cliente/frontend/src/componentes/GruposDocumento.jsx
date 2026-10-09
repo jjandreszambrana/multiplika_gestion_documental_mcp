@@ -3,7 +3,7 @@ import { Alert, Badge, Button, CloseButton, Group, Select, Stack, Text, Textarea
 import { IconFolders, IconPlus } from "@tabler/icons-react"
 import { api } from "../api"
 
-export default function GruposDocumento({ proyecto, idDocumento }) {
+export default function GruposDocumento({ proyecto, idDocumento, refresco }) {
   const [grupos, setGrupos] = useState(null)
   const [todos, setTodos] = useState([])
   const [idGrupoNuevo, setIdGrupoNuevo] = useState(null)
@@ -28,7 +28,7 @@ export default function GruposDocumento({ proyecto, idDocumento }) {
     recargar()
     recargarTodos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function anadir(idGrupo) {
     if (!idGrupo) return

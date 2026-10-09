@@ -35,7 +35,7 @@ function ComoConectar({ activo }) {
   )
 }
 
-export default function RedWeb({ proyecto, activo, onPropuesta }) {
+export default function RedWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [publicaciones, setPublicaciones] = useState(null)
   const [abierta, setAbierta] = useState(null)
 
@@ -46,7 +46,7 @@ export default function RedWeb({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   return (
     <Stack gap="md">

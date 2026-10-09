@@ -27,7 +27,7 @@ function Resultado({ datos }) {
 // Base de datos de la empresa: consultas guardadas (un botón, sin saber SQL),
 // consulta rápida para quien sepa SQL y las tablas. Solo lectura: los cambios
 // los propone la IA y se aprueban en la pestaña Cambios.
-export default function BaseDatosWeb({ proyecto, activo }) {
+export default function BaseDatosWeb({ proyecto, activo, refresco }) {
   const [consultas, setConsultas] = useState(null)
   const [esquema, setEsquema] = useState(null)
   const [resultado, setResultado] = useState(null)
@@ -44,7 +44,7 @@ export default function BaseDatosWeb({ proyecto, activo }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   async function ejecutar(c) {
     setEjecutando(c ? c.id : "rapida")

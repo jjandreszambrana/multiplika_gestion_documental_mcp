@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Button, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Button, Group, Stack, Table, Text, Textarea, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -55,12 +55,21 @@ export default function Estilos({ proyecto, onVolver, onVerEstilo }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="xs">
-        Estilos de informe de {proyecto.nombre}
-      </Title>
-      <Text c="dimmed" mb="lg">
-        Cómo debe construir la IA cada tipo de informe, y qué imágenes fijas debe usar.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="xs">
+            Estilos de informe de {proyecto.nombre}
+          </Title>
+          <Text c="dimmed">
+            Cómo debe construir la IA cada tipo de informe, y qué imágenes fijas debe usar.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={cargando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       {puedeEscribir && (
         <Stack component="form" onSubmit={crear} maw={640} mb="xl">

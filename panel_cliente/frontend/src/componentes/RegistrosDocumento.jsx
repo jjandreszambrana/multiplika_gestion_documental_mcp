@@ -6,7 +6,7 @@ import { formatearFecha } from "../formato"
 
 // Registros de datos vinculados a este documento. Se vinculan desde el
 // registro (pantalla "Registros de datos" o la IA); aquí se ven y se quitan.
-export default function RegistrosDocumento({ proyecto, idDocumento }) {
+export default function RegistrosDocumento({ proyecto, idDocumento, refresco }) {
   const [registros, setRegistros] = useState(null)
   const [error, setError] = useState(null)
 
@@ -20,7 +20,7 @@ export default function RegistrosDocumento({ proyecto, idDocumento }) {
   useEffect(() => {
     recargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function quitar(idRegistro) {
     setError(null)

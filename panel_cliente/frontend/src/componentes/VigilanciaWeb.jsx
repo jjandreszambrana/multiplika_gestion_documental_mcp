@@ -199,7 +199,7 @@ function InstalarConector({ proyecto }) {
   )
 }
 
-export default function VigilanciaWeb({ proyecto, activo, onPropuesta }) {
+export default function VigilanciaWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [comprobaciones, setComprobaciones] = useState(null)
   const [historial, setHistorial] = useState([])
   const [comprobando, setComprobando] = useState(null)
@@ -213,7 +213,7 @@ export default function VigilanciaWeb({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   async function comprobar(tipo) {
     setComprobando(tipo || "todas")

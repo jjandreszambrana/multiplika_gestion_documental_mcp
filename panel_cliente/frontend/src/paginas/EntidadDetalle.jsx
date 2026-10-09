@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import FormularioEntidad from "../componentes/FormularioEntidad"
 import NotasBlocVinculadas from "../componentes/NotasBlocVinculadas"
@@ -25,6 +25,8 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
   const [anadiendo, setAnadiendo] = useState(false)
   // Sube al cambiar una oportunidad, para que el historial se recargue
   const [versionHistorial, setVersionHistorial] = useState(0)
+  const [refrescando, setRefrescando] = useState(false)
+  const [refresco, setRefresco] = useState(0)
 
   function recargarDocumentos() {
     return api
@@ -33,11 +35,25 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
       .catch((err) => setError(err.message))
   }
 
+  function cargarCandidatos() {
+    return api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+  }
+
   useEffect(() => {
     recargarDocumentos()
-    api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+    cargarCandidatos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, entidad.id])
+
+  function recargar() {
+    setRefrescando(true)
+    setRefresco((r) => r + 1)
+    Promise.all([
+      api.obtenerEntidad(proyecto.id, entidad.id).then(setDatos).catch((err) => setError(err.message)),
+      recargarDocumentos(),
+      cargarCandidatos(),
+    ]).finally(() => setRefrescando(false))
+  }
 
   async function guardar() {
     setGuardando(true)
@@ -122,16 +138,23 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
               </Text>
             )}
           </div>
-          {proyecto.puede_editar && (
-            <Group gap="8" wrap="nowrap">
-              <Button variant="default" onClick={() => { setValoresEdicion(datos); setEditando(true) }}>
-                Editar
-              </Button>
-              <Button variant="subtle" color="red" leftSection={<IconTrash size={15} stroke={1.8} />} onClick={eliminar}>
-                Borrar
-              </Button>
-            </Group>
-          )}
+          <Group gap="8" wrap="nowrap">
+            <Tooltip label="Refrescar">
+              <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+                <IconRefresh size={17} stroke={1.8} />
+              </ActionIcon>
+            </Tooltip>
+            {proyecto.puede_editar && (
+              <>
+                <Button variant="default" onClick={() => { setValoresEdicion(datos); setEditando(true) }}>
+                  Editar
+                </Button>
+                <Button variant="subtle" color="red" leftSection={<IconTrash size={15} stroke={1.8} />} onClick={eliminar}>
+                  Borrar
+                </Button>
+              </>
+            )}
+          </Group>
         </Group>
       ) : (
         <Paper withBorder radius="lg" p="16" mb="lg">
@@ -156,20 +179,20 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
       <Title order={4} fz="16px" mb="10">
         Personas de contacto
       </Title>
-      <ContactosEntidad proyecto={proyecto} idEntidad={entidad.id} />
+      <ContactosEntidad proyecto={proyecto} idEntidad={entidad.id} refresco={refresco} />
 
       <Title order={4} fz="16px" mt="xl" mb="10">
         Oportunidades de venta
       </Title>
       <OportunidadesEntidad
         proyecto={proyecto} idEntidad={entidad.id} onVerDocumento={onVerDocumento}
-        onCambiadas={() => setVersionHistorial((v) => v + 1)}
+        onCambiadas={() => setVersionHistorial((v) => v + 1)} refresco={refresco}
       />
 
       <Title order={4} fz="16px" mt="xl" mb="10">
         Facturación
       </Title>
-      <FacturacionEntidad proyecto={proyecto} idEntidad={entidad.id} />
+      <FacturacionEntidad proyecto={proyecto} idEntidad={entidad.id} refresco={refresco} />
 
       <Title order={4} fz="16px" mt="xl" mb="10">
         Documentos relacionados
@@ -230,13 +253,13 @@ export default function EntidadDetalle({ proyecto, entidad, onVolver, onEliminad
       </Title>
       <NotasBlocVinculadas
         proyecto={proyecto} enlace={{ tipo: "entidad", id: entidad.id }}
-        onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+        onVerNota={onVerNota} onNuevaNota={onNuevaNota} refresco={refresco}
       />
 
       <Title order={4} fz="16px" mt="xl" mb="10">
         Historial
       </Title>
-      <HistorialEntidad proyecto={proyecto} idEntidad={entidad.id} version={versionHistorial} />
+      <HistorialEntidad proyecto={proyecto} idEntidad={entidad.id} version={versionHistorial} refresco={refresco} />
     </>
   )
 }

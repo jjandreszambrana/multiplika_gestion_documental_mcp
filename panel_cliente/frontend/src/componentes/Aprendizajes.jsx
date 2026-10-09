@@ -202,7 +202,7 @@ function DetalleAprendizaje({ proyecto, id, alCambiar, alCerrar }) {
   )
 }
 
-export default function Aprendizajes({ proyecto }) {
+export default function Aprendizajes({ proyecto, refresco }) {
   const [enlazadas, setEnlazadas] = useState([])
   const [estado, setEstado] = useState("")
   const [lista, setLista] = useState(null)
@@ -215,9 +215,9 @@ export default function Aprendizajes({ proyecto }) {
 
   useEffect(() => {
     api.listarEnlaces(proyecto.id).then((e) => setEnlazadas(e.filter((x) => x.sentido === "enlazada" && x.activo))).catch((err) => setError(err.message))
-    cargarLista("")
+    cargarLista()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id])
+  }, [proyecto.id, refresco])
 
   return (
     <Stack gap="lg">

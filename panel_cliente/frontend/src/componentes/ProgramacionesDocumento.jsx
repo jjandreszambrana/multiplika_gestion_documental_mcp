@@ -7,7 +7,7 @@ import FormularioProgramacion from "./FormularioProgramacion"
 
 // Pestaña "Avisos" de la ficha de un documento: los avisos programados
 // enlazados a él, y crear uno nuevo ya enlazado.
-export default function ProgramacionesDocumento({ proyecto, idDocumento, onVerProgramacion }) {
+export default function ProgramacionesDocumento({ proyecto, idDocumento, onVerProgramacion, refresco }) {
   const [programaciones, setProgramaciones] = useState(null)
   const [error, setError] = useState(null)
   const [formularioAbierto, setFormularioAbierto] = useState(false)
@@ -17,7 +17,7 @@ export default function ProgramacionesDocumento({ proyecto, idDocumento, onVerPr
       .listarProgramaciones(proyecto.id, { id_documento: idDocumento })
       .then(setProgramaciones)
       .catch((err) => setError(err.message))
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   return (
     <>

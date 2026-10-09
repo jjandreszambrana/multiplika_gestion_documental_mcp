@@ -142,7 +142,7 @@ function SubirMedio({ proyecto, activo, onPropuesta, onCerrar }) {
   )
 }
 
-function Contenido({ proyecto, activo, onPropuesta }) {
+function Contenido({ proyecto, activo, refresco, onPropuesta }) {
   const [tipo, setTipo] = useState("entradas")
   const [buscar, setBuscar] = useState("")
   const [estado, setEstado] = useState(null)
@@ -166,7 +166,7 @@ function Contenido({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activo.id])
+  }, [activo.id, refresco])
 
   function cambiarTipo(t) {
     setTipo(t); setEstado(null); setPagina(1); setFilas(null)
@@ -286,14 +286,14 @@ function Contenido({ proyecto, activo, onPropuesta }) {
   )
 }
 
-function Cambios({ proyecto, activo, version, onAbrir }) {
+function Cambios({ proyecto, activo, version, refresco, onAbrir }) {
   const [estado, setEstado] = useState(null)
   const [cambios, setCambios] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     api.listarCambiosWeb(proyecto.id, activo.id, estado).then(setCambios).catch((err) => setError(err.message))
-  }, [proyecto.id, activo.id, estado, version])
+  }, [proyecto.id, activo.id, estado, version, refresco])
 
   return (
     <Stack gap="sm">
@@ -450,6 +450,8 @@ export default function WebDetalle({ proyecto, idActivo, onVolver }) {
   const [cambioAbierto, setCambioAbierto] = useState(null)
   const [pestana, setPestana] = useState(null)
   const [version, setVersion] = useState(0)
+  const [refresco, setRefresco] = useState(0)
+  const [refrescando, setRefrescando] = useState(false)
 
   function cargar() {
     return api.obtenerActivo(proyecto.id, idActivo).then(setActivo).catch((err) => setError(err.message))
@@ -460,6 +462,12 @@ export default function WebDetalle({ proyecto, idActivo, onVolver }) {
     api.catalogoActivos(proyecto.id).then(setCatalogo).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, idActivo])
+
+  function recargar() {
+    setRefrescando(true)
+    setRefresco((r) => r + 1)
+    cargar().finally(() => setRefrescando(false))
+  }
 
   async function probar() {
     setProbando(true)
@@ -499,9 +507,16 @@ export default function WebDetalle({ proyecto, idActivo, onVolver }) {
           </Group>
           {activo.url && <Anchor href={activo.url} target="_blank" fz="13.5px">{activo.url}</Anchor>}
         </div>
-        {activo.conectable && (
-          <Button variant="default" leftSection={<IconPlugConnected size={16} />} onClick={probar} loading={probando}>Probar conexión</Button>
-        )}
+        <Group gap="xs">
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+          {activo.conectable && (
+            <Button variant="default" leftSection={<IconPlugConnected size={16} />} onClick={probar} loading={probando}>Probar conexión</Button>
+          )}
+        </Group>
       </Group>
       {prueba && (
         <Alert color={prueba.ok ? "teal" : "red"} mb="md" withCloseButton onClose={() => setPrueba(null)}>
@@ -536,27 +551,27 @@ export default function WebDetalle({ proyecto, idActivo, onVolver }) {
           <Tabs.Tab value="datos">Datos y ajustes</Tabs.Tab>
         </Tabs.List>
         {activo.url && (
-          <Tabs.Panel value="vigilancia"><VigilanciaWeb proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="vigilancia"><VigilanciaWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
         {activo.capacidad === "ficheros" && (
-          <Tabs.Panel value="ficheros"><FicherosWeb proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="ficheros"><FicherosWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
         {activo.capacidad === "red" && (
-          <Tabs.Panel value="publicaciones"><RedWeb proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="publicaciones"><RedWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
         {activo.capacidad === "bd" && (
-          <Tabs.Panel value="bd"><BaseDatosWeb proyecto={proyecto} activo={activo} /></Tabs.Panel>
+          <Tabs.Panel value="bd"><BaseDatosWeb proyecto={proyecto} activo={activo} refresco={refresco} /></Tabs.Panel>
         )}
         {activo.capacidad === "wordpress" && (
-          <Tabs.Panel value="contenido"><Contenido proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="contenido"><Contenido proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
         {activo.url && (
-          <Tabs.Panel value="seo"><SeoWeb proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="seo"><SeoWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
         {activo.conector_instalado && (
-          <Tabs.Panel value="copias"><CopiasWeb proyecto={proyecto} activo={activo} onPropuesta={trasCambio} /></Tabs.Panel>
+          <Tabs.Panel value="copias"><CopiasWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={trasCambio} /></Tabs.Panel>
         )}
-        <Tabs.Panel value="cambios"><Cambios proyecto={proyecto} activo={activo} version={version} onAbrir={setCambioAbierto} /></Tabs.Panel>
+        <Tabs.Panel value="cambios"><Cambios proyecto={proyecto} activo={activo} version={version} refresco={refresco} onAbrir={setCambioAbierto} /></Tabs.Panel>
         <Tabs.Panel value="datos">
           <DatosYAjustes proyecto={proyecto} activo={activo} catalogo={catalogo} onCambiado={() => cargar()} />
         </Tabs.Panel>

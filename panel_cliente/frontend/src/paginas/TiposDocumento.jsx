@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Text, Textarea, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconShieldCheck } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, Stack, Text, Textarea, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh, IconShieldCheck } from "@tabler/icons-react"
 import { api } from "../api"
 
 function FilaTipo({ proyecto, tipo, onCambiado, onEliminar }) {
@@ -113,12 +113,15 @@ export default function TiposDocumento({ proyecto, onVolver }) {
   const [error, setError] = useState(null)
   const [nombreNuevo, setNombreNuevo] = useState("")
   const [creando, setCreando] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
 
   function recargar() {
+    setRefrescando(true)
     return api
       .listarTiposDocumento(proyecto.id)
       .then(setTipos)
       .catch((err) => setError(err.message))
+      .finally(() => setRefrescando(false))
   }
 
   useEffect(() => {
@@ -167,14 +170,23 @@ export default function TiposDocumento({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="6">
-        Tipos de documento
-      </Title>
-      <Text c="dimmed" mb="lg" maw={620} fz="13.5px">
-        Catálogo de sugerencias, no una lista cerrada: al guardar un documento se puede usar
-        cualquier tipo, esté aquí o no. Si un tipo tiene formato o normativa definidos, la IA los
-        tiene en cuenta y avisa en el documento si detecta que no los cumple.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="6">
+            Tipos de documento
+          </Title>
+          <Text c="dimmed" maw={620} fz="13.5px">
+            Catálogo de sugerencias, no una lista cerrada: al guardar un documento se puede usar
+            cualquier tipo, esté aquí o no. Si un tipo tiene formato o normativa definidos, la IA los
+            tiene en cuenta y avisa en el documento si detecta que no los cumple.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
 
       {proyecto.es_admin && (
         <Group component="form" onSubmit={crear} mb="lg" maw={480}>

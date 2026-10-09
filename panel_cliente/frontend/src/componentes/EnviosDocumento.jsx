@@ -96,7 +96,7 @@ function FilaEnvio({ proyecto, envio, onCambiado }) {
   )
 }
 
-export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
+export default function EnviosDocumento({ proyecto, idDocumento, documento, refresco }) {
   const [variables, setVariables] = useState(null)
   const [entidades, setEntidades] = useState([])
   const [entidadesVinculadas, setEntidadesVinculadas] = useState([])
@@ -119,7 +119,7 @@ export default function EnviosDocumento({ proyecto, idDocumento, documento }) {
     api.listarEntidadesDocumento(proyecto.id, idDocumento).then(setEntidadesVinculadas).catch(() => setEntidadesVinculadas([]))
     recargarEnvios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   const entidadesPorId = useMemo(() => Object.fromEntries(entidades.map((e) => [String(e.id), e])), [entidades])
 

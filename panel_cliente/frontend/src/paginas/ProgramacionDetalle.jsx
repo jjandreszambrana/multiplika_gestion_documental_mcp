@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Modal, Paper, Stack, Table, Text, Title } from "@mantine/core"
-import { IconArrowLeft, IconCheck, IconEdit, IconPlayerPause, IconPlayerPlay, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Modal, Paper, Stack, Table, Text, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconCheck, IconEdit, IconPlayerPause, IconPlayerPlay, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { COLOR_ESTADO, formatearFecha } from "../formato"
 import FormularioProgramacion from "../componentes/FormularioProgramacion"
@@ -20,6 +20,7 @@ export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver
   const [editando, setEditando] = useState(false)
   const [confirmarBorrado, setConfirmarBorrado] = useState(false)
   const [trabajando, setTrabajando] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
 
   function cargar() {
     return api.obtenerProgramacion(proyecto.id, idProgramacion).then(setProgramacion).catch((err) => setError(err.message))
@@ -29,6 +30,11 @@ export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, idProgramacion])
+
+  function recargar() {
+    setRefrescando(true)
+    cargar().finally(() => setRefrescando(false))
+  }
 
   async function accion(llamada) {
     setTrabajando(true)
@@ -89,28 +95,35 @@ export default function ProgramacionDetalle({ proyecto, idProgramacion, onVolver
           </Group>
           {p.descripcion && <Text c="dimmed" mt={6} style={{ whiteSpace: "pre-wrap" }}>{p.descripcion}</Text>}
         </div>
-        {proyecto.puede_editar && (
-          <Group gap="xs">
-            <Button variant="default" leftSection={<IconEdit size={16} />} onClick={() => setEditando(true)}>
-              Cambiar
-            </Button>
-            {p.estado === "activa" && (
-              <Button variant="default" leftSection={<IconPlayerPause size={16} />} loading={trabajando}
-                onClick={() => accion(() => api.pausarProgramacion(proyecto.id, p.id))}>
-                Pausar
+        <Group gap="xs">
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+          {proyecto.puede_editar && (
+            <>
+              <Button variant="default" leftSection={<IconEdit size={16} />} onClick={() => setEditando(true)}>
+                Cambiar
               </Button>
-            )}
-            {p.estado === "pausada" && (
-              <Button variant="default" leftSection={<IconPlayerPlay size={16} />} loading={trabajando}
-                onClick={() => accion(() => api.reanudarProgramacion(proyecto.id, p.id))}>
-                Reanudar
+              {p.estado === "activa" && (
+                <Button variant="default" leftSection={<IconPlayerPause size={16} />} loading={trabajando}
+                  onClick={() => accion(() => api.pausarProgramacion(proyecto.id, p.id))}>
+                  Pausar
+                </Button>
+              )}
+              {p.estado === "pausada" && (
+                <Button variant="default" leftSection={<IconPlayerPlay size={16} />} loading={trabajando}
+                  onClick={() => accion(() => api.reanudarProgramacion(proyecto.id, p.id))}>
+                  Reanudar
+                </Button>
+              )}
+              <Button variant="light" color="red" leftSection={<IconTrash size={16} />} onClick={() => setConfirmarBorrado(true)}>
+                Eliminar
               </Button>
-            )}
-            <Button variant="light" color="red" leftSection={<IconTrash size={16} />} onClick={() => setConfirmarBorrado(true)}>
-              Eliminar
-            </Button>
-          </Group>
-        )}
+            </>
+          )}
+        </Group>
       </Group>
 
       {error && <Alert color="red" mb="md">{error}</Alert>}

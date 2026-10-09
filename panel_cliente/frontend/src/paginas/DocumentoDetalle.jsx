@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, Paper, Select, SimpleGrid, Stack, Tabs, Text, TextInput, Title, useComputedColorScheme } from "@mantine/core"
+import { ActionIcon, Alert, Anchor, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, Paper, Select, SimpleGrid, Stack, Tabs, Text, TextInput, Title, Tooltip, useComputedColorScheme } from "@mantine/core"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -19,6 +19,7 @@ import {
   IconHistory,
   IconMessageCircle,
   IconNotebook,
+  IconRefresh,
   IconSend,
   IconShare,
   IconTrash,
@@ -77,6 +78,8 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
   const [historialVersion, setHistorialVersion] = useState(0)
   const [vista, setVista] = useState("documento")
   const [notas, setNotas] = useState(null)
+  const [refrescando, setRefrescando] = useState(false)
+  const [refresco, setRefresco] = useState(0)
   const incidenciasAbiertas = notas?.filter((n) => n.tipo === "incidencia" && n.estado === "abierta").length || 0
   const esquemaColor = useComputedColorScheme("light")
 
@@ -101,6 +104,12 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
         setHistorialVersion((v) => v + 1)
       })
       .catch((err) => setError(err.message))
+  }
+
+  function recargar() {
+    setRefrescando(true)
+    setRefresco((r) => r + 1)
+    cargarDocumento().finally(() => setRefrescando(false))
   }
 
   async function alternarReservado() {
@@ -274,10 +283,15 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
                       Archivado
                     </Badge>
                   )}
-                  <ControlSeguimiento proyecto={proyecto} tipo="documento" idObjeto={idDocumento} />
+                  <ControlSeguimiento proyecto={proyecto} tipo="documento" idObjeto={idDocumento} refresco={refresco} />
                 </Group>
               </div>
               <Group gap="8" wrap="nowrap">
+                <Tooltip label="Refrescar">
+                  <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+                    <IconRefresh size={17} stroke={1.8} />
+                  </ActionIcon>
+                </Tooltip>
                 <Button
                   variant="subtle"
                   color="gray"
@@ -335,10 +349,10 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
             </Group>
           )}
 
-          {!editando && <GruposDocumento proyecto={proyecto} idDocumento={idDocumento} />}
-          {!editando && <EntidadesDocumento proyecto={proyecto} idDocumento={idDocumento} />}
-          {!editando && <ScriptsDocumento proyecto={proyecto} idDocumento={idDocumento} />}
-          {!editando && <RegistrosDocumento proyecto={proyecto} idDocumento={idDocumento} />}
+          {!editando && <GruposDocumento proyecto={proyecto} idDocumento={idDocumento} refresco={refresco} />}
+          {!editando && <EntidadesDocumento proyecto={proyecto} idDocumento={idDocumento} refresco={refresco} />}
+          {!editando && <ScriptsDocumento proyecto={proyecto} idDocumento={idDocumento} refresco={refresco} />}
+          {!editando && <RegistrosDocumento proyecto={proyecto} idDocumento={idDocumento} refresco={refresco} />}
 
           {!editando && documento.incumplimientos && (
             <Alert color="red" mb="lg" radius="lg" icon={<IconAlertTriangle size={19} />} title="No cumple el formato/normativa de su tipo">
@@ -517,22 +531,23 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
                   idVersion={documento.id_version}
                   onCargado={setNotas}
                   mostrarTitulo={false}
+                  refresco={refresco}
                 />
               </Tabs.Panel>
 
               <Tabs.Panel value="enviar" pt="lg">
-                <EnviosDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
+                <EnviosDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} refresco={refresco} />
               </Tabs.Panel>
 
               <Tabs.Panel value="compartir" pt="lg">
                 {vista === "compartir" && (
-                  <CompartirDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} />
+                  <CompartirDocumento proyecto={proyecto} idDocumento={idDocumento} documento={documento} refresco={refresco} />
                 )}
               </Tabs.Panel>
 
               <Tabs.Panel value="avisos" pt="lg">
                 {vista === "avisos" && (
-                  <ProgramacionesDocumento proyecto={proyecto} idDocumento={idDocumento} onVerProgramacion={onVerProgramacion} />
+                  <ProgramacionesDocumento proyecto={proyecto} idDocumento={idDocumento} onVerProgramacion={onVerProgramacion} refresco={refresco} />
                 )}
               </Tabs.Panel>
 
@@ -540,14 +555,14 @@ export default function DocumentoDetalle({ proyecto, idDocumento, onVolver, onVe
                 {vista === "bloc" && (
                   <NotasBlocVinculadas
                     proyecto={proyecto} enlace={{ tipo: "documento", id: idDocumento }}
-                    onVerNota={onVerNota} onNuevaNota={onNuevaNota}
+                    onVerNota={onVerNota} onNuevaNota={onNuevaNota} refresco={refresco}
                   />
                 )}
               </Tabs.Panel>
 
               {(proyecto.puede_editar || proyecto.es_admin) && (
                 <Tabs.Panel value="actividad" pt="lg">
-                  {vista === "actividad" && <ActividadDocumento proyecto={proyecto} idDocumento={idDocumento} />}
+                  {vista === "actividad" && <ActividadDocumento proyecto={proyecto} idDocumento={idDocumento} refresco={refresco} />}
                 </Tabs.Panel>
               )}
             </Tabs>

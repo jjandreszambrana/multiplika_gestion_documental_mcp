@@ -58,7 +58,7 @@ export function BadgeSeguimiento({ seguimiento, size = "sm" }) {
 // El estado, quién se encarga y, si está aplazado, hasta cuándo. Pulsando
 // se cambia (salvo invitados). `seguimiento`: el que ya venga con el
 // elemento (null = sin estado); si no se pasa, lo pide.
-export default function ControlSeguimiento({ proyecto, tipo, idObjeto, seguimiento: inicial, size = "sm", onCambiado }) {
+export default function ControlSeguimiento({ proyecto, tipo, idObjeto, seguimiento: inicial, size = "sm", onCambiado, refresco }) {
   const [seguimiento, setSeguimiento] = useState(inicial ?? null)
   const [usuarios, setUsuarios] = useState([])
   const [abierto, setAbierto] = useState(false)
@@ -72,7 +72,7 @@ export default function ControlSeguimiento({ proyecto, tipo, idObjeto, seguimien
       return
     }
     api.obtenerSeguimiento(proyecto.id, tipo, idObjeto).then(setSeguimiento).catch(() => setSeguimiento(null))
-  }, [proyecto.id, tipo, idObjeto, inicial])
+  }, [proyecto.id, tipo, idObjeto, inicial, refresco])
 
   useEffect(() => {
     cargarUsuarios(proyecto.id).then(setUsuarios)

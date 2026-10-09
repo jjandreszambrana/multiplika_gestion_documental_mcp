@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { ActionIcon, Anchor, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core"
-import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconPlus } from "@tabler/icons-react"
+import { ActionIcon, Anchor, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconPlus, IconRefresh } from "@tabler/icons-react"
 import { api } from "../api"
 import CambioWeb from "../componentes/CambioWeb"
 import EditorPublicacion from "../componentes/EditorPublicacion"
@@ -26,11 +26,17 @@ export default function Publicaciones({ proyecto, onVolver }) {
   const [publicaciones, setPublicaciones] = useState([])
   const [abierta, setAbierta] = useState(null)
   const [cambio, setCambio] = useState(null)
+  const [refrescando, setRefrescando] = useState(false)
 
   function cargar() {
     const desde = new Date(mes.getFullYear(), mes.getMonth(), 1)
     const hasta = new Date(mes.getFullYear(), mes.getMonth() + 1, 1)
-    api.listarPublicaciones(proyecto.id, { desde: iso(desde), hasta: iso(hasta) }).then(setPublicaciones).catch(() => setPublicaciones([]))
+    return api.listarPublicaciones(proyecto.id, { desde: iso(desde), hasta: iso(hasta) }).then(setPublicaciones).catch(() => setPublicaciones([]))
+  }
+
+  function recargar() {
+    setRefrescando(true)
+    cargar().finally(() => setRefrescando(false))
   }
 
   useEffect(() => {
@@ -50,12 +56,19 @@ export default function Publicaciones({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Webs y redes
       </Anchor>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" align="flex-start" mb="md">
         <div>
           <Title order={2} mb={6}>Calendario de publicaciones</Title>
           <Text c="dimmed" fz="13.5px" maw={620}>Lo que sale en tus redes. Nada se publica sin que alguien lo apruebe; lo aprobado sale solo a su hora.</Text>
         </div>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setAbierta({ id: null })}>Nueva publicación</Button>
+        <Group gap="xs">
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setAbierta({ id: null })}>Nueva publicación</Button>
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
       <Group mb="sm" gap="xs">
         <ActionIcon variant="default" onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1))}><IconChevronLeft size={16} /></ActionIcon>

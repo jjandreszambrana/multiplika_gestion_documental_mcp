@@ -3,7 +3,7 @@ import { Alert, Badge, CloseButton, Group, Select, Text } from "@mantine/core"
 import { IconCode } from "@tabler/icons-react"
 import { api } from "../api"
 
-export default function ScriptsDocumento({ proyecto, idDocumento }) {
+export default function ScriptsDocumento({ proyecto, idDocumento, refresco }) {
   const [scripts, setScripts] = useState(null)
   const [todos, setTodos] = useState([])
   const [idScriptNuevo, setIdScriptNuevo] = useState(null)
@@ -24,7 +24,7 @@ export default function ScriptsDocumento({ proyecto, idDocumento }) {
     recargar()
     recargarTodos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function anadir(idScript) {
     if (!idScript) return

@@ -12,7 +12,7 @@ const NOMBRE_HISTORIAL = {
 }
 
 // Oportunidades de una entidad (todas, también las cerradas), para su ficha.
-export function OportunidadesEntidad({ proyecto, idEntidad, onVerDocumento, onCambiadas }) {
+export function OportunidadesEntidad({ proyecto, idEntidad, onVerDocumento, onCambiadas, refresco }) {
   const [datos, setDatos] = useState(null)
   const [etapas, setEtapas] = useState([])
   const [abierta, setAbierta] = useState(undefined)
@@ -25,7 +25,7 @@ export function OportunidadesEntidad({ proyecto, idEntidad, onVerDocumento, onCa
     cargar()
     api.listarEtapas(proyecto.id).then(setEtapas).catch(() => setEtapas([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idEntidad])
+  }, [proyecto.id, idEntidad, refresco])
 
   return (
     <>
@@ -66,12 +66,12 @@ export function OportunidadesEntidad({ proyecto, idEntidad, onVerDocumento, onCa
 }
 
 // Todo lo que ha pasado con la entidad, lo último arriba.
-export function HistorialEntidad({ proyecto, idEntidad, version }) {
+export function HistorialEntidad({ proyecto, idEntidad, version, refresco }) {
   const [filas, setFilas] = useState(null)
 
   useEffect(() => {
     api.historialEntidad(proyecto.id, idEntidad).then(setFilas).catch(() => setFilas([]))
-  }, [proyecto.id, idEntidad, version])
+  }, [proyecto.id, idEntidad, version, refresco])
 
   if (!filas) return <Text>Cargando...</Text>
   if (filas.length === 0) return <Text c="dimmed">Todavía no hay nada.</Text>
@@ -89,12 +89,12 @@ export function HistorialEntidad({ proyecto, idEntidad, version }) {
 }
 
 // Lo que dice el ERP (SIF o Excel importado) de la entidad.
-export function FacturacionEntidad({ proyecto, idEntidad }) {
+export function FacturacionEntidad({ proyecto, idEntidad, refresco }) {
   const [datos, setDatos] = useState(null)
 
   useEffect(() => {
     api.datosErpEntidad(proyecto.id, idEntidad).then(setDatos).catch(() => setDatos({ resumen: null, facturas: [] }))
-  }, [proyecto.id, idEntidad])
+  }, [proyecto.id, idEntidad, refresco])
 
   if (!datos) return <Text>Cargando...</Text>
   const r = datos.resumen

@@ -5,7 +5,7 @@ import { api } from "../api"
 
 // Archivos de una web hecha a medida (SFTP o Git). Editar crea una propuesta
 // con el antes y el después; deshacer deja el archivo como estaba.
-export default function FicherosWeb({ proyecto, activo, onPropuesta }) {
+export default function FicherosWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [ruta, setRuta] = useState(".")
   const [entradas, setEntradas] = useState(null)
   const [abierto, setAbierto] = useState(null)
@@ -16,7 +16,7 @@ export default function FicherosWeb({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     setEntradas(null)
     api.listarFicherosWeb(proyecto.id, activo.id, ruta).then(setEntradas).catch((err) => setError(err.message))
-  }, [proyecto.id, activo.id, ruta])
+  }, [proyecto.id, activo.id, ruta, refresco])
 
   const unir = (n) => (ruta === "." ? n : `${ruta}/${n}`)
 

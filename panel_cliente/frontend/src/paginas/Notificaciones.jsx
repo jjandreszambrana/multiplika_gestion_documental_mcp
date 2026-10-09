@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Checkbox, Group, Paper, SegmentedControl, Stack, Text, Title } from "@mantine/core"
-import { IconArchive, IconArchiveOff, IconArrowLeft, IconCheck, IconChecks, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Checkbox, Group, Paper, SegmentedControl, Stack, Text, Title, Tooltip } from "@mantine/core"
+import { IconArchive, IconArchiveOff, IconArrowLeft, IconCheck, IconChecks, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
@@ -11,6 +11,12 @@ export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, 
   const [trabajando, setTrabajando] = useState(null)
   const [archivadas, setArchivadas] = useEstadoPersistente(`filtros:${proyecto.id}:notificaciones:archivadas`, false)
   const [seleccion, setSeleccion] = useState([])
+  const [refrescando, setRefrescando] = useState(false)
+
+  function recargar() {
+    setRefrescando(true)
+    cargar().finally(() => setRefrescando(false))
+  }
 
   function cargar() {
     return api.listarNotificaciones(proyecto.id, archivadas).then(setNotificaciones).catch((err) => setError(err.message))
@@ -84,12 +90,19 @@ export default function Notificaciones({ proyecto, onVolver, onVerProgramacion, 
           <Title order={2} mb="6">Notificaciones</Title>
           <Text c="dimmed" fz="13.5px">Los avisos que te han llegado. Pulsa uno para ver de qué va.</Text>
         </div>
-        {noLeidas > 0 && !archivadas && (
-          <Button variant="default" leftSection={<IconChecks size={16} />} loading={trabajando === "todas"}
-            onClick={() => hacer("todas", () => api.leerTodasNotificaciones(proyecto.id))}>
-            Marcar todas como leídas
-          </Button>
-        )}
+        <Group gap="xs">
+          {noLeidas > 0 && !archivadas && (
+            <Button variant="default" leftSection={<IconChecks size={16} />} loading={trabajando === "todas"}
+              onClick={() => hacer("todas", () => api.leerTodasNotificaciones(proyecto.id))}>
+              Marcar todas como leídas
+            </Button>
+          )}
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
 
       <Group justify="space-between" mb="md">

@@ -216,7 +216,7 @@ function Nota({ proyecto, idDocumento, notas, nota, onCambiado }) {
   )
 }
 
-export default function NotasDocumento({ proyecto, idDocumento, idVersion, onCargado, mostrarTitulo = true }) {
+export default function NotasDocumento({ proyecto, idDocumento, idVersion, onCargado, mostrarTitulo = true, refresco }) {
   const [notas, setNotas] = useState(null)
   const [error, setError] = useState(null)
   const [tipo, setTipo] = useState("comentario")
@@ -238,7 +238,7 @@ export default function NotasDocumento({ proyecto, idDocumento, idVersion, onCar
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function crear(evento) {
     evento.preventDefault()

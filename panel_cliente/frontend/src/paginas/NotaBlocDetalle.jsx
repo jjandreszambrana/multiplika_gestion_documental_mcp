@@ -6,7 +6,7 @@ import {
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
-  IconAlarm, IconArchive, IconArchiveOff, IconArrowLeft, IconEdit, IconLink, IconPin, IconPinFilled, IconPlus, IconTrash,
+  IconAlarm, IconArchive, IconArchiveOff, IconArrowLeft, IconEdit, IconLink, IconPin, IconPinFilled, IconPlus, IconRefresh, IconTrash,
 } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
@@ -206,6 +206,8 @@ export default function NotaBlocDetalle({
   const [modalEnlace, setModalEnlace] = useState(false)
   const [modalRecordatorio, setModalRecordatorio] = useState(false)
   const [confirmarBorrado, setConfirmarBorrado] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
+  const [refresco, setRefresco] = useState(0)
 
   useEffect(() => {
     setError(null)
@@ -217,6 +219,13 @@ export default function NotaBlocDetalle({
     }
     api.obtenerNotaBloc(proyecto.id, idNota).then(setNota).catch((err) => setError(err.message))
   }, [proyecto.id, idNota, esNueva])
+
+  function recargar() {
+    setRefrescando(true)
+    setRefresco((r) => r + 1)
+    api.obtenerNotaBloc(proyecto.id, idNota).then(setNota).catch((err) => setError(err.message))
+      .finally(() => setRefrescando(false))
+  }
 
   useEffect(() => {
     if (!editando) return
@@ -389,30 +398,35 @@ export default function NotaBlocDetalle({
           <Title order={2}>{nota.titulo}</Title>
           {nota.archivada && <Badge color="gray" variant="light">Archivada</Badge>}
         </Group>
-        {puedeEscribir && (
-          <Group gap="xs" wrap="nowrap">
+        <Group gap="xs" wrap="nowrap">
+          <Tooltip label="Refrescar">
+            <ActionIcon variant="subtle" color="gray" onClick={recargar} loading={refrescando}>
+              <IconRefresh size={17} stroke={1.8} />
+            </ActionIcon>
+          </Tooltip>
+          {puedeEscribir && (
             <Button variant="light" leftSection={<IconEdit size={15} />} onClick={() => { setForm(formularioDe(nota)); setEditando(true) }}>
               Editar
             </Button>
-            {nota.puede_gestionar && (
-              <>
-                <Tooltip label={nota.archivada ? "Desarchivar" : "Archivar (se quita de la lista sin borrarla)"}>
-                  <ActionIcon
-                    variant="default" size="lg"
-                    onClick={() => accion(() => api.actualizarNotaBloc(proyecto.id, idNota, { archivada: !nota.archivada }))}
-                  >
-                    {nota.archivada ? <IconArchiveOff size={17} /> : <IconArchive size={17} />}
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label="Eliminar">
-                  <ActionIcon variant="default" size="lg" color="red" onClick={() => setConfirmarBorrado(true)}>
-                    <IconTrash size={17} />
-                  </ActionIcon>
-                </Tooltip>
-              </>
-            )}
-          </Group>
-        )}
+          )}
+          {puedeEscribir && nota.puede_gestionar && (
+            <>
+              <Tooltip label={nota.archivada ? "Desarchivar" : "Archivar (se quita de la lista sin borrarla)"}>
+                <ActionIcon
+                  variant="default" size="lg"
+                  onClick={() => accion(() => api.actualizarNotaBloc(proyecto.id, idNota, { archivada: !nota.archivada }))}
+                >
+                  {nota.archivada ? <IconArchiveOff size={17} /> : <IconArchive size={17} />}
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Eliminar">
+                <ActionIcon variant="default" size="lg" color="red" onClick={() => setConfirmarBorrado(true)}>
+                  <IconTrash size={17} />
+                </ActionIcon>
+              </Tooltip>
+            </>
+          )}
+        </Group>
       </Group>
 
       <Group gap="xs" mb="md" c="dimmed" fz="13px">
@@ -438,7 +452,7 @@ export default function NotaBlocDetalle({
       </Group>
 
       <Group mb="md">
-        <ControlSeguimiento proyecto={proyecto} tipo="nota_bloc" idObjeto={nota.id} />
+        <ControlSeguimiento proyecto={proyecto} tipo="nota_bloc" idObjeto={nota.id} refresco={refresco} />
       </Group>
 
       {nota.etiquetas.length > 0 && (

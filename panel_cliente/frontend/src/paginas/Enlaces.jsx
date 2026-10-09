@@ -3,7 +3,7 @@ import {
   ActionIcon, Alert, Anchor, Badge, Button, Group, PasswordInput, Select, Stack, Switch, Table, Tabs, Text,
   TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconDownload, IconPlugConnected, IconTrash } from "@tabler/icons-react"
+import { IconArrowLeft, IconDownload, IconPlugConnected, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
@@ -34,7 +34,7 @@ function descargarCsv(nombre, filas) {
   URL.revokeObjectURL(enlace.href)
 }
 
-function PestanaEnlaces({ proyecto }) {
+function PestanaEnlaces({ proyecto, refresco }) {
   const [enlaces, setEnlaces] = useState(null)
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(null)
@@ -51,7 +51,7 @@ function PestanaEnlaces({ proyecto }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id])
+  }, [proyecto.id, refresco])
 
   async function enlazar(evento) {
     evento.preventDefault()
@@ -185,7 +185,7 @@ function PestanaEnlaces({ proyecto }) {
   )
 }
 
-function PestanaPreguntas({ proyecto }) {
+function PestanaPreguntas({ proyecto, refresco }) {
   const [preguntas, setPreguntas] = useState(null)
   const [estado, setEstado] = useEstadoPersistente(`filtros:${proyecto.id}:preguntas:estado`, "pendiente")
   const [error, setError] = useState(null)
@@ -197,7 +197,7 @@ function PestanaPreguntas({ proyecto }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id])
+  }, [proyecto.id, refresco])
 
   async function cambiarEstado(pregunta, nuevo) {
     setError(null)
@@ -269,7 +269,7 @@ function PestanaPreguntas({ proyecto }) {
   )
 }
 
-function PestanaUso({ proyecto }) {
+function PestanaUso({ proyecto, refresco }) {
   const [mes, setMes] = useState(mesActual())
   const [filas, setFilas] = useState(null)
   const [error, setError] = useState(null)
@@ -278,7 +278,7 @@ function PestanaUso({ proyecto }) {
     if (mes.length !== 7) return
     setFilas(null)
     api.resumenUsoEnlaces(proyecto.id, mes).then(setFilas).catch((err) => setError(err.message))
-  }, [proyecto.id, mes])
+  }, [proyecto.id, mes, refresco])
 
   const totalPorOrigen = {}
   for (const f of filas || []) totalPorOrigen[f.origen] = (totalPorOrigen[f.origen] || 0) + f.coste_estimado
@@ -340,6 +340,8 @@ function PestanaUso({ proyecto }) {
 }
 
 export default function Enlaces({ proyecto, onVolver }) {
+  const [refresco, setRefresco] = useState(0)
+
   return (
     <>
       <Anchor
@@ -350,14 +352,23 @@ export default function Enlaces({ proyecto, onVolver }) {
         <IconArrowLeft size={15} stroke={2} />
         Documentos
       </Anchor>
-      <Title order={2} mb="6">
-        GDs enlazadas
-      </Title>
-      <Text c="dimmed" maw={640} fz="13.5px" mb="lg">
-        Otras gestiones documentales con las que esta comparte conocimiento: una central a la que consultar
-        cuando tus documentos no responden, o las que te consultan a ti. Lo que marques como reservado nunca
-        sale de aquí.
-      </Text>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <div>
+          <Title order={2} mb="6">
+            GDs enlazadas
+          </Title>
+          <Text c="dimmed" maw={640} fz="13.5px">
+            Otras gestiones documentales con las que esta comparte conocimiento: una central a la que consultar
+            cuando tus documentos no responden, o las que te consultan a ti. Lo que marques como reservado nunca
+            sale de aquí.
+          </Text>
+        </div>
+        <Tooltip label="Refrescar">
+          <ActionIcon variant="subtle" color="gray" onClick={() => setRefresco((n) => n + 1)}>
+            <IconRefresh size={17} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
       <Tabs defaultValue="enlaces" keepMounted={false}>
         <Tabs.List mb="md">
           <Tabs.Tab value="enlaces">Enlaces</Tabs.Tab>
@@ -365,10 +376,10 @@ export default function Enlaces({ proyecto, onVolver }) {
           <Tabs.Tab value="aprendizajes">Aprendizajes</Tabs.Tab>
           <Tabs.Tab value="uso">Uso y coste</Tabs.Tab>
         </Tabs.List>
-        <Tabs.Panel value="enlaces"><PestanaEnlaces proyecto={proyecto} /></Tabs.Panel>
-        <Tabs.Panel value="preguntas"><PestanaPreguntas proyecto={proyecto} /></Tabs.Panel>
-        <Tabs.Panel value="aprendizajes"><Aprendizajes proyecto={proyecto} /></Tabs.Panel>
-        <Tabs.Panel value="uso"><PestanaUso proyecto={proyecto} /></Tabs.Panel>
+        <Tabs.Panel value="enlaces"><PestanaEnlaces proyecto={proyecto} refresco={refresco} /></Tabs.Panel>
+        <Tabs.Panel value="preguntas"><PestanaPreguntas proyecto={proyecto} refresco={refresco} /></Tabs.Panel>
+        <Tabs.Panel value="aprendizajes"><Aprendizajes proyecto={proyecto} refresco={refresco} /></Tabs.Panel>
+        <Tabs.Panel value="uso"><PestanaUso proyecto={proyecto} refresco={refresco} /></Tabs.Panel>
       </Tabs>
     </>
   )

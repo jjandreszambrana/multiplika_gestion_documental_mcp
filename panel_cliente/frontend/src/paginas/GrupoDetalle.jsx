@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Textarea, TextInput, Title } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Badge, Button, Group, Paper, Select, Table, Text, Textarea, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 
 export default function GrupoDetalle({ proyecto, grupo, onVolver, onEliminado }) {
@@ -14,6 +14,7 @@ export default function GrupoDetalle({ proyecto, grupo, onVolver, onEliminado })
   const [candidatos, setCandidatos] = useState([])
   const [idDocumentoNuevo, setIdDocumentoNuevo] = useState(null)
   const [anadiendo, setAnadiendo] = useState(false)
+  const [refrescando, setRefrescando] = useState(false)
 
   function recargar() {
     return api
@@ -22,11 +23,27 @@ export default function GrupoDetalle({ proyecto, grupo, onVolver, onEliminado })
       .catch((err) => setError(err.message))
   }
 
+  function cargarCandidatos() {
+    return api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+  }
+
   useEffect(() => {
     recargar()
-    api.listarOBuscarDocumentos(proyecto.id, "").then(setCandidatos).catch(() => setCandidatos([]))
+    cargarCandidatos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id, grupo.id])
+
+  function refrescar() {
+    setRefrescando(true)
+    Promise.all([
+      api.listarGrupos(proyecto.id).then((lista) => {
+        const actual = lista.find((g) => g.id === grupo.id)
+        if (actual) setDatosGrupo(actual)
+      }).catch((err) => setError(err.message)),
+      recargar(),
+      cargarCandidatos(),
+    ]).finally(() => setRefrescando(false))
+  }
 
   async function guardarDatos() {
     setGuardando(true)
@@ -104,16 +121,23 @@ export default function GrupoDetalle({ proyecto, grupo, onVolver, onEliminado })
               {datosGrupo.proposito}
             </Text>
           </div>
-          {proyecto.puede_editar && (
-            <Group gap="8" wrap="nowrap">
-              <Button variant="default" onClick={() => setEditando(true)}>
-                Editar
-              </Button>
-              <Button variant="subtle" color="red" leftSection={<IconTrash size={15} stroke={1.8} />} onClick={eliminarGrupo}>
-                Borrar grupo
-              </Button>
-            </Group>
-          )}
+          <Group gap="8" wrap="nowrap">
+            <Tooltip label="Refrescar">
+              <ActionIcon variant="subtle" color="gray" onClick={refrescar} loading={refrescando}>
+                <IconRefresh size={17} stroke={1.8} />
+              </ActionIcon>
+            </Tooltip>
+            {proyecto.puede_editar && (
+              <>
+                <Button variant="default" onClick={() => setEditando(true)}>
+                  Editar
+                </Button>
+                <Button variant="subtle" color="red" leftSection={<IconTrash size={15} stroke={1.8} />} onClick={eliminarGrupo}>
+                  Borrar grupo
+                </Button>
+              </>
+            )}
+          </Group>
         </Group>
       ) : (
         <Paper withBorder radius="lg" p="16" mb="lg">

@@ -9,7 +9,7 @@ import TarjetaNotaBloc from "./TarjetaNotaBloc"
 // `enlace`: { tipo: "documento" | "registro" | "entidad", id }
 
 const CON_ESTE = { documento: "este documento", registro: "este registro", entidad: "esta entidad" }
-export default function NotasBlocVinculadas({ proyecto, enlace, onVerNota, onNuevaNota }) {
+export default function NotasBlocVinculadas({ proyecto, enlace, onVerNota, onNuevaNota, refresco }) {
   const [notas, setNotas] = useState(null)
   const [error, setError] = useState(null)
 
@@ -18,7 +18,7 @@ export default function NotasBlocVinculadas({ proyecto, enlace, onVerNota, onNue
       .listarNotasBloc(proyecto.id, { [`id_${enlace.tipo}`]: enlace.id, archivadas: "todas" })
       .then(setNotas)
       .catch((err) => setError(err.message))
-  }, [proyecto.id, enlace.tipo, enlace.id])
+  }, [proyecto.id, enlace.tipo, enlace.id, refresco])
 
   return (
     <>

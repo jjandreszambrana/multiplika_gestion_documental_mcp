@@ -4,7 +4,7 @@ import { IconPlus, IconUsers } from "@tabler/icons-react"
 import { api } from "../api"
 import FormularioEntidad from "./FormularioEntidad"
 
-export default function EntidadesDocumento({ proyecto, idDocumento }) {
+export default function EntidadesDocumento({ proyecto, idDocumento, refresco }) {
   const [entidades, setEntidades] = useState(null)
   const [todas, setTodas] = useState([])
   const [idEntidadNueva, setIdEntidadNueva] = useState(null)
@@ -30,7 +30,7 @@ export default function EntidadesDocumento({ proyecto, idDocumento }) {
     recargar()
     recargarTodas()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, idDocumento])
+  }, [proyecto.id, idDocumento, refresco])
 
   async function anadir(idEntidad) {
     if (!idEntidad) return

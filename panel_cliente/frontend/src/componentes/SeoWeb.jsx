@@ -200,7 +200,7 @@ function EditorSeo({ proyecto, activo, hallazgo, onPropuesta, onCerrar }) {
   )
 }
 
-function Auditoria({ proyecto, activo, onPropuesta }) {
+function Auditoria({ proyecto, activo, refresco, onPropuesta }) {
   const [datos, setDatos] = useState(null)
   const [estado, setEstado] = useState("abierto")
   const [error, setError] = useState(null)
@@ -215,7 +215,7 @@ function Auditoria({ proyecto, activo, onPropuesta }) {
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto.id, activo.id])
+  }, [proyecto.id, activo.id, refresco])
 
   // Mientras está en curso, se mira cada 5 segundos
   useEffect(() => {
@@ -307,7 +307,7 @@ function Auditoria({ proyecto, activo, onPropuesta }) {
   )
 }
 
-export default function SeoWeb({ proyecto, activo, onPropuesta }) {
+export default function SeoWeb({ proyecto, activo, refresco, onPropuesta }) {
   const [cuenta, setCuenta] = useState(null)
   const [informe, setInforme] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -333,8 +333,8 @@ export default function SeoWeb({ proyecto, activo, onPropuesta }) {
     <Stack gap="xl">
       <div><Title order={4} mb="xs">Google</Title><Google proyecto={proyecto} activo={activo} cuenta={cuenta} /></div>
       <div><Title order={4} mb="xs">Velocidad</Title><Velocidad proyecto={proyecto} activo={activo} cuenta={cuenta} /></div>
-      <div><Title order={4} mb="xs">Salir en las respuestas de las IAs (GEO)</Title><GeoWeb proyecto={proyecto} activo={activo} onPropuesta={onPropuesta} /></div>
-      <div><Title order={4} mb="xs">Auditoría</Title><Auditoria proyecto={proyecto} activo={activo} onPropuesta={onPropuesta} /></div>
+      <div><Title order={4} mb="xs">Salir en las respuestas de las IAs (GEO)</Title><GeoWeb proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={onPropuesta} /></div>
+      <div><Title order={4} mb="xs">Auditoría</Title><Auditoria proyecto={proyecto} activo={activo} refresco={refresco} onPropuesta={onPropuesta} /></div>
       <div>
         <Title order={4} mb="xs">Informe mensual</Title>
         <Text fz="13.5px" c="dimmed" mb="xs">
