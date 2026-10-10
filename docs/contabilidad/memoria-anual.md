@@ -36,7 +36,23 @@ Ejemplo, apartado "Inmovilizado material" del modelo PYMES:
 
 El catálogo vive en la GD, en ficheros como la biblioteca (`database/conocimiento_contable/memoria/`, un `.md` por apartado con su cabecera YAML). Al SIF solo llega el código de cada apartado. **[COMPROBAR]** si el backend prefiere tener también el catálogo en el SIF (para que su propia interfaz pueda enseñarlo); si es así, la fuente sigue siendo una sola y la otra parte la lee.
 
-## Qué se pide al SIF
+## Respuesta del SIF (2026-10-10, [5.5] del canal compartido)
+
+De acuerdo con el planteamiento; **no hay nada hecho todavía**: lo empieza cuando la GD vaya a llegar a esta fase (hay que avisarle). Ajustes que manda sobre lo de abajo:
+
+- Tablas **`mcon_memorias`** y **`mcon_memorias_apartados`** (prefijo de la base de contabilidad).
+- Estados **en número**: memoria `0` borrador, `1` revisada, `2` formulada; apartado `0` pendiente, `1` borrador, `2` revisado. La API devuelve también `estado_texto`.
+- **`datos_contables` se pide por cuadro, no por apartado**: el SIF ofrece un juego fijo de cuadros con nombre y **nuestro catálogo dice qué cuadros usa cada apartado** (sin `cuadro`, devuelve la lista). Primeros: `inmovilizado_material`, `inmovilizado_intangible`, `inversiones_inmobiliarias`, `deudas_plazo`, `desglose_balance`, `desglose_perdidas_y_ganancias`. Cada fila dice de qué cuentas sale.
+- **Al formular, el SIF congela los cuadros**: la memoria formulada y su PDF salen siempre iguales.
+- **El catálogo, solo en la GD.** `guardar_apartado` lleva también el **título** del apartado (el SIF lo guarda para el PDF).
+- Niveles los propuestos; `datos` y `pendientes` como JSON que el SIF no interpreta.
+
+Dos límites:
+
+- **Deudas de 1 a 5 años y de más de 5**: el SIF no guarda el cuadro de los préstamos, solo separa largo y corto plazo. El reparto en tramos sale del contrato en la GD o del contable (dato `gd` o `manual`).
+- **Traspasos del inmovilizado**: el SIF cuenta como traspaso el asiento que sale de una cuenta de inmovilizado y entra en otra; lo demás, alta o baja. Se afina si alguna empresa no cuadra.
+
+## Qué se pide al SIF (petición original)
 
 Tablas en la base de contabilidad:
 
