@@ -37,13 +37,24 @@ SIN_REVISAR = "pendiente"
 logger = logging.getLogger(__name__)
 
 
+class _CargadorSinFechas(yaml.SafeLoader):
+    """Las fechas de la cabecera se quedan como texto: así salen tal cual en
+    JSON (tools MCP y panel) y se comparan con _como_fecha."""
+
+
+_CargadorSinFechas.yaml_implicit_resolvers = {
+    letra: [r for r in resolvers if r[0] != "tag:yaml.org,2002:timestamp"]
+    for letra, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+
+
 def _leer(fichero: Path) -> tuple[dict, str]:
     """(cabecera, cuerpo) de un Markdown con cabecera YAML entre `---`."""
     texto = fichero.read_text(encoding="utf-8")
     if not texto.startswith("---"):
         return {}, texto
     _, cabecera, cuerpo = texto.split("---", 2)
-    return yaml.safe_load(cabecera) or {}, cuerpo.strip()
+    return yaml.load(cabecera, Loader=_CargadorSinFechas) or {}, cuerpo.strip()
 
 
 def _normalizar(texto: str) -> str:

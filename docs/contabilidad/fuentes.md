@@ -48,8 +48,16 @@ Normas base, con su identificador comprobado contra la API:
 | Ley 58/2003 General Tributaria | BOE-A-2003-23186 | 8.6 |
 | Ley 3/2004 de morosidad (plazos de pago) | BOE-A-2004-21830 | 10.3 |
 | Ley 18/2022 de creación y crecimiento de empresas (factura electrónica, plazos) | BOE-A-2022-15818 | 8.5, 10.3 |
+| Orden PJC/297/2026, de cotización a la Seguridad Social de 2026 (**anual**: cambia cada enero) | BOE-A-2026-7296 | 2.4 |
+| Ley 22/2015 de Auditoría de Cuentas | BOE-A-2015-8147 | 7.3 |
+| RD 2/2021, Reglamento de auditoría | BOE-A-2021-1351 | 7.3 |
+| RD 1784/1996, Reglamento del Registro Mercantil | BOE-A-1996-17533 | 1.2, 7.3 |
+| Resolución del ICAC de 29-1-2016, periodo medio de pago a proveedores | BOE-A-2016-1112 | 10.3 |
+| Ley 15/2010, modificación de la Ley de morosidad | BOE-A-2010-10708 | 10.3 |
+| Ley 38/2003 General de Subvenciones | BOE-A-2003-20977 | 7.2 |
+| RD 1415/2004, Reglamento de recaudación de la Seguridad Social | BOE-A-2004-11836 | 2.4 |
 
-Faltan por localizar: Ley 22/2015 de Auditoría de Cuentas (para los límites de auditoría también vale la LSC, art. 263) y las órdenes con los modelos de depósito de cuentas en el Registro Mercantil (Ministerio de Justicia; cambian cada pocos años).
+Falta por localizar: las órdenes con los modelos de depósito de cuentas en el Registro Mercantil (Ministerio de Justicia; cambian cada pocos años).
 
 ## Nivel 2: doctrina
 

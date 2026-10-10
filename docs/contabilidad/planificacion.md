@@ -94,7 +94,7 @@ Cuatro herramientas, no una por área. Cada herramienta ocupa espacio en el cont
 - `buscar_temas_contables_gd(texto)`: busca por palabras en título, resumen y palabras clave y devuelve hasta 8 temas con su ruta. Es el atajo para ir directa ("leasing", "prorrata") sin recorrer niveles.
 - `obtener_norma_contable_gd(id_fuente, fecha=None)`: el texto literal de un artículo de ley o el resumen de una consulta de la DGT, con su origen y fecha de versión. Con `fecha` devuelve la versión que estaba vigente ese día, si se conserva. La IA lo abre solo cuando necesita la letra exacta.
 
-Coste de contexto, con números aproximados: una consulta típica (búsqueda, unos 300 tokens, más un tema de 1.500) carga unos 2.000 tokens. Cargar la biblioteca entera (unos 180 temas de 1.500 tokens) serían 270.000 tokens por mensaje, más de 100 veces más, y ni siquiera cabría con holgura.
+Medido con el primer lote (2026-10-10): el índice raíz son unos 750 tokens, una búsqueda unos 250 y un tema completo entre 2.500 y 3.000 (más de lo estimado abajo: los temas salieron de unas 1.000 palabras con tablas de asientos). Una consulta típica queda en unos 3.000-3.500 tokens. Coste de contexto estimado antes de escribirlos, con números aproximados: una consulta típica (búsqueda, unos 300 tokens, más un tema de 1.500) carga unos 2.000 tokens. Cargar la biblioteca entera (unos 180 temas de 1.500 tokens) serían 270.000 tokens por mensaje, más de 100 veces más, y ni siquiera cabría con holgura.
 
 ### Reglas de producto para el asesor
 
