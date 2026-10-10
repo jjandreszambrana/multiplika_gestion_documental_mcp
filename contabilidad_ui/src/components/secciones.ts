@@ -1,0 +1,78 @@
+import type { Nivel } from '../api/sesion'
+
+export interface Seccion {
+  id: string
+  etiqueta: string
+  /** Nivel mínimo para verla. Se esconde, no se deshabilita. */
+  nivelMinimo: Nivel
+  /** Cuelga de este apartado del menú. Sin esto, va suelta. */
+  grupo?: string
+}
+
+/**
+ * Por dónde se entra al módulo. El diario es lo que se abre cada mañana, no lo
+ * primero del menú: si se dejara al orden, cambiar el menú cambiaría por dónde
+ * entra todo el mundo.
+ */
+export const SECCION_DE_ENTRADA = 'asientos'
+
+export const SECCIONES: Seccion[] = [
+  { id: 'plan', etiqueta: 'Gestión plan contable', nivelMinimo: 'consulta', grupo: 'Plan contable' },
+  {
+    id: 'enlace',
+    etiqueta: 'Enlace con facturación',
+    nivelMinimo: 'consulta',
+    grupo: 'Plan contable',
+  },
+  { id: 'asientos', etiqueta: 'Entrada asientos', nivelMinimo: 'consulta', grupo: 'Diario' },
+  { id: 'eliminados', etiqueta: 'Asientos eliminados', nivelMinimo: 'consulta', grupo: 'Diario' },
+  {
+    id: 'traspaso_emitidas',
+    etiqueta: 'Facturas emitidas',
+    nivelMinimo: 'consulta',
+    grupo: 'Traspasos',
+  },
+  {
+    id: 'traspaso_recibidas',
+    etiqueta: 'Facturas recibidas',
+    nivelMinimo: 'consulta',
+    grupo: 'Traspasos',
+  },
+  // Un grupo desde el principio: detrás del mayor vienen sumas y saldos,
+  // balance y pérdidas y ganancias, y no se van a colgar sueltos del menú.
+  { id: 'mayor', etiqueta: 'Mayor', nivelMinimo: 'consulta', grupo: 'Informes' },
+  {
+    id: 'balance',
+    etiqueta: 'Sumas y saldos',
+    nivelMinimo: 'consulta',
+    grupo: 'Informes',
+  },
+  // El balance y pérdidas y ganancias estuvieron sueltos hasta el 01/09/2026:
+  // se juntaron en una pantalla de dos pestañas porque el Excel es el mismo.
+  {
+    id: 'estados_contables',
+    etiqueta: 'Estados contables',
+    nivelMinimo: 'consulta',
+    grupo: 'Informes',
+  },
+  // El grupo nace con una sola entrada: detrás viene el modelo 303, que espera
+  // a que el backend mande los rótulos de las casillas.
+  {
+    id: 'fiscal',
+    etiqueta: 'IVA y retenciones',
+    nivelMinimo: 'consulta',
+    grupo: 'Fiscal',
+  },
+  { id: 'inmovilizado', etiqueta: 'Inmovilizado', nivelMinimo: 'consulta', grupo: 'Inmovilizado' },
+  {
+    id: 'sin_ficha',
+    etiqueta: 'Bienes sin ficha',
+    nivelMinimo: 'consulta',
+    grupo: 'Inmovilizado',
+  },
+  { id: 'cierre', etiqueta: 'Cierre de ejercicio', nivelMinimo: 'cierre' },
+  { id: 'importador', etiqueta: 'Importar datos', nivelMinimo: 'apuntes', grupo: 'Utilidades' },
+  { id: 'ejercicios', etiqueta: 'Ejercicios', nivelMinimo: 'cierre', grupo: 'Utilidades' },
+  { id: 'configuracion', etiqueta: 'Configuración', nivelMinimo: 'cierre', grupo: 'Utilidades' },
+  { id: 'accesos', etiqueta: 'Accesos', nivelMinimo: 'admin' },
+]

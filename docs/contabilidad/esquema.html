@@ -1,0 +1,308 @@
+<title>Asesor contable de la GD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --papel:#F3F6F2; --hoja:#FFFFFF; --tinta:#1D2A24; --suave:#55665D; --raya:#D5DFD7;
+  --verde:#2F6B4F; --verde-claro:#E3EFE7; --rojo:#A23B2A; --rojo-claro:#F6E4DF;
+  --azul:#2D5B7A; --azul-claro:#E2ECF3; --ocre:#8A6A1F; --ocre-claro:#F4ECD8;
+  --f-tit:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-txt:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#131A16; --hoja:#1B241F; --tinta:#E4ECE6; --suave:#9DB0A5; --raya:#2E3B34;
+    --verde:#7CC29C; --verde-claro:#1F3329; --rojo:#E8846F; --rojo-claro:#3A2420;
+    --azul:#8AB8D8; --azul-claro:#1C2C38; --ocre:#D9B45E; --ocre-claro:#352C17;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --papel:#131A16; --hoja:#1B241F; --tinta:#E4ECE6; --suave:#9DB0A5; --raya:#2E3B34;
+  --verde:#7CC29C; --verde-claro:#1F3329; --rojo:#E8846F; --rojo-claro:#3A2420;
+  --azul:#8AB8D8; --azul-claro:#1C2C38; --ocre:#D9B45E; --ocre-claro:#352C17;
+}
+*{box-sizing:border-box}
+body{background:var(--papel);color:var(--tinta);font-family:var(--f-txt);font-size:15px;line-height:1.55;padding:0 20px}
+.envoltura{max-width:1080px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-tit);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4vw,40px)}
+h2{font-size:24px}
+h3{font-size:16px}
+p{margin:0;max-width:68ch}
+.etiqueta{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+section{display:flex;flex-direction:column;gap:18px}
+.cab{display:flex;flex-direction:column;gap:8px}
+.intro{color:var(--suave);font-size:16px}
+
+/* 1. Vista general */
+.general{display:grid;grid-template-columns:1fr auto 1.25fr auto 1fr;gap:12px;align-items:stretch}
+.bloque{background:var(--hoja);border:1px solid var(--raya);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.bloque ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.bloque.conoc{border-top:4px solid var(--verde)}
+.bloque.gd{border-top:4px solid var(--azul)}
+.bloque.sif{border-top:4px solid var(--ocre)}
+.nota-bloque{font-size:13px;color:var(--suave);margin-top:auto}
+.flecha{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;color:var(--suave);font-size:12px;text-align:center;max-width:120px}
+.flecha b{font-size:22px;color:var(--tinta);font-weight:500}
+@media (max-width:820px){
+  .general{grid-template-columns:1fr}
+  .flecha{max-width:none;flex-direction:row}
+  .flecha b{transform:rotate(90deg)}
+}
+
+/* 2. Capas */
+.capas{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.capa{background:var(--hoja);border:1px solid var(--raya);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.capa .num{font-family:var(--f-mono);font-size:12px;color:var(--verde)}
+.fila{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:13.5px}
+.fila dt{color:var(--suave)}
+.fila dd{margin:0}
+.no-guarda{background:var(--rojo-claro);border-radius:10px;padding:14px 18px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.no-guarda b{color:var(--rojo)}
+@media (max-width:820px){.capas{grid-template-columns:1fr}}
+
+/* 3. Jerarquía */
+.jer{display:flex;flex-direction:column;gap:0;background:var(--hoja);border:1px solid var(--raya);border-radius:10px;padding:18px 18px 18px 18px}
+.nivel{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px dashed var(--raya)}
+.nivel:last-child{border-bottom:0}
+.nivel .q{font-weight:600}
+.nivel .t{font-family:var(--f-mono);font-size:12px;color:var(--suave);font-variant-numeric:tabular-nums;white-space:nowrap}
+.nivel.n2 .q{padding-left:18px}.nivel.n3 .q{padding-left:36px}.nivel.n4 .q{padding-left:54px;color:var(--verde)}
+.nivel .q::before{content:"└ ";color:var(--suave);font-weight:400}
+.nivel.n1 .q::before{content:""}
+@media (max-width:620px){.nivel{grid-template-columns:1fr}.nivel .q{padding-left:0!important}}
+
+/* 4. Consulta */
+.consulta{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pasos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:p}
+.pasos li{counter-increment:p;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;background:var(--hoja);border:1px solid var(--raya);border-radius:8px;padding:10px 12px;font-size:14px}
+.pasos li::before{content:counter(p);font-family:var(--f-mono);font-size:12px;width:24px;height:24px;border-radius:50%;background:var(--verde-claro);color:var(--verde);display:grid;place-items:center}
+.pasos .t{font-family:var(--f-mono);font-size:12px;color:var(--suave);white-space:nowrap;font-variant-numeric:tabular-nums}
+.barras{background:var(--hoja);border:1px solid var(--raya);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.barra{display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.pista{height:14px;background:var(--papel);border-radius:3px;overflow:hidden}
+.relleno{height:100%;background:var(--verde)}
+.relleno.malo{background:var(--rojo)}
+.barra .pie{display:flex;justify-content:space-between;color:var(--suave);font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+@media (max-width:820px){.consulta{grid-template-columns:1fr}}
+
+/* 5. Actualización */
+.ciclo{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.paso-c{background:var(--hoja);border:1px solid var(--raya);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;position:relative}
+.paso-c .etiqueta{color:var(--azul)}
+.paso-c.clave{background:var(--azul-claro);border-color:transparent}
+@media (max-width:900px){.ciclo{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.ciclo{grid-template-columns:1fr}}
+.anual{display:flex;gap:14px;flex-wrap:wrap}
+.anual > div{flex:1 1 240px;background:var(--hoja);border:1px solid var(--raya);border-radius:8px;padding:12px 14px;font-size:13.5px}
+
+/* 6. Fases */
+.fases{display:flex;flex-direction:column;gap:0;position:relative}
+.fase{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:12px 0}
+.fase .n{font-family:var(--f-tit);font-size:26px;font-weight:700;color:var(--verde);line-height:1}
+.fase .c{display:flex;flex-direction:column;gap:4px;border-left:2px solid var(--raya);padding-left:16px}
+.fase .c p{font-size:14px;color:var(--suave)}
+.chip{display:inline-block;font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde);margin-left:6px;vertical-align:2px}
+.chip.sif{background:var(--ocre-claro);color:var(--ocre)}
+.fase.luego .n{color:var(--suave)}
+
+/* 7. Disco */
+pre{margin:0;background:var(--hoja);border:1px solid var(--raya);border-radius:10px;padding:18px;overflow-x:auto;font-family:var(--f-mono);font-size:12.5px;line-height:1.7;color:var(--tinta)}
+pre .c{color:var(--suave)}
+pre .v{color:var(--verde)}
+pre .a{color:var(--azul)}
+pre .o{color:var(--ocre)}
+.dos{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;align-items:start}
+@media (max-width:820px){.dos{grid-template-columns:1fr}}
+.porque{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.porque div{background:var(--hoja);border:1px solid var(--raya);border-radius:8px;padding:12px 14px}
+footer{color:var(--suave);font-size:13px;border-top:1px solid var(--raya);padding-top:16px}
+</style>
+
+<div class="envoltura">
+
+<header class="cab">
+  <span class="etiqueta">Gestión documental · plan del 10-10-2026</span>
+  <h1>Asesor contable de la GD</h1>
+  <p class="intro">Cómo queda organizado todo: de dónde sale lo que sabe el asesor, cómo lo consulta la IA sin gastar de más, cómo se conecta con la contabilidad del SIF y cómo se mantiene al día cuando cambia la ley.</p>
+</header>
+
+<section>
+  <div class="cab"><span class="etiqueta">Vista general</span><h2>Tres piezas</h2></div>
+  <div class="general">
+    <div class="bloque conoc">
+      <h3>Biblioteca contable</h3>
+      <ul>
+        <li>Temas explicados con ejemplos</li>
+        <li>Artículos de ley literales</li>
+        <li>Consultas de Hacienda citadas</li>
+      </ul>
+      <p class="nota-bloque">Igual para todos los clientes. La mantenemos nosotros, en ficheros del programa.</p>
+    </div>
+    <div class="flecha"><b>→</b>la IA consulta solo el tema que necesita</div>
+    <div class="bloque gd">
+      <h3>GD del cliente (apartado activado)</h3>
+      <ul>
+        <li>Chat con el asesor</li>
+        <li>Reglas y protocolos propios del cliente</li>
+        <li>Facturas y documentos subidos</li>
+        <li>Bandeja de propuestas para el contable</li>
+        <li>Revisiones programadas (p. ej. cada día 5)</li>
+      </ul>
+      <p class="nota-bloque">Solo en las GD que lo activen. Sin activar, ni sale en el menú ni la IA lo ve.</p>
+    </div>
+    <div class="flecha"><b>⇄</b>con el acceso al SIF de cada usuario, guardado en sus credenciales</div>
+    <div class="bloque sif">
+      <h3>Contabilidad del SIF (opcional)</h3>
+      <ul>
+        <li>Balance, mayor, diario, IVA…</li>
+        <li>Modo asesoría: muchas empresas. Modo empresa: solo la suya</li>
+        <li>El SIF decide qué ve cada usuario</li>
+      </ul>
+      <p class="nota-bloque">La IA lee y propone. No escribe nada en el SIF. Nunca se ve una empresa fuera de la asesoría.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">Biblioteca</span><h2>Tres capas de conocimiento</h2>
+    <p>Cada tipo de información se guarda de una forma distinta, según lo que se puede hacer con ella.</p></div>
+  <div class="capas">
+    <div class="capa">
+      <span class="num">Capa 1</span>
+      <h3>Temas</h3>
+      <dl class="fila">
+        <dt>Qué es</dt><dd>Explicación propia y práctica, no un resumen de la ley. Con un asiento de ejemplo con números.</dd>
+        <dt>Cuántos</dt><dd>Unos 180 (50 en el primer lote)</dd>
+        <dt>Tamaño</dt><dd>1 o 2 páginas cada uno</dd>
+        <dt>Se actualiza</dt><dd>A mano. Lo revisa otra IA de otra plataforma.</dd>
+      </dl>
+    </div>
+    <div class="capa">
+      <span class="num">Capa 2</span>
+      <h3>Artículos de ley</h3>
+      <dl class="fila">
+        <dt>Qué es</dt><dd>Texto literal del BOE. Solo los artículos que citan los temas.</dd>
+        <dt>Cuántos</dt><dd>Unos 500</dd>
+        <dt>Tamaño</dt><dd>Unas 1 o 2 páginas cada uno</dd>
+        <dt>Se actualiza</dt><dd>Solo, cada semana, preguntando al BOE. Se guarda también la versión anterior.</dd>
+      </dl>
+    </div>
+    <div class="capa">
+      <span class="num">Capa 3</span>
+      <h3>Doctrina</h3>
+      <dl class="fila">
+        <dt>Qué es</dt><dd>Consultas de Hacienda (DGT): resumen nuestro de 5 a 10 líneas, número y enlace.</dd>
+        <dt>Cuántos</dt><dd>Solo las que citan los temas</dd>
+        <dt>Tamaño</dt><dd>Media página</dd>
+        <dt>Se actualiza</dt><dd>No cambian. Si una queda superada, se marca.</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="no-guarda">
+    <b>Lo que no se guarda</b>
+    <span>Los manuales de Hacienda (sirven para redactar los temas, cambian cada año y solo se guarda su enlace). Las consultas del ICAC (su web no permite copiarlas, solo se citan). Los datos del Banco de España (son tablas de cifras, se consultan con una herramienta).</span>
+  </div>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">Organización de los temas</span><h2>Cuatro niveles</h2>
+    <p>Solo el último nivel tiene contenido. Los otros tres son un título y una línea de resumen, lo justo para que la IA elija por dónde bajar.</p></div>
+  <div class="jer">
+    <div class="nivel n1"><span class="etiqueta">Área (índice)</span><span class="q">3. Inmovilizado y arrendamientos</span><span class="t">12 áreas · ~400 tokens</span></div>
+    <div class="nivel n2"><span class="etiqueta">Bloque (subíndice)</span><span class="q">3.2 Arrendamientos</span><span class="t">~150 tokens</span></div>
+    <div class="nivel n3"><span class="etiqueta">Capítulo</span><span class="q">3.2.1 Arrendamiento financiero</span><span class="t">~120 tokens</span></div>
+    <div class="nivel n4"><span class="etiqueta">Tema</span><span class="q">Leasing: contabilización por el arrendatario</span><span class="t">~1.500 tokens</span></div>
+  </div>
+  <p class="mono" style="color:var(--suave)">Cada nodo lleva un número fijo (p. ej. tema 10231) que no cambia aunque se renombre o se mueva. "3.2.1" es solo la posición.</p>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">Una consulta</span><h2>"¿Qué IVA de un coche se puede deducir?"</h2></div>
+  <div class="consulta">
+    <ol class="pasos">
+      <li><span>Busca "IVA vehículo" en la biblioteca y le salen 3 temas con su ruta</span><span class="t">~300</span></li>
+      <li><span>Abre el tema de deducibilidad del IVA y responde con su ejemplo</span><span class="t">~1.500</span></li>
+      <li><span>Si hace falta la letra exacta, abre el artículo 95 de la Ley del IVA</span><span class="t">~1.200</span></li>
+      <li><span>Con el SIF conectado, mira el mayor de la cuenta del coche de esa empresa</span><span class="t">~800</span></li>
+      <li><span>Deja una propuesta de asiento para que el contable la revise</span><span class="t">—</span></li>
+    </ol>
+    <div class="barras">
+      <span class="etiqueta">Lo que carga la IA en cada mensaje</span>
+      <div class="barra">
+        <span>Con la biblioteca por niveles (pasos 1 a 4)</span>
+        <div class="pista"><div class="relleno" style="width:1.4%"></div></div>
+        <div class="pie"><span>~3.800 tokens</span><span>1,4 %</span></div>
+      </div>
+      <div class="barra">
+        <span>Cargando la biblioteca entera</span>
+        <div class="pista"><div class="relleno malo" style="width:100%"></div></div>
+        <div class="pie"><span>~270.000 tokens</span><span>100 %</span></div>
+      </div>
+      <p style="font-size:13px;color:var(--suave)">Cifras aproximadas. Por niveles se carga unas 70 veces menos, y la IA trabaja con lo justo, que también la hace más precisa.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">Mantenimiento</span><h2>Cuando cambia una ley</h2>
+    <p>Un programa nuestro lo hace solo, una vez por semana.</p></div>
+  <div class="ciclo">
+    <div class="paso-c"><span class="etiqueta">1 · Preguntar</span>El BOE dice qué leyes han cambiado esta semana.</div>
+    <div class="paso-c"><span class="etiqueta">2 · Filtrar</span>De cada ley, solo los artículos que tenemos guardados y cuya fecha ha cambiado.</div>
+    <div class="paso-c clave"><span class="etiqueta">3 · Sustituir</span>Guarda el texto nuevo y conserva el anterior con sus fechas de vigencia.</div>
+    <div class="paso-c"><span class="etiqueta">4 · Avisar</span>Los temas que citan ese artículo quedan "pendiente de revisar". La IA avisa al usarlos.</div>
+    <div class="paso-c"><span class="etiqueta">5 · Subir</span>Todo queda registrado y se sube a los servidores con el despliegue de siempre.</div>
+  </div>
+  <div class="anual">
+    <div><b>Cada enero</b><br>Salen los nuevos manuales de Hacienda y el calendario fiscal: se revisan los temas de impuestos y los que tienen cifras.</div>
+    <div><b>Versión anterior</b><br>Se conserva dos años. El Impuesto de Sociedades de 2025 se presenta en julio de 2026 con las reglas de 2025.</div>
+    <div><b>Sin respuesta</b><br>Si la IA no encuentra un tema, lo anota. Esa lista dice qué temas faltan.</div>
+  </div>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">En el disco</span><h2>Ficheros, no base de datos</h2></div>
+  <div class="dos">
+<pre><span class="c">database/conocimiento_contable/</span>
+  <span class="v">temas/</span>                      <span class="c">capa 1</span>
+    03_inmovilizado/
+      _nodo.md                <span class="c">título y resumen del área</span>
+      02_arrendamientos/
+        01_arrendamiento_financiero/
+          01_leasing_arrendatario.md
+  <span class="a">normativa/</span>                  <span class="c">capa 2</span>
+    BOE-A-1992-28740/         <span class="c">Ley del IVA</span>
+      _norma.md
+      a95.md                  <span class="c">artículo vigente</span>
+      a95.2025-01-01.md       <span class="c">versión anterior</span>
+  <span class="o">doctrina/</span>                   <span class="c">capa 3</span>
+    DGT-V1234-25.md</pre>
+    <div class="porque">
+      <div><b>Una sola copia</b><br>En una tabla habría que repetirla en la base de cada proyecto de los 5 servidores y mantener todas las copias iguales.</div>
+      <div><b>Registro de cambios</b><br>Se ve qué decía un artículo antes y después, y cuándo cambió.</div>
+      <div><b>Lo del cliente, aparte</b><br>Sus reglas y protocolos siguen en la base de datos de su GD, como hoy.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="cab"><span class="etiqueta">Orden de trabajo</span><h2>Fases</h2></div>
+  <div class="fases">
+    <div class="fase"><span class="n">0</span><div class="c"><h3>Arreglo previo</h3><p>Que el chat del panel reciba el negocio y las preferencias del cliente, como ya los recibe Claude Desktop.</p></div></div>
+    <div class="fase"><span class="n">1</span><div class="c"><h3>Biblioteca contable <span class="chip">sin SIF</span></h3><p>Las tres capas, cuatro herramientas de consulta para la IA y el apartado en el panel. Primer lote de 50 temas.</p></div></div>
+    <div class="fase"><span class="n">2</span><div class="c"><h3>Usuario de la GD ↔ usuario del SIF <span class="chip sif">SIF</span></h3><p>La GD se configura como asesoría o como empresa. La clave de la GD marca qué empresas se pueden ver; la de cada usuario, con qué trabaja él. Cada uno ve solo las que estén en las dos. Las entidades siguen siendo solo los clientes y proveedores del tenant.</p></div></div>
+    <div class="fase"><span class="n">3</span><div class="c"><h3>La IA lee la contabilidad <span class="chip sif">SIF</span></h3><p>Balance, mayor, IVA y ratios calculados por el programa, no por la IA.</p></div></div>
+    <div class="fase"><span class="n">4</span><div class="c"><h3>La IA propone <span class="chip sif">SIF</span></h3><p>Asientos y avisos en una bandeja. El contable los acepta y los pasa él al SIF.</p></div></div>
+    <div class="fase"><span class="n">5</span><div class="c"><h3>Pantallas de contabilidad dentro de la GD <span class="chip sif">SIF</span></h3><p>La interfaz ya hecha, sin entrar dos veces. Mientras tanto se usa en su propia web.</p></div></div>
+    <div class="fase luego"><span class="n">…</span><div class="c"><h3>Más adelante</h3><p>La IA crea asientos como borrador en el SIF, comparación con el sector y avisos del calendario fiscal.</p></div></div>
+  </div>
+</section>
+
+<footer>Detalle completo en docs/contabilidad: planificacion.md, estructura-temas.md y fuentes.md.</footer>
+</div>

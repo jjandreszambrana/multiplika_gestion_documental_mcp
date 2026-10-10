@@ -1,0 +1,20 @@
+- [Entorno en dos equipos](entorno-dos-equipos.md) — Node está puesto a mano en ~/.local; comprobarlo al retomar desde el portátil.
+- [Textos en registro profesional](textos-en-lenguaje-llano.md) — ni jerga de IA ni coloquialismos: términos contables.
+- [Vocabulario del contable](vocabulario-del-contable.md) — grupo, subgrupo, cuenta de mayor y subcuenta; nunca "auxiliar".
+- [Agilidad: precargar de fondo](agilidad-precargar-de-fondo.md) — sin esperas al teclear; nada de sondeos.
+- [Pantallas por tarea](pantallas-por-tarea-no-por-endpoint.md) — la API no dicta cuántos botones hay.
+- [Pendientes en fichero](pendientes-en-fichero.md) — lo que depende del backend se anota, no se parchea.
+- [Puntos suspensivos en botones](puntos-suspensivos-en-botones.md) — si abre formulario, termina en «…».
+- [Textos decididos no se tocan](textos-decididos-no-se-tocan.md) — no reescribir mensajes ya aprobados sin permiso.
+- [Textos de formulario se aprueban](textos-de-formulario-se-aprueban.md) — nada de textos en pantalla sin proponerlos y explicarlos antes.
+- [Canal con el backend](canal-con-backend.md) — un solo fichero N_intercambio.md; mirar los pendientes al empezar la sesión.
+- [Fuente de verdad de la API](fuente-de-verdad-api.md) — la guía vive en compartida; si discrepa del OpenAPI, manda el OpenAPI y se avisa.
+- [Por dónde va el frontend](por-donde-va-el-frontend.md) — hecho armazón, plan y terceros; toca configuración y luego consulta.
+- [Cuentas apartadas del plan](plan-cuentas-apartadas.md) — ya hecho; decidir por oculta y estado, nunca por origen.
+- [/contabilidad/sesion/me tipado](sesion-me-tipado.md) — sustituye a GET /usuarios/me; ya puesto, y ya no queda ninguna llamada GET.
+- [Importador de CSV y Excel](importador-existe.md) — fase 12 del plan; ensayar antes de importar y subir no es JSON.
+- [Modelos de importación](modelos-de-importacion.md) — se definen aparte y se eligen; emparejar en cada importación se rechazó.
+- [Casilla de fecha](casilla-de-fecha.md) — siempre CasillaFecha, nunca DateInput suelto; calendario en español.
+- [Respuestas cortas de verdad](respuestas-cortas-de-verdad.md) — dos o tres frases; los rodeos le enfadan.
+- [Sin paginación en los listados](sin-paginacion-en-listados.md) — se traen enteros; paginar estorba al recorrerlos.
+- [Documentación dentro del proyecto](documentacion-dentro-del-proyecto.md) — todo en docs/, nada publicado fuera.

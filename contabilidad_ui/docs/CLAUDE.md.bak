@@ -1,0 +1,240 @@
+# Proyecto: UI de contabilidad
+
+## Contexto
+
+Cliente web de una aplicación de contabilidad. Toda la lógica de negocio
+(cálculos, validaciones contables, cuadres, generación de asientos) ya está
+implementada en la **Multiplika SIF API** (FastAPI + Pydantic), que además de
+contabilidad cubre facturación VeriFactu, cobros, pedidos y lotes.
+
+Este proyecto es **únicamente la interfaz**. Stack: React + TypeScript + Vite.
+
+### La API
+
+- Especificación: `https://facturae.multiplika.net/apisif/openapi.json`
+  (OpenAPI 3.1). Interfaz de exploración en `/apisif/swagger`.
+- Prefijo de rutas: `/apisif/v1/...`
+- **Casi todo es POST, incluidas las lecturas.** Los filtros y los
+  identificadores viajan en el cuerpo, no en la URL ni en query params.
+  Tenlo en cuenta al montar la capa de datos y la caché.
+
+### Autenticación: cookie, no cabecera
+
+- El servidor usa una cookie `access_token` con JWT (HttpOnly, SameSite=strict,
+  Secure en https, path `/`). **No hay cabecera `Authorization`.**
+- Login: `POST /apisif/v1/usuarios/login`, con `username` + `password`, o bien
+  `username` + `api_key` + `api_secret`.
+- Logout: `POST /apisif/v1/usuarios/logout`, que borra la cookie.
+- Rutas abiertas: login, swagger, redoc y openapi.json. El resto exige cookie.
+
+**Lo único que tiene que hacer el frontend es enviar las cookies:**
+`credentials: "include"` en fetch. Nada más.
+
+Y de ahí salen estas prohibiciones, que son las que suelen incumplirse:
+
+- **NO leas, guardes ni manipules el token.** Es HttpOnly: JavaScript no puede
+  verlo, y no debe intentarlo. Nada de localStorage, sessionStorage ni estado.
+- **NO montes lógica de renovación de token.** El servidor lo renueva solo en
+  cada petición durante una semana. No hay refresh token, no hay temporizador,
+  no hay interceptor que reintente. Escribir eso es añadir un bug.
+- Tras una semana sin actividad llega un 401: se redirige a login y ya está.
+- El estado de sesión no se puede deducir leyendo la cookie. Se deduce de
+  `GET /apisif/v1/usuarios/me`, que devuelve el contenido del token —id,
+  usuario, rol, obligado y, para operarios, sus permisos— o un 401 si no hay
+  sesión. Es la primera llamada al arrancar la aplicación.
+
+### Empresa activa (solo contabilidad)
+
+- La empresa activa **viaja dentro del token**, no en el cuerpo de cada
+  petición. No añadas un `id_empresa` a las llamadas de contabilidad.
+- Se selecciona con `POST /apisif/v1/contabilidad/sesion/conmutar`, que reemite
+  la cookie.
+- `usuarios/me` devuelve `conta_id_obligado`, que es la empresa activa. **Si
+  viene vacío, hay que conmutar antes de pedir nada del módulo de
+  contabilidad.** Compruébalo al arrancar, no esperes al 409.
+- **Hasta que no se conmuta, los endpoints de contabilidad responden 409.**
+  Trata el 409 como "falta elegir empresa" y lleva al selector — nunca como un
+  error genérico ni como una pantalla vacía.
+
+### Tipos: generados, nunca escritos a mano
+
+```
+npm run api:types
+```
+
+que ejecuta:
+
+```
+npx openapi-typescript https://facturae.multiplika.net/apisif/openapi.json -o src/api/types.ts
+```
+
+- `src/api/types.ts` es **generado**. No lo edites nunca a mano.
+- Si necesitas un tipo que no está ahí, dímelo: se arregla en el backend y se
+  regenera, no se parchea aquí.
+- Tras cualquier cambio en la API, regenerar y arreglar lo que marque el
+  compilador.
+
+---
+
+## Reglas innegociables
+
+### 1. Nada de lógica de negocio en el frontend
+
+- No recalcular, no validar reglas contables, no derivar importes que la API
+  ya devuelve.
+- Si hace falta un cálculo que la API no expone, **pregúntame antes**. La
+  respuesta correcta casi siempre es añadir un endpoint, no resolverlo aquí.
+- Excepción única: totales de una columna visible en pantalla, y aun así
+  usando decimal.js.
+
+### 2. Dinero: decimal.js, nunca `number`
+
+- Todo importe se maneja como `Decimal` de decimal.js.
+- Prohibido el tipo `number` de JavaScript para dinero, en cualquier punto:
+  variables, estado, props, cálculos intermedios.
+- La respuesta de la API se convierte a `Decimal` en la capa de cliente, no
+  en el componente.
+- Redondear **solo en el momento de mostrar**. Jamás en un paso intermedio.
+- Redondeo a 2 decimales, modo `ROUND_HALF_UP`.
+- **La API puede devolver un importe como número o como cadena** (el tipo
+  generado lo refleja: `number | string | null`). La capa de cliente normaliza
+  ambos casos a `Decimal` en un único punto. Ningún componente recibe jamás un
+  importe sin normalizar.
+
+### 3. Tipado estricto
+
+- `any` está prohibido. Si no sabes el tipo, pregúntame.
+- Toda respuesta de la API tiene su tipo declarado en `src/api/types.ts`.
+- **No inventes nombres de campos.** Si no tienes la especificación del
+  endpoint delante, pídemela antes de escribir el tipo.
+- `strict: true` en tsconfig. No relajarlo para que algo compile.
+
+### 4. Formato español
+
+- Decimales con coma, miles con punto: `1.234,56`
+- Fechas `dd/mm/aaaa`
+- El formateo vive en un módulo único (`src/lib/format.ts`). No formatear
+  suelto dentro de los componentes.
+
+### 5. Dependencias
+
+- No añadas ninguna librería sin preguntarme antes.
+- Solo licencias MIT o Apache 2.0. Nada de licencia comercial ni dual.
+- Descartadas por licencia, no las propongas: Handsontable, PrimeReact
+  (desde la v11 pasa a licencia PrimeUI, no abierta), AG Grid Enterprise.
+
+### 5b. Librerías de UI — fijadas, no cambiar
+
+- **Mantine** (v___) para componentes generales.
+- **mantine-react-table** (v___) para TODAS las rejillas de datos.
+- **decimal.js** para importes.
+- **NO instalar `@tanstack/react-table` por separado.** Viene como
+  dependencia interna de mantine-react-table, con versión exacta fijada.
+  Instalarlo aparte provoca conflictos de versiones.
+- No introduzcas ninguna otra librería de componentes. Nada de mezclar
+  Ant Design, Material UI, shadcn ni Bootstrap con Mantine.
+
+**Aviso sobre versiones de MRT:** hay dos ramas incompatibles. MRT v1 exige
+Mantine 6; MRT v2 exige Mantine 7.3+. Mucha documentación que circula por
+internet es de la rama antigua. Usa SIEMPRE la versión anotada arriba y, si
+un ejemplo no encaja, comprueba de qué rama viene antes de adaptarlo.
+No mezcles ejemplos de v1 y v2.
+
+### 6. Errores visibles
+
+- Ningún `catch` vacío ni error silenciado.
+- Si una llamada a la API falla, la pantalla lo dice. Nunca se muestra una
+  tabla vacía como si no hubiera datos.
+- Distinguir siempre: "no hay resultados" vs "no se pudo cargar".
+
+### 7. Teclado
+
+Esto se usa a diario y a volumen. La entrada de datos tiene que funcionar sin
+tocar el ratón:
+
+- Orden de tabulación correcto en todos los formularios.
+- Enter avanza al siguiente campo en las pantallas de entrada de asientos.
+- Escape cancela / cierra diálogos.
+
+### 8. Frontera con el backend
+
+El repositorio contiene backend y frontend en el mismo espacio de trabajo.
+
+```
+backend/    API en Go — SOLO LECTURA
+frontend/   este proyecto React
+```
+
+- **Nunca modifiques nada dentro de `backend/`.** Ni un fichero, ni una línea,
+  ni aunque sea obvio que falta algo. Si detectas que hace falta un cambio en
+  la API, **dímelo y detente**. Yo decido.
+- `backend/` está ahí para una sola cosa: consultar contratos, tipos, nombres
+  de campos y forma de las respuestas. Es documentación, no código editable.
+- Trabaja siempre dentro de `frontend/` salvo indicación contraria.
+- **Ver un cálculo en el backend NO autoriza a replicarlo aquí.** La regla 1
+  sigue intacta, y este es el punto donde más fácil es romperla sin querer.
+  Tener el código Go delante no cambia dónde vive la lógica.
+- Nunca inventes un nombre de campo: está en `backend/`, míralo.
+- Los commits no mezclan cambios de backend y de frontend.
+
+---
+
+## Cómo quiero que trabajemos
+
+- **Una pantalla por sesión.** No generes la aplicación entera ni te adelantes
+  a pantallas que no te he pedido.
+- Antes de escribir código, dime en dos líneas qué vas a hacer y espera.
+- Si algo del enunciado es ambiguo, pregunta. No elijas por mí y sigas.
+- No refactorices código que no te he pedido tocar.
+- Cambios pequeños y revisables. Si un fichero se pasa de ~200 líneas,
+  propón cómo partirlo.
+
+## Tests
+
+- Todo lo que calcule o formatee importes lleva test (Vitest).
+- Los tests se escriben con valores concretos y legibles: entra `1234.565`,
+  sale `"1.234,57"`. Nada de comparar contra la propia función.
+- Casos que quiero cubiertos sí o sí: importe negativo, cero, redondeo al
+  alza en el .005, y un asiento con varias líneas que debe cuadrar exacto.
+
+---
+
+## Estructura
+
+```
+src/
+  api/        cliente HTTP y tipos de la API
+  lib/        formateo, utilidades de Decimal
+  components/ componentes reutilizables
+  pages/      una carpeta por pantalla
+```
+
+---
+
+## Particularidades del dominio (confirmar contra la API antes de usarlas)
+
+Observadas en la documentación de la API. Antes de diseñar la pantalla
+correspondiente, **verifícalas contra la especificación actual** y avísame si
+alguna ya no se cumple:
+
+- **Los asientos no se editan.** Se borran y se rehacen; queda copia de lo
+  borrado. Solo el concepto y el documento son corregibles por separado.
+  Esto significa que NO hay pantalla de "editar asiento": hay borrar + crear.
+- **Un ejercicio cerrado no admite ningún cambio.** La interfaz debe reflejarlo
+  en vez de dejar intentar operaciones que van a fallar.
+- Algunos campos llegan como **JSON serializado dentro de una cadena** y hay
+  que parsearlos. Si te topas con uno, dímelo antes de inventar su forma.
+
+---
+
+## Pendiente de rellenar
+
+<!-- Completa esto antes de la primera sesión -->
+
+- Proxy de desarrollo configurado en `vite.config.ts`: sí / no
+
+Versiones exactas (sácalas de `package.json` tras instalar):
+
+- `@mantine/core`:
+- `mantine-react-table`:
+- Node:

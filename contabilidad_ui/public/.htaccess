@@ -1,0 +1,10 @@
+# Entrando por http:// sin la ese, la aplicacion se serviria igual y la sesion
+# no funcionaria: la cookie `access_token` es Secure y el navegador no la manda
+# por una conexion sin cifrar. Se reenvia a https antes de que eso pase.
+#
+# Es el mismo fichero que el otro frontend de esta maquina. Vive en `public/`
+# para que entre en `dist/` al compilar: si estuviera solo en el servidor, el
+# `rsync --delete` del despliegue lo borraria, que es lo que paso el 30/08/2026.
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

@@ -1,0 +1,6 @@
+/* Los estilos base los pone Mantine. Aquí solo lo imprescindible. */
+html,
+body,
+#root {
+  height: 100%;
+}
