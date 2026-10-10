@@ -119,3 +119,15 @@ Endpoints bajo `/apisif/v1/contabilidad/memoria/`, con los niveles de acceso de 
 ## Coste aproximado
 
 Redactar un apartado: catálogo (unos 500 tokens), cuadros del SIF (1.000-3.000), documentos de la GD (2.000-5.000) y tema de la biblioteca (unos 3.000). Unos 8.000-12.000 tokens por apartado. Una memoria PYMES de unos 15 apartados: entre 120.000 y 180.000 tokens el primer año. Los siguientes, bastante menos, porque se parte de la del año anterior y solo se rehacen los apartados con cambios.
+
+## Catálogo escrito (2026-10-10): puntos a revisar
+
+45 apartados en `database/conocimiento_contable/memoria/`: 25 del modelo normal (ids 31101-31125), 10 del abreviado (31201-31210) y 10 de PYMES (31301-31310), desde el texto vigente del BOE. Sin revisar todavía:
+
+1. **Periodo medio de pago a proveedores** (Ley 15/2010 y Resolución del ICAC de 2016): sin número en los modelos del PGC, va en "Otra información" como dato `contabilidad`, pero **no hay cuadro del SIF para él**. Decidir: pedir al SIF un cuadro `periodo_medio_pago` o pasarlo a `manual`.
+2. **Aplicación del resultado**: abreviado y PYMES ya no la tienen desde 2016 ni la exige el art. 261 LSC; queda como información voluntaria.
+3. **Retribución de administradores**: opcional en abreviado y PYMES, obligatoria en el normal.
+4. **Requisitos de la LSC añadidos** aunque el modelo del PGC no los nombre: art. 261 (dominante del grupo menor, deudas a más de 5 años, garantías) y art. 229 (conflictos de interés).
+5. **`obligatorio`** discutible en: medio ambiente (`false`), hechos posteriores (`true`), partes vinculadas (`true` en normal, `false` en abreviado y PYMES), activos financieros y fondos propios en abreviado y PYMES (`false`).
+6. **Vencimientos por tramos** que el SIF no da: como `gd`, junto al reparto largo/corto que sí da el SIF.
+7. **Desgloses que dependen de las subcuentas del cliente** (cifra de negocios por actividad o mercado, compras nacionales/intracomunitarias/importaciones, bienes totalmente amortizados): `contabilidad` si la empresa separa subcuentas; si no, `manual`.

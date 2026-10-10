@@ -8,7 +8,7 @@ despliegue de siempre.
     python scripts/biblioteca_contable.py normativa   # baja/actualiza del BOE los artículos citados
     python scripts/biblioteca_contable.py comprobar   # revisa ids, campos obligatorios y enlaces
 
-`normativa` recorre las `fuentes` de todos los temas con forma
+`normativa` recorre las `fuentes` de todos los temas y de los apartados de la memoria con forma
 `<id BOE>/<id bloque>` y, para cada norma, baja su índice de la API de
 datos abiertos del BOE (sin clave). Un artículo que no está guardado, o
 cuya `fecha_actualizacion` en el índice ha cambiado, se vuelve a bajar
@@ -113,7 +113,7 @@ def _bajar_articulo(norma: str, bloque: str, fecha_actualizacion: str, carpeta: 
 def normativa() -> None:
     nodos, _, _ = biblioteca_contable._biblioteca()
     citados: dict[str, set[str]] = {}
-    for nodo in nodos.values():
+    for nodo in [*nodos.values(), *biblioteca_contable._memoria().values()]:
         for id_fuente in nodo.get("fuentes") or []:
             if coincidencia := PATRON_FUENTE_BOE.match(str(id_fuente)):
                 citados.setdefault(coincidencia[1], set()).add(coincidencia[2])
