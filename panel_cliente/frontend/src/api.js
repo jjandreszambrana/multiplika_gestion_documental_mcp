@@ -146,6 +146,8 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/sincronizar`),
   guardarMiAccesoContable: (idProyecto, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`, datos),
+  usarAccesoGdComoMio: (idProyecto) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso/el-de-la-gd`),
   borrarMiAccesoContable: (idProyecto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`),
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idObligado, estado) =>

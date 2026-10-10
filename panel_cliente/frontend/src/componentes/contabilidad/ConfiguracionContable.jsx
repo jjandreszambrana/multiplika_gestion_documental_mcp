@@ -11,12 +11,15 @@ import { api } from "../../api"
 // pequeñas) y, ya conectada, el resumen con el estado de cada usuario.
 
 const ESTADO_ACCESO = {
-  activo: ["green", "Con clave"],
-  sin_permiso: ["yellow", "Sin permiso"],
-  clave_incorrecta: ["red", "Clave incorrecta"],
+  activo: ["green", "Con acceso"],
+  sin_permiso: ["yellow", "Su usuario no tiene permiso en esta empresa"],
+  clave_incorrecta: ["red", "Su contraseña ya no vale"],
 }
+const SIN_ACCESO = ["gray", "Le falta poner su acceso"]
+const TEXTO_SIN_CLAVE_PROPIA =
+  "Quien no tenga su propio acceso al SIF trabaja con este (para equipos de una o dos personas: en el SIF todo aparecerá hecho con este usuario)"
 
-function Resumen({ proyecto, estado, onCambiar, onEditar, onError }) {
+function Resumen({ proyecto, estado, onCambiar, onEditar, onError, onIrAMiAcceso }) {
   const [usuarios, setUsuarios] = useState([])
   const [trabajando, setTrabajando] = useState(false)
 
@@ -42,9 +45,9 @@ function Resumen({ proyecto, estado, onCambiar, onEditar, onError }) {
           </Text>
         </Stack>
         {estado.estado_clave_contable === "activo" ? (
-          <Badge color="green" variant="light">Conectada</Badge>
+          <Badge color="green" variant="light">La gestión documental está conectada al SIF</Badge>
         ) : (
-          <Badge color="red" variant="light">La clave no funciona</Badge>
+          <Badge color="red" variant="light">La contraseña de esta conexión ya no vale</Badge>
         )}
       </Group>
       {estado.error_clave_contable && <Alert color="red">{estado.error_clave_contable}</Alert>}
@@ -60,10 +63,20 @@ function Resumen({ proyecto, estado, onCambiar, onEditar, onError }) {
         </Button>
         <Button variant="default" onClick={onEditar}>Cambiar acceso…</Button>
       </Group>
-      {estado.modo_contable === "asesoria" && (
+      {!estado.mi_acceso && estado.id_usuario_actual && (
+        <Alert color="blue" p="sm">
+          <Group justify="space-between" wrap="wrap" gap="xs">
+            <Text fz="sm">¿El usuario del SIF {estado.usuario_clave_gd} es el tuyo? Úsalo también como tu acceso y no tendrás que escribirlo otra vez.</Text>
+            <Button size="xs" loading={trabajando} onClick={() => ejecutar(() => api.usarAccesoGdComoMio(proyecto.id))}>
+              Usar este acceso también como el mío
+            </Button>
+          </Group>
+        </Alert>
+      )}
+      {(
         <Checkbox
           id="conta-sin-clave-propia"
-          label="Quien no tenga clave propia trabaja con la de la asesoría (para asesorías de una o dos personas: en el SIF todo aparecerá como hecho por la asesoría)"
+          label={TEXTO_SIN_CLAVE_PROPIA}
           checked={!!estado.conta_sin_clave_propia}
           disabled={trabajando}
           onChange={(e) => {
@@ -83,15 +96,22 @@ function Resumen({ proyecto, estado, onCambiar, onEditar, onError }) {
         }}
       />
       <Title order={4} mt="sm">Usuarios</Title>
+      <Text fz="sm" c="dimmed">Cada persona entra al SIF con su propio usuario, para que quede constancia de quién hace cada cosa.</Text>
       <Table>
         <Table.Tbody>
           {usuarios.map((u) => {
             const acceso = accesos[u.id]
-            const [color, texto] = acceso ? ESTADO_ACCESO[acceso.estado] || ["gray", acceso.estado] : ["gray", "Sin clave"]
+            const [color, texto] = acceso ? ESTADO_ACCESO[acceso.estado] || ["gray", acceso.estado] : SIN_ACCESO
+            const soyYo = u.id === estado.id_usuario_actual
             return (
               <Table.Tr key={u.id}>
-                <Table.Td>{u.nombre}</Table.Td>
+                <Table.Td>{u.nombre}{soyYo && " (tú)"}</Table.Td>
                 <Table.Td><Badge color={color} variant="light">{texto}</Badge></Table.Td>
+                <Table.Td>
+                  {soyYo && (!acceso || acceso.estado !== "activo") && (
+                    <Button size="xs" variant="light" onClick={onIrAMiAcceso}>Poner mi acceso</Button>
+                  )}
+                </Table.Td>
               </Table.Tr>
             )
           })}
@@ -117,11 +137,12 @@ function Asistente({ proyecto, estado, onCambiar, onCancelar, onError }) {
   const [prueba, setPrueba] = useState(null)
   const [idObligado, setIdObligado] = useState(estado.id_obligado_sif_fijo ? String(estado.id_obligado_sif_fijo) : null)
   const [sinClavePropia, setSinClavePropia] = useState(!!estado.conta_sin_clave_propia)
+  const [esMio, setEsMio] = useState(true)
   const [trabajando, setTrabajando] = useState(false)
 
   const datos = () => ({
     modo, url: url || null, usuario, contrasena: contrasena || null,
-    id_obligado_fijo: idObligado ? Number(idObligado) : null, sin_clave_propia: sinClavePropia,
+    id_obligado_fijo: idObligado ? Number(idObligado) : null, sin_clave_propia: sinClavePropia, es_mio: esMio,
   })
   const probar = () => {
     setTrabajando(true)
@@ -130,7 +151,14 @@ function Asistente({ proyecto, estado, onCambiar, onCancelar, onError }) {
   }
   const guardar = () => {
     setTrabajando(true)
-    api.conectarContabilidadSif(proyecto.id, datos()).then(onCambiar).catch((err) => onError(err.message)).finally(() => setTrabajando(false))
+    api
+      .conectarContabilidadSif(proyecto.id, datos())
+      .then((r) => {
+        if (r.aviso) onError(r.aviso)
+        onCambiar(!!r.aviso)
+      })
+      .catch((err) => onError(err.message))
+      .finally(() => setTrabajando(false))
   }
 
   return (
@@ -174,19 +202,22 @@ function Asistente({ proyecto, estado, onCambiar, onCancelar, onError }) {
 
       {prueba && (
         <Stack gap="xs">
-          <Text fw={600}>3. {modo === "empresa" ? "¿Qué empresa es la vuestra?" : "Opciones"}</Text>
-          {modo === "empresa" ? (
+          <Text fw={600}>3. {modo === "empresa" ? "¿Qué empresa es la vuestra?" : "Últimos detalles"}</Text>
+          {modo === "empresa" && (
             <Select
               id="conta-empresa" placeholder="Elige la empresa" value={idObligado} onChange={setIdObligado}
               data={prueba.empresas.map((e) => ({ value: String(e.id_obligado), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
             />
-          ) : (
-            <Checkbox
-              id="conta-asistente-sin-clave"
-              label="Quien no tenga clave propia trabaja con la de la asesoría (en el SIF todo aparecerá como hecho por la asesoría)"
-              checked={sinClavePropia} onChange={(e) => setSinClavePropia(e.currentTarget.checked)}
-            />
           )}
+          <Checkbox
+            id="conta-asistente-es-mio"
+            label={`¿El usuario del SIF ${usuario} es el tuyo? Si es así, queda también como tu acceso y no tendrás que escribirlo otra vez`}
+            checked={esMio} onChange={(e) => setEsMio(e.currentTarget.checked)}
+          />
+          <Checkbox
+            id="conta-asistente-sin-clave" label={TEXTO_SIN_CLAVE_PROPIA}
+            checked={sinClavePropia} onChange={(e) => setSinClavePropia(e.currentTarget.checked)}
+          />
           <Group>
             <Button onClick={guardar} loading={trabajando} disabled={modo === "empresa" && prueba.empresas.length > 1 && !idObligado}>
               Guardar y conectar
@@ -199,14 +230,14 @@ function Asistente({ proyecto, estado, onCambiar, onCancelar, onError }) {
   )
 }
 
-export default function ConfiguracionContable({ proyecto, estado, onCambiar }) {
+export default function ConfiguracionContable({ proyecto, estado, onCambiar, onIrAMiAcceso }) {
   const [editando, setEditando] = useState(false)
   const [error, setError] = useState(null)
   const conectada = !!estado?.modo_contable
 
-  const cambiado = () => {
+  const cambiado = (conAviso) => {
     setEditando(false)
-    setError(null)
+    if (!conAviso) setError(null)
     onCambiar()
   }
 
@@ -214,7 +245,10 @@ export default function ConfiguracionContable({ proyecto, estado, onCambiar }) {
     <Stack gap="md">
       {error && <Alert color="red" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {conectada && !editando ? (
-        <Resumen proyecto={proyecto} estado={estado} onCambiar={cambiado} onEditar={() => setEditando(true)} onError={setError} />
+        <Resumen
+          proyecto={proyecto} estado={estado} onCambiar={() => cambiado()} onEditar={() => setEditando(true)}
+          onError={setError} onIrAMiAcceso={onIrAMiAcceso}
+        />
       ) : (
         <Asistente
           proyecto={proyecto} estado={estado || {}} onCambiar={cambiado} onError={setError}

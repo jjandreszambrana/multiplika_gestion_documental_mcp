@@ -38,9 +38,9 @@ export default function MiAccesoContable({ proyecto, miAcceso, onCambiar }) {
         veces, ves las empresas que el SIF te permite y en el SIF queda que lo has hecho tú. Se guardan cifrados y
         solo los usas tú.
       </Text>
-      {miAcceso?.estado === "activo" && !resultado && <Alert color="green">Tienes tu acceso puesto y funciona.</Alert>}
+      {miAcceso?.estado === "activo" && !resultado && <Alert color="green">Tu acceso al SIF está puesto y funciona.</Alert>}
       {miAcceso?.estado === "clave_incorrecta" && (
-        <Alert color="red">Tu clave del SIF ya no funciona (¿la has cambiado?). Vuelve a escribirla.</Alert>
+        <Alert color="red">Tu contraseña del SIF ya no vale (¿la has cambiado?). Vuelve a escribirla.</Alert>
       )}
       {resultado && <Alert color="green">Correcto: ves {resultado.empresas} de las {resultado.de} empresas de esta GD.</Alert>}
       {error && <Alert color="red" withCloseButton onClose={() => setError(null)}>{error}</Alert>}

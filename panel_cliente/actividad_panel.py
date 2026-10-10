@@ -89,6 +89,7 @@ ACCIONES_PANEL = {
     "desconectar_contabilidad_sif": ("desconectó la GD de la contabilidad del SIF", None, None),
     "sincronizar_contabilidad_sif": ("actualizó la lista de empresas del SIF", None, None),
     "guardar_mi_acceso_contable": ("guardó su acceso a la contabilidad del SIF", None, None),
+    "usar_acceso_gd_como_mio": ("usó el acceso de la GD como su acceso a la contabilidad del SIF", None, None),
     "borrar_mi_acceso_contable": ("quitó su acceso a la contabilidad del SIF", None, None),
     "resolver_propuesta_contable": ("resolvió una propuesta contable", None, "id_propuesta"),
     "crear_memoria": ("creó la memoria anual de una empresa en el SIF", None, None),

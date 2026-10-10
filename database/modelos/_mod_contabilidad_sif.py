@@ -155,11 +155,13 @@ async def probar_clave_gd(url: str, modo: str, usuario: str, contrasena: str) ->
 
 async def guardar_clave_gd(
     config: dict, modo: str, url: str, usuario: str, contrasena: str | None,
-    id_obligado_fijo: int | None, sin_clave_propia: bool,
+    id_obligado_fijo: int | None, sin_clave_propia: bool, id_usuario_mio: int | None = None,
 ) -> dict:
     """Guarda (o cambia) la clave de la GD y la configuración, y pone al día
     la lista de empresas. Sin contraseña nueva, se vuelve a probar la ya
-    guardada."""
+    guardada. Con `id_usuario_mio` (quien la configura dice que ese usuario
+    del SIF es el suyo), se guarda también como su acceso propio: así no se
+    le pide dos veces la misma clave."""
     credenciales = CredencialesCRUD(config)
     cred = await credenciales.obtener_por_nombre(NOMBRE_CREDENCIAL_CONTABILIDAD_GD, permitir_reservada=True)
     if contrasena is None:
@@ -184,11 +186,27 @@ async def guardar_clave_gd(
         await credenciales.crear(NOMBRE_CREDENCIAL_CONTABILIDAD_GD, descripcion, contrasena, usuario, permitir_reservada=True)
     await _guardar_configuracion(
         config, modo_contable=modo, url_sif_contable=_url(url), id_obligado_sif_fijo=id_obligado_fijo,
-        conta_sin_clave_propia=bool(sin_clave_propia) and modo == "asesoria",
+        conta_sin_clave_propia=bool(sin_clave_propia),
         estado_clave_contable="activo", error_clave_contable=None,
     )
     await sincronizar_empresas(config)
-    return await estado(config)
+    aviso = None
+    if id_usuario_mio:
+        try:
+            await guardar_acceso_usuario(config, id_usuario_mio, usuario, contrasena)
+        except (ValueError, LookupError) as e:
+            aviso = f"La conexión se ha guardado, pero no tu acceso propio: {e}"
+    return {**await estado(config, id_usuario_mio), "aviso": aviso}
+
+
+async def usar_clave_gd_como_mia(config: dict, id_usuario: int) -> dict:
+    """Para quien conectó la GD con su propio usuario del SIF y no lo dijo:
+    guarda esa misma clave como su acceso propio."""
+    datos = await leer_configuracion(config)
+    if not datos["id_credencial_gd"]:
+        raise ValueError("Esta GD todavía no está conectada con el SIF")
+    contrasena = await CredencialesCRUD(config).valor_descifrado(datos["id_credencial_gd"])
+    return await guardar_acceso_usuario(config, id_usuario, datos["usuario_clave_gd"], contrasena)
 
 
 async def guardar_opciones(config: dict, sin_clave_propia: bool | None = None, revision_automatica: bool | None = None) -> None:
@@ -446,6 +464,7 @@ async def estado(config: dict, id_usuario: int | None = None) -> dict:
         "url_sif_contable": datos["url_sif_contable"], "usuario_clave_gd": datos["usuario_clave_gd"],
         **dict(resumen),
         "mi_acceso": acceso and {k: acceso[k] for k in ("estado", "ultima_comprobacion", "ultimo_error")},
+        "id_usuario_actual": id_usuario,
     }
 
 

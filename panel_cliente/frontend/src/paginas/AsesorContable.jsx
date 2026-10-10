@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import {
-  Alert, Anchor, Badge, Grid, Group, Modal, NavLink, Paper, Select, Stack, Switch, Tabs, Text, TextInput, Title,
+  Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Switch, Tabs, Text, TextInput, Title,
 } from "@mantine/core"
 import { IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
@@ -220,6 +220,9 @@ function Contabilidad({ proyecto }) {
   const conectada = !!estado?.modo_contable
   const empresa = empresas?.find((e) => String(e.id_obligado_sif) === idEmpresa)
   const deEmpresa = ["contabilidad", "propuestas", "memoria"].includes(pestana)
+  // Sin acceso propio (y sin la opción de trabajar con el de la GD), las
+  // pestañas de una empresa no pueden enseñar nada: un solo mensaje claro.
+  const faltaMiAcceso = conectada && estado.mi_acceso?.estado !== "activo" && !estado.conta_sin_clave_propia
 
   return (
     <Tabs value={pestana} onChange={setPestana} keepMounted={false}>
@@ -232,7 +235,18 @@ function Contabilidad({ proyecto }) {
         {proyecto.es_admin && <Tabs.Tab value="configuracion">Conexión con el SIF</Tabs.Tab>}
       </Tabs.List>
 
-      {deEmpresa && (
+      {deEmpresa && faltaMiAcceso ? (
+        <Alert color="blue" mb="md">
+          <Group justify="space-between" wrap="wrap" gap="xs">
+            <Text fz="sm">
+              {estado.mi_acceso?.estado === "clave_incorrecta"
+                ? "Tu contraseña del SIF ya no vale (¿la has cambiado?). Vuelve a ponerla para ver la contabilidad."
+                : "Para ver la contabilidad necesitas poner tu propio acceso al SIF."}
+            </Text>
+            <Button size="xs" onClick={() => setPestana("mi-acceso")}>Poner mi acceso</Button>
+          </Group>
+        </Alert>
+      ) : deEmpresa && (
         errorEmpresas ? (
           <Alert color="yellow" mb="md">
             {errorEmpresas}{" "}
@@ -248,12 +262,12 @@ function Contabilidad({ proyecto }) {
 
       <Tabs.Panel value="biblioteca"><Biblioteca proyecto={proyecto} /></Tabs.Panel>
       <Tabs.Panel value="contabilidad">
-        {empresa && <ContabilidadSIF key={empresa.id_obligado_sif} proyecto={proyecto} empresa={{ ...empresa, id_obligado: empresa.id_obligado_sif }} />}
+        {empresa && !faltaMiAcceso && <ContabilidadSIF key={empresa.id_obligado_sif} proyecto={proyecto} empresa={{ ...empresa, id_obligado: empresa.id_obligado_sif }} />}
       </Tabs.Panel>
-      <Tabs.Panel value="propuestas">{empresa && <PropuestasContables proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
-      <Tabs.Panel value="memoria">{empresa && <MemoriaAnual key={empresa.id_obligado_sif} proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
+      <Tabs.Panel value="propuestas">{empresa && !faltaMiAcceso && <PropuestasContables proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
+      <Tabs.Panel value="memoria">{empresa && !faltaMiAcceso && <MemoriaAnual key={empresa.id_obligado_sif} proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
       <Tabs.Panel value="mi-acceso"><MiAccesoContable proyecto={proyecto} miAcceso={estado?.mi_acceso} onCambiar={cargar} /></Tabs.Panel>
-      <Tabs.Panel value="configuracion"><ConfiguracionContable proyecto={proyecto} estado={estado} onCambiar={cargar} /></Tabs.Panel>
+      <Tabs.Panel value="configuracion"><ConfiguracionContable proyecto={proyecto} estado={estado} onCambiar={cargar} onIrAMiAcceso={() => setPestana("mi-acceso")} /></Tabs.Panel>
     </Tabs>
   )
 }

@@ -344,6 +344,7 @@ class ClaveContableGD(BaseModel):
     contrasena: str | None = None
     id_obligado_fijo: int | None = None
     sin_clave_propia: bool = False
+    es_mio: bool = False  # «¿Este usuario del SIF es el tuyo?»: se guarda también como acceso propio
 
 
 class OpcionesContables(BaseModel):
@@ -424,12 +425,13 @@ async def probar_contabilidad_sif(
 
 @app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif")
 async def conectar_contabilidad_sif(
-    id_proyecto: int, datos: ClaveContableGD, proyecto: dict = Depends(admin_gestion_documental_actual)
+    id_proyecto: int, datos: ClaveContableGD, proyecto: dict = Depends(admin_gestion_documental_actual),
+    identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         return await conta_sif.guardar_clave_gd(
             get_db_config(proyecto["id"]), datos.modo, datos.url, datos.usuario, datos.contrasena,
-            datos.id_obligado_fijo, datos.sin_clave_propia,
+            datos.id_obligado_fijo, datos.sin_clave_propia, _id_usuario(identidad) if datos.es_mio else None,
         )
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
@@ -466,6 +468,20 @@ async def guardar_mi_acceso_contable(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El acceso al SIF es de cada usuario: entra con tu usuario")
     try:
         return await conta_sif.guardar_acceso_usuario(get_db_config(proyecto["id"]), identidad.id, datos.usuario, datos.contrasena)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/mi-acceso/el-de-la-gd")
+async def usar_acceso_gd_como_mio(
+    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """«Usar este acceso también como el mío»: solo el admin, que es quien
+    puso la clave de la GD y sabe si ese usuario del SIF es el suyo."""
+    if identidad.tipo != "usuario":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El acceso al SIF es de cada usuario: entra con tu usuario")
+    try:
+        return await conta_sif.usar_clave_gd_como_mia(get_db_config(proyecto["id"]), identidad.id)
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 
