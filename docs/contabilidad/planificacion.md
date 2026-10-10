@@ -1,6 +1,6 @@
 # Asesor contable y financiero dentro de la GD
 
-Plan, 2026-10-10. Nada implementado. Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
+Plan, 2026-10-10. **Fases 0 y 1 implementadas el mismo día** (código; el contenido del primer lote se está redactando y falta revisarlo; sin desplegar). Ver docs/gestion-documental.md → "Asesor contable". Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
 
 Documentos de esta carpeta:
 
@@ -116,7 +116,7 @@ Apartado "Asesor contable" en el menú, con:
 
 ### Contenido de la fase 1
 
-El primer lote, unos 50 temas marcados P1 en [estructura-temas.md](estructura-temas.md), es lo del día a día de una asesoría: operaciones habituales, IVA, cierre, análisis financiero y revisión de la contabilidad. Cómo se redacta y se revisa cada tema: ver [fuentes.md](fuentes.md).
+El primer lote, los 81 temas marcados P1 en [estructura-temas.md](estructura-temas.md), es lo del día a día de una asesoría: operaciones habituales, IVA, cierre, análisis financiero y revisión de la contabilidad. Cómo se redacta y se revisa cada tema: ver [fuentes.md](fuentes.md).
 
 ## Fase 2: conexión con el SIF (modos, claves y empresas)
 

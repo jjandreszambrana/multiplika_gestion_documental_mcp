@@ -83,6 +83,7 @@ ACCIONES_PANEL = {
     "crear_compartido_endpoint": ("compartió por enlace el documento", "documento", "id_documento"),
     "anular_compartido_endpoint": ("anuló el enlace compartido", "compartido", "id_compartido"),
     "actualizar_configuracion_avisos": ("cambió la configuración de avisos de caducidad", None, None),
+    "actualizar_modulo_contable": ("activó o desactivó el asesor contable", None, None),
     "actualizar_cuenta_email": ("cambió la cuenta de correo de envío", None, None),
     "crear_credencial": ("dio de alta la credencial", "credencial", None),
     "actualizar_credencial": ("modificó la credencial", "credencial", "id_credencial"),

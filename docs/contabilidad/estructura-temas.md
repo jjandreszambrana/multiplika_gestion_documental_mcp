@@ -11,7 +11,7 @@ Propuesta, 2026-10-10. Cómo se organiza el conocimiento del asesor contable y f
 | 3 | Capítulo | Grupo de temas muy relacionados | 3.2.1 Arrendamiento financiero |
 | 4 | Tema | La unidad que la IA lee. Responde a una pregunta concreta | Leasing: contabilización por el arrendatario |
 
-Solo los temas tienen contenido. Los niveles 1 a 3 solo tienen título y un resumen de una línea, que es lo que devuelve `indice_contable_gd`. Un capítulo puede tener un único tema. Si un bloque no necesita capítulos, se pone un capítulo con el mismo nombre que el bloque, para que todos los temas estén a la misma profundidad y la herramienta sea más simple.
+Solo los temas tienen contenido. Los niveles 1 a 3 solo tienen título y un resumen de una línea, que es lo que devuelve `indice_contable_gd`. **El capítulo es opcional** (cambio al implementar, 2026-10-10): si un bloque no necesita agruparse, sus temas cuelgan directamente de él, como en todo el primer lote. Así no hay un paso de navegación que no aporta nada.
 
 ### Cómo navega la IA
 

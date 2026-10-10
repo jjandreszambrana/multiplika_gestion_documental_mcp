@@ -25,6 +25,13 @@ class ConfiguracionCRUD(AsyncCrudBase):
         fila = await self.obtener(1)
         return fila["proveedor_embedding"] if fila else "mistral:mistral-embed"
 
+    async def obtener_modulo_contable(self) -> bool:
+        fila = await self.obtener(1)
+        return bool(fila and fila["modulo_contable"])
+
+    async def actualizar_modulo_contable(self, activo: bool) -> None:
+        await self.update(1, {"modulo_contable": activo})
+
     async def obtener_email_avisos(self) -> str | None:
         fila = await self.obtener(1)
         return fila["email_avisos"] if fila else None

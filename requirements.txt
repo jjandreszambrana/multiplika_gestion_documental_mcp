@@ -15,3 +15,4 @@ pymysql
 PyJWT
 openpyxl
 py7zr
+pyyaml

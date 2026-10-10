@@ -738,7 +738,7 @@ Decisiones tomadas al implementar (pendientes de corregir por el usuario):
 - **`reservada`**, no prevista en el plan: una regla suele llevar datos de la empresa (correos, criterios internos) y las globales se inyectan también cuando llama una key `gd_enlazada`, que es de otra empresa. Mismo concepto que `gd_documentos.reservado`. Por eso, además, `obtener_reglas_globales_gd` devuelve vacío si quien llama es una GD enlazada: lo que hereda sale solo por `obtener_reglas_compartidas_gd`, ya filtrado.
 - **`es_global`, no `global`**: `global` es palabra reservada de Python y no puede ser parámetro de una tool.
 - `listar_reglas_gd` enseña solo las propias (es la de gestionarlas); las heredadas se ven con `obtener_reglas_gd`, que es la de cumplirlas.
-- El chat del panel (`chat_ia.py`) recibe las reglas globales a mano, pegadas al `SYSTEM_PROMPT`: el `initialize` de MCP solo sirve para un cliente MCP normal (Claude Desktop), no para el chat, que arma su propio prompt.
+- El chat del panel (`chat_ia.py`) arma su propio prompt, así que pega a mano detrás del `SYSTEM_PROMPT` el `instructions` que le da su propia conexión MCP al abrirla (`Client.instructions`): el mismo bloque que recibe Claude Desktop, con el negocio, las preferencias de trabajo y las reglas globales (antes solo le llegaban las reglas).
 
 Quién decidió: usuario (plan completo); el asistente, los seis puntos de arriba.
 Reversible: sí — una tabla nueva sin FKs y un bloque de texto más en el contexto inicial; sin reglas, todo se comporta como antes.
@@ -1001,3 +1001,14 @@ Pantalla "Copias de seguridad" en el bloque de Administración del panel (solo a
 - **Una copia o restauración a la vez** por proyecto (bloqueo con `flock`).
 - **Actividad**: hacer, borrar, restaurar, cambiar ajustes y también **descargar** (a mano en el endpoint, porque el middleware solo apunta escrituras). El cuerpo de esas peticiones no se guarda (lleva contraseñas).
 - **Al desplegar**: `pip install py7zr`; `pg_dump`/`pg_restore` ya están en los servidores (los usa el backup del núcleo); cron `/etc/cron.d/mcp_gd_copias_bd` cada 5 minutos; la carpeta se crea sola.
+
+### Asesor contable (2026-10-10, fases 0 y 1)
+
+La IA como asesor contable, fiscal y financiero, con una biblioteca propia igual para todos los clientes y, en fases siguientes, conectada con la contabilidad de Multiplika SIF. Plan completo, estructura de temas y fuentes: `docs/contabilidad/`.
+
+- **Activación por GD**: `gd_configuracion.modulo_contable` (por defecto apagado). Sin activar, `ModuloContableMiddleware` (`_herr_contabilidad.py`) oculta las herramientas con la etiqueta `contabilidad` y rechaza llamarlas, y el panel no enseña el apartado salvo al admin, que lo activa desde la propia pantalla.
+- **Biblioteca** (`database/biblioteca_contable.py`, ficheros en `database/conocimiento_contable/`): `temas/` (área → bloque → [capítulo] → tema, cada nodo con id fijo en su cabecera YAML), `normativa/` (artículos literales del BOE con sus versiones) y `doctrina/` (consultas de la DGT resumidas). Se carga una vez por proceso; solo enseña las partes del árbol con algún tema. Los avisos de cada tema (no revisado, más de 12 meses, norma citada cambiada después de revisarlo) se calculan en código.
+- **Tools MCP** (solo lectura): `buscar_temas_contables_gd`, `indice_contable_gd`, `obtener_tema_contable_gd`, `obtener_norma_contable_gd`. Las reglas del asesor (citar, avisar, proponer en vez de afirmar) van en sus docstrings: solo ocupan contexto donde el apartado está activado.
+- **Panel**: `paginas/AsesorContable.jsx` (índice que se carga por niveles, buscador, tema y normas citadas en un modal) y endpoints `/v1/proyectos/{id}/contabilidad/...` (`modulo` para activar, solo admin; el resto exige el apartado activado).
+- **Mantenimiento** (en local): `python scripts/biblioteca_contable.py normativa` baja o actualiza del BOE los artículos citados (API de datos abiertos, sin clave) y `... comprobar` revisa ids, campos y enlaces. Lo que cambie se revisa, se hace commit y se despliega como siempre.
+- **Fase 0**: el chat del panel recibe el negocio, las preferencias de trabajo y las reglas globales del `instructions` de su conexión MCP (ver "Reglas de comportamiento").

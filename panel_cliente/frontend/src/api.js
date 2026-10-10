@@ -118,6 +118,17 @@ export const api = {
   obtenerAyuda: () => peticion(BASE_CLIENTE, "GET", "/ayuda"),
   obtenerSeccionAyuda: (idSeccion) => peticion(BASE_CLIENTE, "GET", `/ayuda/${idSeccion}`),
 
+  actualizarModuloContable: (idProyecto, activo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/modulo`, { activo }),
+  indiceContable: (idProyecto, idNodo) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/indice${idNodo ? `?id_nodo=${idNodo}` : ""}`),
+  buscarTemasContables: (idProyecto, texto) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/buscar?q=${encodeURIComponent(texto)}`),
+  obtenerTemaContable: (idProyecto, idTema) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/temas/${idTema}`),
+  obtenerFuenteContable: (idProyecto, idFuente) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/fuentes/${idFuente.split("/").map(encodeURIComponent).join("/")}`),
+
   // Gestión de usuarios/roles: vive en el backend del panel de
   // administración (mismo JWT, se puede llamar desde aquí igual que
   // login/listarProyectosDeLaEmpresa) — permitido para admin_tenant de

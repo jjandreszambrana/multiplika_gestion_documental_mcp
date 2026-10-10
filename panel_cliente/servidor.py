@@ -52,6 +52,7 @@ from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.api_keys import comprobar_dueno_api_key, generar_api_key, nombre_api_key_disponible
 from lib.roles_proyecto import ROLES_API_KEY, puede_editar_proyecto
 
+from ..database import biblioteca_contable
 from ..database.ayuda_gd import indice_ayuda, obtener_seccion
 from ..database.modelos._mod_actividad import ActividadCRUD, registrar_sin_fallar
 from ..database.modelos._mod_certificados import CertificadosCRUD, CertificadosLogCRUD
@@ -258,10 +259,71 @@ async def ver_proyecto(
     rol invitado); `id_tenant` hace falta para gestionar los usuarios de
     la empresa (viven por tenant, no por proyecto)."""
     puede_editar = identidad.tipo == "usuario" and await puede_editar_proyecto(identidad.id, proyecto["id"])
+    modulo_contable = await ConfiguracionCRUD(get_db_config(proyecto["id"])).obtener_modulo_contable()
     return {
         "id": proyecto["id"], "id_tenant": proyecto["id_tenant"], "nombre": proyecto["nombre"],
-        "es_admin": es_admin, "puede_editar": puede_editar,
+        "es_admin": es_admin, "puede_editar": puede_editar, "modulo_contable": modulo_contable,
     }
+
+
+# --- Asesor contable (ver docs/contabilidad/planificacion.md, fase 1). La
+# biblioteca es la misma para todos los clientes (database/biblioteca_contable.py);
+# solo se sirve en las GD con el apartado activado. Activarlo es cosa del admin.
+
+
+class ActualizarModuloContable(BaseModel):
+    activo: bool
+
+
+async def biblioteca_contable_disponible(proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> dict:
+    if not await ConfiguracionCRUD(get_db_config(proyecto["id"])).obtener_modulo_contable():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El asesor contable no está activado en esta gestión documental")
+    return proyecto
+
+
+@app.put("/v1/proyectos/{id_proyecto}/contabilidad/modulo")
+async def actualizar_modulo_contable(
+    id_proyecto: int, datos: ActualizarModuloContable, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    await ConfiguracionCRUD(get_db_config(proyecto["id"])).actualizar_modulo_contable(datos.activo)
+    return {"activo": datos.activo}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/indice")
+async def indice_biblioteca_contable(
+    id_proyecto: int, id_nodo: int | None = None, proyecto: dict = Depends(biblioteca_contable_disponible)
+) -> dict:
+    resultado = biblioteca_contable.indice(id_nodo)
+    if resultado is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe esa parte de la biblioteca")
+    return resultado
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/buscar")
+async def buscar_biblioteca_contable(
+    id_proyecto: int, q: str, proyecto: dict = Depends(biblioteca_contable_disponible)
+) -> dict:
+    return {"temas": biblioteca_contable.buscar(q)}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/temas/{id_tema}")
+async def obtener_tema_contable(
+    id_proyecto: int, id_tema: int, proyecto: dict = Depends(biblioteca_contable_disponible)
+) -> dict:
+    resultado = biblioteca_contable.tema(id_tema)
+    if resultado is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe ese tema")
+    return resultado
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/fuentes/{id_fuente:path}")
+async def obtener_fuente_contable(
+    id_proyecto: int, id_fuente: str, proyecto: dict = Depends(biblioteca_contable_disponible)
+) -> dict:
+    resultado = biblioteca_contable.fuente(id_fuente)
+    if resultado is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No se conserva esa fuente")
+    return resultado
 
 
 @app.get("/v1/proyectos/{id_proyecto}/documentos")

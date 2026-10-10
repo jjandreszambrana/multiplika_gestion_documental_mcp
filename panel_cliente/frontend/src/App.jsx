@@ -69,6 +69,7 @@ import Ventas from "./paginas/Ventas"
 import Webs from "./paginas/Webs"
 import WebDetalle from "./paginas/WebDetalle"
 import Publicaciones from "./paginas/Publicaciones"
+import AsesorContable from "./paginas/AsesorContable"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
 // del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
@@ -379,6 +380,11 @@ export default function App() {
             <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("documentos")} />
           ) : vista === "ayuda" ? (
             <Ayuda onVolver={() => navegar("documentos")} />
+          ) : vista === "asesor-contable" ? (
+            <AsesorContable
+              proyecto={proyecto}
+              onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
+            />
           ) : vista === "estilos" && estiloActivo ? (
             <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
           ) : vista === "estilos" ? (

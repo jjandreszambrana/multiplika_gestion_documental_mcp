@@ -518,6 +518,32 @@ oportunidad de 4.500 € para García", "pasa lo de García a negociación", \
 año?", "¿cuánto nos debe García?", "importa este Excel de facturas".""",
     },
     {
+        "id": "asesor-contable",
+        "titulo": "Asesor contable",
+        "resumen": "Biblioteca contable y fiscal que consulta la IA antes de responder; se activa por gestión documental.",
+        "markdown": """\
+Con el **asesor contable** activado, la IA trabaja como asesor contable, \
+fiscal y financiero: antes de responder una duda consulta una biblioteca \
+de temas propia (plan contable, IVA, Impuesto sobre Sociedades, cierre, \
+análisis financiero, trabajo de asesoría...), escrita a partir de la \
+normativa oficial (BOE, ICAC, Agencia Tributaria) y con ejemplos de \
+asientos. Cita el tema y la norma en que se apoya.
+
+- **Activarlo**: el administrador, en "Asesor contable", con el \
+  interruptor de arriba. Sin activar, ni sale en el menú ni la IA lo usa.
+- **Consultar la biblioteca**: en la misma pantalla, por el índice o con \
+  el buscador. En cada tema se pueden abrir las normas que cita, con su \
+  texto literal del BOE.
+- **Vuestras reglas**: si en vuestra empresa o asesoría hacéis algo de una \
+  forma concreta (p.ej. "los gastos de vehículo se imputan al 50 %"), \
+  ponedlo en "Reglas de la IA": la IA lo aplica, y si contradice la norma \
+  os lo advierte.
+
+Lo que propone la IA (un asiento, una corrección) es siempre una \
+propuesta para que la valide el contable. Un tema todavía no revisado se \
+avisa al usarlo.""",
+    },
+    {
         "id": "tipos-documento",
         "titulo": "Tipos de documento",
         "resumen": "El catálogo de tipos, y el formato o normativa que debe cumplir cada uno.",
