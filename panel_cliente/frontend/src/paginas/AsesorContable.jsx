@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react"
 import {
-  Alert, Anchor, Badge, Grid, Group, Loader, Modal, NavLink, Paper, Stack, Switch, Text, TextInput, Title,
+  Alert, Anchor, Badge, Grid, Group, Modal, NavLink, Paper, Stack, Switch, Text, TextInput, Title,
 } from "@mantine/core"
 import { IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 
 // Biblioteca del asesor contable (ver docs/contabilidad/planificacion.md,
-// fase 1): árbol que se va cargando al abrir cada nivel, buscador y tema.
+// fase 1): índice entero (llega de una vez, sin esperas al desplegar), buscador y tema.
 // El admin activa o desactiva aquí el apartado para esta GD.
 
-function Rama({ nodo, hijos, cargarHijos, idTema, onElegirTema }) {
-  const [abierto, setAbierto] = useState(false)
+function Rama({ nodo, idTema, onElegirTema }) {
   if (nodo.tipo === "tema") {
     return (
       <NavLink
@@ -25,20 +24,10 @@ function Rama({ nodo, hijos, cargarHijos, idTema, onElegirTema }) {
     <NavLink
       label={`${nodo.posicion} ${nodo.titulo}`}
       description={nodo.resumen}
-      opened={abierto}
-      // Mientras llegan los hijos, el reloj en lugar de la flecha.
-      rightSection={abierto && !hijos[nodo.id] ? <Loader size={14} /> : undefined}
-      onChange={(valor) => {
-        setAbierto(valor)
-        if (valor && !hijos[nodo.id]) cargarHijos(nodo.id)
-      }}
       childrenOffset={14}
     >
-      {(hijos[nodo.id] || []).map((h) => (
-        <Rama
-          key={h.id} nodo={h} hijos={hijos} cargarHijos={cargarHijos}
-          idTema={idTema} onElegirTema={onElegirTema}
-        />
+      {nodo.hijos.map((h) => (
+        <Rama key={h.id} nodo={h} idTema={idTema} onElegirTema={onElegirTema} />
       ))}
     </NavLink>
   )
@@ -66,7 +55,6 @@ function Activacion({ proyecto, onCambiarModulo, onError }) {
 }
 
 export default function AsesorContable({ proyecto, onCambiarModulo }) {
-  const [hijos, setHijos] = useState({})
   const [raiz, setRaiz] = useState(null)
   const [texto, setTexto] = useState("")
   const [resultados, setResultados] = useState(null)
@@ -78,7 +66,7 @@ export default function AsesorContable({ proyecto, onCambiarModulo }) {
 
   useEffect(() => {
     if (!activo) return
-    api.indiceContable(proyecto.id).then((r) => setRaiz(r.hijos)).catch((err) => setError(err.message))
+    api.arbolContable(proyecto.id).then((r) => setRaiz(r.nodos)).catch((err) => setError(err.message))
   }, [proyecto.id, activo])
 
   useEffect(() => {
@@ -86,12 +74,6 @@ export default function AsesorContable({ proyecto, onCambiarModulo }) {
     setTema(null)
     api.obtenerTemaContable(proyecto.id, idTema).then(setTema).catch((err) => setError(err.message))
   }, [proyecto.id, idTema])
-
-  const cargarHijos = (idNodo) =>
-    api
-      .indiceContable(proyecto.id, idNodo)
-      .then((r) => setHijos((previos) => ({ ...previos, [idNodo]: r.hijos })))
-      .catch((err) => setError(err.message))
 
   const buscar = (e) => {
     e.preventDefault()
@@ -150,10 +132,7 @@ export default function AsesorContable({ proyecto, onCambiarModulo }) {
                 <Text fz="sm" c="dimmed">La biblioteca todavía no tiene temas.</Text>
               ) : (
                 raiz.map((n) => (
-                  <Rama
-                    key={n.id} nodo={n} hijos={hijos} cargarHijos={cargarHijos}
-                    idTema={idTema} onElegirTema={setIdTema}
-                  />
+                  <Rama key={n.id} nodo={n} idTema={idTema} onElegirTema={setIdTema} />
                 ))
               )}
             </Paper>

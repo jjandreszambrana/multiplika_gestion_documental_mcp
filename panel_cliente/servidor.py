@@ -289,14 +289,9 @@ async def actualizar_modulo_contable(
     return {"activo": datos.activo}
 
 
-@app.get("/v1/proyectos/{id_proyecto}/contabilidad/indice")
-async def indice_biblioteca_contable(
-    id_proyecto: int, id_nodo: int | None = None, proyecto: dict = Depends(biblioteca_contable_disponible)
-) -> dict:
-    resultado = biblioteca_contable.indice(id_nodo)
-    if resultado is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe esa parte de la biblioteca")
-    return resultado
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/arbol")
+async def arbol_biblioteca_contable(id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible)) -> dict:
+    return {"nodos": biblioteca_contable.arbol()}
 
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/buscar")

@@ -186,6 +186,21 @@ def indice(id_nodo: int | None = None) -> dict | None:
     }
 
 
+def arbol() -> list[dict]:
+    """El índice entero de una vez (sin el contenido de los temas), para el
+    panel: son pocos cientos de nodos y así se despliega sin esperas. La IA
+    sigue bajando nivel a nivel con indice()."""
+    nodos, raiz, _ = _biblioteca()
+
+    def con_hijos(datos: dict) -> dict:
+        nodo = nodos[datos["id"]]
+        if nodo["tipo"] != "tema":
+            datos["hijos"] = [con_hijos(h) for h in _hijos_con_temas(nodo["hijos"], nodos)]
+        return datos
+
+    return [con_hijos(h) for h in _hijos_con_temas(raiz, nodos)]
+
+
 def tema(id_tema: int) -> dict | None:
     nodos, _, fuentes = _biblioteca()
     nodo = nodos.get(id_tema)

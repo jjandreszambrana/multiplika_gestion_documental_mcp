@@ -120,8 +120,7 @@ export const api = {
 
   actualizarModuloContable: (idProyecto, activo) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/modulo`, { activo }),
-  indiceContable: (idProyecto, idNodo) =>
-    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/indice${idNodo ? `?id_nodo=${idNodo}` : ""}`),
+  arbolContable: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/arbol`),
   buscarTemasContables: (idProyecto, texto) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/buscar?q=${encodeURIComponent(texto)}`),
   obtenerTemaContable: (idProyecto, idTema) =>
