@@ -104,9 +104,9 @@ export default function PropuestasContables({ proyecto, empresa }) {
 
   const cargar = () => {
     setPropuestas(null)
-    api.listarPropuestasContables(proyecto.id, empresa.id_obligado_sif, estado).then((r) => setPropuestas(r.propuestas)).catch((err) => setError(err.message))
+    api.listarPropuestasContables(proyecto.id, empresa.id_empresa, estado).then((r) => setPropuestas(r.propuestas)).catch((err) => setError(err.message))
   }
-  useEffect(cargar, [proyecto.id, empresa.id_obligado_sif, estado])
+  useEffect(cargar, [proyecto.id, empresa.id_empresa, estado])
 
   return (
     <Stack gap="md">

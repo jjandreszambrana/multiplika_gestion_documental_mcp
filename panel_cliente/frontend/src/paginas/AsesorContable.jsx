@@ -5,9 +5,8 @@ import {
 import { IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
-import ConfiguracionContable from "../componentes/contabilidad/ConfiguracionContable"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
-import MiAccesoContable from "../componentes/contabilidad/MiAccesoContable"
+import MisAccesosSif from "../componentes/contabilidad/MisAccesosSif"
 import PropuestasContables from "../componentes/contabilidad/PropuestasContables"
 import ContabilidadSIF from "./ContabilidadSIF"
 import { ALTO_INDICE } from "../theme"
@@ -192,23 +191,24 @@ function Biblioteca({ proyecto }) {
 }
 
 
-// Las pestañas que dependen del SIF solo salen con la GD conectada; las de
-// una empresa, con la empresa elegida (en modo empresa solo hay una).
+// Cada usuario vincula sus propios accesos al SIF ([5.9] del canal
+// compartido): las pestañas de una empresa salen cuando tiene alguno, y la
+// empresa elegida dice con qué acceso se habla.
 function Contabilidad({ proyecto }) {
-  const [estado, setEstado] = useState(null)
+  const [accesos, setAccesos] = useState(null)
   const [empresas, setEmpresas] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
   const [errorEmpresas, setErrorEmpresas] = useState(null)
   const [pestana, setPestana] = useState("biblioteca")
 
   const cargar = () => {
-    api.estadoContabilidadSif(proyecto.id).then(setEstado).catch(() => setEstado({}))
+    api.accesosSif(proyecto.id).then((r) => setAccesos(r.accesos)).catch(() => setAccesos([]))
     setErrorEmpresas(null)
     api
       .empresasContables(proyecto.id)
       .then((r) => {
         setEmpresas(r.empresas)
-        setIdEmpresa((actual) => actual ?? (r.empresas[0] ? String(r.empresas[0].id_obligado_sif) : null))
+        setIdEmpresa((actual) => (r.empresas.some((e) => String(e.id_empresa) === actual) ? actual : r.empresas[0] ? String(r.empresas[0].id_empresa) : null))
       })
       .catch((err) => {
         setEmpresas([])
@@ -217,57 +217,44 @@ function Contabilidad({ proyecto }) {
   }
   useEffect(cargar, [proyecto.id])
 
-  const conectada = !!estado?.modo_contable
-  const empresa = empresas?.find((e) => String(e.id_obligado_sif) === idEmpresa)
+  const conAcceso = accesos?.length > 0
+  const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
   const deEmpresa = ["contabilidad", "propuestas", "memoria"].includes(pestana)
-  // Sin acceso propio (y sin la opción de trabajar con el de la GD), las
-  // pestañas de una empresa no pueden enseñar nada: un solo mensaje claro.
-  const faltaMiAcceso = conectada && estado.mi_acceso?.estado !== "activo" && !estado.conta_sin_clave_propia
+  const sinAccesoQueFuncione = conAcceso && !empresas?.length
 
   return (
     <Tabs value={pestana} onChange={setPestana} keepMounted={false}>
       <Tabs.List mb="md">
         <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
-        {conectada && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
-        {conectada && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
-        {conectada && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
-        {conectada && <Tabs.Tab value="mi-acceso">Mi acceso al SIF</Tabs.Tab>}
-        {proyecto.es_admin && <Tabs.Tab value="configuracion">Conexión con el SIF</Tabs.Tab>}
+        {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
+        {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
+        {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
+        <Tabs.Tab value="accesos">Mis accesos al SIF</Tabs.Tab>
       </Tabs.List>
 
-      {deEmpresa && faltaMiAcceso ? (
-        <Alert color="blue" mb="md">
-          <Group justify="space-between" wrap="wrap" gap="xs">
-            <Text fz="sm">
-              {estado.mi_acceso?.estado === "clave_incorrecta"
-                ? "Tu contraseña del SIF ya no vale (¿la has cambiado?). Vuelve a ponerla para ver la contabilidad."
-                : "Para ver la contabilidad necesitas poner tu propio acceso al SIF."}
-            </Text>
-            <Button size="xs" onClick={() => setPestana("mi-acceso")}>Poner mi acceso</Button>
-          </Group>
-        </Alert>
-      ) : deEmpresa && (
-        errorEmpresas ? (
-          <Alert color="yellow" mb="md">
-            {errorEmpresas}{" "}
-            <Anchor component="button" type="button" onClick={() => setPestana("mi-acceso")}>Poner mi acceso</Anchor>
+      {deEmpresa && (
+        sinAccesoQueFuncione ? (
+          <Alert color="blue" mb="md">
+            <Group justify="space-between" wrap="wrap" gap="xs">
+              <Text fz="sm">{errorEmpresas || "Ninguno de tus accesos al SIF funciona ahora mismo."}</Text>
+              <Button size="xs" onClick={() => setPestana("accesos")}>Revisar mis accesos</Button>
+            </Group>
           </Alert>
         ) : empresas?.length > 1 ? (
           <Select
-            id="conta-empresa-activa" aria-label="Empresa" mb="md" maw={420} searchable value={idEmpresa} onChange={setIdEmpresa}
-            data={empresas.map((e) => ({ value: String(e.id_obligado_sif), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
+            id="conta-empresa-activa" aria-label="Empresa" mb="md" maw={480} searchable value={idEmpresa} onChange={setIdEmpresa}
+            data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
           />
         ) : null
       )}
 
       <Tabs.Panel value="biblioteca"><Biblioteca proyecto={proyecto} /></Tabs.Panel>
       <Tabs.Panel value="contabilidad">
-        {empresa && !faltaMiAcceso && <ContabilidadSIF key={empresa.id_obligado_sif} proyecto={proyecto} empresa={{ ...empresa, id_obligado: empresa.id_obligado_sif }} />}
+        {empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
       </Tabs.Panel>
-      <Tabs.Panel value="propuestas">{empresa && !faltaMiAcceso && <PropuestasContables proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
-      <Tabs.Panel value="memoria">{empresa && !faltaMiAcceso && <MemoriaAnual key={empresa.id_obligado_sif} proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
-      <Tabs.Panel value="mi-acceso"><MiAccesoContable proyecto={proyecto} miAcceso={estado?.mi_acceso} onCambiar={cargar} /></Tabs.Panel>
-      <Tabs.Panel value="configuracion"><ConfiguracionContable proyecto={proyecto} estado={estado} onCambiar={cargar} onIrAMiAcceso={() => setPestana("mi-acceso")} /></Tabs.Panel>
+      <Tabs.Panel value="propuestas">{empresa && <PropuestasContables proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
+      <Tabs.Panel value="memoria">{empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
+      <Tabs.Panel value="accesos"><MisAccesosSif proyecto={proyecto} accesos={accesos} onCambiar={cargar} /></Tabs.Panel>
     </Tabs>
   )
 }
@@ -286,8 +273,8 @@ export default function AsesorContable({ proyecto, onCambiarModulo }) {
       ) : (
         <Text c="dimmed">
           Con el apartado activado, la IA de esta gestión documental trabaja como asesor contable y fiscal: consulta una
-          biblioteca propia (plan contable, IVA, sociedades, cierre, análisis financiero...) antes de responder y, si la
-          conectáis con la contabilidad del SIF, también la contabilidad real de la empresa.
+          biblioteca propia (plan contable, IVA, sociedades, cierre, análisis financiero...) antes de responder y, si cada
+          uno pone su acceso al SIF, también la contabilidad real de sus empresas.
         </Text>
       )}
     </>

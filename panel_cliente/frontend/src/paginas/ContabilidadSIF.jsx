@@ -8,8 +8,9 @@ const Embebido = lazy(() => import('@contabilidad/Embebido.tsx'))
 
 /**
  * Contabilidad del SIF dentro del panel.
- * `empresa` = { id_obligado, nombre, nif, nivel } (el nivel es opcional: si
- * falta, lo pregunta la propia contabilidad).
+ * `empresa` = { id_empresa, id_obligado_sif, nombre, nif, nivel }: `id_empresa`
+ * es el de la GD (va en la dirección del proxy, que elige el acceso al SIF);
+ * `id_obligado_sif`, el de la empresa en su SIF.
  */
 export default function ContabilidadSIF({ proyecto, empresa }) {
   return (
@@ -17,7 +18,8 @@ export default function ContabilidadSIF({ proyecto, empresa }) {
       <Embebido
         sesion={sesionPanel}
         idProyecto={proyecto.id}
-        idObligado={empresa.id_obligado}
+        idEmpresa={empresa.id_empresa}
+        idObligado={empresa.id_obligado_sif}
         nombreEmpresa={empresa.nombre}
         nif={empresa.nif}
         nivel={empresa.nivel || undefined}

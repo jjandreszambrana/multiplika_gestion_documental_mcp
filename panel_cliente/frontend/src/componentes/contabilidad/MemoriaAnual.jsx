@@ -29,13 +29,13 @@ export default function MemoriaAnual({ proyecto, empresa }) {
   const [texto, setTexto] = useState("")
   const [error, setError] = useState(null)
   const [trabajando, setTrabajando] = useState(false)
-  const idObligado = empresa.id_obligado_sif
+  const idEmpresa = empresa.id_empresa
 
   const cargar = () => {
     setMemoria(undefined)
-    api.obtenerMemoria(proyecto.id, idObligado, ejercicio).then((r) => setMemoria(r.memoria)).catch((err) => { setMemoria(null); setError(err.message) })
+    api.obtenerMemoria(proyecto.id, idEmpresa, ejercicio).then((r) => setMemoria(r.memoria)).catch((err) => { setMemoria(null); setError(err.message) })
   }
-  useEffect(cargar, [proyecto.id, idObligado, ejercicio])
+  useEffect(cargar, [proyecto.id, idEmpresa, ejercicio])
 
   const modeloActual = memoria?.modelo || modelo
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function MemoriaAnual({ proyecto, empresa }) {
       ) : memoria === null ? (
         <Group align="flex-end" wrap="wrap">
           <Select id="memoria-modelo" label="Modelo de memoria" data={MODELOS} value={modelo} onChange={(v) => v && setModelo(v)} w={260} />
-          <Button loading={trabajando} onClick={() => ejecutar(() => api.crearMemoria(proyecto.id, { id_obligado: idObligado, ejercicio, modelo }))}>
+          <Button loading={trabajando} onClick={() => ejecutar(() => api.crearMemoria(proyecto.id, { id_empresa: idEmpresa, ejercicio, modelo }))}>
             Crear la memoria de {ejercicio}
           </Button>
           <Text fz="sm" c="dimmed">Si existe la del año anterior, se parte de sus textos.</Text>
@@ -110,13 +110,13 @@ export default function MemoriaAnual({ proyecto, empresa }) {
                     <>
                     <Group>
                       <Button loading={trabajando} onClick={() => ejecutar(() => api.guardarApartadoMemoria(proyecto.id, {
-                        id_obligado: idObligado, id_memoria: memoria.id, codigo_apartado: String(actual.id), titulo: `${actual.numero}. ${actual.titulo}`, texto,
+                        id_empresa: idEmpresa, id_memoria: memoria.id, codigo_apartado: String(actual.id), titulo: `${actual.numero}. ${actual.titulo}`, texto,
                       }))}>
                         Guardar en el SIF
                       </Button>
                       {guardados[String(actual.id)] && guardados[String(actual.id)].estado !== REVISADO && (
                         <Button variant="light" color="green" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "marcar_revisado", {
-                          id_obligado: idObligado, id_memoria: memoria.id, codigo_apartado: String(actual.id),
+                          id_empresa: idEmpresa, id_memoria: memoria.id, codigo_apartado: String(actual.id),
                         }))}>
                           Dar por revisado
                         </Button>
@@ -137,11 +137,11 @@ export default function MemoriaAnual({ proyecto, empresa }) {
       {memoria && (
         <Group>
           {!formulada ? (
-            <Button color="green" variant="light" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "formular", { id_obligado: idObligado, id_memoria: memoria.id }))}>
+            <Button color="green" variant="light" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "formular", { id_empresa: idEmpresa, id_memoria: memoria.id }))}>
               Formular (queda bloqueada)
             </Button>
           ) : (
-            <Button variant="light" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "nueva_version", { id_obligado: idObligado, id_memoria: memoria.id }))}>
+            <Button variant="light" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "nueva_version", { id_empresa: idEmpresa, id_memoria: memoria.id }))}>
               Nueva versión
             </Button>
           )}

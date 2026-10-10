@@ -2,22 +2,20 @@
 
 - Fase 1: la biblioteca contable (database/biblioteca_contable.py), igual
   para todos los clientes.
-- Fases 3, 3 bis y 4: la contabilidad del SIF, como el usuario que llama y
-  solo en las empresas que puede ver desde esta GD
+- Fases 3, 3 bis y 4: la contabilidad del SIF, con los accesos propios del
+  usuario que llama y solo en las empresas que esos accesos ven
   (database/modelos/_mod_contabilidad_sif.py), los ratios calculados en
   código y las propuestas para el contable. Nada de esto escribe en el SIF.
 
 Solo existen para la IA en las GD con el apartado activado
-(`gd_configuracion.modulo_contable`), y las del SIF además solo con la GD
-conectada (`modo_contable`): `ModuloContableMiddleware` oculta y rechaza
+(`gd_configuracion.modulo_contable`), y las del SIF además solo si quien
+llama tiene algún acceso suyo al SIF: `ModuloContableMiddleware` oculta y rechaza
 las demás, para que sus definiciones no ocupen contexto donde no sirven."""
 
 from typing import Literal
 
 from apps.mcp_server.core import mcp_app
-from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from apps.mcp_server.core.dependencias.auth import clave_actual_es_solo_lectura
-from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware.middleware import Middleware
 
@@ -47,11 +45,10 @@ INFORMES_FISCALES = ("iva", "retenciones", "cuadre_iva", "libros_iva")
 
 
 async def _estado_modulo() -> tuple[bool, bool]:
-    """(apartado activado, GD conectada con el SIF)."""
-    proyecto = await resolver_proyecto_actual()
-    config = get_db_config(proyecto["id"])
+    """(apartado activado, quien llama tiene algún acceso suyo al SIF)."""
+    config, _, id_usuario, _ = await _contexto()
     activo = await ConfiguracionCRUD(config).obtener_modulo_contable()
-    return activo, activo and bool((await sif.leer_configuracion(config)).get("modo_contable"))
+    return activo, activo and bool(await sif.accesos_de(config, id_usuario))
 
 
 def _oculta(tool, activo: bool, conectado: bool) -> bool:
@@ -79,10 +76,10 @@ class ModuloContableMiddleware(Middleware):
         return await call_next(context)
 
 
-async def _sif(id_obligado: int, ruta: str, cuerpo: dict) -> dict:
+async def _sif(id_empresa: int, ruta: str, cuerpo: dict) -> dict:
     config, _, id_usuario, _ = await _contexto()
     try:
-        return await sif.pedir(config, id_usuario, id_obligado, ruta, {k: v for k, v in cuerpo.items() if v is not None})
+        return await sif.pedir(config, id_usuario, id_empresa, ruta, {k: v for k, v in cuerpo.items() if v is not None})
     except (ValueError, LookupError) as e:
         raise ToolError(str(e)) from e
 
@@ -145,10 +142,10 @@ async def obtener_norma_contable_gd(id_fuente: str, fecha: str | None = None) ->
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def empresas_contables_gd() -> list[dict]:
-    """Empresas cuya contabilidad del SIF puede ver quien te habla desde
-    esta GD (id_obligado_sif, nombre, NIF y su nivel: consulta, apuntes,
-    cierre o admin). Úsala para saber qué `id_obligado` pasar al resto de
-    herramientas de contabilidad; si solo hay una, es esa."""
+    """Empresas cuya contabilidad del SIF puede ver quien te habla, con sus
+    propios accesos al SIF (id_empresa, nombre, NIF, de qué SIF y su nivel:
+    consulta, apuntes, cierre o admin). Úsala para saber qué `id_empresa`
+    pasar al resto de herramientas de contabilidad; si solo hay una, es esa."""
     config, _, id_usuario, _ = await _contexto()
     try:
         return await sif.empresas_de(config, id_usuario)
@@ -158,7 +155,7 @@ async def empresas_contables_gd() -> list[dict]:
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def informe_contable_gd(
-    id_obligado: int, informe: Informe, ejercicio: int,
+    id_empresa: int, informe: Informe, ejercicio: int,
     desde: str | None = None, hasta: str | None = None, cuenta: str | None = None,
     nivel: int | None = None, periodo: str | None = None, libro: Literal["expedidas", "recibidas"] | None = None,
     offset: int = 0, detalle: Literal["epigrafes", "cuentas", "subcuentas"] | None = None,
@@ -193,26 +190,26 @@ async def informe_contable_gd(
             if informe == "mayor" and not cuenta:
                 raise ToolError("El mayor necesita `cuenta`")
             cuerpo |= {"cuenta": cuenta if informe == "mayor" else None, "offset": offset, "limit": LIMITE_APUNTES_IA}
-    return await _sif(id_obligado, RUTA_INFORME[informe], cuerpo)
+    return await _sif(id_empresa, RUTA_INFORME[informe], cuerpo)
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
-async def buscar_cuenta_contable_gd(id_obligado: int, texto: str, ejercicio: int | None = None) -> dict:
+async def buscar_cuenta_contable_gd(id_empresa: int, texto: str, ejercicio: int | None = None) -> dict:
     """Busca en el plan de cuentas de la empresa por código (que empiece por
     lo escrito, p. ej. "430") o por título ("teléfono"). Úsala antes de
     proponer un asiento para usar las cuentas y subcuentas que ya tiene la
     empresa."""
-    return await _sif(id_obligado, "/contabilidad/plan/listar", {"ejercicio": ejercicio, "texto": texto, "limit": LIMITE_APUNTES_IA})
+    return await _sif(id_empresa, "/contabilidad/plan/listar", {"ejercicio": ejercicio, "texto": texto, "limit": LIMITE_APUNTES_IA})
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
-async def analisis_financiero_gd(id_obligado: int, ejercicio: int, hasta: str | None = None) -> dict:
+async def analisis_financiero_gd(id_empresa: int, ejercicio: int, hasta: str | None = None) -> dict:
     """Ratios de liquidez, solvencia, rentabilidad y plazos de cobro y pago
     de una empresa, calculados por el programa con su balance y su cuenta de
     pérdidas y ganancias del SIF (cada ratio trae su fórmula). No los
     recalcules: interprétalos, con el tema de ratios de la biblioteca."""
-    balance = await _sif(id_obligado, RUTA_INFORME["balance"], {"ejercicio": ejercicio, "hasta": hasta})
-    pyg = await _sif(id_obligado, RUTA_INFORME["perdidas_y_ganancias"], {"ejercicio": ejercicio, "hasta": hasta})
+    balance = await _sif(id_empresa, RUTA_INFORME["balance"], {"ejercicio": ejercicio, "hasta": hasta})
+    pyg = await _sif(id_empresa, RUTA_INFORME["perdidas_y_ganancias"], {"ejercicio": ejercicio, "hasta": hasta})
     return analisis_financiero(balance, pyg)
 
 
@@ -223,7 +220,7 @@ def _sin_invitado() -> None:
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def proponer_contable_gd(
-    id_obligado: int, tipo: Literal["asiento", "reclasificacion", "aviso"], titulo: str, justificacion: str,
+    id_empresa: int, tipo: Literal["asiento", "reclasificacion", "aviso"], titulo: str, justificacion: str,
     asiento: dict | None = None, id_tema: int | None = None, id_documento: int | None = None,
 ) -> dict:
     """Deja una propuesta para que la revise el contable en "Asesor
@@ -240,25 +237,25 @@ async def proponer_contable_gd(
     _sin_invitado()
     config, _, id_usuario, nombre = await _contexto()
     try:
-        if id_obligado not in {e["id_obligado_sif"] for e in await sif.empresas_de(config, id_usuario)}:
+        if id_empresa not in {e["id_empresa"] for e in await sif.empresas_de(config, id_usuario)}:
             raise LookupError("No tienes acceso a esa empresa desde esta GD")
-        return await crear_propuesta(config, id_obligado, tipo, titulo, justificacion, asiento, id_tema, id_documento, creado_por=nombre)
+        return await crear_propuesta(config, id_empresa, tipo, titulo, justificacion, asiento, id_tema, id_documento, creado_por=nombre)
     except (ValueError, LookupError) as e:
         raise ToolError(str(e)) from e
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def listar_propuestas_contables_gd(
-    id_obligado: int | None = None, estado: Literal["pendiente", "aceptada", "descartada"] | None = "pendiente",
+    id_empresa: int | None = None, estado: Literal["pendiente", "aceptada", "descartada"] | None = "pendiente",
 ) -> list[dict]:
     """Propuestas para el contable (las de la IA y los avisos de la revisión
     automática), de una empresa o de todas las que puede ver el usuario."""
     config, _, id_usuario, _ = await _contexto()
     try:
-        ids = [e["id_obligado_sif"] for e in await sif.empresas_de(config, id_usuario)]
+        ids = [e["id_empresa"] for e in await sif.empresas_de(config, id_usuario)]
     except (ValueError, LookupError) as e:
         raise ToolError(str(e)) from e
-    return await listar_propuestas(config, ids, estado, id_obligado)
+    return await listar_propuestas(config, ids, estado, id_empresa)
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD})
@@ -283,31 +280,31 @@ async def obtener_apartado_memoria_gd(id_apartado: int) -> dict:
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
-async def memoria_contable_gd(id_obligado: int, ejercicio: int) -> dict:
+async def memoria_contable_gd(id_empresa: int, ejercicio: int) -> dict:
     """La memoria de una empresa y ejercicio guardada en el SIF: modelo,
     versión, estado y cada apartado con su texto, estado y datos
     pendientes. Si no existe todavía, dilo: se crea desde el panel."""
-    listado = await _sif(id_obligado, "/contabilidad/memoria/listar", {"ejercicio": ejercicio})
+    listado = await _sif(id_empresa, "/contabilidad/memoria/listar", {"ejercicio": ejercicio})
     memorias = listado.get("memorias") or listado.get("registros") or []
     if not memorias:
         return {"memoria": None, "aviso": "Esta empresa no tiene memoria de ese ejercicio en el SIF."}
     ultima = max(memorias, key=lambda m: m.get("version") or 0)
-    return await _sif(id_obligado, "/contabilidad/memoria/obtener", {"id_memoria": ultima["id"]})
+    return await _sif(id_empresa, "/contabilidad/memoria/obtener", {"id_memoria": ultima["id"]})
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
-async def datos_memoria_gd(id_obligado: int, ejercicio: int, cuadro: str | None = None) -> dict:
+async def datos_memoria_gd(id_empresa: int, ejercicio: int, cuadro: str | None = None) -> dict:
     """Un cuadro numérico de la memoria calculado por el SIF desde la
     contabilidad (p. ej. inmovilizado_material, deudas_plazo,
     desglose_balance), con el año anterior y las cuentas de origen de cada
     fila. Sin `cuadro`, la lista de cuadros disponibles. Las cifras de la
     memoria salen de aquí, nunca calculadas por ti."""
-    return await _sif(id_obligado, "/contabilidad/memoria/datos_contables", {"ejercicio": ejercicio, "cuadro": cuadro})
+    return await _sif(id_empresa, "/contabilidad/memoria/datos_contables", {"ejercicio": ejercicio, "cuadro": cuadro})
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def proponer_apartado_memoria_gd(
-    id_obligado: int, ejercicio: int, id_apartado: int, texto: str,
+    id_empresa: int, ejercicio: int, id_apartado: int, texto: str,
     datos: list[dict] | None = None, pendientes: list[dict] | None = None,
 ) -> dict:
     """Deja el borrador de un apartado de la memoria como propuesta para el
@@ -332,10 +329,10 @@ async def proponer_apartado_memoria_gd(
         "datos": datos or [], "pendientes": pendientes or [],
     }
     try:
-        if id_obligado not in {e["id_obligado_sif"] for e in await sif.empresas_de(config, id_usuario)}:
+        if id_empresa not in {e["id_empresa"] for e in await sif.empresas_de(config, id_usuario)}:
             raise LookupError("No tienes acceso a esa empresa desde esta GD")
         return await crear_propuesta(
-            config, id_obligado, "memoria", f"Memoria {ejercicio}: {apartado['titulo']}",
+            config, id_empresa, "memoria", f"Memoria {ejercicio}: {apartado['titulo']}",
             "Borrador de la IA para revisar", detalle, creado_por=nombre,
         )
     except (ValueError, LookupError) as e:

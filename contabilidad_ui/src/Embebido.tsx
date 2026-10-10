@@ -21,6 +21,9 @@ export interface SesionAnfitrion {
 export interface PropsEmbebido {
   sesion: SesionAnfitrion
   idProyecto: number
+  /** Número de la empresa en la GD: va en la dirección del proxy, que elige con qué acceso al SIF se habla. */
+  idEmpresa?: number
+  /** Id de la empresa en su SIF. */
   idObligado: number
   nombreEmpresa: string
   nif?: string | null
@@ -41,6 +44,7 @@ export interface PropsEmbebido {
 export default function Embebido({
   sesion,
   idProyecto,
+  idEmpresa,
   idObligado,
   nombreEmpresa,
   nif = null,
@@ -50,7 +54,7 @@ export default function Embebido({
   // En el render y no en un efecto: los efectos de las pantallas corren antes
   // que los de este componente y sus primeras llamadas saldrían sin configurar.
   configurarCliente({
-    prefijo: `${sesion.base()}/proyectos/${idProyecto}/contabilidad/sif/proxy/${idObligado}`,
+    prefijo: `${sesion.base()}/proyectos/${idProyecto}/contabilidad/sif/proxy/${idEmpresa ?? idObligado}`,
     cabeceras: sesion.cabeceras,
     trasRespuesta: sesion.capturarTokenRenovado,
   })

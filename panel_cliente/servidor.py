@@ -323,9 +323,10 @@ async def obtener_fuente_contable(
 
 
 # --- Asesor contable conectado con el SIF (ver docs/contabilidad/planificacion.md,
-# fases 2 a 5 y memoria-anual.md). La configuración y la clave de la GD son del
-# admin; el acceso de cada usuario, suyo. Todo lo que llega al SIF pasa por
-# _mod_contabilidad_sif, que impone el límite de empresas de esta GD.
+# fases 2 a 5, memoria-anual.md y [5.9] del canal compartido). Cada usuario vincula
+# sus propios accesos al SIF y ve lo que esos usuarios del SIF ven; no hay nada
+# que configurar a nivel de la GD. Todo lo que llega al SIF pasa por
+# _mod_contabilidad_sif, que lo comprueba.
 
 
 def _id_usuario(identidad: Identidad) -> int | None:
@@ -337,24 +338,20 @@ def _error_contable(e: Exception) -> HTTPException:
     return HTTPException(codigo, str(e))
 
 
-class ClaveContableGD(BaseModel):
-    modo: Literal["asesoria", "empresa"]
+def _usuario_real(identidad: Identidad) -> int:
+    if identidad.tipo != "usuario":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Los accesos al SIF son de cada usuario: entra con tu usuario")
+    return identidad.id
+
+
+class AccesoSif(BaseModel):
     url: str | None = None
     usuario: str
-    contrasena: str | None = None
-    id_obligado_fijo: int | None = None
-    sin_clave_propia: bool = False
-    es_mio: bool = False  # «¿Este usuario del SIF es el tuyo?»: se guarda también como acceso propio
-
-
-class OpcionesContables(BaseModel):
-    sin_clave_propia: bool | None = None
-    revision_automatica: bool | None = None
-
-
-class AccesoContableUsuario(BaseModel):
-    usuario: str
     contrasena: str
+
+
+class RevisionAcceso(BaseModel):
+    activa: bool
 
 
 class ResolverPropuesta(BaseModel):
@@ -364,14 +361,14 @@ class ResolverPropuesta(BaseModel):
 
 
 class NuevaMemoria(BaseModel):
-    id_obligado: int
+    id_empresa: int
     ejercicio: int
     modelo: Literal["normal", "abreviado", "pymes"]
     copiar_anterior: bool = True
 
 
 class ApartadoMemoria(BaseModel):
-    id_obligado: int
+    id_empresa: int
     id_memoria: int
     codigo_apartado: str
     titulo: str
@@ -381,12 +378,12 @@ class ApartadoMemoria(BaseModel):
 
 
 class AccionMemoria(BaseModel):
-    id_obligado: int
+    id_empresa: int
     id_memoria: int
 
 
 class RevisarApartado(BaseModel):
-    id_obligado: int
+    id_empresa: int
     id_memoria: int
     codigo_apartado: str
 
@@ -394,104 +391,56 @@ class RevisarApartado(BaseModel):
 MEMORIA_FORMULADA = 2  # estado de la memoria en el SIF: 0 borrador, 1 revisada, 2 formulada
 
 
-@app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif")
-async def estado_contabilidad_sif(
-    id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible),
-    es_admin: bool = Depends(es_admin_actual), identidad: Identidad = Depends(identidad_actual),
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos")
+async def mis_accesos_sif(
+    id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
-    config = get_db_config(proyecto["id"])
-    datos = await conta_sif.estado(config, _id_usuario(identidad))
-    if es_admin:
-        datos["accesos"] = await conta_sif.accesos_usuarios(config)
-    return datos
+    return {"accesos": await conta_sif.accesos_de(get_db_config(proyecto["id"]), _id_usuario(identidad))}
 
 
-@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/probar")
-async def probar_contabilidad_sif(
-    id_proyecto: int, datos: ClaveContableGD, proyecto: dict = Depends(admin_gestion_documental_actual)
-) -> dict:
-    config = get_db_config(proyecto["id"])
-    contrasena = datos.contrasena
-    if contrasena is None:
-        actual = await conta_sif.leer_configuracion(config)
-        if not actual["id_credencial_gd"]:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Falta la contraseña del SIF")
-        contrasena = await CredencialesCRUD(config).valor_descifrado(actual["id_credencial_gd"])
-    try:
-        return await conta_sif.probar_clave_gd(datos.url, datos.modo, datos.usuario, contrasena)
-    except (ValueError, LookupError) as e:
-        raise _error_contable(e) from e
-
-
-@app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif")
-async def conectar_contabilidad_sif(
-    id_proyecto: int, datos: ClaveContableGD, proyecto: dict = Depends(admin_gestion_documental_actual),
-    identidad: Identidad = Depends(identidad_actual),
-) -> dict:
-    try:
-        return await conta_sif.guardar_clave_gd(
-            get_db_config(proyecto["id"]), datos.modo, datos.url, datos.usuario, datos.contrasena,
-            datos.id_obligado_fijo, datos.sin_clave_propia, _id_usuario(identidad) if datos.es_mio else None,
-        )
-    except (ValueError, LookupError) as e:
-        raise _error_contable(e) from e
-
-
-@app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/opciones")
-async def opciones_contabilidad_sif(
-    id_proyecto: int, datos: OpcionesContables, proyecto: dict = Depends(admin_gestion_documental_actual)
-) -> dict:
-    config = get_db_config(proyecto["id"])
-    await conta_sif.guardar_opciones(config, datos.sin_clave_propia, datos.revision_automatica)
-    return await conta_sif.estado(config)
-
-
-@app.delete("/v1/proyectos/{id_proyecto}/contabilidad/sif", status_code=status.HTTP_204_NO_CONTENT)
-async def desconectar_contabilidad_sif(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> None:
-    await conta_sif.desconectar(get_db_config(proyecto["id"]))
-
-
-@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/sincronizar")
-async def sincronizar_contabilidad_sif(id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual)) -> dict:
-    try:
-        return await conta_sif.sincronizar_empresas(get_db_config(proyecto["id"]))
-    except (ValueError, LookupError) as e:
-        raise _error_contable(e) from e
-
-
-@app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/mi-acceso")
-async def guardar_mi_acceso_contable(
-    id_proyecto: int, datos: AccesoContableUsuario,
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos")
+async def anadir_acceso_sif(
+    id_proyecto: int, datos: AccesoSif,
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
-    if identidad.tipo != "usuario":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "El acceso al SIF es de cada usuario: entra con tu usuario")
     try:
-        return await conta_sif.guardar_acceso_usuario(get_db_config(proyecto["id"]), identidad.id, datos.usuario, datos.contrasena)
+        return await conta_sif.anadir_acceso(get_db_config(proyecto["id"]), _usuario_real(identidad), datos.url, datos.usuario, datos.contrasena)
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 
 
-@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/mi-acceso/el-de-la-gd")
-async def usar_acceso_gd_como_mio(
-    id_proyecto: int, proyecto: dict = Depends(admin_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/actualizar")
+async def actualizar_acceso_sif(
+    id_proyecto: int, id_acceso: int,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
-    """«Usar este acceso también como el mío»: solo el admin, que es quien
-    puso la clave de la GD y sabe si ese usuario del SIF es el suyo."""
-    if identidad.tipo != "usuario":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "El acceso al SIF es de cada usuario: entra con tu usuario")
     try:
-        return await conta_sif.usar_clave_gd_como_mia(get_db_config(proyecto["id"]), identidad.id)
+        return await conta_sif.actualizar_acceso_de(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso)
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 
 
-@app.delete("/v1/proyectos/{id_proyecto}/contabilidad/sif/mi-acceso", status_code=status.HTTP_204_NO_CONTENT)
-async def borrar_mi_acceso_contable(
-    id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+@app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/revision")
+async def revision_acceso_sif(
+    id_proyecto: int, id_acceso: int, datos: RevisionAcceso,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    try:
+        await conta_sif.cambiar_revision(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, datos.activa)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+    return {"activa": datos.activa}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}", status_code=status.HTTP_204_NO_CONTENT)
+async def borrar_acceso_sif(
+    id_proyecto: int, id_acceso: int,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> None:
-    if identidad.tipo == "usuario":
-        await conta_sif.borrar_acceso_usuario(get_db_config(proyecto["id"]), identidad.id)
+    try:
+        await conta_sif.borrar_acceso(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
 
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/empresas")
@@ -507,9 +456,9 @@ async def empresas_contabilidad_sif(
 CABECERAS_PROXY = ("content-type", "content-disposition")
 
 
-@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/proxy/{id_obligado}/{ruta:path}")
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/proxy/{id_empresa}/{ruta:path}")
 async def proxy_contabilidad_sif(
-    id_proyecto: int, id_obligado: int, ruta: str, request: Request,
+    id_proyecto: int, id_empresa: int, ruta: str, request: Request,
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> Response:
     """Las pantallas de contabilidad (contabilidad_ui embebida) llaman aquí
@@ -524,9 +473,9 @@ async def proxy_contabilidad_sif(
             ficheros = [
                 (k, (v.filename, await v.read(), v.content_type)) for k, v in formulario.multi_items() if not isinstance(v, str)
             ]
-            respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_obligado, ruta, campos=campos, ficheros=ficheros)
+            respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_empresa, ruta, campos=campos, ficheros=ficheros)
         else:
-            respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_obligado, ruta, await request.body())
+            respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_empresa, ruta, await request.body())
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
     cabeceras = {k: v for k, v in respuesta.headers.items() if k.lower() in CABECERAS_PROXY}
@@ -535,38 +484,38 @@ async def proxy_contabilidad_sif(
 
 async def _ids_visibles(config: dict, identidad: Identidad) -> list[int]:
     try:
-        return [e["id_obligado_sif"] for e in await conta_sif.empresas_de(config, _id_usuario(identidad))]
+        return [e["id_empresa"] for e in await conta_sif.empresas_de(config, _id_usuario(identidad))]
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/propuestas")
 async def listar_propuestas_contables(
-    id_proyecto: int, id_obligado: int | None = None, estado: str | None = "pendiente",
+    id_proyecto: int, id_empresa: int | None = None, estado: str | None = "pendiente",
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     config = get_db_config(proyecto["id"])
     ids = await _ids_visibles(config, identidad)
-    return {"propuestas": await conta_propuestas.listar(config, ids, estado or None, id_obligado)}
+    return {"propuestas": await conta_propuestas.listar(config, ids, estado or None, id_empresa)}
 
 
-async def _guardar_apartado_en_sif(config: dict, id_usuario: int | None, id_obligado: int, detalle: dict) -> None:
+async def _guardar_apartado_en_sif(config: dict, id_usuario: int | None, id_empresa: int, detalle: dict) -> None:
     """Guarda un apartado de la memoria en el SIF, creando la memoria del
     ejercicio si aún no existe."""
-    listado = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/listar", {"ejercicio": detalle["ejercicio"]})
+    listado = await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/listar", {"ejercicio": detalle["ejercicio"]})
     memorias = listado.get("memorias") or []
     ultima = max(memorias, key=lambda m: m.get("version") or 0) if memorias else None
     if ultima and ultima.get("estado") != MEMORIA_FORMULADA:
         id_memoria = ultima["id"]
     elif ultima:  # formulada: el SIF no deja crear otra, se abre una versión nueva
-        nueva = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/nueva_version", {"id_memoria": ultima["id"]})
+        nueva = await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/nueva_version", {"id_memoria": ultima["id"]})
         id_memoria = nueva["id"]
     else:
-        creada = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/crear", {
+        creada = await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/crear", {
             "ejercicio": detalle["ejercicio"], "modelo": detalle["modelo"], "copiar_anterior": True,
         })
         id_memoria = creada["id"]
-    await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/guardar_apartado", {
+    await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/guardar_apartado", {
         "id_memoria": id_memoria, "codigo_apartado": detalle["codigo_apartado"], "titulo": detalle["titulo"],
         "texto": detalle["texto"], "datos": json.dumps(detalle.get("datos") or [], ensure_ascii=False),
         "pendientes": json.dumps(detalle.get("pendientes") or [], ensure_ascii=False),
@@ -584,14 +533,14 @@ async def resolver_propuesta_contable(
     con la clave de quien acepta."""
     config = get_db_config(proyecto["id"])
     propuesta = await conta_propuestas.obtener(config, id_propuesta)
-    if not propuesta or propuesta["id_obligado_sif"] not in await _ids_visibles(config, identidad):
+    if not propuesta or propuesta["id_empresa"] not in await _ids_visibles(config, identidad):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa propuesta no existe")
     try:
         if datos.aceptar and propuesta["tipo"] == "memoria":
             if not propuesta.get("detalle"):
                 raise ValueError("A esa propuesta le falta el texto del apartado")
             detalle = {**propuesta["detalle"], "texto": datos.texto or propuesta["detalle"]["texto"]}
-            await _guardar_apartado_en_sif(config, _id_usuario(identidad), propuesta["id_obligado_sif"], detalle)
+            await _guardar_apartado_en_sif(config, _id_usuario(identidad), propuesta["id_empresa"], detalle)
         return await conta_propuestas.resolver(
             config, id_propuesta, "aceptada" if datos.aceptar else "descartada", _id_usuario(identidad), datos.motivo,
         )
@@ -606,17 +555,17 @@ async def catalogo_memoria(id_proyecto: int, modelo: str, proyecto: dict = Depen
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/memoria")
 async def obtener_memoria(
-    id_proyecto: int, id_obligado: int, ejercicio: int,
+    id_proyecto: int, id_empresa: int, ejercicio: int,
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     config, id_usuario = get_db_config(proyecto["id"]), _id_usuario(identidad)
     try:
-        listado = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/listar", {"ejercicio": ejercicio})
+        listado = await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/listar", {"ejercicio": ejercicio})
         memorias = listado.get("memorias") or []
         if not memorias:
             return {"memoria": None}
         ultima = max(memorias, key=lambda m: m.get("version") or 0)
-        return {"memoria": await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/obtener", {"id_memoria": ultima["id"]})}
+        return {"memoria": await conta_sif.pedir(config, id_usuario, id_empresa, "/contabilidad/memoria/obtener", {"id_memoria": ultima["id"]})}
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 
@@ -627,7 +576,7 @@ async def crear_memoria(
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
-        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado, "/contabilidad/memoria/crear",
+        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_empresa, "/contabilidad/memoria/crear",
                                      {"ejercicio": datos.ejercicio, "modelo": datos.modelo, "copiar_anterior": datos.copiar_anterior})
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
@@ -638,10 +587,10 @@ async def guardar_apartado_memoria(
     id_proyecto: int, datos: ApartadoMemoria,
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
-    cuerpo = datos.model_dump(exclude={"id_obligado"})
+    cuerpo = datos.model_dump(exclude={"id_empresa"})
     cuerpo["datos"], cuerpo["pendientes"] = json.dumps(datos.datos, ensure_ascii=False), json.dumps(datos.pendientes, ensure_ascii=False)
     try:
-        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado,
+        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_empresa,
                                      "/contabilidad/memoria/guardar_apartado", cuerpo)
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
@@ -653,7 +602,7 @@ async def revisar_apartado_memoria(
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
-        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado,
+        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_empresa,
                                      "/contabilidad/memoria/marcar_revisado",
                                      {"id_memoria": datos.id_memoria, "codigo_apartado": datos.codigo_apartado})
     except (ValueError, LookupError) as e:
@@ -666,7 +615,7 @@ async def accion_memoria(
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
-        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado,
+        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_empresa,
                                      f"/contabilidad/memoria/{accion}", {"id_memoria": datos.id_memoria})
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
@@ -5038,7 +4987,7 @@ async def inicio_panel(
 
     if await ConfiguracionCRUD(config).obtener_modulo_contable():
         try:
-            ids = [e["id_obligado_sif"] for e in await conta_sif.empresas_de(config, identidad.id if es_usuario else None)]
+            ids = [e["id_empresa"] for e in await conta_sif.empresas_de(config, identidad.id if es_usuario else None)]
             resultado["contabilidad"] = _resumen(await conta_propuestas.listar(config, ids, "pendiente"))
         except Exception:  # sin conexión con el SIF o sin clave propia: no hay tarjeta
             pass

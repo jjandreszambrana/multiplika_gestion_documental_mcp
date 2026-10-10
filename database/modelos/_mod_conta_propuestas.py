@@ -24,7 +24,7 @@ def _publica(fila: dict) -> dict:
 
 
 async def crear(
-    config: dict, id_obligado: int, tipo: str, titulo: str, justificacion: str | None = None,
+    config: dict, id_empresa: int, tipo: str, titulo: str, justificacion: str | None = None,
     detalle: dict | None = None, id_tema: int | None = None, id_documento: int | None = None,
     origen: str = "ia", creado_por: str | None = None,
 ) -> dict:
@@ -33,35 +33,35 @@ async def crear(
     if tipo in ("asiento", "reclasificacion"):
         detalle = asiento_valido(detalle or {})
     filas = await AsyncDatabase(**config).query(
-        f'INSERT INTO "{_T}" (id_obligado_sif, tipo, titulo, detalle, justificacion, id_tema, id_documento, origen, creado_por) '
+        f'INSERT INTO "{_T}" (id_empresa, tipo, titulo, detalle, justificacion, id_tema, id_documento, origen, creado_por) '
         "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *",
-        (id_obligado, tipo, titulo[:255], json.dumps(detalle, ensure_ascii=False) if detalle else None,
+        (id_empresa, tipo, titulo[:255], json.dumps(detalle, ensure_ascii=False) if detalle else None,
          justificacion, id_tema, id_documento, origen, creado_por),
     )
     return _publica(filas[0])
 
 
-async def aviso_sin_repetir(config: dict, id_obligado: int, titulo: str, justificacion: str, detalle: dict) -> bool:
+async def aviso_sin_repetir(config: dict, id_empresa: int, titulo: str, justificacion: str, detalle: dict) -> bool:
     """Para la revisión automática: no crea un aviso igual a otro que siga
     pendiente en esa empresa. True si lo ha creado."""
     db = AsyncDatabase(**config)
     existe = await db.query(
-        f"SELECT id FROM \"{_T}\" WHERE id_obligado_sif = %s AND tipo = 'aviso' AND titulo = %s AND estado = 'pendiente'",
-        (id_obligado, titulo),
+        f"SELECT id FROM \"{_T}\" WHERE id_empresa = %s AND tipo = 'aviso' AND titulo = %s AND estado = 'pendiente'",
+        (id_empresa, titulo),
     )
     if existe:
         await db.query(f'UPDATE "{_T}" SET detalle = %s WHERE id = %s', (json.dumps(detalle, ensure_ascii=False), existe[0]["id"]))
         return False
-    await crear(config, id_obligado, "aviso", titulo, justificacion, detalle, origen="revision", creado_por="Revisión automática")
+    await crear(config, id_empresa, "aviso", titulo, justificacion, detalle, origen="revision", creado_por="Revisión automática")
     return True
 
 
-async def listar(config: dict, ids_obligado: list[int], estado: str | None = "pendiente", id_obligado: int | None = None) -> list[dict]:
-    """Solo de las empresas que el usuario puede ver (`ids_obligado`)."""
-    ids = [id_obligado] if id_obligado is not None else ids_obligado
-    if id_obligado is not None and id_obligado not in ids_obligado:
+async def listar(config: dict, ids_empresa: list[int], estado: str | None = "pendiente", id_empresa: int | None = None) -> list[dict]:
+    """Solo de las empresas que el usuario puede ver (`ids_empresa`)."""
+    ids = [id_empresa] if id_empresa is not None else ids_empresa
+    if id_empresa is not None and id_empresa not in ids_empresa:
         return []
-    condiciones, valores = ["id_obligado_sif = ANY(%s)"], [ids]
+    condiciones, valores = ["id_empresa = ANY(%s)"], [ids]
     if estado:
         condiciones.append("estado = %s")
         valores.append(estado)

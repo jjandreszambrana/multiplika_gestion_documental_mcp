@@ -134,29 +134,21 @@ export const api = {
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/buscar?q=${encodeURIComponent(texto)}`),
   obtenerTemaContable: (idProyecto, idTema) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/temas/${idTema}`),
-  estadoContabilidadSif: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif`),
-  probarContabilidadSif: (idProyecto, datos) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/probar`, datos),
-  conectarContabilidadSif: (idProyecto, datos) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif`, datos),
-  opcionesContabilidadSif: (idProyecto, datos) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/opciones`, datos),
-  desconectarContabilidadSif: (idProyecto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif`),
-  sincronizarContabilidadSif: (idProyecto) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/sincronizar`),
-  guardarMiAccesoContable: (idProyecto, datos) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`, datos),
-  usarAccesoGdComoMio: (idProyecto) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso/el-de-la-gd`),
-  borrarMiAccesoContable: (idProyecto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`),
+  accesosSif: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/accesos`),
+  anadirAccesoSif: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/accesos`, datos),
+  actualizarAccesoSif: (idProyecto, idAcceso) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/actualizar`),
+  revisionAccesoSif: (idProyecto, idAcceso, activa) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/revision`, { activa }),
+  borrarAccesoSif: (idProyecto, idAcceso) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}`),
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
-  listarPropuestasContables: (idProyecto, idObligado, estado) =>
-    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_obligado=${idObligado}&estado=${estado || ""}`),
+  listarPropuestasContables: (idProyecto, idEmpresa, estado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),
   resolverPropuestaContable: (idProyecto, idPropuesta, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/propuestas/${idPropuesta}/resolver`, datos),
   catalogoMemoria: (idProyecto, modelo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria/catalogo/${modelo}`),
-  obtenerMemoria: (idProyecto, idObligado, ejercicio) =>
-    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria?id_obligado=${idObligado}&ejercicio=${ejercicio}`),
+  obtenerMemoria: (idProyecto, idEmpresa, ejercicio) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria?id_empresa=${idEmpresa}&ejercicio=${ejercicio}`),
   crearMemoria: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/memoria/crear`, datos),
   guardarApartadoMemoria: (idProyecto, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/memoria/apartado`, datos),

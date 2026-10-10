@@ -16,11 +16,7 @@ from ._mod_credenciales_campos import CredencialesCamposCRUD
 # webs, bases de datos, SFTP... que la IA puede configurar contra cualquier
 # servidor) la encuentra, y nadie más puede crear una con ese nombre.
 NOMBRE_CREDENCIAL_COPIAS_BD = "Contraseña de las copias de seguridad"
-# Igual de apartada: la clave con la que la GD entra en la contabilidad del
-# SIF (ver _mod_contabilidad_sif.py) — en una asesoría llega a todas sus
-# empresas, así que no se presta a ninguna otra función.
-NOMBRE_CREDENCIAL_CONTABILIDAD_GD = "Acceso de la GD a la contabilidad del SIF"
-NOMBRES_RESERVADOS = {NOMBRE_CREDENCIAL_COPIAS_BD, NOMBRE_CREDENCIAL_CONTABILIDAD_GD}
+NOMBRES_RESERVADOS = {NOMBRE_CREDENCIAL_COPIAS_BD}
 
 
 class CredencialesCRUD(AsyncCrudBase):
