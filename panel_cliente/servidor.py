@@ -4985,6 +4985,8 @@ async def inicio_panel(
             resultado[nombre] = _resumen(datos["filas"], datos["total"])
         elif nombre == "programaciones":
             resultado[nombre] = _resumen(sorted(datos, key=lambda p: str(p.get("proxima_ejecucion") or "9")))
+        elif nombre == "documentos":
+            resultado[nombre] = _resumen([d for d in datos if not d.get("archivado")])
         elif nombre == "webs":
             con_alerta = [a for a in datos if a.get("vigilancia") not in (None, "ok")]
             if datos:
