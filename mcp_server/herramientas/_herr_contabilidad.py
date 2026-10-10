@@ -221,11 +221,9 @@ async def analisis_financiero_gd(id_empresa: int, ejercicio: int, hasta: str | N
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def listar_asientos_predefinidos_gd(id_empresa: int) -> dict:
-    """Asientos predefinidos de una empresa y de su asesoría: plantillas con
-    los datos que piden (`campos`: bruto, IRPF, Seguridad Social...; unos se
-    calculan solos), sus líneas con la fórmula de cada importe y, si las
-    tiene, líneas que se repiten por fila (p. ej. una por trabajador). Cada
-    uno trae una descripción de para qué sirve. Míralos antes de
+    """Asientos predefinidos de una empresa y de su asesoría (plantillas con
+    sus cuentas y cómo sale cada importe: base, porcentaje, fijo o resto),
+    cada uno con una descripción de para qué sirve. Míralos antes de
     proponer un asiento: si uno encaja (p. ej. una factura de alquiler), usa
     proponer_contable_gd con `predefinido`, que calcula los importes en el
     SIF en vez de que los calcules tú."""
@@ -252,14 +250,11 @@ async def proponer_contable_gd(
       plan de la empresa (buscar_cuenta_contable_gd).
     - aviso: algo que revisar, sin asiento.
     - Con un asiento predefinido (listar_asientos_predefinidos_gd), en vez
-      de `asiento`: `predefinido` = {"id": ..., "fecha": "AAAA-MM-DD",
-      "valores": {"bruto": 1800, ...} (los campos que se piden una vez),
-      "filas": [{"bruto": 1800, "irpf": 220, "subcuenta": "46500003"}, ...]
-      (si tiene líneas por fila, una por trabajador), "concepto" (opcional),
-      "subcuentas": {"410": "41000012"} (para líneas con prefijo; si no la
-      sabes, déjala y el contable la elige)}. Saca los datos de los
-      documentos (la nómina, la factura) y no inventes ninguno: si falta uno
-      obligatorio, pregúntalo. Los importes los calcula el SIF.
+      de `asiento`: `predefinido` = {"id": ..., "importe": 1000.0, "fecha":
+      "AAAA-MM-DD", "concepto": "..." (opcional), "variables": {...}
+      (opcional), "subcuentas": {"410": "41000012", ...} (para las líneas
+      con prefijo, la subcuenta que corresponda; si no la sabes, déjala y
+      el contable la elige)}. Los importes los calcula el SIF.
     Cita en `justificacion` la norma o el tema (`id_tema`) en que te apoyas,
     y `id_documento` si sale de un documento de la GD (p. ej. una factura).
     Dile al usuario que es una propuesta, no un apunte hecho."""
@@ -281,11 +276,11 @@ async def _asiento_de_predefinido(id_empresa: int, predefinido: dict) -> tuple[d
     """El asiento que calcula el SIF con un predefinido, con las subcuentas
     elegidas puestas en sus líneas. Devuelve también los prefijos que se
     quedan sin subcuenta, para avisar al contable."""
-    if not predefinido.get("id"):
-        raise ValueError("Falta el `id` del asiento predefinido")
+    if not predefinido.get("id") or predefinido.get("importe") is None:
+        raise ValueError("El predefinido necesita su `id` y el `importe`")
     calculado = await _sif(id_empresa, "/contabilidad/predefinidos/calcular", {
-        "id_modelo": predefinido["id"], "fecha": predefinido.get("fecha"), "concepto": predefinido.get("concepto"),
-        "valores": predefinido.get("valores"), "filas": predefinido.get("filas"),
+        "id_modelo": predefinido["id"], "importe": str(predefinido["importe"]), "fecha": predefinido.get("fecha"),
+        "concepto": predefinido.get("concepto"), "variables": predefinido.get("variables"),
     })
     elegidas = predefinido.get("subcuentas") or {}
     lineas, sin_subcuenta = [], []
