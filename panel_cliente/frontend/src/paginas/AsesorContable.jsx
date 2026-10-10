@@ -10,6 +10,7 @@ import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
 import MiAccesoContable from "../componentes/contabilidad/MiAccesoContable"
 import PropuestasContables from "../componentes/contabilidad/PropuestasContables"
 import ContabilidadSIF from "./ContabilidadSIF"
+import { ALTO_INDICE } from "../theme"
 
 // Biblioteca del asesor contable (ver docs/contabilidad/planificacion.md,
 // fase 1): índice entero (llega de una vez, sin esperas al desplegar), buscador y tema.
@@ -98,7 +99,7 @@ function Biblioteca({ proyecto }) {
       {(
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, md: 4 }}>
-            <Paper withBorder p="xs">
+            <Paper withBorder p="xs" mah={ALTO_INDICE} style={{ overflowY: "auto" }}>
               <form onSubmit={buscar}>
                 <TextInput
                   id="buscar-tema-contable" aria-label="Buscar en la biblioteca" placeholder="Buscar: leasing, prorrata, 555..."

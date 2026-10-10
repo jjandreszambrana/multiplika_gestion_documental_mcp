@@ -3,6 +3,7 @@ import {
   Alert, Badge, Button, Grid, Group, NavLink, NumberInput, Paper, Select, Stack, Text, Textarea, Title,
 } from "@mantine/core"
 import { api } from "../../api"
+import { ALTO_INDICE } from "../../theme"
 
 // Memoria anual de una empresa, guardada en el SIF (ver
 // docs/contabilidad/memoria-anual.md): a la izquierda los apartados del
@@ -75,7 +76,7 @@ export default function MemoriaAnual({ proyecto, empresa }) {
       ) : (
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, md: 4 }}>
-            <Paper withBorder p="xs">
+            <Paper withBorder p="xs" mah={ALTO_INDICE} style={{ overflowY: "auto" }}>
               {catalogo.map((a) => {
                 const guardado = guardados[String(a.id)]
                 return (

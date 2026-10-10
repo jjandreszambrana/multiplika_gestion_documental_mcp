@@ -27,3 +27,8 @@ export const theme = createTheme({
     },
   },
 })
+
+// Alto de los índices largos (biblioteca contable, ayuda, apartados de la
+// memoria): con su propia barra, para que al elegir una opción del final el
+// contenido de la derecha no quede escondido arriba.
+export const ALTO_INDICE = "calc(100dvh - 220px)"

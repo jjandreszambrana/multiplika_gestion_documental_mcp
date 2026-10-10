@@ -3,6 +3,7 @@ import { Alert, Anchor, Grid, NavLink, Paper, Text, Title } from "@mantine/core"
 import { IconArrowLeft } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
+import { ALTO_INDICE } from "../theme"
 
 export default function Ayuda({ onVolver }) {
   const [secciones, setSecciones] = useState(null)
@@ -50,7 +51,7 @@ export default function Ayuda({ onVolver }) {
       {secciones && (
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, md: 4 }}>
-            <Paper withBorder p="xs">
+            <Paper withBorder p="xs" mah={ALTO_INDICE} style={{ overflowY: "auto" }}>
               {secciones.map((s) => (
                 <NavLink
                   key={s.id}
