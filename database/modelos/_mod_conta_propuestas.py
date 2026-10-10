@@ -32,13 +32,14 @@ async def crear(
         raise ValueError(f"Tipo de propuesta no válido: {tipo} (vale {', '.join(TIPOS_PROPUESTA)})")
     if tipo in ("asiento", "reclasificacion"):
         detalle = asiento_valido(detalle or {})
-    filas = await AsyncDatabase(**config).query(
+    db = AsyncDatabase(**config)
+    await db.query(
         f'INSERT INTO "{_T}" (id_empresa, tipo, titulo, detalle, justificacion, id_tema, id_documento, origen, creado_por) '
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (id_empresa, tipo, titulo[:255], json.dumps(detalle, ensure_ascii=False) if detalle else None,
          justificacion, id_tema, id_documento, origen, creado_por),
     )
-    return _publica(filas[0])
+    return await obtener(config, db.ultimo_insert_id)
 
 
 async def aviso_sin_repetir(config: dict, id_empresa: int, titulo: str, justificacion: str, detalle: dict) -> bool:
@@ -80,11 +81,11 @@ async def obtener(config: dict, id_propuesta: int) -> dict | None:
 async def resolver(config: dict, id_propuesta: int, estado: str, id_usuario: int | None, motivo: str | None = None) -> dict:
     if estado not in ESTADOS_PROPUESTA or estado == "pendiente":
         raise ValueError("Una propuesta se acepta o se descarta")
-    filas = await AsyncDatabase(**config).query(
+    cambiadas = await AsyncDatabase(**config).query(
         f"UPDATE \"{_T}\" SET estado = %s, motivo_descarte = %s, revisado_por = %s, fecha_revision = %s "
-        "WHERE id = %s AND estado = 'pendiente' RETURNING *",
+        "WHERE id = %s AND estado = 'pendiente'",
         (estado, motivo if estado == "descartada" else None, id_usuario, ahora_madrid(), id_propuesta),
     )
-    if not filas:
+    if not cambiadas:
         raise LookupError("Esa propuesta no existe o ya estaba resuelta")
-    return _publica(filas[0])
+    return await obtener(config, id_propuesta)

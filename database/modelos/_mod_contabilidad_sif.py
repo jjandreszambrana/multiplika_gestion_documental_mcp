@@ -113,11 +113,15 @@ async def _guardar_empresas(config: dict, acceso: dict, empresas: list[dict]) ->
     """Rehace la lista de empresas que ve un acceso. Devuelve cuántas."""
     db = AsyncDatabase(**config)
     vistas = []
+    # AsyncDatabase.query solo devuelve filas en un SELECT: el id se lee aparte.
     for e in empresas:
-        fila = await db.query(
+        await db.query(
             f'INSERT INTO "{_T_EMP}" (url_sif, id_obligado_sif, nif, nombre) VALUES (%s, %s, %s, %s) '
-            "ON CONFLICT (url_sif, id_obligado_sif) DO UPDATE SET nif = EXCLUDED.nif, nombre = EXCLUDED.nombre RETURNING id",
+            "ON CONFLICT (url_sif, id_obligado_sif) DO UPDATE SET nif = EXCLUDED.nif, nombre = EXCLUDED.nombre",
             (acceso["url_sif"], int(e["id_obligado"]), e.get("NIF"), (e.get("NombreRazon") or f"Empresa {e['id_obligado']}")[:255]),
+        )
+        fila = await db.query(
+            f'SELECT id FROM "{_T_EMP}" WHERE url_sif = %s AND id_obligado_sif = %s', (acceso["url_sif"], int(e["id_obligado"]))
         )
         vistas.append((fila[0]["id"], e.get("nivel")))
     await db.query(f'DELETE FROM "{_T_AE}" WHERE id_acceso = %s', (acceso["id"],))
@@ -150,20 +154,22 @@ async def anadir_acceso(config: dict, id_usuario: int, url: str, usuario: str, c
     if previo:
         await credenciales.actualizar(previo["id_credencial"], descripcion, contrasena, usuario)
         await _olvidar(config, previo["id_credencial"])
-        filas = await db.query(
+        await db.query(
             f"UPDATE \"{_T_ACC}\" SET tipo = %s, nombre_sif = %s, estado = 'activo', ultima_comprobacion = %s, "
-            "ultimo_error = NULL WHERE id = %s RETURNING *", (tipo, nombre_sif, ahora_madrid(), previo["id"]),
+            "ultimo_error = NULL WHERE id = %s", (tipo, nombre_sif, ahora_madrid(), previo["id"]),
         )
+        id_acceso = previo["id"]
     else:
         id_credencial = await credenciales.crear(
             NOMBRE_CREDENCIAL.format(id_usuario=id_usuario, url=url.split("//")[-1], usuario=usuario)[:100],
             descripcion, contrasena, usuario, id_usuario_dueno=id_usuario,
         )
-        filas = await db.query(
+        await db.query(
             f'INSERT INTO "{_T_ACC}" (id_usuario, url_sif, id_credencial, tipo, nombre_sif, estado, ultima_comprobacion) '
-            "VALUES (%s, %s, %s, %s, %s, 'activo', %s) RETURNING *", (id_usuario, url, id_credencial, tipo, nombre_sif, ahora_madrid()),
+            "VALUES (%s, %s, %s, %s, %s, 'activo', %s) RETURNING id", (id_usuario, url, id_credencial, tipo, nombre_sif, ahora_madrid()),
         )
-    acceso = dict(filas[0])
+        id_acceso = db.ultimo_insert_id
+    acceso = await _acceso(config, id_usuario, id_acceso)
     return {**_publico(acceso), "empresas": await _guardar_empresas(config, acceso, empresas)}
 
 
