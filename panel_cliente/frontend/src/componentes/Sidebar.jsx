@@ -199,8 +199,8 @@ export default function Sidebar({
         <Grupo id="negocio" titulo="Clientes y negocio" activo={["entidades", "ventas", "asesor-contable", "webs", "publicaciones"].includes(vista)}>
           <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
           <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
-          {/* Solo en las GD con el apartado activado; el admin lo ve siempre para poder activarlo */}
-          {(proyecto.modulo_contable || proyecto.es_admin) && (
+          {/* Solo en las GD con el apartado activado (se activa en Contexto de negocio) */}
+          {proyecto.modulo_contable && (
             <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
           )}
           {/* Invitado no ve nada de webs y redes, ni para leer */}

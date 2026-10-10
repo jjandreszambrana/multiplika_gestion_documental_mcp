@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Switch, Tabs, Text, TextInput, Title, Tooltip,
+  ActionIcon, Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Tabs, Text, TextInput, Title, Tooltip,
 } from "@mantine/core"
 import { IconMenu2, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
@@ -35,27 +35,6 @@ function Rama({ nodo, idTema, onElegirTema }) {
         <Rama key={h.id} nodo={h} idTema={idTema} onElegirTema={onElegirTema} />
       ))}
     </NavLink>
-  )
-}
-
-function Activacion({ proyecto, onCambiarModulo, onError }) {
-  const [guardando, setGuardando] = useState(false)
-  if (!proyecto.es_admin) return null
-  return (
-    <Switch
-      label="Activado en esta gestión documental"
-      checked={!!proyecto.modulo_contable}
-      disabled={guardando}
-      onChange={(e) => {
-        const activo = e.currentTarget.checked
-        setGuardando(true)
-        api
-          .actualizarModuloContable(proyecto.id, activo)
-          .then(() => onCambiarModulo(activo))
-          .catch((err) => onError(err.message))
-          .finally(() => setGuardando(false))
-      }}
-    />
   )
 }
 
@@ -272,8 +251,7 @@ function Contabilidad({ proyecto }) {
   )
 }
 
-export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onCambiarModulo }) {
-  const [error, setError] = useState(null)
+export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu }) {
   return (
     <>
       <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="wrap">
@@ -287,9 +265,7 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
           )}
           <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
         </Group>
-        <Activacion proyecto={proyecto} onCambiarModulo={onCambiarModulo} onError={setError} />
       </Group>
-      {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {proyecto.modulo_contable ? (
         <Contabilidad proyecto={proyecto} />
       ) : (

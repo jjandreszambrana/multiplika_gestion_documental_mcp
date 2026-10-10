@@ -369,7 +369,6 @@ export default function App() {
                 proyecto={proyecto}
                 pantallaCompleta
                 onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)}
-                onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
               />
             </Container>
           </Box>
@@ -390,7 +389,10 @@ export default function App() {
           ) : vista === "enlaces" ? (
             <Enlaces proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "contexto" ? (
-            <Contexto proyecto={proyecto} onVolver={() => navegar("inicio")} />
+            <Contexto
+              proyecto={proyecto} onVolver={() => navegar("inicio")}
+              onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
+            />
           ) : vista === "credenciales" ? (
             <Credenciales proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "certificados" ? (
