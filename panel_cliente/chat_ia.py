@@ -115,6 +115,52 @@ def _con_punto_de_cache(mensajes: list[dict]) -> list[dict]:
     return [*mensajes[:-1], {**ultimo, "content": bloques}]
 
 
+PREGUNTAS_CON_RESULTADOS_ENTEROS = 2  # las dos últimas preguntas del usuario llevan sus resultados completos
+MIN_CARACTERES_RECORTE = 1500  # un resultado corto no merece la pena recortarlo
+
+
+def _es_pregunta(mensaje: dict) -> bool:
+    """Un mensaje del usuario escrito por él (no la respuesta de una herramienta)."""
+    if mensaje["role"] != "user":
+        return False
+    contenido = mensaje["content"]
+    return isinstance(contenido, str) or not any(b.get("type") == "tool_result" for b in contenido)
+
+
+def _recortar_resultados_antiguos(mensajes: list[dict]) -> list[dict]:
+    """Copia `mensajes` cambiando los resultados largos de herramientas de
+    preguntas antiguas por una línea que dice qué se consultó: en cada
+    mensaje se reenvía toda la conversación, y cinco informes de 4.000
+    tokens consultados al principio se pagarían otra vez en cada mensaje.
+    La IA los vuelve a pedir si de verdad los necesita. Solo para la llamada
+    a la API: el historial guardado no cambia. Un resultado, una vez
+    recortado, se queda recortado: así el principio de la conversación no
+    cambia de un mensaje al siguiente y sigue sirviendo de caché."""
+    preguntas = [i for i, m in enumerate(mensajes) if _es_pregunta(m)]
+    if len(preguntas) <= PREGUNTAS_CON_RESULTADOS_ENTEROS:
+        return mensajes
+    limite = preguntas[-PREGUNTAS_CON_RESULTADOS_ENTEROS]
+    nombres = {
+        b["id"]: (b["name"], b.get("input") or {})
+        for m in mensajes[:limite] if m["role"] == "assistant" and isinstance(m["content"], list)
+        for b in m["content"] if b.get("type") == "tool_use"
+    }
+    copia = []
+    for i, m in enumerate(mensajes):
+        if i < limite and m["role"] == "user" and isinstance(m["content"], list):
+            bloques = []
+            for b in m["content"]:
+                texto = b.get("content")
+                if b.get("type") == "tool_result" and isinstance(texto, str) and len(texto) > MIN_CARACTERES_RECORTE:
+                    nombre, argumentos = nombres.get(b["tool_use_id"], ("herramienta", {}))
+                    resumen = json.dumps(argumentos, ensure_ascii=False)[:200]
+                    b = {**b, "content": f"[Resultado ya usado de {nombre} {resumen}: si lo necesitas otra vez, vuelve a pedirlo]"}
+                bloques.append(b)
+            m = {**m, "content": bloques}
+        copia.append(m)
+    return copia
+
+
 async def _pedir_a_claude(
     id_proyecto: int, mensajes: list[dict], tools: list[dict], contexto_inicial: str
 ) -> "anthropic.types.Message":
@@ -139,7 +185,7 @@ async def _pedir_a_claude(
             "type": "text", "text": f"{SYSTEM_PROMPT}\n\n{contexto_inicial}",
             "cache_control": _CACHE_EFIMERA,
         }],
-        tools=tools, messages=_con_punto_de_cache(mensajes),
+        tools=tools, messages=_con_punto_de_cache(_recortar_resultados_antiguos(mensajes)),
     )
 
 

@@ -23,13 +23,13 @@ from ._anotaciones import SOLO_LECTURA
 from ._herr_bloc_notas import _contexto
 from ..database import biblioteca_contable
 from ..database.modelos import _mod_contabilidad_sif as sif
-from ..database.modelos._mod_conta_analisis import analisis_financiero
+from ..database.modelos._mod_conta_analisis import analisis_financiero, compactar_informe
 from ..database.modelos._mod_conta_propuestas import crear as crear_propuesta, listar as listar_propuestas
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 
 TAG_CONTABILIDAD = "contabilidad"
 TAG_SIF = "contabilidad_sif"
-LIMITE_APUNTES_IA = 200  # el SIF admite 1000 por página; a la IA le basta y le cuesta menos
+LIMITE_APUNTES_IA = 50  # el SIF admite 1000 por página; con 50 basta casi siempre y cuesta mucho menos
 Informe = Literal[
     "balance", "perdidas_y_ganancias", "sumas_y_saldos", "mayor", "diario",
     "iva", "retenciones", "cuadre_iva", "libros_iva",
@@ -110,8 +110,12 @@ async def indice_contable_gd(id_nodo: int | None = None) -> dict:
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD})
-async def obtener_tema_contable_gd(id_tema: int) -> dict:
-    """Un tema completo de la biblioteca contable. Al responder con él:
+async def obtener_tema_contable_gd(id_tema: int, seccion: str | None = None) -> dict:
+    """Un tema de la biblioteca contable, por partes para no cargar de más:
+    sin `seccion` llega su resumen ("En pocas palabras"), sus avisos, fuentes
+    y la lista de secciones; si con eso no basta, pide la que necesites
+    (p. ej. "Cómo se contabiliza", "Fiscalidad", "Errores frecuentes") o
+    "todo" para el tema entero. Al responder con él:
     cita el tema y sus fuentes; di siempre lo que traiga en `avisos` (no
     revisado, posible desactualización, norma cambiada); da las cifras que
     cambian cada año (tipos, límites, plazos) con el año del tema; y si
@@ -119,7 +123,7 @@ async def obtener_tema_contable_gd(id_tema: int) -> dict:
     la valide el contable, nunca como hecho. Si una regla del cliente
     contradice el tema o la norma, adviértelo en vez de aplicarla en
     silencio. Para la letra exacta de una fuente, obtener_norma_contable_gd."""
-    resultado = biblioteca_contable.tema(id_tema)
+    resultado = biblioteca_contable.tema_por_partes(id_tema, seccion)
     if resultado is None:
         raise ToolError(f"No hay ningún tema con id {id_tema}.")
     return resultado
@@ -165,13 +169,15 @@ async def informe_contable_gd(
     - balance / perdidas_y_ganancias: con `hasta` opcional y `detalle`.
     - sumas_y_saldos: `nivel` 1 grupos, 2 subgrupos, 3 cuentas, 0 cuenta a
       cuenta; `desde`/`hasta` acotan el periodo.
-    - mayor (necesita `cuenta`) y diario: paginan de 200 en 200 con
+    - mayor (necesita `cuenta`) y diario: paginan de 50 en 50 con
       `offset`; los totales son los del periodo entero. Acota con fechas y
       cuenta antes de pedir páginas de más.
     - iva (base del 303), retenciones (111 y 115), cuadre_iva (facturas
       frente a lo contabilizado), libros_iva (con `libro`): necesitan
       `periodo` ("01".."12" o "1T".."4T").
-    Fechas AAAA-MM-DD. Las cifras son del SIF: cítalas tal cual."""
+    Fechas AAAA-MM-DD. Las cifras son del SIF: cítalas tal cual. Las
+    listas llegan como tabla (`columnas` una vez y `filas`), sin las cuentas
+    a cero."""
     if informe in INFORMES_FISCALES:
         if not periodo:
             raise ToolError("Este informe necesita `periodo` (\"01\"..\"12\" o \"1T\"..\"4T\")")
@@ -190,7 +196,7 @@ async def informe_contable_gd(
             if informe == "mayor" and not cuenta:
                 raise ToolError("El mayor necesita `cuenta`")
             cuerpo |= {"cuenta": cuenta if informe == "mayor" else None, "offset": offset, "limit": LIMITE_APUNTES_IA}
-    return await _sif(id_empresa, RUTA_INFORME[informe], cuerpo)
+    return compactar_informe(informe, await _sif(id_empresa, RUTA_INFORME[informe], cuerpo))
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})

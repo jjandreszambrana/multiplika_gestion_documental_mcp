@@ -129,3 +129,50 @@ def asiento_valido(detalle: dict) -> dict:
         raise ValueError(f"El asiento no cuadra: debe {debe:.2f} y haber {haber:.2f}")
     return {"fecha": detalle.get("fecha"), "concepto": detalle.get("concepto"), "apuntes": normalizados,
             "total": round(debe, 2)}
+
+
+# ---------- Informes del SIF, compactados para la IA ----------
+# Lo mismo que devuelve el SIF, pero sin cuentas a cero ni campos vacíos y en
+# forma de tabla (columnas una vez, filas como listas): unas sumas y saldos
+# cuenta a cuenta pasan de ~12.000 tokens a ~3.000-4.000.
+
+COLUMNAS_INFORME = {
+    "sumas_y_saldos": ("lineas", ["cuenta", "descripcion", "saldo_anterior", "debe", "haber", "saldo"]),
+    "mayor": ("apuntes", ["fecha", "asiento", "concepto", "documento", "debe", "haber", "saldo"]),
+    "diario": ("apuntes", ["fecha", "asiento", "cuenta", "concepto", "documento", "debe", "haber"]),
+    "libros_iva": ("renglones", None),
+}
+CAMPOS_IMPORTE = ("saldo_anterior", "debe", "haber", "saldo")
+
+
+def _a_tabla(filas: list[dict], columnas: list[str] | None) -> dict:
+    if not filas:
+        return {"columnas": columnas or [], "filas": []}
+    columnas = columnas or [c for c in filas[0] if any(f.get(c) not in (None, "", 0, 0.0) for f in filas)]
+    return {"columnas": columnas, "filas": [[f.get(c) for c in columnas] for f in filas]}
+
+
+def _sin_vacios(datos: dict) -> dict:
+    return {k: v for k, v in datos.items() if v not in (None, "", [], {})}
+
+
+def compactar_informe(informe: str, datos: dict) -> dict:
+    if informe in ("balance", "perdidas_y_ganancias"):
+        resultado = dict(datos)
+        for clave in ("activo", "pasivo", "epigrafes"):
+            if isinstance(datos.get(clave), list):
+                filas = [f for f in datos[clave] if abs(float(f.get("saldo") or 0)) > TOLERANCIA_SALDO]
+                resultado[clave] = _a_tabla(filas, ["nodo", "titulo", "cuenta", "nivel", "saldo"])
+        return _sin_vacios(resultado)
+    if informe in COLUMNAS_INFORME:
+        clave, columnas = COLUMNAS_INFORME[informe]
+        lista = datos.get(clave)
+        if not isinstance(lista, list):
+            clave = next((k for k, v in datos.items() if isinstance(v, list)), None)
+            lista = datos.get(clave) if clave else None
+        if lista is None:
+            return _sin_vacios(datos)
+        if informe == "sumas_y_saldos":
+            lista = [l for l in lista if any(abs(float(l.get(c) or 0)) > TOLERANCIA_SALDO for c in CAMPOS_IMPORTE)]
+        return _sin_vacios({**datos, clave: _a_tabla(lista, columnas)})
+    return _sin_vacios(datos)

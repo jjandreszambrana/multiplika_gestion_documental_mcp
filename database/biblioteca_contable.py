@@ -243,6 +243,48 @@ def tema(id_tema: int) -> dict | None:
     }
 
 
+SECCION_RESUMEN = "En pocas palabras"
+SECCION_TODO = "todo"
+CAMPOS_RESUMEN_TEMA = ("id", "titulo", "aplica_a", "revisado", "avisos")
+
+
+def _secciones(cuerpo: str) -> list[tuple[str, str]]:
+    """[(título, texto)] de las secciones `## ` de un tema."""
+    partes, actual, lineas = [], None, []
+    for linea in cuerpo.splitlines():
+        if linea.startswith("## "):
+            if actual is not None:
+                partes.append((actual, "\n".join(lineas).strip()))
+            actual, lineas = linea[3:].strip(), []
+        elif actual is not None:
+            lineas.append(linea)
+    if actual is not None:
+        partes.append((actual, "\n".join(lineas).strip()))
+    return partes
+
+
+def tema_por_partes(id_tema: int, seccion: str | None = None) -> dict | None:
+    """Para la IA: sin `seccion`, el tema con solo su resumen y la lista de
+    secciones (unos 600 tokens en vez de ~3.000); con `seccion`, esa sección
+    (o "todo" para el tema entero). None si el tema no existe."""
+    completo = tema(id_tema)
+    if completo is None:
+        return None
+    partes = _secciones(completo.pop("cuerpo", ""))
+    if seccion == SECCION_TODO:
+        return {**completo, "secciones": {t: x for t, x in partes}}
+    if seccion:
+        buscada = _normalizar(seccion)
+        encontradas = {t: x for t, x in partes if _normalizar(t).startswith(buscada) or buscada in _normalizar(t)}
+        return {"id": id_tema, "titulo": completo.get("titulo"), "secciones": encontradas or {},
+                "disponibles": [t for t, _ in partes]}
+    resumen = next((x for t, x in partes if _normalizar(t) == _normalizar(SECCION_RESUMEN)), None)
+    esencial = {k: completo.get(k) for k in CAMPOS_RESUMEN_TEMA}
+    esencial["fuentes"] = [f["id"] for f in completo.get("fuentes") or []]
+    esencial["relacionados"] = [{"id": r["id"], "titulo": r["titulo"]} for r in completo.get("relacionados") or []]
+    return {**esencial, SECCION_RESUMEN: resumen, "secciones_disponibles": [t for t, _ in partes]}
+
+
 def buscar(texto: str) -> list[dict]:
     """Temas que más se parecen a `texto`, por palabras en título, palabras
     clave y resumen (sin tildes ni mayúsculas)."""
