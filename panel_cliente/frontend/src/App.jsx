@@ -104,11 +104,9 @@ export default function App() {
   const [chatAbierto, setChatAbierto] = useState(false)
   const [chatMontado, setChatMontado] = useState(false)
   // El asesor contable se queda montado al irse a otro apartado (oculto), para
-  // que la contabilidad vuelva con la misma pantalla y lo que se eligió. En su
-  // pestaña de contabilidad ocupa toda la pantalla salvo el chat: el menú de la
-  // GD se esconde y se abre con un botón.
+  // que vuelva con la misma pantalla y lo que se eligió. Ocupa toda la pantalla
+  // salvo el chat: el menú de la GD se esconde y se abre con un botón.
   const [contaMontada, setContaMontada] = useState(false)
-  const [contaCompleta, setContaCompleta] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [anchoChat, setAnchoChat] = useState(anchoChatGuardado)
   const [redimensionando, setRedimensionando] = useState(false)
@@ -243,7 +241,6 @@ export default function App() {
     setIdProgramacionActiva(null)
     setNotaActiva(null)
     setContaMontada(false)
-    setContaCompleta(false)
     setVista("inicio")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -325,7 +322,7 @@ export default function App() {
   const avisoEmpresa = empresas.length > 1
 
   const enConta = vista === "asesor-contable" && !idDocumentoActivo
-  const pantallaContable = enConta && contaCompleta
+  const pantallaContable = enConta
   const menuOculto = pantallaContable && !menuAbierto
 
   return (
@@ -370,8 +367,7 @@ export default function App() {
             <Container size="lg" px={0} fluid={pantallaContable}>
               <AsesorContable
                 proyecto={proyecto}
-                pantallaCompleta={pantallaContable}
-                onPantallaCompleta={setContaCompleta}
+                pantallaCompleta
                 onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)}
                 onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
               />

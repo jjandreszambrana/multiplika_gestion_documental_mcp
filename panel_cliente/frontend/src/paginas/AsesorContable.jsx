@@ -194,7 +194,7 @@ function Biblioteca({ proyecto }) {
 // Cada usuario vincula sus propios accesos al SIF ([5.9] del canal
 // compartido): las pestañas de una empresa salen cuando tiene alguno, y la
 // empresa elegida dice con qué acceso se habla.
-function Contabilidad({ proyecto, onPantallaCompleta }) {
+function Contabilidad({ proyecto }) {
   const [accesos, setAccesos] = useState(null)
   const [empresas, setEmpresas] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
@@ -228,9 +228,6 @@ function Contabilidad({ proyecto, onPantallaCompleta }) {
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
   const deEmpresa = ["contabilidad", "propuestas", "memoria"].includes(pestana)
   const sinAccesoQueFuncione = conAcceso && !empresas?.length
-  useEffect(() => {
-    onPantallaCompleta(pestana === "contabilidad" && !!empresa)
-  }, [pestana, empresa, onPantallaCompleta])
 
   return (
     <Tabs value={pestana} onChange={abrir}>
@@ -275,7 +272,7 @@ function Contabilidad({ proyecto, onPantallaCompleta }) {
   )
 }
 
-export default function AsesorContable({ proyecto, pantallaCompleta, onPantallaCompleta, onAlternarMenu, onCambiarModulo }) {
+export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onCambiarModulo }) {
   const [error, setError] = useState(null)
   return (
     <>
@@ -290,11 +287,11 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onPantallaC
           )}
           <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
         </Group>
-        {!pantallaCompleta && <Activacion proyecto={proyecto} onCambiarModulo={onCambiarModulo} onError={setError} />}
+        <Activacion proyecto={proyecto} onCambiarModulo={onCambiarModulo} onError={setError} />
       </Group>
       {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {proyecto.modulo_contable ? (
-        <Contabilidad proyecto={proyecto} onPantallaCompleta={onPantallaCompleta} />
+        <Contabilidad proyecto={proyecto} />
       ) : (
         <Text c="dimmed">
           Con el apartado activado, la IA de esta gestión documental trabaja como asesor contable y fiscal: consulta una
