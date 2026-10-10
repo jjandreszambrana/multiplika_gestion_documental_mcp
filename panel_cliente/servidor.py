@@ -384,6 +384,15 @@ class AccionMemoria(BaseModel):
     id_memoria: int
 
 
+class RevisarApartado(BaseModel):
+    id_obligado: int
+    id_memoria: int
+    codigo_apartado: str
+
+
+MEMORIA_FORMULADA = 2  # estado de la memoria en el SIF: 0 borrador, 1 revisada, 2 formulada
+
+
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif")
 async def estado_contabilidad_sif(
     id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible),
@@ -529,9 +538,13 @@ async def _guardar_apartado_en_sif(config: dict, id_usuario: int | None, id_obli
     """Guarda un apartado de la memoria en el SIF, creando la memoria del
     ejercicio si aún no existe."""
     listado = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/listar", {"ejercicio": detalle["ejercicio"]})
-    memorias = [m for m in (listado.get("memorias") or []) if m.get("estado") != 2]
-    if memorias:
-        id_memoria = max(memorias, key=lambda m: m.get("version") or 0)["id"]
+    memorias = listado.get("memorias") or []
+    ultima = max(memorias, key=lambda m: m.get("version") or 0) if memorias else None
+    if ultima and ultima.get("estado") != MEMORIA_FORMULADA:
+        id_memoria = ultima["id"]
+    elif ultima:  # formulada: el SIF no deja crear otra, se abre una versión nueva
+        nueva = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/nueva_version", {"id_memoria": ultima["id"]})
+        id_memoria = nueva["id"]
     else:
         creada = await conta_sif.pedir(config, id_usuario, id_obligado, "/contabilidad/memoria/crear", {
             "ejercicio": detalle["ejercicio"], "modelo": detalle["modelo"], "copiar_anterior": True,
@@ -614,6 +627,19 @@ async def guardar_apartado_memoria(
     try:
         return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado,
                                      "/contabilidad/memoria/guardar_apartado", cuerpo)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/memoria/marcar_revisado")
+async def revisar_apartado_memoria(
+    id_proyecto: int, datos: RevisarApartado,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    try:
+        return await conta_sif.pedir(get_db_config(proyecto["id"]), _id_usuario(identidad), datos.id_obligado,
+                                     "/contabilidad/memoria/marcar_revisado",
+                                     {"id_memoria": datos.id_memoria, "codigo_apartado": datos.codigo_apartado})
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 

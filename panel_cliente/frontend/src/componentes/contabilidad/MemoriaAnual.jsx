@@ -18,6 +18,7 @@ const MODELOS = [
 const ESTADO_MEMORIA = ["Borrador", "Revisada", "Formulada"]
 const COLOR_APARTADO = ["gray", "yellow", "green"]
 const FORMULADA = 2
+const REVISADO = 2  // estado de un apartado en el SIF: 0 pendiente, 1 borrador, 2 revisado
 
 export default function MemoriaAnual({ proyecto, empresa }) {
   const [ejercicio, setEjercicio] = useState(new Date().getFullYear() - 1)
@@ -106,13 +107,25 @@ export default function MemoriaAnual({ proyecto, empresa }) {
                   )}
                   <Textarea id="memoria-apartado-texto" aria-label="Texto del apartado" autosize minRows={10} value={texto} disabled={formulada} onChange={(e) => setTexto(e.currentTarget.value)} />
                   {!formulada && (
+                    <>
                     <Group>
                       <Button loading={trabajando} onClick={() => ejecutar(() => api.guardarApartadoMemoria(proyecto.id, {
                         id_obligado: idObligado, id_memoria: memoria.id, codigo_apartado: String(actual.id), titulo: `${actual.numero}. ${actual.titulo}`, texto,
                       }))}>
                         Guardar en el SIF
                       </Button>
+                      {guardados[String(actual.id)] && guardados[String(actual.id)].estado !== REVISADO && (
+                        <Button variant="light" color="green" loading={trabajando} onClick={() => ejecutar(() => api.accionMemoria(proyecto.id, "marcar_revisado", {
+                          id_obligado: idObligado, id_memoria: memoria.id, codigo_apartado: String(actual.id),
+                        }))}>
+                          Dar por revisado
+                        </Button>
+                      )}
                     </Group>
+                    {guardados[String(actual.id)]?.estado === REVISADO && (
+                      <Text fz="sm" c="dimmed">Revisado. Si lo cambias y lo guardas, vuelve a borrador.</Text>
+                    )}
+                    </>
                   )}
                 </Stack>
               )}

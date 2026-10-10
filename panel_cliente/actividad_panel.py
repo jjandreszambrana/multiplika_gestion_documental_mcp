@@ -94,6 +94,7 @@ ACCIONES_PANEL = {
     "crear_memoria": ("creó la memoria anual de una empresa en el SIF", None, None),
     "guardar_apartado_memoria": ("guardó un apartado de la memoria anual en el SIF", None, None),
     "accion_memoria": ("formuló o versionó la memoria anual en el SIF", None, None),
+    "revisar_apartado_memoria": ("dio por revisado un apartado de la memoria anual", None, None),
     "actualizar_cuenta_email": ("cambió la cuenta de correo de envío", None, None),
     "crear_credencial": ("dio de alta la credencial", "credencial", None),
     "actualizar_credencial": ("modificó la credencial", "credencial", "id_credencial"),
