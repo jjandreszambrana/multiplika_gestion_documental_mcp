@@ -4933,21 +4933,6 @@ async def leer_fichero_web(
     return {"ruta": ruta, "contenido": contenido, "existe": contenido is not None}
 
 
-# El frontend compilado se sirve si existe (ver README de este repo sobre
-# cómo se construye y se sube — no hay Node en el servidor, se compila
-# en local y se copia ya construido).
-_DIST_FRONTEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
-if os.path.isdir(_DIST_FRONTEND):
-    app.mount("/", StaticFiles(directory=_DIST_FRONTEND, html=True), name="frontend")
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    host, puerto = os.environ.get("PANEL_CLIENTE_BIND", "127.0.0.1:8002").split(":")
-    uvicorn.run(app, host=host, port=int(puerto))
-
-
 # --- Inicio del panel: un resumen de cada parte con su cifra y sus últimos
 # elementos, en una sola petición. Reutiliza los endpoints de cada pantalla
 # (mismas reglas de permisos y visibilidad); una parte que falle se queda
@@ -5014,3 +4999,19 @@ async def inicio_panel(
         except Exception:  # sin conexión con el SIF o sin clave propia: no hay tarjeta
             pass
     return resultado
+
+
+# El frontend compilado se sirve si existe (ver README de este repo sobre
+# cómo se construye y se sube — no hay Node en el servidor, se compila
+# en local y se copia ya construido).
+_DIST_FRONTEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
+if os.path.isdir(_DIST_FRONTEND):
+    app.mount("/", StaticFiles(directory=_DIST_FRONTEND, html=True), name="frontend")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    host, puerto = os.environ.get("PANEL_CLIENTE_BIND", "127.0.0.1:8002").split(":")
+    uvicorn.run(app, host=host, port=int(puerto))
+
