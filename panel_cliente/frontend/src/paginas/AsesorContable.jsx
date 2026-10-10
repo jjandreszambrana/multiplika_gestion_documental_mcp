@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import {
-  Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Switch, Tabs, Text, TextInput, Title,
+  ActionIcon, Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Switch, Tabs, Text, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconSearch } from "@tabler/icons-react"
+import { IconMenu2, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
@@ -194,12 +194,19 @@ function Biblioteca({ proyecto }) {
 // Cada usuario vincula sus propios accesos al SIF ([5.9] del canal
 // compartido): las pestañas de una empresa salen cuando tiene alguno, y la
 // empresa elegida dice con qué acceso se habla.
-function Contabilidad({ proyecto }) {
+function Contabilidad({ proyecto, onPantallaCompleta }) {
   const [accesos, setAccesos] = useState(null)
   const [empresas, setEmpresas] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
   const [errorEmpresas, setErrorEmpresas] = useState(null)
   const [pestana, setPestana] = useState("biblioteca")
+  // Las pestañas se montan la primera vez que se abren y luego se quedan
+  // (ocultas): al volver, la contabilidad sigue donde se dejó.
+  const [abiertas, setAbiertas] = useState(() => new Set(["biblioteca"]))
+  const abrir = (valor) => {
+    setPestana(valor)
+    setAbiertas((previas) => new Set(previas).add(valor))
+  }
 
   const cargar = () => {
     api.accesosSif(proyecto.id).then((r) => setAccesos(r.accesos)).catch(() => setAccesos([]))
@@ -221,9 +228,12 @@ function Contabilidad({ proyecto }) {
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
   const deEmpresa = ["contabilidad", "propuestas", "memoria"].includes(pestana)
   const sinAccesoQueFuncione = conAcceso && !empresas?.length
+  useEffect(() => {
+    onPantallaCompleta(pestana === "contabilidad" && !!empresa)
+  }, [pestana, empresa, onPantallaCompleta])
 
   return (
-    <Tabs value={pestana} onChange={setPestana} keepMounted={false}>
+    <Tabs value={pestana} onChange={abrir}>
       <Tabs.List mb="md">
         <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
         {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
@@ -237,7 +247,7 @@ function Contabilidad({ proyecto }) {
           <Alert color="blue" mb="md">
             <Group justify="space-between" wrap="wrap" gap="xs">
               <Text fz="sm">{errorEmpresas || "Ninguno de tus accesos al SIF funciona ahora mismo."}</Text>
-              <Button size="xs" onClick={() => setPestana("accesos")}>Revisar mis accesos</Button>
+              <Button size="xs" onClick={() => abrir("accesos")}>Revisar mis accesos</Button>
             </Group>
           </Alert>
         ) : empresas?.length > 1 ? (
@@ -250,26 +260,41 @@ function Contabilidad({ proyecto }) {
 
       <Tabs.Panel value="biblioteca"><Biblioteca proyecto={proyecto} /></Tabs.Panel>
       <Tabs.Panel value="contabilidad">
-        {empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+        {abiertas.has("contabilidad") && empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
       </Tabs.Panel>
-      <Tabs.Panel value="propuestas">{empresa && <PropuestasContables proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
-      <Tabs.Panel value="memoria">{empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}</Tabs.Panel>
-      <Tabs.Panel value="accesos"><MisAccesosSif proyecto={proyecto} accesos={accesos} onCambiar={cargar} /></Tabs.Panel>
+      <Tabs.Panel value="propuestas">
+        {abiertas.has("propuestas") && empresa && <PropuestasContables key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+      </Tabs.Panel>
+      <Tabs.Panel value="memoria">
+        {abiertas.has("memoria") && empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+      </Tabs.Panel>
+      <Tabs.Panel value="accesos">
+        {abiertas.has("accesos") && <MisAccesosSif proyecto={proyecto} accesos={accesos} onCambiar={cargar} />}
+      </Tabs.Panel>
     </Tabs>
   )
 }
 
-export default function AsesorContable({ proyecto, onCambiarModulo }) {
+export default function AsesorContable({ proyecto, pantallaCompleta, onPantallaCompleta, onAlternarMenu, onCambiarModulo }) {
   const [error, setError] = useState(null)
   return (
     <>
-      <Group justify="space-between" mb="lg" wrap="wrap">
-        <Title order={2}>Asesor contable</Title>
-        <Activacion proyecto={proyecto} onCambiarModulo={onCambiarModulo} onError={setError} />
+      <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="wrap">
+        <Group gap="xs">
+          {pantallaCompleta && (
+            <Tooltip label="Menú de la gestión documental">
+              <ActionIcon variant="default" size="lg" aria-label="Abrir o cerrar el menú de la gestión documental" onClick={onAlternarMenu}>
+                <IconMenu2 size={18} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
+        </Group>
+        {!pantallaCompleta && <Activacion proyecto={proyecto} onCambiarModulo={onCambiarModulo} onError={setError} />}
       </Group>
       {error && <Alert color="red" mb="md" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {proyecto.modulo_contable ? (
-        <Contabilidad proyecto={proyecto} />
+        <Contabilidad proyecto={proyecto} onPantallaCompleta={onPantallaCompleta} />
       ) : (
         <Text c="dimmed">
           Con el apartado activado, la IA de esta gestión documental trabaja como asesor contable y fiscal: consulta una

@@ -103,6 +103,13 @@ export default function App() {
   // cerrarlo: solo se oculta, y la conversación sigue intacta.
   const [chatAbierto, setChatAbierto] = useState(false)
   const [chatMontado, setChatMontado] = useState(false)
+  // El asesor contable se queda montado al irse a otro apartado (oculto), para
+  // que la contabilidad vuelva con la misma pantalla y lo que se eligió. En su
+  // pestaña de contabilidad ocupa toda la pantalla salvo el chat: el menú de la
+  // GD se esconde y se abre con un botón.
+  const [contaMontada, setContaMontada] = useState(false)
+  const [contaCompleta, setContaCompleta] = useState(false)
+  const [menuAbierto, setMenuAbierto] = useState(false)
   const [anchoChat, setAnchoChat] = useState(anchoChatGuardado)
   const [redimensionando, setRedimensionando] = useState(false)
 
@@ -235,6 +242,8 @@ export default function App() {
     setIdActivoActivo(null)
     setIdProgramacionActiva(null)
     setNotaActiva(null)
+    setContaMontada(false)
+    setContaCompleta(false)
     setVista("inicio")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
@@ -248,6 +257,8 @@ export default function App() {
     setIdActivoActivo(null)
     setIdProgramacionActiva(null)
     setNotaActiva(null)
+    setMenuAbierto(false)
+    if (nuevaVista === "asesor-contable") setContaMontada(true)
     setVista(nuevaVista)
   }
 
@@ -313,10 +324,14 @@ export default function App() {
   // cambiar de empresa sin volver a poner la contraseña).
   const avisoEmpresa = empresas.length > 1
 
+  const enConta = vista === "asesor-contable" && !idDocumentoActivo
+  const pantallaContable = enConta && contaCompleta
+  const menuOculto = pantallaContable && !menuAbierto
+
   return (
     <AppShell
       header={avisoEmpresa ? { height: 34 } : undefined}
-      navbar={{ width: 252, breakpoint: 0 }}
+      navbar={{ width: 252, breakpoint: 0, collapsed: { desktop: menuOculto, mobile: menuOculto } }}
       // En pantallas estrechas (móvil) Mantine lo pone a pantalla completa
       aside={{ width: anchoChat, breakpoint: "sm", collapsed: { desktop: !chatAbierto, mobile: !chatAbierto } }}
       transitionDuration={redimensionando ? 0 : 200}
@@ -350,7 +365,20 @@ export default function App() {
           la de la ventana, saldría pegada al borde derecho, por fuera del
           chat lateral. */}
       <AppShell.Main h="100dvh" style={{ overflow: "hidden" }}>
-        <Box h="100%" p="xl" style={{ overflowY: "auto" }}>
+        {contaMontada && (
+          <Box h="100%" p={pantallaContable ? "xs" : "xl"} hidden={!enConta} style={{ overflowY: "auto" }}>
+            <Container size="lg" px={0} fluid={pantallaContable}>
+              <AsesorContable
+                proyecto={proyecto}
+                pantallaCompleta={pantallaContable}
+                onPantallaCompleta={setContaCompleta}
+                onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)}
+                onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
+              />
+            </Container>
+          </Box>
+        )}
+        <Box h="100%" p="xl" hidden={enConta} style={{ overflowY: "auto" }}>
         <Container size="lg" px={0}>
           {idDocumentoActivo ? (
             <DocumentoDetalle
@@ -381,12 +409,7 @@ export default function App() {
             <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "ayuda" ? (
             <Ayuda onVolver={() => navegar("inicio")} />
-          ) : vista === "asesor-contable" ? (
-            <AsesorContable
-              proyecto={proyecto}
-              onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
-            />
-          ) : vista === "estilos" && estiloActivo ? (
+          ) : vista === "asesor-contable" ? null /* se pinta aparte, ver contaMontada */ : vista === "estilos" && estiloActivo ? (
             <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
           ) : vista === "estilos" ? (
             <Estilos proyecto={proyecto} onVolver={() => navegar("inicio")} onVerEstilo={setEstiloActivo} />
