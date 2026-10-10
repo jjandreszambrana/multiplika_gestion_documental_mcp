@@ -18,6 +18,8 @@ function dos(numero: number): string {
  * que se bajan.
  */
 export function compiladoEl(): string {
+  // Compilado desde otro proyecto (el panel de la GD) la constante no existe.
+  if (typeof __COMPILADO__ === 'undefined') return ''
   const cuando = new Date(__COMPILADO__)
   if (Number.isNaN(cuando.getTime())) return ''
   return (

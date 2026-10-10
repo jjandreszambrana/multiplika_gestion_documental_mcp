@@ -249,16 +249,20 @@ cuál es cuál.
 
 ### 5b. Librerías de UI — fijadas, no cambiar
 
-- **Mantine 7.17.8** para componentes generales (`@mantine/core`,
-  `@mantine/hooks`, `@mantine/dates`).
+- **Mantine 8.3.x** para componentes generales (`@mantine/core`,
+  `@mantine/hooks`, `@mantine/dates`), la misma que el panel de la GD.
 - **mantine-react-table 2.0.0-beta.9** para TODAS las rejillas de datos.
 - **decimal.js 10.6.0** para importes.
 - Arrastradas por MRT v2, no se instalan por gusto: `@tabler/icons-react`,
   `clsx`, `dayjs`.
 
-**Por qué Mantine 7 y no 8 ni 9:** mantine-react-table v2 declara
-`@mantine/core: ^7.9` y no hay versión compatible con Mantine 8+. La rejilla
-manda. No actualices Mantine "porque hay una versión nueva".
+**Mantine 8 desde el 2026-10-10** (fase 5, para montar las pantallas dentro del
+panel de la GD, que usa Mantine 8). mantine-react-table v2 sigue declarando
+`@mantine/core: ^7.9` y no hay versión que declare la 8, así que `package.json`
+lleva un bloque `overrides` que le hace aceptar la 8 (igual en el panel). Desde
+Mantine 8 el `DateInput` devuelve `aaaa-mm-dd` en cadena: `CasillaFecha` lo
+convierte a `Date` y el resto de la aplicación no cambia. No actualices Mantine
+"porque hay una versión nueva": la rejilla manda.
 
 **Aviso sobre versiones de MRT:** hay dos ramas incompatibles. MRT v1 exige
 Mantine 6; MRT v2 exige Mantine 7.9+. Mucha documentación que circula por

@@ -69,19 +69,31 @@ class ClienteSIF:
         if r.status_code >= 400:
             raise ErrorSIF(f"SIF respondió {r.status_code} al entrar: {r.text[:200]}")
 
-    async def _peticion(self, metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
+    async def crudo(self, metodo: str, ruta: str, **kwargs) -> httpx.Response:
+        """La respuesta tal cual (también un error o una descarga), volviendo
+        a entrar una vez si la sesión caducó. `kwargs` va a httpx (json,
+        content, headers...)."""
         for intento in range(2):
             try:
-                r = await self.http.request(metodo, ruta, json=cuerpo)
+                r = await self.http.request(metodo, ruta, **kwargs)
             except httpx.HTTPError as e:
                 raise ErrorSIF(f"Fallo de conexión con SIF ({ruta}): {e}") from e
             if r.status_code == 401 and intento == 0:
                 await self.entrar()  # la sesión caducó (una semana sin uso)
                 continue
-            if r.status_code >= 400:
-                raise ErrorSIF(f"SIF respondió {r.status_code} en {ruta}: {r.text[:300]}")
-            return r.json()
+            return r
         raise ErrorSIF("SIF no acepta la sesión")
+
+    async def _peticion(self, metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
+        r = await self.crudo(metodo, ruta, json=cuerpo)
+        if r.status_code == 401:
+            raise ErrorSIF("SIF no acepta la sesión")
+        if r.status_code >= 400:
+            raise ErrorSIF(f"SIF respondió {r.status_code} en {ruta}: {r.text[:300]}")
+        return r.json()
+
+    async def pedir(self, ruta: str, cuerpo: dict | None = None) -> dict:
+        return await self._peticion("POST", ruta, cuerpo or {})
 
     async def yo(self) -> dict:
         datos = await self._peticion("GET", "/usuarios/me")

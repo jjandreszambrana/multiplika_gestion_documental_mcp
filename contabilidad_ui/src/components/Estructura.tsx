@@ -1,4 +1,4 @@
-import { Alert, AppShell, Button, Group, Loader, Stack, Text } from '@mantine/core'
+import { Alert, AppShell, Box, Button, Group, Loader, Stack, Text } from '@mantine/core'
 import { useCallback, useEffect, useState } from 'react'
 import { textoDeError } from '../api/errores'
 import { obtenerConfiguracion, type Configuracion } from '../api/configuracion'
@@ -35,9 +35,17 @@ interface Props {
   nivel: string
   usuario: Usuario | null
   alCambiarEmpresa: (() => void) | null
-  alSalir: () => void
+  /** Nulo dentro del panel de la GD: la sesión es la del panel. */
+  alSalir: (() => void) | null
   /** Nulo para quien no puede activar contabilidades. */
   alActivarEsta: (() => void) | null
+  /**
+   * Dentro del panel de la GD: sin `AppShell` de pantalla completa, el menú y
+   * el contenido caben en la zona que les deje el panel.
+   */
+  embebido?: boolean
+  /** Ejercicio con el que entrar; si no está en la lista, se cae al de siempre. */
+  ejercicioInicial?: number
 }
 
 const ALTO_CABECERA = 64
@@ -52,6 +60,8 @@ export default function Estructura({
   alCambiarEmpresa,
   alSalir,
   alActivarEsta,
+  embebido = false,
+  ejercicioInicial,
 }: Props) {
   const [configuracion, setConfiguracion] = useState<Configuracion | null>(null)
   const [ejercicios, setEjercicios] = useState<Ejercicio[] | null>(null)
@@ -62,7 +72,9 @@ export default function Estructura({
   const quienGuarda = `${usuario?.usuario ?? 'anonimo'}.${empresa.id_obligado}`
   // Se lee una sola vez, al entrar: si se releyera en cada render, guardarlo
   // volvería a disparar la carga de la configuración.
-  const [recordado] = useState(() => leerPreferencia<number>(quienGuarda, PREFERENCIA_EJERCICIO))
+  const [recordado] = useState(
+    () => ejercicioInicial ?? leerPreferencia<number>(quienGuarda, PREFERENCIA_EJERCICIO),
+  )
   const [errorEjercicios, setErrorEjercicios] = useState<string | null>(null)
   const [seccion, setSeccion] = useState(SECCION_DE_ENTRADA)
 
@@ -108,6 +120,182 @@ export default function Estructura({
 
   const etiqueta = SECCIONES.find((s) => s.id === seccion)?.etiqueta ?? ''
 
+  const cabeceraEmpresa = (
+    <CabeceraEmpresa
+      empresa={empresa}
+      nivel={nivel}
+      usuario={usuario}
+      alCambiarEmpresa={alCambiarEmpresa}
+      alSalir={alSalir}
+    />
+  )
+
+  const selectorYAvisos = (
+    <Group gap="sm" wrap="nowrap">
+      {ejercicios && ejercicios.length > 0 && (
+        <SelectorEjercicio
+          ejercicios={ejercicios}
+          elegido={ejercicio}
+          alElegir={setEjercicio}
+        />
+      )}
+      {configuracion && <CampanaAvisos configuracion={configuracion} />}
+    </Group>
+  )
+
+  const menu = <MenuModulo nivel={nivel} activa={seccion} alElegir={setSeccion} />
+
+  const contenido = (
+    <RedDeSeguridad llave={`${seccion}.${ejercicio ?? ""}`}>
+      {error && (
+        <Alert color="red" title="No se pudo cargar la contabilidad de esta empresa" mb="md">
+          <Stack gap="sm" align="flex-start">
+            <Text size="sm">{error}</Text>
+            {alActivarEsta && (
+              <Button size="xs" onClick={alActivarEsta}>
+                Activar la contabilidad de esta empresa
+              </Button>
+            )}
+          </Stack>
+        </Alert>
+      )}
+      {!ejercicios && !error && <Loader size="sm" />}
+      {ejercicios?.length === 0 && !error && (
+        <Alert color="yellow" title="Sin ejercicios" mb="md">
+          Esta empresa no tiene ningún ejercicio abierto todavía.
+        </Alert>
+      )}
+      {ejercicios &&
+        configuracion &&
+        (seccion === 'asientos' ? (
+          <PantallaDiario
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            cierre={ejercicios.find((e) => e.ejercicio === ejercicio)?.cierre ?? null}
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'plan' ? (
+          <PantallaPlan
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+          />
+        ) : seccion === 'eliminados' ? (
+          <PantallaEliminados
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'enlace' ? (
+          <PantallaEnlace
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+            origenTerceros={configuracion.origen_terceros}
+          />
+        ) : seccion === 'ejercicios' ? (
+          <PantallaEjercicios
+            ejercicios={ejercicios}
+            nivel={nivel}
+            error={errorEjercicios}
+            alRecargar={recargarEjercicios}
+          />
+        ) : seccion === 'configuracion' ? (
+          <PantallaConfiguracion
+            configuracion={configuracion}
+            ejercicio={ejercicio}
+            alGuardada={setConfiguracion}
+          />
+        ) : seccion === 'inmovilizado' ? (
+          <PantallaInmovilizado
+            ejercicio={ejercicio}
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+          />
+        ) : seccion === 'mayor' ? (
+          <PantallaMayor
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            ancho={configuracion.anchocuentas}
+            nivel={nivel}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'balance' ? (
+          <PantallaBalance
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            ancho={configuracion.anchocuentas}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'estados_contables' ? (
+          <PantallaEstadosContables
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'fiscal' ? (
+          <PantallaFiscal
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            usuario={usuario?.usuario ?? 'anonimo'}
+          />
+        ) : seccion === 'cierre' ? (
+          <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
+        ) : seccion === 'sin_ficha' ? (
+          <PantallaSinFicha
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+            ejercicio={ejercicio}
+          />
+        ) : seccion === 'importador' ? (
+          <PantallaImportador ejercicio={ejercicio} nivel={nivel} />
+        ) : seccion === 'traspaso_emitidas' || seccion === 'traspaso_recibidas' ? (
+          <PantallaTraspasos
+            key={`${seccion}.${ejercicio ?? 'sin-ejercicio'}`}
+            ejercicio={ejercicio}
+            tipo={seccion === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+          />
+        ) : (
+          <Text c="dimmed">{etiqueta}: pantalla pendiente.</Text>
+        ))}
+    </RedDeSeguridad>
+  )
+
+  if (embebido) {
+    return (
+      <ProveedorCuadre>
+        <ProveedorPlan ejercicio={ejercicio}>
+          <Box>
+            <Group
+              justify="space-between"
+              wrap="nowrap"
+              pb="xs"
+              mb="md"
+              style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+            >
+              {cabeceraEmpresa}
+              {selectorYAvisos}
+            </Group>
+            <Group align="flex-start" wrap="nowrap" gap="md">
+              <Box
+                w={ANCHO_MENU}
+                style={{ flexShrink: 0, borderRight: '1px solid var(--mantine-color-default-border)' }}
+                pr="xs"
+              >
+                {menu}
+              </Box>
+              <Box style={{ flex: 1, minWidth: 0 }}>{contenido}</Box>
+            </Group>
+          </Box>
+        </ProveedorPlan>
+      </ProveedorCuadre>
+    )
+  }
+
   return (
     <ProveedorCuadre>
       <ProveedorPlan ejercicio={ejercicio}>
@@ -118,28 +306,13 @@ export default function Estructura({
         >
           <AppShell.Header>
             <Group justify="space-between" h="100%" px="md" wrap="nowrap">
-              <CabeceraEmpresa
-                empresa={empresa}
-                nivel={nivel}
-                usuario={usuario}
-                alCambiarEmpresa={alCambiarEmpresa}
-                alSalir={alSalir}
-              />
-              <Group gap="sm" wrap="nowrap">
-                {ejercicios && ejercicios.length > 0 && (
-                  <SelectorEjercicio
-                    ejercicios={ejercicios}
-                    elegido={ejercicio}
-                    alElegir={setEjercicio}
-                  />
-                )}
-                {configuracion && <CampanaAvisos configuracion={configuracion} />}
-              </Group>
+              {cabeceraEmpresa}
+              {selectorYAvisos}
             </Group>
           </AppShell.Header>
 
           <AppShell.Navbar p="xs">
-            <MenuModulo nivel={nivel} activa={seccion} alElegir={setSeccion} />
+            {menu}
             {/* Al pie del menú, no del contenido: así se ve siempre, sin
                 depender de lo largo que sea el listado que haya puesto. */}
             <Text size="xs" c="dimmed" mt="auto" pt="xs" ta="center">
@@ -147,125 +320,7 @@ export default function Estructura({
             </Text>
           </AppShell.Navbar>
 
-          <AppShell.Main>
-            <RedDeSeguridad llave={`${seccion}.${ejercicio ?? ""}`}>
-              {error && (
-                <Alert color="red" title="No se pudo cargar la contabilidad de esta empresa" mb="md">
-                  <Stack gap="sm" align="flex-start">
-                    <Text size="sm">{error}</Text>
-                    {alActivarEsta && (
-                      <Button size="xs" onClick={alActivarEsta}>
-                        Activar la contabilidad de esta empresa
-                      </Button>
-                    )}
-                  </Stack>
-                </Alert>
-              )}
-              {!ejercicios && !error && <Loader size="sm" />}
-              {ejercicios?.length === 0 && !error && (
-                <Alert color="yellow" title="Sin ejercicios" mb="md">
-                  Esta empresa no tiene ningún ejercicio abierto todavía.
-                </Alert>
-              )}
-              {ejercicios &&
-                configuracion &&
-                (seccion === 'asientos' ? (
-                  <PantallaDiario
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    cierre={ejercicios.find((e) => e.ejercicio === ejercicio)?.cierre ?? null}
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'plan' ? (
-                  <PantallaPlan
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                  />
-                ) : seccion === 'eliminados' ? (
-                  <PantallaEliminados
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'enlace' ? (
-                  <PantallaEnlace
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                    origenTerceros={configuracion.origen_terceros}
-                  />
-                ) : seccion === 'ejercicios' ? (
-                  <PantallaEjercicios
-                    ejercicios={ejercicios}
-                    nivel={nivel}
-                    error={errorEjercicios}
-                    alRecargar={recargarEjercicios}
-                  />
-                ) : seccion === 'configuracion' ? (
-                  <PantallaConfiguracion
-                    configuracion={configuracion}
-                    ejercicio={ejercicio}
-                    alGuardada={setConfiguracion}
-                  />
-                ) : seccion === 'inmovilizado' ? (
-                  <PantallaInmovilizado
-                    ejercicio={ejercicio}
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                  />
-                ) : seccion === 'mayor' ? (
-                  <PantallaMayor
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    ancho={configuracion.anchocuentas}
-                    nivel={nivel}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'balance' ? (
-                  <PantallaBalance
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    ancho={configuracion.anchocuentas}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'estados_contables' ? (
-                  <PantallaEstadosContables
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'fiscal' ? (
-                  <PantallaFiscal
-                    key={ejercicio ?? 'sin-ejercicio'}
-                    ejercicio={ejercicio}
-                    usuario={usuario?.usuario ?? 'anonimo'}
-                  />
-                ) : seccion === 'cierre' ? (
-                  <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
-                ) : seccion === 'sin_ficha' ? (
-                  <PantallaSinFicha
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                    ejercicio={ejercicio}
-                  />
-                ) : seccion === 'importador' ? (
-                  <PantallaImportador ejercicio={ejercicio} nivel={nivel} />
-                ) : seccion === 'traspaso_emitidas' || seccion === 'traspaso_recibidas' ? (
-                  <PantallaTraspasos
-                    key={`${seccion}.${ejercicio ?? 'sin-ejercicio'}`}
-                    ejercicio={ejercicio}
-                    tipo={seccion === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
-                    nivel={nivel}
-                    ancho={configuracion.anchocuentas}
-                  />
-                ) : (
-                  <Text c="dimmed">{etiqueta}: pantalla pendiente.</Text>
-                ))}
-            </RedDeSeguridad>
-          </AppShell.Main>
+          <AppShell.Main>{contenido}</AppShell.Main>
         </AppShell>
       </ProveedorPlan>
     </ProveedorCuadre>

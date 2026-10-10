@@ -11,6 +11,7 @@ from ._dep_bloc_notas import __TABLAS__ as TABLAS_BLOC_NOTAS
 from ._dep_chat import TABLA_CHAT_CONVERSACIONES
 from ._dep_chunks import construir_tabla_chunks
 from ._dep_compartidos import TABLA_COMPARTIDOS
+from ._dep_contabilidad import __TABLAS__ as TABLAS_CONTABILIDAD
 from ._dep_configuracion import PROVEEDORES_EMBEDDING_SOPORTADOS, construir_tabla_configuracion
 from ._dep_credenciales import TABLA_CREDENCIALES
 from ._dep_credenciales_campos import TABLA_CREDENCIALES_CAMPOS
@@ -84,4 +85,5 @@ def tablas_esquema(proveedor_embedding: str) -> list:
         *TABLAS_GEO,
         *TABLAS_CRM,
         *TABLAS_ERP,
+        *TABLAS_CONTABILIDAD,
     ]

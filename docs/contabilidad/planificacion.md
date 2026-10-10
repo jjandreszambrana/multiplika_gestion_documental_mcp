@@ -1,6 +1,6 @@
 # Asesor contable y financiero dentro de la GD
 
-Plan, 2026-10-10. **Fases 0 y 1 implementadas el mismo día** (código; el contenido del primer lote se está redactando y falta revisarlo; sin desplegar). Ver docs/gestion-documental.md → "Asesor contable". Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
+Plan, 2026-10-10. **Todas las fases implementadas el mismo día en la GD** (0 y 1 desplegadas en Adimel; 2 a 5 escritas y compiladas, **sin probar contra un SIF real**). La memoria (3 bis) espera además los endpoints del SIF ([5.6] del canal compartido). Ver docs/gestion-documental.md → "Asesor contable". Lo marcado **[DECIDIR]** queda pendiente del usuario; lo marcado **[COMPROBAR]** hay que verificarlo antes de empezar esa fase.
 
 Documentos de esta carpeta:
 

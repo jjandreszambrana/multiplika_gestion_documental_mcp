@@ -13,6 +13,9 @@ uno va en sus reglas):
   (`<id_bloque>.md` el vigente, `<id_bloque>.<vigente_desde>.md` los
   anteriores). Los escribe scripts/normativa_boe.py.
 - `doctrina/`: resúmenes propios de consultas de la DGT citadas.
+- `memoria/<modelo>/`: catálogo de apartados de la memoria anual (normal,
+  abreviado, pymes), con qué cuadros del SIF y qué datos pide cada uno —
+  ver docs/contabilidad/memoria-anual.md.
 
 Se lee del disco una vez por proceso. Un id que llega en una petición se
 busca en lo ya cargado y nunca se usa para componer una ruta."""
@@ -121,6 +124,32 @@ def _cargar_fuentes() -> dict:
     for versiones in fuentes.values():
         versiones.sort(key=lambda v: str(v.get("vigente_desde") or ""), reverse=True)
     return fuentes
+
+
+MODELOS_MEMORIA = ("normal", "abreviado", "pymes")
+
+
+@functools.cache
+def _memoria() -> dict[int, dict]:
+    apartados = {}
+    for modelo in MODELOS_MEMORIA:
+        for fichero in sorted((DIRECTORIO / "memoria" / modelo).glob("*.md")):
+            cabecera, cuerpo = _leer(fichero)
+            if isinstance(cabecera.get("id"), int):
+                apartados[cabecera["id"]] = {**cabecera, "modelo": modelo, "guia": cuerpo}
+    return apartados
+
+
+def catalogo_memoria(modelo: str) -> list[dict]:
+    """Apartados de un modelo de memoria, en orden, sin la guía de redacción."""
+    return sorted(
+        ({k: v for k, v in a.items() if k != "guia"} for a in _memoria().values() if a["modelo"] == modelo),
+        key=lambda a: a.get("numero") or 0,
+    )
+
+
+def apartado_memoria(id_apartado: int) -> dict | None:
+    return _memoria().get(id_apartado)
 
 
 @functools.cache

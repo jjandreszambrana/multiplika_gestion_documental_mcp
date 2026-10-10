@@ -52,6 +52,14 @@ function _capturarTokenRenovado(res) {
   if (nuevo) setToken(nuevo)
 }
 
+// Para las pantallas de contabilidad embebidas (contabilidad_ui), que
+// llaman al proxy del SIF con su propio cliente pero con esta misma sesión.
+export const sesionPanel = {
+  base: () => BASE_CLIENTE,
+  cabeceras: () => (token ? { Authorization: `Bearer ${token}` } : {}),
+  capturarTokenRenovado: (res) => _capturarTokenRenovado(res),
+}
+
 async function peticion(base, metodo, ruta, cuerpo) {
   const headers = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
@@ -125,6 +133,32 @@ export const api = {
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/buscar?q=${encodeURIComponent(texto)}`),
   obtenerTemaContable: (idProyecto, idTema) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/temas/${idTema}`),
+  estadoContabilidadSif: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif`),
+  probarContabilidadSif: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/probar`, datos),
+  conectarContabilidadSif: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif`, datos),
+  opcionesContabilidadSif: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/opciones`, datos),
+  desconectarContabilidadSif: (idProyecto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif`),
+  sincronizarContabilidadSif: (idProyecto) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/sincronizar`),
+  guardarMiAccesoContable: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`, datos),
+  borrarMiAccesoContable: (idProyecto) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/mi-acceso`),
+  empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
+  listarPropuestasContables: (idProyecto, idObligado, estado) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_obligado=${idObligado}&estado=${estado || ""}`),
+  resolverPropuestaContable: (idProyecto, idPropuesta, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/propuestas/${idPropuesta}/resolver`, datos),
+  catalogoMemoria: (idProyecto, modelo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria/catalogo/${modelo}`),
+  obtenerMemoria: (idProyecto, idObligado, ejercicio) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria?id_obligado=${idObligado}&ejercicio=${ejercicio}`),
+  crearMemoria: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/memoria/crear`, datos),
+  guardarApartadoMemoria: (idProyecto, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/memoria/apartado`, datos),
+  accionMemoria: (idProyecto, accion, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/memoria/${accion}`, datos),
   obtenerFuenteContable: (idProyecto, idFuente) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/fuentes/${idFuente.split("/").map(encodeURIComponent).join("/")}`),
 

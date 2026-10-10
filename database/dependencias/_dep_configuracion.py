@@ -31,6 +31,16 @@ def construir_tabla_configuracion(proveedor_embedding: str = PROVEEDOR_EMBEDDING
                 comentario="Dimensión del vector de embedding — debe coincidir con gd_chunks.embedding"),
         Columna(nombre="modulo_contable", tipo="BOOLEAN", not_null=True, default=False,
                 comentario="Apartado de asesor contable activado (ver docs/contabilidad/planificacion.md)"),
+        Columna(nombre="modo_contable", tipo="VARCHAR", longitud=20,
+                comentario="Conexión con el SIF: asesoria, empresa o NULL (sin conectar)"),
+        Columna(nombre="url_sif_contable", tipo="VARCHAR", longitud=255),
+        Columna(nombre="id_obligado_sif_fijo", tipo="INT", comentario="Modo empresa: la única empresa"),
+        Columna(nombre="conta_sin_clave_propia", tipo="BOOLEAN", not_null=True, default=False,
+                comentario="Asesorías pequeñas: quien no tenga clave propia trabaja con la de la GD"),
+        Columna(nombre="conta_revision_automatica", tipo="BOOLEAN", not_null=True, default=False,
+                comentario="Revisión nocturna de saldos anómalos (scripts/revisar_contabilidad.py)"),
+        Columna(nombre="estado_clave_contable", tipo="VARCHAR", longitud=20),
+        Columna(nombre="error_clave_contable", tipo="MEDIUMTEXT"),
         Columna(nombre="email_avisos", tipo="VARCHAR", longitud=255,
                 comentario="A quién avisar por email cuando hay documentos por caducar (aviso "
                            "proactivo diario, no solo si se pregunta — ver "

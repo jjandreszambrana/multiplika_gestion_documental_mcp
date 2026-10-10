@@ -520,28 +520,51 @@ año?", "¿cuánto nos debe García?", "importa este Excel de facturas".""",
     {
         "id": "asesor-contable",
         "titulo": "Asesor contable",
-        "resumen": "Biblioteca contable y fiscal que consulta la IA antes de responder; se activa por gestión documental.",
+        "resumen": "La IA como asesor contable: biblioteca, contabilidad del SIF, propuestas y memoria anual; se activa por gestión documental.",
         "markdown": """\
 Con el **asesor contable** activado, la IA trabaja como asesor contable, \
 fiscal y financiero: antes de responder una duda consulta una biblioteca \
 de temas propia (plan contable, IVA, Impuesto sobre Sociedades, cierre, \
 análisis financiero, trabajo de asesoría...), escrita a partir de la \
 normativa oficial (BOE, ICAC, Agencia Tributaria) y con ejemplos de \
-asientos. Cita el tema y la norma en que se apoya.
+asientos. Cita el tema y la norma en que se apoya. Lo activa el \
+administrador con el interruptor de arriba de "Asesor contable"; sin \
+activar, ni sale en el menú ni la IA lo usa.
 
-- **Activarlo**: el administrador, en "Asesor contable", con el \
-  interruptor de arriba. Sin activar, ni sale en el menú ni la IA lo usa.
-- **Consultar la biblioteca**: en la misma pantalla, por el índice o con \
-  el buscador. En cada tema se pueden abrir las normas que cita, con su \
-  texto literal del BOE.
-- **Vuestras reglas**: si en vuestra empresa o asesoría hacéis algo de una \
-  forma concreta (p.ej. "los gastos de vehículo se imputan al 50 %"), \
-  ponedlo en "Reglas de la IA": la IA lo aplica, y si contradice la norma \
-  os lo advierte.
+### Pestañas
 
-Lo que propone la IA (un asiento, una corrección) es siempre una \
-propuesta para que la valide el contable. Un tema todavía no revisado se \
-avisa al usarlo.""",
+- **Biblioteca**: el índice y el buscador de temas. En cada tema se \
+  pueden abrir las normas que cita, con su texto literal del BOE.
+- **Contabilidad**: las pantallas de la contabilidad del SIF (diario, \
+  mayor, balances, IVA...) sin salir de la GD ni volver a entrar.
+- **Propuestas**: lo que propone la IA (asientos, correcciones, \
+  apartados de la memoria) y los avisos de la revisión nocturna. Aceptar \
+  un asiento no lo apunta en el SIF: lo pasas tú. Aceptar un apartado de \
+  la memoria sí lo guarda en el SIF.
+- **Memoria anual**: la memoria de las cuentas anuales de cada empresa y \
+  ejercicio, apartado por apartado. Las cifras salen de la contabilidad; \
+  la IA prepara los textos (pídeselo en el chat) y tú los revisas, \
+  guardas y, al final, formulas: entonces queda bloqueada.
+- **Mi acceso al SIF**: tu usuario y contraseña del SIF. Se guardan \
+  cifrados y solo los usas tú; con ellos ves las empresas que el SIF te \
+  permite y en el SIF queda que lo has hecho tú.
+- **Conexión con el SIF** (solo administrador): se elige si la GD es de \
+  una **asesoría** (la contabilidad de vuestros clientes) o de **una sola \
+  empresa**, y se pone el acceso de la asesoría o de la empresa, con un \
+  botón para probarlo. En una asesoría, nunca se ve una empresa que no \
+  sea de la asesoría en el SIF, y cada usuario ve solo las suyas. Aquí se \
+  activa también la revisión nocturna (saldos raros y cuadre del IVA, sin \
+  gastar IA).
+
+### Vuestras reglas
+
+Si en vuestra empresa o asesoría hacéis algo de una forma concreta (p.ej. \
+"los gastos de vehículo se imputan al 50 %"), ponedlo en "Reglas de la \
+IA": la IA lo aplica, y si contradice la norma os lo advierte.
+
+Lo que propone la IA es siempre una propuesta para que la valide el \
+contable: la IA no apunta nada en el SIF. Un tema de la biblioteca todavía \
+no revisado se avisa al usarlo.""",
     },
     {
         "id": "tipos-documento",

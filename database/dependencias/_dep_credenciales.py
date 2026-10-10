@@ -20,6 +20,10 @@ CAMPOS_CREDENCIALES = [
             comentario="La contraseña, token o API key — lo único realmente secreto, cifrado "
                        "con Fernet (lib.cifrado del repo core, mismo mecanismo que "
                        "mcpc_api_keys)"),
+    Columna(nombre="id_usuario_dueno", tipo="INT",
+            comentario="NULL = del proyecto, como siempre. Con dueño (mcpc_usuarios.id, sin FK), "
+                       "es privada de ese usuario: no se lista ni se encuentra por nombre (p.ej. "
+                       "su acceso a la contabilidad del SIF, ver _mod_contabilidad_sif.py)"),
     Columna(nombre="fecha_actualizacion", tipo="TIMESTAMP", not_null=True,
             default=SQLLiteral("CURRENT_TIMESTAMP"),
             comentario="Fecha de creación o de la última vez que se cambió el valor"),

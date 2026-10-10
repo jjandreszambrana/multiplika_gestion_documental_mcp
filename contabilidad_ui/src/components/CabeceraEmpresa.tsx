@@ -7,7 +7,8 @@ interface Props {
   usuario: Usuario | null
   /** Nulo cuando el usuario no puede conmutar: entonces no hay nada que cambiar. */
   alCambiarEmpresa: (() => void) | null
-  alSalir: () => void
+  /** Nulo dentro del panel de la GD, que tiene su propia salida. */
+  alSalir: (() => void) | null
 }
 
 /**
@@ -38,9 +39,11 @@ export default function CabeceraEmpresa({
             Cambiar empresa
           </Button>
         )}
-        <Button variant="subtle" size="xs" onClick={alSalir}>
-          Salir
-        </Button>
+        {alSalir && (
+          <Button variant="subtle" size="xs" onClick={alSalir}>
+            Salir
+          </Button>
+        )}
       </Group>
     </Group>
   )

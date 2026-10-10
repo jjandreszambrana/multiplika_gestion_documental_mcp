@@ -10,7 +10,48 @@ import { ErrorApi, ErrorRed } from './errores'
  *   token no se lee ni se guarda, y no hay lógica de refresco ni reintentos.
  */
 
-const PREFIJO = '/apisif/v1'
+/**
+ * A dónde van las llamadas y qué se añade a cada una. Por defecto, lo de la app
+ * independiente: `/apisif/v1` y la cookie. Dentro del panel de la GD se cambia
+ * con `configurarCliente` para ir por su proxy, con sus cabeceras.
+ */
+export interface ConfiguracionCliente {
+  /** Lo que va delante de cada ruta (`/contabilidad/...`). */
+  prefijo: string
+  /** Cabeceras que se añaden a todas las peticiones. */
+  cabeceras: () => Record<string, string>
+  /** Se llama con cada respuesta que llega, buena o mala, antes de leerla. */
+  trasRespuesta: (respuesta: Response) => void
+}
+
+const POR_DEFECTO: ConfiguracionCliente = {
+  prefijo: '/apisif/v1',
+  cabeceras: () => ({}),
+  trasRespuesta: () => {},
+}
+
+let configuracion: ConfiguracionCliente = POR_DEFECTO
+
+/** Cambia la configuración; lo que no se pase vuelve al valor por defecto. */
+export function configurarCliente(cambios: Partial<ConfiguracionCliente>): void {
+  configuracion = { ...POR_DEFECTO, ...cambios }
+}
+
+/** El `fetch` de todo el módulo: prefijo, cabeceras, cookie y gancho de respuesta. */
+async function llamar(ruta: string, init: RequestInit): Promise<Response> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(`${configuracion.prefijo}${ruta}`, {
+      ...init,
+      headers: { ...configuracion.cabeceras(), ...(init.headers as Record<string, string>) },
+      credentials: 'include',
+    })
+  } catch (causa) {
+    throw new ErrorRed(causa)
+  }
+  configuracion.trasRespuesta(respuesta)
+  return respuesta
+}
 
 function textoDe(cuerpo: unknown, clave: string): string | null {
   if (typeof cuerpo !== 'object' || cuerpo === null || !(clave in cuerpo)) return null
@@ -35,13 +76,7 @@ async function leerError(respuesta: Response): Promise<ErrorApi> {
 }
 
 async function ejecutar<T>(ruta: string, init: RequestInit): Promise<T> {
-  let respuesta: Response
-  try {
-    respuesta = await fetch(`${PREFIJO}${ruta}`, { ...init, credentials: 'include' })
-  } catch (causa) {
-    throw new ErrorRed(causa)
-  }
-
+  const respuesta = await llamar(ruta, init)
   if (!respuesta.ok) throw await leerError(respuesta)
   return (await respuesta.json()) as T
 }
@@ -102,18 +137,12 @@ export async function descargar(
   cuerpo: object = {},
   senal?: AbortSignal,
 ): Promise<Descarga> {
-  let respuesta: Response
-  try {
-    respuesta = await fetch(`${PREFIJO}${ruta}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cuerpo),
-      credentials: 'include',
-      signal: senal,
-    })
-  } catch (causa) {
-    throw new ErrorRed(causa)
-  }
+  const respuesta = await llamar(ruta, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cuerpo),
+    signal: senal,
+  })
 
   if (!respuesta.ok) throw await leerError(respuesta)
 

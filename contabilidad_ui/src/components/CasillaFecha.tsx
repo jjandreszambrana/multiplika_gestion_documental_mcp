@@ -1,8 +1,14 @@
 import { DateInput, type DateInputProps } from '@mantine/dates'
 import { useState } from 'react'
-import { parsearFechaEscrita } from '../lib/fecha'
+import { fechaDeApi, parsearFechaEscrita } from '../lib/fecha'
 
-interface Props extends DateInputProps {
+/**
+ * Desde Mantine 8 el `DateInput` devuelve la fecha como cadena `aaaa-mm-dd`.
+ * Aquí se sigue dando y recibiendo un `Date`, como en el resto de la
+ * aplicación: la cadena se convierte en este único punto, con la fecha local.
+ */
+interface Props extends Omit<DateInputProps, 'onChange'> {
+  onChange?: (valor: Date | null) => void
   /** Se llama al cerrarse el calendario, que es cuando se ha elegido un día. */
   alCerrarCalendario?: () => void
 }
@@ -58,7 +64,7 @@ export function CasillaFecha({
         onBlur?.(e)
       }}
       onChange={(valor) => {
-        onChange?.(valor)
+        onChange?.(fechaDeApi(valor))
         // Elegir un día en el calendario lo cierra; teclear no lo abre, así que
         // aquí solo se llega desde el calendario.
         cerrar()
