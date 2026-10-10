@@ -34,7 +34,7 @@ mantienes de dos formas:
 
 El menú del panel sigue el mismo orden que esta ayuda: primero lo del día \
 a día (documentos, notificaciones, bloc de notas, seguimiento, avisos \
-programados, tipos, estilos de informe, registros de datos, reglas, \
+programados, CRM, asesor contable si está activado, tipos, estilos de informe, registros de datos, reglas, \
 grupos, entidades, scripts, webs y redes, actividad, chat) y, en "Administración", lo \
 que solo ve el administrador.
 
@@ -934,6 +934,9 @@ pídele que haga cosas.
   siempre.
 - Las conversaciones sin uso en **6 meses** se borran solas.
 - Un invitado también puede usarlo, pero solo para consultar.
+- **Sabe a qué se dedica tu empresa**: igual que tu IA conectada, lee \
+  desde el primer mensaje el "Contexto de negocio", las preferencias de \
+  trabajo y las reglas globales.
 
 Para que funcione, tu empresa necesita tener configurada su propia clave de \
 IA (su uso se paga aparte, según lo que se use). Si el chat dice que no hay \
@@ -948,7 +951,8 @@ Esta parte del menú solo la ve el administrador.
 
 ### Contexto de negocio
 
-Lo que la IA lee en cuanto se conecta: a qué se dedica tu empresa y cómo \
+Lo que la IA lee en cuanto se conecta, tanto tu IA conectada como el chat \
+del panel: a qué se dedica tu empresa y cómo \
 quieres que se comporte contigo (tono, prioridades, cosas a evitar). \
 Cuanto más claro, mejor te ayuda. Para instrucciones de tareas concretas, \
 mejor "Reglas de la IA".
