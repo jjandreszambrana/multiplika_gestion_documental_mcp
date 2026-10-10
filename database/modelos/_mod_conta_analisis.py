@@ -127,8 +127,11 @@ def asiento_valido(detalle: dict) -> dict:
         normalizados.append({"cuenta": cuenta, "concepto": a.get("concepto"), "debe": d, "haber": h})
     if abs(debe - haber) > TOLERANCIA_SALDO:
         raise ValueError(f"El asiento no cuadra: debe {debe:.2f} y haber {haber:.2f}")
-    return {"fecha": detalle.get("fecha"), "concepto": detalle.get("concepto"), "apuntes": normalizados,
-            "total": round(debe, 2)}
+    normalizado = {"fecha": detalle.get("fecha"), "concepto": detalle.get("concepto"), "apuntes": normalizados,
+                   "total": round(debe, 2)}
+    if detalle.get("id_predefinido"):
+        normalizado["id_predefinido"] = detalle["id_predefinido"]
+    return normalizado
 
 
 # ---------- Informes del SIF, compactados para la IA ----------
