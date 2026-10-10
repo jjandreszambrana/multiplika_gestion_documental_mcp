@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import {
-  Alert, Anchor, Badge, Grid, Group, Modal, NavLink, Paper, Stack, Switch, Text, TextInput, Title,
+  Alert, Anchor, Badge, Grid, Group, Loader, Modal, NavLink, Paper, Stack, Switch, Text, TextInput, Title,
 } from "@mantine/core"
 import { IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
@@ -26,6 +26,8 @@ function Rama({ nodo, hijos, cargarHijos, idTema, onElegirTema }) {
       label={`${nodo.posicion} ${nodo.titulo}`}
       description={nodo.resumen}
       opened={abierto}
+      // Mientras llegan los hijos, el reloj en lugar de la flecha.
+      rightSection={abierto && !hijos[nodo.id] ? <Loader size={14} /> : undefined}
       onChange={(valor) => {
         setAbierto(valor)
         if (valor && !hijos[nodo.id]) cargarHijos(nodo.id)
