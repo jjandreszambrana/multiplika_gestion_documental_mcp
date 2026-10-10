@@ -554,16 +554,12 @@ activar, ni sale en el menú ni la IA lo usa.
   ejercicio, apartado por apartado. Las cifras salen de la contabilidad; \
   la IA prepara los textos (pídeselo en el chat) y tú los revisas, \
   guardas y, al final, formulas: entonces queda bloqueada.
-- **Mi acceso al SIF**: tu usuario y contraseña del SIF. Se guardan \
-  cifrados y solo los usas tú; con ellos ves las empresas que el SIF te \
-  permite y en el SIF queda que lo has hecho tú.
-- **Conexión con el SIF** (solo administrador): se elige si la GD es de \
-  una **asesoría** (la contabilidad de vuestros clientes) o de **una sola \
-  empresa**, y se pone el acceso de la asesoría o de la empresa, con un \
-  botón para probarlo. En una asesoría, nunca se ve una empresa que no \
-  sea de la asesoría en el SIF, y cada usuario ve solo las suyas. Aquí se \
-  activa también la revisión nocturna (saldos raros y cuadre del IVA, sin \
-  gastar IA).
+- **Mis accesos al SIF**: tu usuario y contraseña del SIF, con la \
+  dirección del SIF. Se guardan cifrados y solo los usas tú. Ves lo mismo \
+  que ese usuario ve en el SIF: su empresa, o todas las de la asesoría. Si \
+  trabajas con varios SIF, añade uno por cada uno. En cada acceso puedes \
+  activar la revisión nocturna de sus empresas (saldos raros y cuadre del \
+  IVA, sin gastar IA), que deja avisos en Propuestas.
 
 ### Vuestras reglas
 

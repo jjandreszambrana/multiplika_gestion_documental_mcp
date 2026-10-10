@@ -120,6 +120,8 @@ El primer lote, los 81 temas marcados P1 en [estructura-temas.md](estructura-tem
 
 ## Fase 2: conexión con el SIF (modos, claves y empresas)
 
+> **Cambiado el 2026-10-10 por decisión del usuario ([5.9] del canal compartido).** Lo que sigue sobre los dos modos, la clave de la GD, el límite de empresas y la opción de asesorías pequeñas **ya no vale**: cada usuario vincula sus propios accesos al SIF (uno o varios, a SIF distintos, de empresa o de asesoría según el rol que devuelva el SIF) y ve lo que esos usuarios ven. No hay configuración a nivel de la GD; la revisión nocturna va por acceso, con el de quien la activa. Estado actual en docs/gestion-documental.md → "Asesor contable conectado con el SIF". Se conserva el texto de abajo como historia de la decisión.
+
 Decisiones del usuario (2026-10-10):
 
 - Una GD trabaja con el SIF en uno de dos modos, **asesoría** o **empresa**, y lo elige el administrador.
