@@ -219,9 +219,13 @@ Herramientas de solo lectura, agrupadas para no llenar el contexto:
 - `buscar_cuenta_contable_gd(empresa, texto)`: buscar una cuenta o un tercero en el plan.
 - `analisis_financiero_gd(empresa, ejercicio)`: ratios (liquidez, solvencia, endeudamiento, rentabilidad, periodos de cobro y pago, fondo de maniobra) **calculados en código** a partir del balance y la cuenta de pérdidas y ganancias. La IA no calcula, interpreta. Así un ratio no sale distinto en dos conversaciones.
 
-Cuidado con el tamaño: un diario o un mayor de un año puede tener miles de líneas. Las herramientas devuelven totales y las primeras N líneas con aviso de que hay más, y aceptan filtros (fechas, cuenta). **[COMPROBAR]** qué paginación ofrecen `/informes/diario` y `/informes/mayor`.
+Cuidado con el tamaño: un diario o un mayor de un año puede tener miles de líneas. Las herramientas devuelven totales y las primeras N líneas con aviso de que hay más, y aceptan filtros (fechas, cuenta). Comprobado el 2026-10-10: `/informes/diario` y `/informes/mayor` ya paginan (`offset`/`limit`, con `total` y totales del periodo entero), así que no hay que pedir nada al SIF.
 
 Todas mandan `id_obligado` en el cuerpo con la sesión del usuario. El SIF comprueba el nivel de acceso, la GD no duplica esa comprobación.
+
+## Fase 3 bis: memoria anual
+
+La memoria de las cuentas anuales, guardada en el SIF por empresa y ejercicio y redactada desde la GD con datos de la contabilidad, de los documentos de la GD y de lo que aporte el contable a mano. Plan completo en [memoria-anual.md](memoria-anual.md). Es la única pieza que **escribe en el SIF**: siempre con la clave del usuario y después de que lo apruebe el contable.
 
 ## Fase 4: la IA propone
 
@@ -277,7 +281,7 @@ Se pide al SIF:
 1. **Ruta de empresas dentro de `contabilidad/*`.** La interfaz usa `/obligados/listar`, que es de otro módulo, en la pantalla de activar la contabilidad (`pages/empresa/PantallaActivar.tsx`). O se ofrece lo mismo bajo `/contabilidad/...` o esa pantalla no se enseña dentro de la GD. Así el proxy solo deja pasar `contabilidad/*` y no se abre nada más del SIF.
 2. **Marca de origen en el registro del SIF** (opcional): aceptar una cabecera tipo `X-Origen: gd` para que en el registro de actividad del SIF se vea que la acción vino desde la GD. El usuario ya es el suyo, así que la autoría es correcta igualmente.
 3. **Más adelante, una clave de servicio para contabilidad**: hoy las api_key solo valen para Veri\*Factu. Una clave por usuario limitada a `contabilidad/*` evitaría guardar su contraseña personal y no se rompería al cambiarla. No bloquea nada.
-4. **Paginación en diario y mayor** para la fase 3 (la IA no puede recibir miles de líneas). **[COMPROBAR]** qué ofrecen hoy.
+4. ~~Paginación en diario y mayor~~: ya existe (comprobado el 2026-10-10).
 5. **No romper la API sin avisar**: la GD llevará una versión fija de las pantallas. Si cambia un endpoint, hay que subir a la vez la versión nueva de las pantallas en la GD. Los tipos generados desde el OpenAPI (`npm run api:types`) avisan al compilar.
 
 ## Más adelante (sin fecha)
