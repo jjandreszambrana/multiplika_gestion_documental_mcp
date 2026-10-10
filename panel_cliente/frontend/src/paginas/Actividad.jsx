@@ -60,7 +60,7 @@ export default function Actividad({ proyecto, onVolver, onVerDocumento }) {
         underline="hover" c="dimmed" fz="13.5px" fw={500}
       >
         <IconArrowLeft size={15} stroke={2} />
-        Documentos
+        Inicio
       </Anchor>
 
       <Title order={2} mb="6">

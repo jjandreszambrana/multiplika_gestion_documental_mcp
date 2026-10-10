@@ -95,3 +95,8 @@ body {
   padding: 9px 10px;
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
+
+/* Filas del Inicio: se ve que se pueden pulsar */
+.fila-inicio { padding: 2px 4px; margin: 0 -4px; }
+.fila-inicio:hover { background: var(--mantine-color-default-hover); }
+.fila-inicio:focus-visible { outline: 2px solid var(--mantine-primary-color-filled); }

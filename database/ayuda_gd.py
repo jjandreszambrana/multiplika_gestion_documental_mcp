@@ -32,11 +32,20 @@ mantienes de dos formas:
   reglas... y un chat con la IA dentro del propio panel (ver "Chat con la \
   IA").
 
-El menú del panel sigue el mismo orden que esta ayuda: primero lo del día \
-a día (documentos, notificaciones, bloc de notas, seguimiento, avisos \
-programados, CRM, asesor contable si está activado, tipos, estilos de informe, registros de datos, reglas, \
-grupos, entidades, scripts, webs y redes, actividad, chat) y, en "Administración", lo \
-que solo ve el administrador.
+Al entrar se abre el **Inicio**: una tarjeta por cada parte (documentos \
+pendientes, notificaciones, tu seguimiento, próximos avisos, documentos \
+que caducan, oportunidades del CRM, propuestas contables, webs con \
+alertas, últimos documentos y notas, actividad) con su cifra y lo último. \
+Pulsando una línea vas directo a ella, y el botón "Inicio" de cada \
+pantalla te devuelve aquí.
+
+El menú está agrupado por lo que hace cada opción, y cada grupo se pliega \
+(el panel recuerda cómo lo dejaste): **Día a día** (notificaciones, \
+seguimiento, avisos programados, bloc de notas, chat), **Documentación** \
+(documentos, grupos, tipos, registros de datos, estilos de informe), \
+**Clientes y negocio** (entidades, CRM, asesor contable, webs y redes), \
+**IA y automatización** (reglas, scripts, actividad) y \
+**Administración**, que solo ve el administrador.
 
 ### Qué puede hacer cada usuario
 

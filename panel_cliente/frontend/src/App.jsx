@@ -70,6 +70,7 @@ import Webs from "./paginas/Webs"
 import WebDetalle from "./paginas/WebDetalle"
 import Publicaciones from "./paginas/Publicaciones"
 import AsesorContable from "./paginas/AsesorContable"
+import Inicio from "./paginas/Inicio"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
 // del menú). Un minuto basta: los avisos saltan como mucho una vez por minuto.
@@ -92,7 +93,7 @@ export default function App() {
   // (ya enlazada al documento o registro desde el que se pidió)
   const [notaActiva, setNotaActiva] = useState(null)
   const [noLeidas, setNoLeidas] = useState(0)
-  const [vista, setVista] = useState("documentos")
+  const [vista, setVista] = useState("inicio")
   const [comprobandoEnlace, setComprobandoEnlace] = useState(true)
   const [error, setError] = useState(null)
   const [pendientesCount, setPendientesCount] = useState(0)
@@ -182,7 +183,7 @@ export default function App() {
       setChatAbierto(false)
       setChatMontado(false)
       localStorage.removeItem(CLAVE_PROYECTO)
-      navegar("documentos")
+      navegar("inicio")
     })
   }
 
@@ -234,7 +235,7 @@ export default function App() {
     setIdActivoActivo(null)
     setIdProgramacionActiva(null)
     setNotaActiva(null)
-    setVista("documentos")
+    setVista("inicio")
     localStorage.removeItem(CLAVE_PROYECTO)
   }
 
@@ -361,25 +362,25 @@ export default function App() {
               onNuevaNota={nuevaNota}
             />
           ) : vista === "api-keys" ? (
-            <ApiKeys proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <ApiKeys proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "enlaces" ? (
-            <Enlaces proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Enlaces proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "contexto" ? (
-            <Contexto proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Contexto proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "credenciales" ? (
-            <Credenciales proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Credenciales proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "certificados" ? (
-            <Certificados proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Certificados proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "copias-bd" ? (
-            <CopiasBD proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <CopiasBD proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "usuarios" ? (
-            <Usuarios proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Usuarios proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "avisos" ? (
-            <Avisos proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Avisos proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "cuenta-email" ? (
-            <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "ayuda" ? (
-            <Ayuda onVolver={() => navegar("documentos")} />
+            <Ayuda onVolver={() => navegar("inicio")} />
           ) : vista === "asesor-contable" ? (
             <AsesorContable
               proyecto={proyecto}
@@ -388,13 +389,13 @@ export default function App() {
           ) : vista === "estilos" && estiloActivo ? (
             <EstiloDetalle proyecto={proyecto} estilo={estiloActivo} onVolver={() => setEstiloActivo(null)} />
           ) : vista === "estilos" ? (
-            <Estilos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEstilo={setEstiloActivo} />
+            <Estilos proyecto={proyecto} onVolver={() => navegar("inicio")} onVerEstilo={setEstiloActivo} />
           ) : vista === "reglas" ? (
-            <Reglas proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <Reglas proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "registros" ? (
-            <Registros proyecto={proyecto} onVolver={() => navegar("documentos")} onVerNota={verNota} onNuevaNota={nuevaNota} />
+            <Registros proyecto={proyecto} onVolver={() => navegar("inicio")} onVerNota={verNota} onNuevaNota={nuevaNota} />
           ) : vista === "tipos-documento" ? (
-            <TiposDocumento proyecto={proyecto} onVolver={() => navegar("documentos")} />
+            <TiposDocumento proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "grupos" && grupoActivo ? (
             <GrupoDetalle
               proyecto={proyecto}
@@ -403,7 +404,7 @@ export default function App() {
               onEliminado={() => setGrupoActivo(null)}
             />
           ) : vista === "grupos" ? (
-            <Grupos proyecto={proyecto} onVolver={() => navegar("documentos")} onVerGrupo={setGrupoActivo} />
+            <Grupos proyecto={proyecto} onVolver={() => navegar("inicio")} onVerGrupo={setGrupoActivo} />
           ) : vista === "entidades" && entidadActiva ? (
             <EntidadDetalle
               proyecto={proyecto}
@@ -415,7 +416,7 @@ export default function App() {
               onVerDocumento={verDocumento}
             />
           ) : vista === "entidades" ? (
-            <Entidades proyecto={proyecto} onVolver={() => navegar("documentos")} onVerEntidad={setEntidadActiva} />
+            <Entidades proyecto={proyecto} onVolver={() => navegar("inicio")} onVerEntidad={setEntidadActiva} />
           ) : vista === "scripts" && scriptActivo ? (
             <ScriptDetalle
               proyecto={proyecto}
@@ -424,11 +425,11 @@ export default function App() {
               onCambiado={setScriptActivo}
             />
           ) : vista === "scripts" ? (
-            <Scripts proyecto={proyecto} onVolver={() => navegar("documentos")} onVerScript={setScriptActivo} />
+            <Scripts proyecto={proyecto} onVolver={() => navegar("inicio")} onVerScript={setScriptActivo} />
           ) : vista === "webs" && idActivoActivo ? (
             <WebDetalle proyecto={proyecto} idActivo={idActivoActivo} onVolver={() => setIdActivoActivo(null)} />
           ) : vista === "webs" ? (
-            <Webs proyecto={proyecto} onVolver={() => navegar("documentos")} onVerActivo={setIdActivoActivo} onVerCalendario={() => navegar("publicaciones")} />
+            <Webs proyecto={proyecto} onVolver={() => navegar("inicio")} onVerActivo={setIdActivoActivo} onVerCalendario={() => navegar("publicaciones")} />
           ) : vista === "publicaciones" ? (
             <Publicaciones proyecto={proyecto} onVolver={() => navegar("webs")} />
           ) : vista === "programaciones" && idProgramacionActiva ? (
@@ -440,11 +441,11 @@ export default function App() {
               onVerNota={verNota}
             />
           ) : vista === "programaciones" ? (
-            <Programaciones proyecto={proyecto} onVolver={() => navegar("documentos")} onVerProgramacion={setIdProgramacionActiva} />
+            <Programaciones proyecto={proyecto} onVolver={() => navegar("inicio")} onVerProgramacion={setIdProgramacionActiva} />
           ) : vista === "notificaciones" ? (
             <Notificaciones
               proyecto={proyecto}
-              onVolver={() => navegar("documentos")}
+              onVolver={() => navegar("inicio")}
               onVerProgramacion={verProgramacion}
               onVerSeguimiento={() => navegar("seguimiento")}
               onVerWebs={() => navegar("webs")}
@@ -454,7 +455,7 @@ export default function App() {
             <Ventas
               proyecto={proyecto}
               esSuperadmin={esSuperadmin}
-              onVolver={() => navegar("documentos")}
+              onVolver={() => navegar("inicio")}
               onVerEntidad={verEntidad}
               onVerDocumento={verDocumento}
             />
@@ -462,7 +463,7 @@ export default function App() {
             <Seguimiento
               proyecto={proyecto}
               esSuperadmin={esSuperadmin}
-              onVolver={() => navegar("documentos")}
+              onVolver={() => navegar("inicio")}
               onVerNota={verNota}
               onVerDocumento={verDocumento}
             />
@@ -484,12 +485,22 @@ export default function App() {
             <BlocNotas
               proyecto={proyecto}
               esSuperadmin={esSuperadmin}
-              onVolver={() => navegar("documentos")}
+              onVolver={() => navegar("inicio")}
               onVerNota={verNota}
               onNuevaNota={nuevaNota}
             />
+          ) : vista === "inicio" ? (
+            <Inicio
+              proyecto={proyecto}
+              esSuperadmin={esSuperadmin}
+              onNavegar={navegar}
+              onVerDocumento={verDocumento}
+              onVerNota={verNota}
+              onVerProgramacion={verProgramacion}
+              onVerEntidad={verEntidad}
+            />
           ) : vista === "actividad" ? (
-            <Actividad proyecto={proyecto} onVolver={() => navegar("documentos")} onVerDocumento={setIdDocumentoActivo} />
+            <Actividad proyecto={proyecto} onVolver={() => navegar("inicio")} onVerDocumento={setIdDocumentoActivo} />
           ) : (
             <Documentos
               proyecto={proyecto}

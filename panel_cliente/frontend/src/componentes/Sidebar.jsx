@@ -1,6 +1,9 @@
-import { ActionIcon, AppShell, Avatar, Badge, Group, Menu, NavLink, Text, ThemeIcon, Tooltip, UnstyledButton, useMantineColorScheme } from "@mantine/core"
+import { ActionIcon, AppShell, Avatar, Badge, Collapse, Group, Menu, NavLink, Text, ThemeIcon, Tooltip, UnstyledButton, useMantineColorScheme } from "@mantine/core"
+import { useEffect, useState } from "react"
 import {
   IconFileText,
+  IconLayoutDashboard,
+  IconChevronDown,
   IconCalculator,
   IconCategory,
   IconFolders,
@@ -14,7 +17,6 @@ import {
   IconBellRinging,
   IconMail,
   IconHelpCircle,
-  IconInbox,
   IconMessageCircle,
   IconCode,
   IconWorld,
@@ -52,6 +54,48 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
       onClick={onClick}
       styles={{ root: { borderRadius: "var(--mantine-radius-md)" } }}
     />
+  )
+}
+
+// Qué grupos del menú ha plegado cada uno: se recuerda en este navegador.
+const CLAVE_PLEGADOS = "gd_menu_plegados"
+
+function leerPlegados() {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_PLEGADOS) || "[]")
+  } catch {
+    return []
+  }
+}
+
+// Grupo plegable del menú. El que contiene la pantalla abierta se despliega
+// solo, para que nunca quede escondida la opción en la que se está.
+function Grupo({ id, titulo, activo, children }) {
+  const [plegado, setPlegado] = useState(() => leerPlegados().includes(id))
+  useEffect(() => {
+    if (activo) setPlegado(false)
+  }, [activo])
+  const alternar = () => {
+    const nuevo = !plegado
+    setPlegado(nuevo)
+    try {
+      const resto = leerPlegados().filter((g) => g !== id)
+      localStorage.setItem(CLAVE_PLEGADOS, JSON.stringify(nuevo ? [...resto, id] : resto))
+    } catch {
+      // sin almacenamiento: solo no se recuerda
+    }
+  }
+  return (
+    <>
+      <UnstyledButton
+        onClick={alternar} aria-expanded={!plegado} mt="md" mb="4" px="8" w="100%"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <Text size="11px" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: ".04em" }}>{titulo}</Text>
+        <IconChevronDown size={14} style={{ transform: plegado ? "rotate(-90deg)" : "none", transition: "transform 150ms", color: "var(--mantine-color-dimmed)" }} />
+      </UnstyledButton>
+      <Collapse in={!plegado}>{children}</Collapse>
+    </>
   )
 }
 
@@ -120,81 +164,78 @@ export default function Sidebar({
       </AppShell.Section>
 
       <AppShell.Section grow style={{ overflowY: "auto" }}>
-        <Item icon={IconFileText} label="Documentos" active={vista === "documentos"} onClick={() => onNavigate("documentos")} />
-        {/* Las notificaciones son de cada usuario: soporte no tiene */}
-        {!esSuperadmin && (
+        <Item icon={IconLayoutDashboard} label="Inicio" active={vista === "inicio"} onClick={() => onNavigate("inicio")} />
+
+        <Grupo id="dia" titulo="Día a día" activo={["notificaciones", "seguimiento", "programaciones", "bloc-notas"].includes(vista)}>
+          {/* Las notificaciones son de cada usuario: soporte no tiene */}
+          {!esSuperadmin && (
+            <Item
+              icon={IconBell} label="Notificaciones" active={vista === "notificaciones"}
+              badge={noLeidas > 0 ? noLeidas : null} onClick={() => onNavigate("notificaciones")}
+            />
+          )}
+          <Item icon={IconProgressCheck} label="Seguimiento" active={vista === "seguimiento"} onClick={() => onNavigate("seguimiento")} />
+          <Item icon={IconAlarm} label="Avisos programados" active={vista === "programaciones"} onClick={() => onNavigate("programaciones")} />
+          <Item icon={IconNotebook} label="Bloc de notas" active={vista === "bloc-notas"} onClick={() => onNavigate("bloc-notas")} />
+          {/* El chat solo existe para usuarios de la empresa (el historial
+              referencia mcpc_usuarios) — un superadmin en modo soporte no
+              puede usarlo, ver usuario_chat_gd_actual en dependencias.py */}
+          {!esSuperadmin && (
+            <Item icon={IconMessageCircle} label="Chat con la IA" active={chatAbierto} onClick={onAlternarChat} />
+          )}
+        </Grupo>
+
+        <Grupo id="documentacion" titulo="Documentación" activo={["documentos", "grupos", "tipos-documento", "registros", "estilos"].includes(vista)}>
           <Item
-            icon={IconBell} label="Notificaciones" active={vista === "notificaciones"}
-            badge={noLeidas > 0 ? noLeidas : null} onClick={() => onNavigate("notificaciones")}
+            icon={IconFileText} label="Documentos" active={vista === "documentos"}
+            badge={pendientesCount > 0 ? pendientesCount : null} onClick={() => onNavigate("documentos")}
           />
-        )}
-        <Item icon={IconNotebook} label="Bloc de notas" active={vista === "bloc-notas"} onClick={() => onNavigate("bloc-notas")} />
-        <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
-        {/* Solo en las GD con el apartado activado; el admin lo ve siempre para poder activarlo */}
-        {(proyecto.modulo_contable || proyecto.es_admin) && (
-          <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
-        )}
-        <Item icon={IconProgressCheck} label="Seguimiento" active={vista === "seguimiento"} onClick={() => onNavigate("seguimiento")} />
-        <Item icon={IconAlarm} label="Avisos programados" active={vista === "programaciones"} onClick={() => onNavigate("programaciones")} />
-        <Item
-          icon={IconCategory}
-          label="Tipos de documento"
-          active={vista === "tipos-documento"}
-          onClick={() => onNavigate("tipos-documento")}
-        />
-        <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
-        <Item icon={IconClipboardList} label="Registros de datos" active={vista === "registros"} onClick={() => onNavigate("registros")} />
-        <Item icon={IconGavel} label="Reglas de la IA" active={vista === "reglas"} onClick={() => onNavigate("reglas")} />
-        <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
-        <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
-        <Item icon={IconCode} label="Scripts" active={vista === "scripts"} onClick={() => onNavigate("scripts")} />
-        {/* Invitado no ve nada de webs y redes, ni para leer */}
-        {(proyecto.puede_editar || proyecto.es_admin) && (
-          <Item icon={IconWorld} label="Webs y redes" active={vista === "webs" || vista === "publicaciones"} onClick={() => onNavigate("webs")} />
-        )}
-        {/* Invitado no ve la actividad; soporte sí (llega con es_admin) */}
-        {(proyecto.puede_editar || proyecto.es_admin) && (
-          <Item icon={IconActivity} label="Actividad" active={vista === "actividad"} onClick={() => onNavigate("actividad")} />
-        )}
-        {/* El chat solo existe para usuarios de la empresa (el historial
-            referencia mcpc_usuarios) — un superadmin en modo soporte no
-            puede usarlo, ver usuario_chat_gd_actual en dependencias.py */}
-        {!esSuperadmin && (
-          <Item icon={IconMessageCircle} label="Chat con la IA" active={chatAbierto} onClick={onAlternarChat} />
-        )}
+          <Item icon={IconFolders} label="Grupos" active={vista === "grupos"} onClick={() => onNavigate("grupos")} />
+          <Item icon={IconCategory} label="Tipos de documento" active={vista === "tipos-documento"} onClick={() => onNavigate("tipos-documento")} />
+          <Item icon={IconClipboardList} label="Registros de datos" active={vista === "registros"} onClick={() => onNavigate("registros")} />
+          <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
+        </Grupo>
+
+        <Grupo id="negocio" titulo="Clientes y negocio" activo={["entidades", "ventas", "asesor-contable", "webs", "publicaciones"].includes(vista)}>
+          <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
+          <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
+          {/* Solo en las GD con el apartado activado; el admin lo ve siempre para poder activarlo */}
+          {(proyecto.modulo_contable || proyecto.es_admin) && (
+            <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
+          )}
+          {/* Invitado no ve nada de webs y redes, ni para leer */}
+          {(proyecto.puede_editar || proyecto.es_admin) && (
+            <Item icon={IconWorld} label="Webs y redes" active={vista === "webs" || vista === "publicaciones"} onClick={() => onNavigate("webs")} />
+          )}
+        </Grupo>
+
+        <Grupo id="ia" titulo="IA y automatización" activo={["reglas", "scripts", "actividad"].includes(vista)}>
+          <Item icon={IconGavel} label="Reglas de la IA" active={vista === "reglas"} onClick={() => onNavigate("reglas")} />
+          <Item icon={IconCode} label="Scripts" active={vista === "scripts"} onClick={() => onNavigate("scripts")} />
+          {/* Invitado no ve la actividad; soporte sí (llega con es_admin) */}
+          {(proyecto.puede_editar || proyecto.es_admin) && (
+            <Item icon={IconActivity} label="Actividad" active={vista === "actividad"} onClick={() => onNavigate("actividad")} />
+          )}
+        </Grupo>
 
         {proyecto.es_admin && (
-          <>
-            <Text size="11px" fw={600} c="dimmed" tt="uppercase" mt="lg" mb="4" ml="8" style={{ letterSpacing: ".04em" }}>
-              Administración
-            </Text>
+          <Grupo
+            id="administracion" titulo="Administración"
+            activo={["contexto", "usuarios", "api-keys", "enlaces", "credenciales", "certificados", "copias-bd", "avisos", "cuenta-email"].includes(vista)}
+          >
             <Item icon={IconBriefcase} label="Contexto de negocio" active={vista === "contexto"} onClick={() => onNavigate("contexto")} />
             <Item icon={IconUsers} label="Usuarios" active={vista === "usuarios"} onClick={() => onNavigate("usuarios")} />
             <Item icon={IconKey} label="API keys" active={vista === "api-keys"} onClick={() => onNavigate("api-keys")} />
             <Item icon={IconLink} label="GDs enlazadas" active={vista === "enlaces"} onClick={() => onNavigate("enlaces")} />
             <Item icon={IconLock} label="Credenciales" active={vista === "credenciales"} onClick={() => onNavigate("credenciales")} />
             <Item icon={IconCertificate} label="Certificados" active={vista === "certificados"} onClick={() => onNavigate("certificados")} />
-            <Item icon={IconDatabaseExport} label="Copias de seguridad" active={vista === "copias-bd"} onClick={() => onNavigate("copias-bd")} />
-            <Item
-              icon={IconBellRinging}
-              label="Avisos de caducidad"
-              active={vista === "avisos"}
-              onClick={() => onNavigate("avisos")}
-            />
             <Item icon={IconMail} label="Cuenta de correo" active={vista === "cuenta-email"} onClick={() => onNavigate("cuenta-email")} />
-          </>
+            <Item icon={IconDatabaseExport} label="Copias de seguridad" active={vista === "copias-bd"} onClick={() => onNavigate("copias-bd")} />
+            <Item icon={IconBellRinging} label="Avisos de caducidad" active={vista === "avisos"} onClick={() => onNavigate("avisos")} />
+          </Grupo>
         )}
 
-        <Text size="11px" fw={600} c="dimmed" tt="uppercase" mt="lg" mb="4" ml="8" style={{ letterSpacing: ".04em" }}>
-          Otros
-        </Text>
         <Item icon={IconHelpCircle} label="Ayuda" active={vista === "ayuda"} onClick={() => onNavigate("ayuda")} />
-        <Item
-          icon={IconInbox}
-          label="Documentos pendientes"
-          badge={pendientesCount > 0 ? pendientesCount : null}
-          onClick={() => onNavigate("documentos")}
-        />
       </AppShell.Section>
 
       <AppShell.Section

@@ -40,7 +40,7 @@ export default function Avisos({ proyecto, onVolver }) {
         underline="hover" c="dimmed" fz="13.5px" fw={500}
       >
         <IconArrowLeft size={15} stroke={2} />
-        Documentos
+        Inicio
       </Anchor>
       <Title order={2} mb="xs">
         Avisos de caducidad de {proyecto.nombre}

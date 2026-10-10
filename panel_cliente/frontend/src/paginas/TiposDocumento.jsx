@@ -168,7 +168,7 @@ export default function TiposDocumento({ proyecto, onVolver }) {
         fw={500}
       >
         <IconArrowLeft size={15} stroke={2} />
-        Documentos
+        Inicio
       </Anchor>
       <Group justify="space-between" align="flex-start" mb="lg">
         <div>

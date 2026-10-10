@@ -1017,7 +1017,7 @@ export default function Registros({ proyecto, onVolver, onVerNota, onNuevaNota }
         underline="hover" c="dimmed" fz="13.5px" fw={500}
       >
         <IconArrowLeft size={15} stroke={2} />
-        Documentos
+        Inicio
       </Anchor>
       <Group justify="space-between" align="flex-start" mb="lg">
         <div>

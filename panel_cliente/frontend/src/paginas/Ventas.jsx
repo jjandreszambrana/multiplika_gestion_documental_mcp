@@ -113,7 +113,7 @@ export default function Ventas({ proyecto, esSuperadmin, onVolver, onVerEntidad,
         underline="hover" c="dimmed" fz="13.5px" fw={500}
       >
         <IconArrowLeft size={15} stroke={2} />
-        Documentos
+        Inicio
       </Anchor>
 
       <Group justify="space-between" align="flex-start" mb="6">

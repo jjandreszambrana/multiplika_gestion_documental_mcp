@@ -4946,3 +4946,71 @@ if __name__ == "__main__":
 
     host, puerto = os.environ.get("PANEL_CLIENTE_BIND", "127.0.0.1:8002").split(":")
     uvicorn.run(app, host=host, port=int(puerto))
+
+
+# --- Inicio del panel: un resumen de cada parte con su cifra y sus últimos
+# elementos, en una sola petición. Reutiliza los endpoints de cada pantalla
+# (mismas reglas de permisos y visibilidad); una parte que falle se queda
+# fuera sin tumbar las demás.
+
+ULTIMOS_INICIO = 5
+DIAS_CADUCIDAD_INICIO = 30
+
+
+def _resumen(filas: list, total: int | None = None) -> dict:
+    return {"total": len(filas) if total is None else total, "ultimos": filas[:ULTIMOS_INICIO]}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/inicio")
+async def inicio_panel(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual),
+    es_admin: bool = Depends(es_admin_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    es_usuario = identidad.tipo == "usuario"
+    puede_editar = es_usuario and await puede_editar_proyecto(identidad.id, proyecto["id"])
+    partes = {
+        "pendientes": lambda: listar_documentos_pendientes(id_proyecto, proyecto),
+        "documentos": lambda: listar_o_buscar_documentos(id_proyecto, None, None, None, None, proyecto),
+        "caducan": lambda: VersionesCRUD(config).listar_por_caducar(DIAS_CADUCIDAD_INICIO),
+        "programaciones": lambda: listar_programaciones_endpoint(id_proyecto, "activa", None, None, proyecto),
+        "bloc": lambda: listar_notas_bloc_endpoint(
+            id_proyecto, None, None, None, None, None, None, None, None, "no", False, None, proyecto, identidad),
+        "crm": lambda: listar_oportunidades_endpoint(id_proyecto, "abiertas", None, None, False, False, None, proyecto, identidad),
+    }
+    if es_usuario:
+        partes["notificaciones"] = lambda: listar_notificaciones_endpoint(id_proyecto, True, False, proyecto, identidad)
+        partes["seguimiento"] = lambda: listar_seguimiento_endpoint(
+            id_proyecto, "pendiente,en_curso", None, True, False, False, proyecto, identidad)
+    if puede_editar or es_admin:
+        partes["actividad"] = lambda: listar_actividad(id_proyecto, None, None, None, None, None, None, None, 1, ULTIMOS_INICIO, proyecto)
+        partes["webs"] = lambda: listar_activos(id_proyecto, None, None, False, proyecto)
+
+    resultado = {}
+    for nombre, obtener in partes.items():
+        try:
+            datos = await obtener()
+        except Exception as e:  # una parte sin datos o caída no tumba el Inicio
+            print(f"[inicio] proyecto={proyecto['id']} {nombre}: {e}")
+            continue
+        if nombre == "crm":
+            resultado[nombre] = {**_resumen(sorted(datos["oportunidades"], key=lambda o: str(o.get("fecha_proximo_paso") or "9"))),
+                                 "resumen": datos["resumen"]}
+        elif nombre == "actividad":
+            resultado[nombre] = _resumen(datos["filas"], datos["total"])
+        elif nombre == "programaciones":
+            resultado[nombre] = _resumen(sorted(datos, key=lambda p: str(p.get("proxima_ejecucion") or "9")))
+        elif nombre == "webs":
+            con_alerta = [a for a in datos if a.get("vigilancia") not in (None, "ok")]
+            if datos:
+                resultado[nombre] = {"total": len(datos), "con_alerta": len(con_alerta), "ultimos": con_alerta[:ULTIMOS_INICIO]}
+        else:
+            resultado[nombre] = _resumen(datos)
+
+    if await ConfiguracionCRUD(config).obtener_modulo_contable():
+        try:
+            ids = [e["id_obligado_sif"] for e in await conta_sif.empresas_de(config, identidad.id if es_usuario else None)]
+            resultado["contabilidad"] = _resumen(await conta_propuestas.listar(config, ids, "pendiente"))
+        except Exception:  # sin conexión con el SIF o sin clave propia: no hay tarjeta
+            pass
+    return resultado
