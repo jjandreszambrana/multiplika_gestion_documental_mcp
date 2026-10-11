@@ -19,6 +19,7 @@ import PantallaMayor from '../pages/informes/PantallaMayor'
 import PantallaInmovilizado from '../pages/inmovilizado/PantallaInmovilizado'
 import PantallaSinFicha from '../pages/inmovilizado/PantallaSinFicha'
 import PantallaPlan from '../pages/plan/PantallaPlan'
+import PantallaPlantillas from '../pages/plantillas/PantallaPlantillas'
 import PantallaTraspasos from '../pages/traspasos/PantallaTraspasos'
 import { EMITIDAS, RECIBIDAS } from '../api/contabilizar'
 import { compiladoEl } from '../lib/compilacion'
@@ -183,6 +184,8 @@ export default function Estructura({
             nivel={nivel}
             ancho={configuracion.anchocuentas}
           />
+        ) : seccion === 'plantillas' ? (
+          <PantallaPlantillas nivel={nivel} ancho={configuracion.anchocuentas} />
         ) : seccion === 'eliminados' ? (
           <PantallaEliminados
             key={ejercicio ?? 'sin-ejercicio'}

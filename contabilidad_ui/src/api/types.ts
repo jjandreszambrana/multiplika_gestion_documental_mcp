@@ -144,7 +144,7 @@ export interface paths {
         put?: never;
         /**
          * Obtener factura emitida por ID o UUID
-         * @description Retorna una factura emitida con su detalle y metadatos.
+         * @description Recupera una factura por `id` (int) o `uuid` (string/UUIDv4), con su cabecera, detalle y metadatos.<br />Devuelve `registros` con una lista de un solo elemento y `numero_registros=1`; si no existe, responde 404.<br />Tras transmitir, consulte aquí `id_estado_msif`, `hash`, `url_validacion`, `text_validacion` y `DescripcionErrorRegistro`: los dos campos de validación son los que necesita el cliente final para imprimir el QR y comprobar la factura en la sede de la AEAT.
          */
         post: operations["obtener_factura_apisif_v1_facturas_emitidas_obtener_post"];
         delete?: never;
@@ -164,7 +164,7 @@ export interface paths {
         put?: never;
         /**
          * Calcula el hash de una factura emitida sin persistirlo
-         * @description Calcula la huella SHA-256 de una factura emitida o su anulación sin modificar la base de datos.
+         * @description Calcula la huella SHA-256 de una factura emitida o anulada **sin modificar la base de datos** y devuelve también la `cadena_original` con la que se montó, además de los datos de encadenamiento (`id_factura_anterior`, `tipo_registro_anterior`) y de validación (`url_validacion`, `text_validacion`).<br />Útil para auditar que la cadena se construye como espera el integrador antes de transmitir.<br />`tipo_registro`: `"A"` (alta, por defecto) o `"X"` (anulación).<br />Los importes se normalizan a dos decimales (ROUND_HALF_UP) eliminando ceros finales (210.00 → 210, 210.40 → 210.4) y el hash se devuelve siempre en mayúsculas.
          */
         post: operations["calcular_hash_apisif_v1_facturas_emitidas_calcular_hash_post"];
         delete?: never;
@@ -182,8 +182,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Lista facturas emitidas */
+        /**
+         * Lista facturas emitidas
+         * @description Listado paginado y filtrado de facturas emitidas.<br />Cada filtro se envía como `{"campo": {"op": "<operador>", "valor": <dato>}}`, con operadores `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `in` y `between` (p. ej. `"serie": {"op": "like", "valor": "A2025%"}`). Solo `id_obligado` e `id_receptor` admiten además el número directo.<br />Campos filtrables: `serie`, `numero`, `NIF_receptor`, `NombreRazon_receptor`, `ident_fact_obligado` (el identificador propio que envió al crear la factura), `referencia_obligado`, `uuid_relacionada`, `id_tipo_serie`, `NIF_obligado`, `NombreRazon_obligado` e `id`; cualquier otro campo se rechaza con 422.<br />`id_obligado` se fuerza siempre según los permisos del usuario autenticado.
+         */
         post: operations["listar_apisif_v1_facturas_emitidas_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/facturas_emitidas/lineas/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lista las líneas de factura de un cliente
+         * @description Devuelve una fila por línea de factura del cliente indicado, con la factura a la que pertenece.<br />No se incluyen las facturas anuladas ni las simplificadas ya canjeadas por una factura de canje (F3), para que sus líneas no salgan por duplicado.<br />Sí entran las rectificativas (R1-R5): sus líneas llevan ya el signo que les corresponde, de modo que las devoluciones restan al sumar el listado.
+         */
+        post: operations["listar_lineas_apisif_v1_facturas_emitidas_lineas_listar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -201,8 +224,7 @@ export interface paths {
         put?: never;
         /**
          * Lista recibos de facturas emitidas
-         * @description Lista recibos de facturas emitidas (VF/SII) con filtros por factura, receptor, estado, rango de fechas,
-         *     importe e incluso medio de pago asociado al cobro.
+         * @description Lista los recibos (vencimientos de cobro) de facturas emitidas VF/SII, con filtros por factura, receptor, estado, rango de fechas, importe y medio de pago asociado al cobro.
          */
         post: operations["listar_recibos_apisif_v1_facturas_emitidas_recibos_listar_post"];
         delete?: never;
@@ -260,7 +282,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Imprime PDF de facturas emitidas */
+        /**
+         * Descarga el PDF de facturas emitidas
+         * @description Genera el PDF de una o varias facturas (`list_ids`) y lo devuelve como **binario** `application/pdf` con cabecera `Content-Disposition: inline`, listo para abrir en el navegador o descargar.<br />Si prefiere el PDF dentro de un JSON, use `/print_pdf`, que lo devuelve en Base64.
+         */
         post: operations["down_pdf_apisif_v1_facturas_emitidas_print_pdf_download_post"];
         delete?: never;
         options?: never;
@@ -277,7 +302,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Imprime PDF de facturas emitidas */
+        /**
+         * PDF de facturas emitidas en Base64
+         * @description Genera el PDF de una o varias facturas (`list_ids`) y lo devuelve dentro de un JSON, codificado en Base64 en el campo `pdf_base64`.<br />Para recibir el binario directamente, use `/print_pdf/download`.
+         */
         post: operations["pdf_apisif_v1_facturas_emitidas_print_pdf_post"];
         delete?: never;
         options?: never;
@@ -294,7 +322,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Alias de listar */
+        /**
+         * Alias de listar
+         * @description Alias de `/listar`: mismo contrato de entrada, filtros y respuesta.
+         */
         post: operations["listado_apisif_v1_facturas_emitidas_listado_post"];
         delete?: never;
         options?: never;
@@ -311,7 +342,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get Tipos Factura */
+        /**
+         * Catálogo de tipos de factura
+         * @description Devuelve los valores admitidos para `id_tipo` al crear una factura: F1 Ordinaria (0), F2 Simplificada (1), F3 Canje (2) y las rectificativas R1-R5 (3-7).<br />Para los tipos rectificativos (3-7) es obligatorio aportar `uuid_relacionada` o `numero_factura_rel`.
+         */
         post: operations["get_tipos_factura_apisif_v1_facturas_emitidas_tipos_factura_post"];
         delete?: never;
         options?: never;
@@ -328,7 +362,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get Tipos Rectificativa */
+        /**
+         * Catálogo de tipos de rectificativa
+         * @description Devuelve los valores admitidos para el tipo de rectificativa: `S` (por sustitución) o `I` (por diferencia).
+         */
         post: operations["get_tipos_rectificativa_apisif_v1_facturas_emitidas_tipos_rectificativa_post"];
         delete?: never;
         options?: never;
@@ -343,7 +380,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Retorna lista de valores de IVA */
+        /**
+         * Retorna lista de valores de IVA
+         * @description Lista de porcentajes de IVA admitidos en las líneas de detalle, como strings (p. ej. `["0", "4", "10", "21", …]`).
+         */
         get: operations["get_iva_apisif_v1_facturas_emitidas_iva_get"];
         put?: never;
         post?: never;
@@ -360,7 +400,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Retorna lista de valores de RE */
+        /**
+         * Retorna lista de valores de RE
+         * @description Lista de porcentajes de recargo de equivalencia admitidos, como strings (p. ej. `["0", "0.5", "1.4", "5.2", …]`).
+         */
         get: operations["get_re_apisif_v1_facturas_emitidas_re_get"];
         put?: never;
         post?: never;
@@ -685,6 +728,161 @@ export interface paths {
          * @description Convierte una factura simplificada (F2) en una factura ordinaria (F1) cuando el cliente solicita pago fraccionado a posteriori. Si la FS está en borrador, la reemplaza por un borrador F1. Si la FS ya está aprobada, emite automáticamente el abono R5 y crea el borrador F1.
          */
         post: operations["convertir_pago_fraccionado_apisif_v1_facturas_simplificadas_convertir_pago_fraccionado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Memorias de la empresa */
+        post: operations["listar_apisif_v1_contabilidad_memoria_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Una memoria con sus apartados */
+        post: operations["obtener_apisif_v1_contabilidad_memoria_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear la memoria de un ejercicio
+         * @description Crea la version 1. Si el ejercicio ya tiene memoria responde 400: para cambiar una
+         *     formulada se usa `nueva_version`.
+         */
+        post: operations["crear_apisif_v1_contabilidad_memoria_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/guardar_apartado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Guardar el texto de un apartado
+         * @description Crea o reescribe el apartado. Si estaba revisado vuelve a borrador. 400 si la memoria
+         *     esta formulada o si `datos` o `pendientes` no son JSON.
+         */
+        post: operations["guardar_apartado_apisif_v1_contabilidad_memoria_guardar_apartado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/marcar_revisado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dar un apartado por revisado */
+        post: operations["marcar_revisado_apisif_v1_contabilidad_memoria_marcar_revisado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/formular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Formular la memoria: queda bloqueada
+         * @description Bloquea la version y congela los cuadros numericos tal como estan. No tiene vuelta
+         *     atras: para cambiarla despues se saca una version nueva.
+         */
+        post: operations["formular_apisif_v1_contabilidad_memoria_formular_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/nueva_version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sacar una version nueva de una memoria formulada */
+        post: operations["nueva_version_apisif_v1_contabilidad_memoria_nueva_version_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/memoria/datos_contables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Las cifras de un cuadro de la memoria
+         * @description Sin `cuadro`, la lista de cuadros que hay. Con el, el cuadro calculado desde el
+         *     diario, con el ejercicio anterior y las cuentas de las que sale cada fila.
+         *
+         *     Si la memoria del ejercicio esta formulada, devuelve el cuadro tal como se congelo al
+         *     formularla (`congelado: true`).
+         */
+        post: operations["datos_contables_apisif_v1_contabilidad_memoria_datos_contables_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2355,6 +2553,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/contabilidad/declaraciones/previsualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ver el 303 de un periodo sin guardarlo
+         * @description El 303 calculado al momento, igual que `preparar`, pero sin guardar nada.
+         *
+         *     Para revisarlo antes de preparar la declaracion y sacar el fichero. Cada casilla trae
+         *     su descripcion oficial y el bloque al que pertenece. Mismo cuerpo que `preparar`.
+         */
+        post: operations["previsualizar_apisif_v1_contabilidad_declaraciones_previsualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/contabilidad/declaraciones/preparar": {
         parameters: {
             query?: never;
@@ -2432,6 +2653,34 @@ export interface paths {
          *     miles de lineas.
          */
         post: operations["documentos_apisif_v1_contabilidad_declaraciones_documentos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/fichero": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fichero del 303 para la sede de la AEAT
+         * @description El fichero de una declaracion ya preparada, para importarlo en la sede de la AEAT.
+         *
+         *     Sigue el diseno de registro oficial del 303 de 2026. Lleva el NIF de la empresa
+         *     desarrolladora, que sale del registro del SIF. No cambia la declaracion: generarlo no
+         *     es presentarlo.
+         *
+         *     Responde 400 si la declaracion tiene avisos (salvo `aceptar_avisos`), si falta el
+         *     IBAN para domiciliar o devolver, o si la empresa esta exonerada del 390 en el ultimo
+         *     periodo. La huella SHA-256 del fichero va en la cabecera `X-Huella`.
+         */
+        post: operations["fichero_apisif_v1_contabilidad_declaraciones_fichero_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3288,6 +3537,265 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/contabilidad/plantillas/catalogo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tipos de dato, funciones y listas para el editor */
+        post: operations["catalogo_apisif_v1_contabilidad_plantillas_catalogo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/opciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Valores de una lista cerrada (obras, diarios, tipos de IVA) */
+        post: operations["opciones_apisif_v1_contabilidad_plantillas_opciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plantillas de la empresa */
+        post: operations["listar_apisif_v1_contabilidad_plantillas_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Una plantilla con su definición */
+        post: operations["obtener_apisif_v1_contabilidad_plantillas_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/versiones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Historial de versiones */
+        post: operations["versiones_apisif_v1_contabilidad_plantillas_versiones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear una plantilla
+         * @description Nace con la versión 1. Si la definición no vale, 400 con todos los errores en `errores`.
+         */
+        post: operations["crear_apisif_v1_contabilidad_plantillas_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/editar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar nombre, descripción o definición
+         * @description Una definición distinta de la vigente se guarda como versión nueva; la misma, no crea versión.
+         *     Los asientos ya hechos siguen apuntando a la versión con la que se hicieron.
+         */
+        post: operations["editar_apisif_v1_contabilidad_plantillas_editar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/desactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirar una plantilla
+         * @description No se borra nunca: hay asientos que salieron de ella.
+         */
+        post: operations["desactivar_apisif_v1_contabilidad_plantillas_desactivar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/activar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Volver a poner en uso una plantilla */
+        post: operations["activar_apisif_v1_contabilidad_plantillas_activar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/duplicar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copiar una plantilla con otro código */
+        post: operations["duplicar_apisif_v1_contabilidad_plantillas_duplicar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/comprobar_definicion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revisar una definición sin datos
+         * @description Claves, tipos, fórmulas que se entienden y que solo usan lo que existe en ese punto.
+         */
+        post: operations["comprobar_definicion_apisif_v1_contabilidad_plantillas_comprobar_definicion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/previsualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calcular el asiento sin grabarlo
+         * @description Nunca escribe. Los datos mal puestos van en `errores` con 200: es lo normal mientras se teclea.
+         *     Con `definicion` (en vez de `codigo`) prueba una plantilla sin guardarla.
+         */
+        post: operations["previsualizar_apisif_v1_contabilidad_plantillas_previsualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/ejecutar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calcular y grabar el asiento
+         * @description Recalcula en el servidor, comprueba todo y graba en una sola operación. Si algo no
+         *     vale, no se graba nada y responde 400 con los errores en `errores`.
+         */
+        post: operations["ejecutar_apisif_v1_contabilidad_plantillas_ejecutar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/ejecuciones/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Qué asientos salieron de las plantillas */
+        post: operations["ejecuciones_apisif_v1_contabilidad_plantillas_ejecuciones_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/contabilidad/terceros/listar": {
         parameters: {
             query?: never;
@@ -3573,6 +4081,34 @@ export interface paths {
          * @description Avisa si lo que se va a declarar no coincide con lo que dicen los libros.
          */
         post: operations["cuadre_iva_apisif_v1_contabilidad_fiscal_cuadre_iva_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/fiscal/libros_iva": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Libro registro de IVA de facturas expedidas o recibidas
+         * @description El libro registro del periodo: un renglon por factura y tipo de IVA.
+         *
+         *     Entran las mismas facturas que en el 303, con el mismo criterio: las expedidas por su
+         *     fecha, de VeriFactu y del SII, sin anuladas; las recibidas por el periodo en que se
+         *     registraron. Paginado; `totales` es del periodo entero.
+         *
+         *     El libro recoge todas las facturas, y por eso no cuadra al centimo con el 303 en dos
+         *     casos: la factura de canje (F3) sale en el libro y no suma en el 303, porque sus
+         *     simplificadas ya se declararon; y lo que el 303 aparta con aviso si sale aqui.
+         */
+        post: operations["libros_iva_apisif_v1_contabilidad_fiscal_libros_iva_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4402,7 +4938,7 @@ export interface paths {
         put?: never;
         /**
          * Cartera de recibos (listado generalizado con filtros)
-         * @description Listado de recibos para la pantalla de Cartera. Filtros amplios: receptor, rango vencimiento/emisión, estado del recibo, medio/forma de pago previstos, sólo vencidos, importe mínimo, texto libre. Devuelve cobrado y pendiente calculados en vivo + días de retraso. Incluye recibos sin cobros vinculados.
+         * @description Listado de recibos para la pantalla de Cartera. Filtros amplios: receptor, rango vencimiento/emisión, estado del recibo, medio/forma de pago previstos, sólo vencidos, importe mínimo, texto libre y situación de los domiciliados. Devuelve cobrado, pendiente, remesado (en remesa sin abonar, no cuenta como cobrado) y `situacion` calculados en vivo + días de retraso. Incluye recibos sin cobros vinculados.
          *
          *     Diferencias con /recibos/receptor: este endpoint no exige id_receptor y devuelve todos los recibos (con o sin cobros) según los filtros aplicados.
          */
@@ -4739,6 +5275,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/remesas/candidatos_recibos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar recibos pendientes que se pueden remesar
+         * @description Recibos con importe pendiente cuya factura se paga por domiciliación del mismo tipo (CORE o B2B) que el medio de pago del banco indicado. Los que ya están en una remesa no salen. `tiene_mandato` avisa de los clientes sin mandato activo.
+         */
+        post: operations["candidatos_recibos_apisif_v1_remesas_candidatos_recibos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/crear_desde_recibos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear remesa en Borrador a partir de recibos pendientes
+         * @description Crea en una sola operación un cobro «en cartera» por lo pendiente de cada recibo y la remesa con ellos.
+         */
+        post: operations["crear_desde_recibos_apisif_v1_remesas_crear_desde_recibos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/remesas/actualizar": {
         parameters: {
             query?: never;
@@ -4782,7 +5358,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generar XML SEPA pain.008 (con placeholders) y opcionalmente marcar Enviada */
+        /**
+         * Generar el fichero SEPA pain.008.001.08 y opcionalmente marcar Enviada
+         * @description Genera el fichero con los datos reales de la empresa (medio de pago de la remesa), de cada mandato y de cada cliente, y lo valida contra el formato oficial. Los cobros sin mandato válido se sacan de la remesa y se devuelven en `excluidos` con su motivo.
+         */
         post: operations["generar_fichero_apisif_v1_remesas_generar_fichero_post"];
         delete?: never;
         options?: never;
@@ -4821,6 +5400,297 @@ export interface paths {
          * @description Registra una o varias devoluciones de cobros incluidos en la remesa. Cada devolución crea un cobro NEGATIVO con id_cobro_origen apuntando al positivo (mismo mecanismo que /gestion_cobros/devolucion). Si 'importe' se omite, devolución total.
          */
         post: operations["registrar_devoluciones_apisif_v1_remesas_devoluciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear mandato SEPA
+         * @description Crea el mandato de un cliente. Los datos del deudor y el IBAN que no se indiquen se copian de su ficha.
+         */
+        post: operations["crear_mandato_apisif_v1_mandatos_sepa_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Modificar mandato SEPA
+         * @description Si el mandato ya se usó en una remesa solo admite anotación, correo y datos postales.
+         */
+        post: operations["modificar_mandato_apisif_v1_mandatos_sepa_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/cambiar_estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anular o activar mandato SEPA
+         * @description 0 = anular (queda la fecha de baja; no tiene vuelta atrás). 2 = activar un mandato pendiente de firma.
+         */
+        post: operations["cambiar_estado_mandato_apisif_v1_mandatos_sepa_cambiar_estado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar mandato SEPA sin usar
+         * @description Solo se borra un mandato que nunca se ha usado en una remesa; si se usó, hay que anularlo.
+         */
+        post: operations["eliminar_mandato_apisif_v1_mandatos_sepa_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Obtener mandato SEPA */
+        post: operations["obtener_mandato_apisif_v1_mandatos_sepa_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/vigente": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mandato vigente de un cliente
+         * @description El mandato activo y sin caducar con el que se puede cargar hoy al cliente. `null` si no tiene.
+         */
+        post: operations["mandato_vigente_apisif_v1_mandatos_sepa_vigente_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Listar mandatos SEPA */
+        post: operations["listar_mandatos_apisif_v1_mandatos_sepa_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/firmado_papel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marcar mandato firmado en papel
+         * @description El cliente ha firmado a mano: el mandato queda firmado con esa fecha y se anula el enlace de firma.
+         */
+        post: operations["marcar_firmado_papel_apisif_v1_mandatos_sepa_firmado_papel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Historial de un mandato
+         * @description Envíos del enlace, aperturas, códigos pedidos, firma... del más antiguo al más reciente.
+         */
+        post: operations["eventos_mandato_apisif_v1_mandatos_sepa_eventos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/pendientes_firma": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mandatos sin firmar
+         * @description Mandatos activos sin firma, del más antiguo al más reciente, con los cargos e importe ya presentados al banco con ellos.
+         */
+        post: operations["pendientes_firma_apisif_v1_mandatos_sepa_pendientes_firma_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/configuracion/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Configuración de mandatos de la empresa */
+        post: operations["obtener_configuracion_apisif_v1_mandatos_sepa_configuracion_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/configuracion/guardar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Guardar configuración de mandatos de la empresa
+         * @description Solo se cambian los campos que se envían.
+         */
+        post: operations["guardar_configuracion_apisif_v1_mandatos_sepa_configuracion_guardar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/enviar_enlace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar al cliente el enlace para firmar
+         * @description Envía (o reenvía) desde la cuenta de correo de la empresa el enlace de firma, con el mandato en PDF. Solo mandatos CORE sin firmar.
+         */
+        post: operations["enviar_enlace_apisif_v1_mandatos_sepa_enviar_enlace_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/anular_enlace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anular el enlace de firma
+         * @description El enlace enviado deja de valer; el mandato vuelve a «sin firmar».
+         */
+        post: operations["anular_enlace_apisif_v1_mandatos_sepa_anular_enlace_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/mandatos_sepa/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * PDF del mandato
+         * @description Firmado por internet: con los datos de la firma. Si no: en blanco para firmar a mano, con el QR del enlace si se envió.
+         */
+        post: operations["pdf_mandato_apisif_v1_mandatos_sepa_pdf_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5429,6 +6299,117 @@ export interface paths {
          * @description Crea un albarán a partir de un presupuesto. El presupuesto pasa a estado Aceptado.
          */
         post: operations["convertir_a_albaran_apisif_v1_presupuestos_convertir_a_albaran_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear remesa programada
+         * @description Las remesas que genere quedan siempre en borrador: SIF no las entrega al banco.
+         */
+        post: operations["crear_apisif_v1_remesas_programacion_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Modificar remesa programada */
+        post: operations["modificar_apisif_v1_remesas_programacion_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar remesa programada
+         * @description Borra la programación y su historial de ejecuciones; las remesas que creó no se tocan.
+         */
+        post: operations["eliminar_apisif_v1_remesas_programacion_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Listar remesas programadas */
+        post: operations["listar_apisif_v1_remesas_programacion_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/ejecutar_ahora": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ejecutar ya una remesa programada
+         * @description Lanza la programación en el momento, sin esperar a su día y hora. El resultado queda en el historial.
+         */
+        post: operations["ejecutar_ahora_apisif_v1_remesas_programacion_ejecutar_ahora_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/remesas/programacion/ejecuciones/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Historial de ejecuciones de las remesas programadas */
+        post: operations["listar_ejecuciones_apisif_v1_remesas_programacion_ejecuciones_listar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7191,6 +8172,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/autofacturas/suscripciones_cabeceras/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear cabecera de suscripciones
+         * @description Crea un conjunto de suscripciones (cabecera) que se facturarán juntas en una sola factura.
+         */
+        post: operations["crear_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/suscripciones_cabeceras/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar cabeceras de suscripciones
+         * @description Lista cabeceras de suscripciones con filtros.
+         */
+        post: operations["listar_cabeceras_apisif_v1_autofacturas_suscripciones_cabeceras_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/suscripciones_cabeceras/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener cabecera de suscripciones
+         * @description Obtiene una cabecera de suscripciones por ID.
+         */
+        post: operations["obtener_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/suscripciones_cabeceras/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar cabecera de suscripciones
+         * @description Actualiza campos de una cabecera de suscripciones.
+         */
+        post: operations["actualizar_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/suscripciones_cabeceras/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar cabecera de suscripciones
+         * @description Elimina una cabecera de suscripciones. La cabecera solo se puede eliminar si ninguna suscripción la referencia (restricción de la base de datos).
+         */
+        post: operations["eliminar_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/autofacturas/servicios/crear": {
         parameters: {
             query?: never;
@@ -7291,6 +8372,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/autofacturas/acciones/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear acción
+         * @description Crea la acción externa (renovación) asociada a un servicio de autofacturación.
+         */
+        post: operations["crear_accion_apisif_v1_autofacturas_acciones_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/acciones/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener acción
+         * @description Obtiene la acción por id o por id_servicio. Nunca devuelve el secreto en claro.
+         */
+        post: operations["obtener_accion_apisif_v1_autofacturas_acciones_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/acciones/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar acciones
+         * @description Lista las acciones configuradas para el obligado.
+         */
+        post: operations["listar_acciones_apisif_v1_autofacturas_acciones_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/acciones/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar acción
+         * @description Actualiza la acción externa de un servicio.
+         */
+        post: operations["actualizar_accion_apisif_v1_autofacturas_acciones_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/acciones/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar acción
+         * @description Elimina la acción externa asociada a un servicio.
+         */
+        post: operations["eliminar_accion_apisif_v1_autofacturas_acciones_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/autofacturas/ejecuciones/listar": {
         parameters: {
             query?: never;
@@ -7385,6 +8566,26 @@ export interface paths {
          * @description Lista ejecuciones pendientes de envío de email.
          */
         post: operations["pendientes_email_apisif_v1_autofacturas_ejecuciones_pendientes_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/autofacturas/ejecuciones/pendientes_accion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pendientes de acción
+         * @description Lista ejecuciones facturadas cuyo servicio tiene una acción (renovación) pendiente de lanzar, normalmente por falta de pago.
+         */
+        post: operations["pendientes_accion_apisif_v1_autofacturas_ejecuciones_pendientes_accion_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8129,6 +9330,914 @@ export interface paths {
         put?: never;
         /** Eliminar línea de albarán */
         post: operations["eliminar_linea_apisif_v1_compras_albaranes_entrada_lineas_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/planes/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear plan
+         * @description Crea un plan del catálogo de hosting.
+         */
+        post: operations["crear_plan_apisif_v1_hosting_planes_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/planes/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener plan
+         * @description Obtiene un plan del catálogo.
+         */
+        post: operations["obtener_plan_apisif_v1_hosting_planes_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/planes/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar planes
+         * @description Lista los planes del catálogo del obligado.
+         */
+        post: operations["listar_planes_apisif_v1_hosting_planes_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/planes/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar plan
+         * @description Actualiza un plan del catálogo.
+         */
+        post: operations["actualizar_plan_apisif_v1_hosting_planes_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/planes/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar plan
+         * @description Elimina un plan del catálogo.
+         */
+        post: operations["eliminar_plan_apisif_v1_hosting_planes_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/contactos/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear contacto
+         * @description Crea un contacto de dominio.
+         */
+        post: operations["crear_contacto_apisif_v1_hosting_contactos_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/contactos/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener contacto
+         * @description Obtiene un contacto de dominio.
+         */
+        post: operations["obtener_contacto_apisif_v1_hosting_contactos_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/contactos/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar contactos
+         * @description Lista los contactos de dominio del obligado.
+         */
+        post: operations["listar_contactos_apisif_v1_hosting_contactos_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/contactos/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar contacto
+         * @description Actualiza un contacto de dominio.
+         */
+        post: operations["actualizar_contacto_apisif_v1_hosting_contactos_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/contactos/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar contacto
+         * @description Elimina un contacto de dominio.
+         */
+        post: operations["eliminar_contacto_apisif_v1_hosting_contactos_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/ips/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear IP
+         * @description Da de alta una dirección IP en el pool.
+         */
+        post: operations["crear_ip_apisif_v1_hosting_ips_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/ips/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener IP
+         * @description Obtiene una IP del pool.
+         */
+        post: operations["obtener_ip_apisif_v1_hosting_ips_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/ips/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar IPs
+         * @description Lista las IPs del pool del obligado.
+         */
+        post: operations["listar_ips_apisif_v1_hosting_ips_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/ips/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar IP
+         * @description Actualiza una IP del pool.
+         */
+        post: operations["actualizar_ip_apisif_v1_hosting_ips_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/ips/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar IP
+         * @description Elimina una IP del pool.
+         */
+        post: operations["eliminar_ip_apisif_v1_hosting_ips_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/renovaciones/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar renovaciones
+         * @description Historial de intentos de renovación ante el registrador, para un dominio o un servicio.
+         */
+        post: operations["listar_renovaciones_apisif_v1_hosting_renovaciones_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servicios/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear servicio
+         * @description Crea un VPS o alojamiento compartido.
+         */
+        post: operations["crear_servicio_apisif_v1_hosting_servicios_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servicios/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener servicio
+         * @description Obtiene un servicio de hosting.
+         */
+        post: operations["obtener_servicio_apisif_v1_hosting_servicios_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servicios/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar servicios
+         * @description Lista los VPS/alojamientos del obligado.
+         */
+        post: operations["listar_servicios_apisif_v1_hosting_servicios_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servicios/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar servicio
+         * @description Actualiza un servicio de hosting.
+         */
+        post: operations["actualizar_servicio_apisif_v1_hosting_servicios_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servicios/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar servicio
+         * @description Elimina un servicio de hosting.
+         */
+        post: operations["eliminar_servicio_apisif_v1_hosting_servicios_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/complementos/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear complemento
+         * @description Crea un complemento de un servicio de hosting.
+         */
+        post: operations["crear_complemento_apisif_v1_hosting_complementos_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/complementos/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener complemento
+         * @description Obtiene un complemento de hosting.
+         */
+        post: operations["obtener_complemento_apisif_v1_hosting_complementos_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/complementos/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar complementos
+         * @description Lista los complementos de un servicio o del obligado.
+         */
+        post: operations["listar_complementos_apisif_v1_hosting_complementos_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/complementos/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar complemento
+         * @description Actualiza un complemento de hosting.
+         */
+        post: operations["actualizar_complemento_apisif_v1_hosting_complementos_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/complementos/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar complemento
+         * @description Elimina un complemento de hosting.
+         */
+        post: operations["eliminar_complemento_apisif_v1_hosting_complementos_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servidores/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear servidor
+         * @description Crea un servidor de hosting.
+         */
+        post: operations["crear_servidor_apisif_v1_hosting_servidores_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servidores/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener servidor
+         * @description Obtiene un servidor de hosting. Nunca devuelve las credenciales.
+         */
+        post: operations["obtener_servidor_apisif_v1_hosting_servidores_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servidores/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar servidores
+         * @description Lista los servidores de hosting del obligado.
+         */
+        post: operations["listar_servidores_apisif_v1_hosting_servidores_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servidores/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar servidor
+         * @description Actualiza un servidor de hosting.
+         */
+        post: operations["actualizar_servidor_apisif_v1_hosting_servidores_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/servidores/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar servidor
+         * @description Elimina un servidor de hosting.
+         */
+        post: operations["eliminar_servidor_apisif_v1_hosting_servidores_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/dominios/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear dominio
+         * @description Da de alta un dominio.
+         */
+        post: operations["crear_dominio_apisif_v1_hosting_dominios_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/dominios/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener dominio
+         * @description Obtiene un dominio.
+         */
+        post: operations["obtener_dominio_apisif_v1_hosting_dominios_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/dominios/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar dominios
+         * @description Lista los dominios del obligado.
+         */
+        post: operations["listar_dominios_apisif_v1_hosting_dominios_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/dominios/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar dominio
+         * @description Actualiza un dominio.
+         */
+        post: operations["actualizar_dominio_apisif_v1_hosting_dominios_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/dominios/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar dominio
+         * @description Elimina un dominio.
+         */
+        post: operations["eliminar_dominio_apisif_v1_hosting_dominios_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/registradores/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear registrador
+         * @description Da de alta un registrador de dominios.
+         */
+        post: operations["crear_registrador_apisif_v1_hosting_registradores_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/registradores/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener registrador
+         * @description Obtiene un registrador. Nunca devuelve las credenciales.
+         */
+        post: operations["obtener_registrador_apisif_v1_hosting_registradores_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/registradores/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar registradores
+         * @description Lista los registradores del obligado.
+         */
+        post: operations["listar_registradores_apisif_v1_hosting_registradores_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/registradores/actualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Actualizar registrador
+         * @description Actualiza un registrador de dominios.
+         */
+        post: operations["actualizar_registrador_apisif_v1_hosting_registradores_actualizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/registradores/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar registrador
+         * @description Elimina un registrador de dominios.
+         */
+        post: operations["eliminar_registrador_apisif_v1_hosting_registradores_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/sesion/empresas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Empresas cuyo hosting puedo gestionar
+         * @description Lo que alimenta el selector de empresa. Si devuelve una sola, no hay que conmutar.
+         *
+         *     Usa exactamente el mismo criterio que `BaseAPI.validar_acceso` para cada rol, para
+         *     no tener dos reglas de "a que obligados llega este usuario" que puedan desincronizarse.
+         */
+        post: operations["listar_empresas_apisif_v1_hosting_sesion_empresas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/sesion/actual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Empresa activa en esta sesion */
+        post: operations["empresa_actual_apisif_v1_hosting_sesion_actual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/sesion/conmutar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar de empresa
+         * @description Cambia la empresa activa y reemite el token de sesion.
+         *
+         *     El acceso se comprueba con `BaseAPI.validar_acceso`, la misma funcion que ya protege
+         *     a los 9 endpoints de hosting: si no tuviera acceso, tampoco podria usar ninguno de
+         *     ellos una vez conmutado.
+         */
+        post: operations["conmutar_apisif_v1_hosting_sesion_conmutar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/hosting/sesion/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quien soy
+         * @description Lo mismo que `GET /usuarios/me`, pero declarando lo que devuelve.
+         *
+         *     El de siempre no declara su respuesta, asi que en el esquema OpenAPI sale como un
+         *     objeto libre y el frontend no puede generar tipos desde el. Los datos salen de la
+         *     misma funcion, no de una copia; aqui tampoco se devuelve `api_key`.
+         */
+        post: operations["me_apisif_v1_hosting_sesion_me_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9528,6 +11637,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/maestros/articulos/recalcular_precios_venta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recalcular precios de venta por margen
+         * @description Aplica a los artículos existentes la regla precio_venta = precio_compra * (1 + margen/100). Con simular=true (por defecto) solo informa de lo que cambiaría. Exige la regla activa en el obligado.
+         */
+        post: operations["recalcular_precios_venta_apisif_v1_maestros_articulos_recalcular_precios_venta_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/articulos/historial_precios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Historial de cambios de precio de artículos
+         * @description Lista los cambios de precio de compra, de venta y de margen, con su origen y el usuario responsable. Más reciente primero. Filtra por artículo y/o fechas.
+         */
+        post: operations["historial_precios_apisif_v1_maestros_articulos_historial_precios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/articulos/exportar_excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Descargar Excel de artículos para modificar precios
+         * @description Devuelve un Excel con los artículos filtrados (precio de compra, margen y precio de venta editables). El mismo fichero, ya modificado, se sube después a importar_excel. Admite los filtros del listado, más proveedor habitual, precio de compra, precio de venta y margen. Máximo 50000 artículos.
+         */
+        post: operations["exportar_excel_apisif_v1_maestros_articulos_exportar_excel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/articulos/importar_excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importar el Excel de artículos con los precios modificados
+         * @description Sube el Excel descargado con exportar_excel. Solo cambia precio de compra, margen y precio de venta; una casilla vacía no cambia nada. Con simular=true (por defecto) solo informa de lo que cambiaría. Con simular=false lo guarda, pero solo si el fichero no tiene errores: si hay alguno no se guarda nada. Los cambios quedan en el historial de precios con origen importacion_excel.
+         */
+        post: operations["importar_excel_apisif_v1_maestros_articulos_importar_excel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/maestros/articulos/eliminar": {
         parameters: {
             query?: never;
@@ -10349,7 +12538,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read Me */
+        /**
+         * Datos de la sesión actual
+         * @description Devuelve en `user` los datos del usuario autenticado según su token: identidad, rol, obligado(s) que gestiona y módulos activos.<br />Útil para comprobar que la sesión sigue viva y con qué permisos se está trabajando.
+         */
         get: operations["read_me_apisif_v1_usuarios_me_get"];
         put?: never;
         post?: never;
@@ -10730,25 +12922,7 @@ export interface paths {
         put?: never;
         /**
          * Insertar certificado de un obligado
-         * @description Inserta un certificado digital para un obligado.
-         *
-         *     Este endpoint permite que un obligado (o un superadministrador, administrador, representante) cargue un archivo .pfx junto con su
-         *     contraseña. El sistema extrae del certificado los datos relevantes (fechas de validez, emisor y clave privada),
-         *     los cifra usando Fernet, y los guarda en la base de datos asociados al obligado correspondiente.
-         *
-         *     Parámetros:
-         *     - id_obligado (int, Form): ID del obligado al que se asigna el certificado.
-         *     - password_cert (str, Form): Contraseña del archivo .pfx.
-         *     - usuario (dict, Depends): Usuario autenticado extraído del token JWT.
-         *     - archivo_certificado (UploadFile, File): Archivo del certificado digital en formato .pfx.
-         *
-         *     Retorna:
-         *     - dict: Mensaje de confirmación y número de registros actualizados.
-         *
-         *     Excepciones:
-         *     - 403: Si el usuario autenticado no tiene permiso para insertar el certificado.
-         *     - 422: Si los datos proporcionados no son válidos o faltan.
-         *     - 500: Si ocurre un error inesperado durante la operación.
+         * @description Sube el certificado digital del obligado, necesario **solo si firma con certificado propio** (vea las dos opciones de firma en la guía de certificados).<br />Petición `multipart/form-data` con tres partes: `id_obligado` (Form), `password_cert` (Form, contraseña del fichero) y `archivo_certificado` (File, el certificado en formato **.pfx**).<br />El sistema extrae fechas de validez, emisor y clave privada, y lo guarda **cifrado**; la contraseña nunca se almacena en claro.<br />Alternativa sin subir certificado: autorizar a Multiplika SIF como apoderado/colaborador social de la AEAT (requiere hacernos llegar la autorización que exige la AEAT; la activación la hacemos nosotros).
          */
         post: operations["insertar_certificado_apisif_v1_obligados_certificados_crear_post"];
         delete?: never;
@@ -10768,9 +12942,29 @@ export interface paths {
         put?: never;
         /**
          * Listado de certificados de un obligado
-         * @description Devuelve los certificados asociados al obligado indicado, con filtros y paginación.
+         * @description Devuelve los certificados asociados al obligado indicado, con filtros y paginación.<br />Cada registro incluye las fechas de validez y el estado, útiles para vigilar la caducidad y renovar a tiempo. La clave privada nunca se devuelve.
          */
         post: operations["listar_certificado_apisif_v1_obligados_certificados_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/certificados/listar_cartera": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listado de certificados de toda la cartera
+         * @description Devuelve los certificados de todas las empresas a las que llega el usuario, sin tener que consultar empresa por empresa. Superadministrador: todas. Administrador o representante: solo las de su cartera.
+         */
+        post: operations["listar_certificado_cartera_apisif_v1_obligados_certificados_listar_cartera_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10788,7 +12982,7 @@ export interface paths {
         put?: never;
         /**
          * Eliminar certificado de un obligado
-         * @description Elimina un certificado asociado a un obligado concreto.
+         * @description Elimina un certificado por su `id`, verificando que pertenezca al obligado indicado.<br />Atención: si el obligado firma con certificado propio y elimina el único vigente, las transmisiones a Veri*Factu fallarán hasta subir otro.
          */
         post: operations["eliminar_certificado_apisif_v1_obligados_certificados_eliminar_post"];
         delete?: never;
@@ -10911,6 +13105,106 @@ export interface paths {
          * @description Devuelve una lista de objetos de receptores.
          */
         post: operations["listar_receptor_apisif_v1_obligados_receptores_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/receptores/establecimientos/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear un establecimiento de un cliente
+         * @description Crea un establecimiento (centro) de un cliente. El cliente debe pertenecer al obligado.
+         */
+        post: operations["crear_establecimiento_apisif_v1_obligados_receptores_establecimientos_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/receptores/establecimientos/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Modificar un establecimiento de un cliente
+         * @description Modifica un establecimiento. No se puede cambiar de cliente.
+         */
+        post: operations["modificar_establecimiento_apisif_v1_obligados_receptores_establecimientos_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/receptores/establecimientos/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener un establecimiento de un cliente
+         * @description Devuelve un establecimiento por su id, si su cliente pertenece al obligado.
+         */
+        post: operations["obtener_establecimiento_apisif_v1_obligados_receptores_establecimientos_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/receptores/establecimientos/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar los establecimientos de un cliente
+         * @description Devuelve los establecimientos de un cliente del obligado.
+         */
+        post: operations["listar_establecimientos_apisif_v1_obligados_receptores_establecimientos_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/obligados/receptores/establecimientos/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar un establecimiento de un cliente
+         * @description Elimina un establecimiento si ningún documento (presupuesto, pedido, albarán, borrador o factura) lo usa.
+         */
+        post: operations["eliminar_establecimiento_apisif_v1_obligados_receptores_establecimientos_eliminar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11932,6 +14226,151 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/grupos_obligados/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crear grupo de empresas */
+        post: operations["crear_grupo_apisif_v1_grupos_obligados_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Listar grupos de empresas con sus miembros */
+        post: operations["listar_grupos_apisif_v1_grupos_obligados_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Obtener un grupo con sus miembros */
+        post: operations["obtener_grupo_apisif_v1_grupos_obligados_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Modificar grupo de empresas */
+        post: operations["modificar_grupo_apisif_v1_grupos_obligados_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar grupo de empresas
+         * @description Borra el grupo. Las empresas no se tocan: solo dejan de ser hermanas.
+         */
+        post: operations["eliminar_grupo_apisif_v1_grupos_obligados_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/miembros/anadir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Meter una empresa en el grupo
+         * @description Una empresa solo puede estar en un grupo. No se crean fichas de cliente ni de proveedor entre las empresas: se dan de alta a mano.
+         */
+        post: operations["anadir_miembro_apisif_v1_grupos_obligados_miembros_anadir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/miembros/quitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sacar una empresa del grupo */
+        post: operations["quitar_miembro_apisif_v1_grupos_obligados_miembros_quitar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/grupos_obligados/mi_grupo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grupo de una empresa y sus empresas hermanas
+         * @description Para cualquier usuario con acceso a la empresa. Devuelve null si la empresa no está en ningún grupo activo.
+         */
+        post: operations["mi_grupo_apisif_v1_grupos_obligados_mi_grupo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/proyectos/presupuesto_obra/crear": {
         parameters: {
             query?: never;
@@ -12166,6 +14605,26 @@ export interface paths {
          * @description Devuelve el árbol completo del presupuesto (capítulos, partidas y recursos) ordenado de arriba a abajo. El frontend lo pinta usando el campo 'nivel' para indentar.
          */
         post: operations["arbol_presupuesto_apisif_v1_proyectos_presupuesto_obra_partidas_arbol_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/presupuesto_obra/partidas/aceptacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marcar lo que acepta el cliente
+         * @description Marca capítulos y partidas como aceptados o excluidos por el cliente. Excluir un capítulo excluye todo lo que cuelga de él. La partida va entera: sus recursos no se marcan sueltos. Solo con el presupuesto en borrador; una vez aceptado, los cambios van en un presupuesto adicional. Lo excluido no se borra: sigue contando en el importe ofertado, pero no en el aceptado, y no se le puede imputar ningún coste.
+         */
+        post: operations["aceptacion_partidas_apisif_v1_proyectos_presupuesto_obra_partidas_aceptacion_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12466,6 +14925,26 @@ export interface paths {
          * @description Elimina una línea de certificación.
          */
         post: operations["eliminar_linea_certificacion_apisif_v1_proyectos_certificaciones_lineas_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/certificaciones/facturar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Facturar una certificación aceptada
+         * @description Crea la factura por el circuito normal: un borrador de factura emitida si la empresa va por VeriFactu (se aprueba después como cualquier borrador), o la factura SII directamente si va por SII. Una línea por línea con cantidad en el periodo, con el IVA de la certificación, o como inversión del sujeto pasivo (S2) si es la certificación de una subcontrata del grupo con ISP. La certificación pasa a facturada; si se borra el borrador o se anula la factura VeriFactu, vuelve a aceptada. Vale igual para la certificación de una empresa del grupo a otra: es la factura entre ellas.
+         */
+        post: operations["facturar_certificacion_apisif_v1_proyectos_certificaciones_facturar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12952,6 +15431,242 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/proyectos/subcontratas_grupo/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subcontratar una partida a una empresa del grupo
+         * @description Crea en la empresa subcontratista una obra (con la contratante como cliente) y un presupuesto en borrador que es copia sin precios de la partida o capítulo. La subcontratista pone sus precios y la contratante lo acepta con /aceptar. Exige que cada empresa tenga a la otra dada de alta: la contratante como cliente en la subcontratista, y la subcontratista como proveedor en la contratante.
+         */
+        post: operations["crear_subcontrata_apisif_v1_proyectos_subcontratas_grupo_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/subcontratas_grupo/aceptar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar el presupuesto de la empresa subcontratista
+         * @description La contratante acepta el presupuesto de la subcontratista, entero o en parte. Ese presupuesto queda vigente y se crea en la contratante un pedido de compra a la subcontratista, con una línea por partida aceptada, que se recibe por certificación y va imputada a la obra y la partida de la contratante.
+         */
+        post: operations["aceptar_subcontrata_apisif_v1_proyectos_subcontratas_grupo_aceptar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/subcontratas_grupo/cerrar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cerrar la subcontrata */
+        post: operations["cerrar_subcontrata_apisif_v1_proyectos_subcontratas_grupo_cerrar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/subcontratas_grupo/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Obtener una subcontrata del grupo (la ven las dos empresas) */
+        post: operations["obtener_subcontrata_apisif_v1_proyectos_subcontratas_grupo_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/subcontratas_grupo/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Listar subcontratas del grupo de una empresa */
+        post: operations["listar_subcontratas_apisif_v1_proyectos_subcontratas_grupo_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Planificar una partida */
+        post: operations["crear_linea_apisif_v1_proyectos_planificacion_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Planificación de una obra
+         * @description Cada partida planificada con sus recursos, las órdenes de trabajo de esa partida con lo realizado, y avisos si empieza antes de que termine la que debería ir antes.
+         */
+        post: operations["listar_planificacion_apisif_v1_proyectos_planificacion_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Modificar una partida planificada */
+        post: operations["modificar_linea_apisif_v1_proyectos_planificacion_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quitar una partida de la planificación
+         * @description Se van sus recursos. Las órdenes de trabajo creadas desde ella siguen.
+         */
+        post: operations["eliminar_linea_apisif_v1_proyectos_planificacion_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/recursos/anadir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prever un recurso para la partida */
+        post: operations["anadir_recurso_apisif_v1_proyectos_planificacion_recursos_anadir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/recursos/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Modificar un recurso previsto */
+        post: operations["modificar_recurso_apisif_v1_proyectos_planificacion_recursos_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/recursos/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Quitar un recurso previsto */
+        post: operations["eliminar_recurso_apisif_v1_proyectos_planificacion_recursos_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/planificacion/crear_ot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear la orden de trabajo de una partida planificada
+         * @description Copia las fechas previstas, suma las horas de personal previstas y pone las subcontratas del grupo de los recursos. Después, la orden y la planificación van cada una por su lado.
+         */
+        post: operations["crear_ot_apisif_v1_proyectos_planificacion_crear_ot_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/proyectos/obras/crear": {
         parameters: {
             query?: never;
@@ -13106,6 +15821,263 @@ export interface paths {
          * @description Elimina una obra si no tiene documentos asociados.
          */
         post: operations["eliminar_obra_apisif_v1_proyectos_obras_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear orden de trabajo
+         * @description Cuelga de una partida aceptada de la obra. Se le asignan las subcontratas del grupo vigentes de esa partida, salvo que se indiquen otras.
+         */
+        post: operations["crear_ot_apisif_v1_proyectos_ordenes_trabajo_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Listar órdenes de trabajo
+         * @description Cada orden trae lo realizado (horas y coste de todas las empresas) y los avisos si se ha pasado de lo previsto.
+         */
+        post: operations["listar_ot_apisif_v1_proyectos_ordenes_trabajo_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener orden de trabajo
+         * @description Con las subcontratas del grupo que figuran en ella y lo realizado, en total y por empresa.
+         */
+        post: operations["obtener_ot_apisif_v1_proyectos_ordenes_trabajo_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Modificar orden de trabajo
+         * @description La partida no se cambia: para otra partida, otra orden.
+         */
+        post: operations["modificar_ot_apisif_v1_proyectos_ordenes_trabajo_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/cambiar_estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar el estado de la orden de trabajo
+         * @description Planificada → en curso o anulada; en curso → terminada o anulada; terminada → en curso (se reabre).
+         */
+        post: operations["estado_ot_apisif_v1_proyectos_ordenes_trabajo_cambiar_estado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar orden de trabajo
+         * @description Solo si está planificada y no tiene nada apuntado. Si no, se anula.
+         */
+        post: operations["eliminar_ot_apisif_v1_proyectos_ordenes_trabajo_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/subcontratas/anadir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hacer figurar una subcontrata del grupo en la orden */
+        post: operations["anadir_subcontrata_ot_apisif_v1_proyectos_ordenes_trabajo_subcontratas_anadir_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/subcontratas/quitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quitar una subcontrata del grupo de la orden
+         * @description No se puede si esa empresa ya tiene trabajo apuntado en la orden.
+         */
+        post: operations["quitar_subcontrata_ot_apisif_v1_proyectos_ordenes_trabajo_subcontratas_quitar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/recursos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Empresas, operarios y máquinas que se pueden apuntar en la orden
+         * @description La empresa dueña y las subcontratas del grupo que figuran en la orden, con sus operarios activos y sus máquinas propias. Es lo que el encargado puede elegir en el tajo.
+         */
+        post: operations["recursos_ot_apisif_v1_proyectos_ordenes_trabajo_recursos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/tajo/registrar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apuntar el trabajo del día en la orden de trabajo
+         * @description Una sola entrada para el encargado. Lo de la empresa dueña de la obra va a su obra y a la partida de la orden; lo de otra empresa del grupo va a la obra de esa empresa y a la partida de su presupuesto que es copia de la de la orden, y solo si su subcontrata figura en la orden. Se crean o se completan los partes de trabajo de cada empresa (en borrador; los valida el responsable de cada empresa). Todo o nada. Si la orden se pasa de lo previsto, se guarda igual y la respuesta trae avisos.
+         */
+        post: operations["registrar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_registrar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/tajo/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lo apuntado en la orden de trabajo
+         * @description Los apuntes de la orden, de todas las empresas que figuran en ella, en cinco listas: personal, maquinaria, material, subcontratas y avances. Cada uno trae `editable` (su parte o su recepción sigue en borrador; el avance, con la orden en curso). De las líneas de otras empresas del grupo no se devuelven costes.
+         */
+        post: operations["listar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/tajo/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Corregir un apunte de la orden de trabajo
+         * @description Solo si su parte o su recepción sigue en borrador. Quién o qué (operario, máquina, empresa) no se cambia: se borra y se apunta de nuevo. El coste de una línea de otra empresa del grupo no se puede cambiar desde aquí.
+         */
+        post: operations["modificar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/proyectos/ordenes_trabajo/tajo/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Borrar un apunte de la orden de trabajo
+         * @description Solo si su parte o su recepción sigue en borrador. Si el parte o la recepción creados por la orden se quedan vacíos, se borran también.
+         */
+        post: operations["eliminar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_eliminar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13607,6 +16579,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/sistema/superadmin/resumen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumen agregado para el panel de superadministrador
+         * @description Devuelve en una sola petición los recuentos que hoy exigen varias peticiones al abrir el panel: empresas, usuarios, asesorías, desarrolladores, estado de servicio, certificados y logs de las últimas 24 horas. Solo superadministrador.
+         */
+        post: operations["resumen_apisif_v1_sistema_superadmin_resumen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/facturas-face/enviar": {
         parameters: {
             query?: never;
@@ -14043,6 +17035,52 @@ export interface components {
              */
             fecha_alta?: string | null;
         };
+        /** Aceptacion */
+        Aceptacion: {
+            /**
+             * Id Cabecera
+             * @description ID del presupuesto (en borrador)
+             */
+            id_cabecera: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Marcas
+             * @description Capítulos y partidas a marcar. Se aplican todas o ninguna.
+             */
+            marcas: components["schemas"]["MarcaAceptacion"][];
+        };
+        /** Aceptar */
+        Aceptar: {
+            /**
+             * Id
+             * @description ID de la subcontrata
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa contratante (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Iva
+             * @description % de IVA de la operación. Lo elige el usuario según la naturaleza del trabajo (normalmente 21).
+             */
+            iva: number;
+            /**
+             * Inversion Sujeto Pasivo
+             * @description true = con inversión del sujeto pasivo (S2): el pedido y las certificaciones van sin cuota de IVA.
+             */
+            inversion_sujeto_pasivo: boolean;
+            /**
+             * Marcas
+             * @description Para aceptar el presupuesto de la subcontratista en parte. Vacío = entero.
+             */
+            marcas?: components["schemas"]["MarcaAceptacionSubcontrata"][] | null;
+        };
         /** ActualizarEstado */
         ActualizarEstado: {
             /** Id Obligado */
@@ -14113,6 +17151,11 @@ export interface components {
              * @description ID del obligado al que se calculará el acumulado. Si se omite, se usará el asociado al usuario.
              */
             id_obligado?: number | null;
+            /**
+             * Trimestres
+             * @description Número de trimestres a devolver (más reciente primero). Si se omite, no se incluye la lista.
+             */
+            trimestres?: number | null;
         };
         /** AcumuladoComprasRespuesta */
         AcumuladoComprasRespuesta: {
@@ -14159,6 +17202,11 @@ export interface components {
              * @default 0
              */
             trimestre_anterior: string;
+            /**
+             * Trimestres
+             * @description Lista de N trimestres más recientes con su base imponible acumulada.
+             */
+            trimestres?: components["schemas"]["TrimestresItem"][];
         };
         /** AcumuladoVentasEntrada */
         AcumuladoVentasEntrada: {
@@ -14167,6 +17215,11 @@ export interface components {
              * @description ID del obligado al que se calculará el acumulado. Si se omite, se usará el asociado al usuario.
              */
             id_obligado?: number | null;
+            /**
+             * Trimestres
+             * @description Número de trimestres a devolver (más reciente primero). Si se omite, no se incluye la lista.
+             */
+            trimestres?: number | null;
         };
         /** AcumuladoVentasRespuesta */
         AcumuladoVentasRespuesta: {
@@ -14213,6 +17266,11 @@ export interface components {
              * @default 0
              */
             trimestre_anterior: string;
+            /**
+             * Trimestres
+             * @description Lista de N trimestres más recientes con su base imponible acumulada.
+             */
+            trimestres?: components["schemas"]["TrimestresItem"][];
         };
         /** AdministradorListar */
         AdministradorListar: {
@@ -14364,6 +17422,40 @@ export interface components {
              * @description Asiento que hay que revertir.
              */
             asiento_original: number;
+        };
+        /** Apartado */
+        Apartado: {
+            /** Codigo Apartado */
+            codigo_apartado: string;
+            /** Titulo */
+            titulo?: string | null;
+            /** Orden */
+            orden: number;
+            /** Texto */
+            texto?: string | null;
+            /**
+             * Estado
+             * @description 0 pendiente, 1 borrador, 2 revisado.
+             */
+            estado: number;
+            /** Estado Texto */
+            estado_texto: string;
+            /**
+             * Datos
+             * @description JSON en texto, tal como se guardo.
+             */
+            datos?: string | null;
+            /**
+             * Pendientes
+             * @description JSON en texto, tal como se guardo.
+             */
+            pendientes?: string | null;
+            /** Revisado Por */
+            revisado_por?: string | null;
+            /** Fecha Revision */
+            fecha_revision?: string | null;
+            /** Fecha Modificacion */
+            fecha_modificacion?: string | null;
         };
         /**
          * ApunteDiario
@@ -14838,6 +17930,42 @@ export interface components {
              */
             id_obligado?: number | null;
         };
+        /** AsientoCalculado */
+        AsientoCalculado: {
+            /** Orden */
+            orden: number;
+            /**
+             * Papel
+             * @description principal o reversion.
+             */
+            papel: string;
+            /** Asiento Plantilla */
+            asiento_plantilla?: number | null;
+            /** Ejercicio */
+            ejercicio?: number | null;
+            /** Fecha */
+            fecha?: string | null;
+            /**
+             * Concepto
+             * @default
+             */
+            concepto: string;
+            /**
+             * Diario
+             * @default
+             */
+            diario: string;
+            /** Lineas */
+            lineas?: components["schemas"]["LineaCalculada"][];
+            /** Total Debe */
+            total_debe: number;
+            /** Total Haber */
+            total_haber: number;
+            /** Diferencia */
+            diferencia: number;
+            /** Cuadra */
+            cuadra: boolean;
+        };
         /** AsientoDeReversion */
         AsientoDeReversion: {
             /**
@@ -14897,6 +18025,31 @@ export interface components {
              * @description Serie y numero de la factura.
              */
             numero_factura?: string | null;
+        };
+        /** AsientoGrabado */
+        AsientoGrabado: {
+            /** Orden */
+            orden: number;
+            /** Papel */
+            papel: string;
+            /** Ejercicio */
+            ejercicio: number;
+            /** Asiento */
+            asiento: number;
+            /**
+             * Id Borrador
+             * @description 0 si fue directo al libro.
+             */
+            id_borrador: number;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Concepto */
+            concepto: string;
+            /** Total */
+            total: number;
         };
         /** AsientoImportado */
         AsientoImportado: {
@@ -14958,12 +18111,12 @@ export interface components {
         AvisoDeclaracion: {
             /**
              * Ref Tipo
-             * @description factura_emitida o factura_recibida_sii.
+             * @description factura_emitida, factura_emitida_sii o factura_recibida_sii. Vacio si el aviso es de la declaracion entera.
              */
             ref_tipo: string;
             /**
              * Ref Id
-             * @description Factura que no se supo clasificar.
+             * @description Factura que no se supo clasificar. 0 si el aviso es de la declaracion entera.
              */
             ref_id: number;
             /**
@@ -15254,6 +18407,27 @@ export interface components {
              * @description Código moneda ISO 4217
              */
             codigo_moneda?: string | null;
+        };
+        /** Body_importar_excel_apisif_v1_maestros_articulos_importar_excel_post */
+        Body_importar_excel_apisif_v1_maestros_articulos_importar_excel_post: {
+            /**
+             * Archivo
+             * Format: binary
+             * @description Excel .xlsx descargado con exportar_excel
+             */
+            archivo: string;
+            /**
+             * Id Obligado
+             * @description ID del obligado (omitible si rol=4; se autofija)
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Simular
+             * @description True (por defecto): solo informa. False: guarda los cambios
+             * @default true
+             */
+            simular: boolean;
         };
         /** Body_insertar_certificado_apisif_v1_administradores_insertar_certificado_post */
         Body_insertar_certificado_apisif_v1_administradores_insertar_certificado_post: {
@@ -15552,6 +18726,37 @@ export interface components {
              */
             limit: number;
         };
+        /** CandidatosRecibos */
+        CandidatosRecibos: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Id Medio Pago
+             * @description Medio de pago del banco con el que se remesa (domiciliación tipo 5 o 6)
+             */
+            id_medio_pago: number;
+            /** Fecha Venc Desde */
+            fecha_venc_desde?: string | null;
+            /**
+             * Fecha Venc Hasta
+             * @description Recibos que vencen hasta esta fecha
+             */
+            fecha_venc_hasta?: string | null;
+            /** Ids Receptores Incluir */
+            ids_receptores_incluir?: number[] | null;
+            /** Ids Receptores Excluir */
+            ids_receptores_excluir?: number[] | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 1000
+             */
+            limit: number;
+        };
         /** CasillaDeclarada */
         CasillaDeclarada: {
             /**
@@ -15574,6 +18779,34 @@ export interface components {
              * @description Para las casillas que no son importes.
              */
             texto?: string | null;
+        };
+        /** CasillaPrevista */
+        CasillaPrevista: {
+            /**
+             * Pagina
+             * @description Pagina del modelo: 01000 o 03000.
+             */
+            pagina: string;
+            /**
+             * Casilla
+             * @description Numero de casilla.
+             */
+            casilla: string;
+            /**
+             * Importe
+             * @description Lo que iria en ella.
+             */
+            importe: number;
+            /**
+             * Apartado
+             * @description devengado, deducible, informacion_adicional o resultado.
+             */
+            apartado: string;
+            /**
+             * Descripcion
+             * @description Que es la casilla, con las palabras del diseno oficial.
+             */
+            descripcion: string;
         };
         /**
          * ClavesRegimenEnum
@@ -15602,6 +18835,55 @@ export interface components {
         ConfigObtener: {
             /** Id Obligado */
             id_obligado?: number | null;
+        };
+        /** Configuracion */
+        Configuracion: {
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Generar Al Remesar
+             * @description Al remesar, crear un mandato sin firmar (solo CORE) al cliente con IBAN que no tenga.
+             */
+            generar_al_remesar?: boolean | null;
+            /**
+             * Enviar Enlace Al Generar
+             * @description Enviar el enlace de firma en cuanto se genera el mandato.
+             */
+            enviar_enlace_al_generar?: boolean | null;
+            /**
+             * Dias Validez Enlace
+             * @description Días que vale el enlace (1-365).
+             */
+            dias_validez_enlace?: number | null;
+            /**
+             * Recordatorios
+             * @description Recordatorios como máximo (0-10).
+             */
+            recordatorios?: number | null;
+            /**
+             * Dias Entre Recordatorios
+             * @description Días entre recordatorios (1-90).
+             */
+            dias_entre_recordatorios?: number | null;
+            /**
+             * Dias Limite Sin Firma
+             * @description Pasados estos días sin firmar, el cliente deja de entrar en remesas (0 = sin límite).
+             */
+            dias_limite_sin_firma?: number | null;
+            /**
+             * Telefono Contacto
+             * @description Teléfono que se muestra al cliente (vacío = el de la empresa).
+             */
+            telefono_contacto?: string | null;
+            /**
+             * Direccion Web
+             * @description Dirección web de la empresa para el enlace de firma, p. ej. https://sif.empresa.es (vacío = la de la instalación).
+             */
+            direccion_web?: string | null;
         };
         /** ConsultarEstado */
         ConsultarEstado: {
@@ -15778,6 +19060,41 @@ export interface components {
              */
             importe_suplidos?: number | string | null;
             /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Descripción del 2º suplido.
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido.
+             */
+            importe_suplidos_2?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Descripción del 3er suplido.
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido.
+             */
+            importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido.
+             */
+            cuenta_contable_suplidos_3?: string | null;
+            /**
              * Baseimponibleacoste
              * @description Base imponible a coste.
              */
@@ -15928,6 +19245,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno). Solo se imprime; no se comunica al SII. Debe pertenecer al cliente.
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Rectificativa No Relacionada
              * @description Rectificativa no relacionada (0/1).
              */
@@ -15938,6 +19260,30 @@ export interface components {
              * @default false
              */
             no_alterar_tx: number | boolean | null;
+        };
+        /** CrearDesdeRecibos */
+        CrearDesdeRecibos: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Id Medio Pago
+             * @description Medio de pago del banco (domiciliación tipo 5 o 6, con IBAN de la empresa)
+             */
+            id_medio_pago: number;
+            /**
+             * Ids Recibos
+             * @description IDs de los recibos pendientes a remesar
+             */
+            ids_recibos: number[];
+            /** Fecha Presentacion */
+            fecha_presentacion?: string | null;
+            /**
+             * Fecha Vencimiento
+             * @description Fecha de cobro para todos; sin ella, el vencimiento de cada recibo
+             */
+            fecha_vencimiento?: string | null;
+            /** Anotacion */
+            anotacion?: string | null;
         };
         /** CrearMedio */
         CrearMedio: {
@@ -16100,6 +19446,21 @@ export interface components {
              * @description Importe suplidos 3.
              */
             importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Tiporectificativa
              * @description Tipo rectificativa.
@@ -16279,7 +19640,7 @@ export interface components {
             campo: string;
             /**
              * Columna
-             * @description Columna de la tabla en la que se pinta esta casilla: cuenta, gasto, ventas, iva, recargo o retencion. **Varias casillas pueden compartir columna**: una venta con dos tipos de IVA trae dos casillas con `columna: "iva"`, cada una con su ficha. Vacío en las cuentas de una ficha de maestro, que no se pintan en tabla.
+             * @description Columna de la tabla en la que se pinta esta casilla: cuenta, gasto, ventas, iva, recargo, retencion o suplidos. **Varias casillas pueden compartir columna**: una venta con dos tipos de IVA trae dos casillas con `columna: "iva"`, cada una con su ficha. Vacío en las cuentas de una ficha de maestro, que no se pintan en tabla.
              * @default
              */
             columna: string;
@@ -16843,7 +20204,7 @@ export interface components {
             resultado: number;
             /**
              * Tipo Resultado
-             * @description ingresar, compensar, devolver o sin_actividad.
+             * @description ingresar, compensar, devolver, resultado_cero o sin_actividad.
              */
             tipo_resultado: string;
             /**
@@ -17278,7 +20639,7 @@ export interface components {
         DocumentoDeclarado: {
             /**
              * Ref Tipo
-             * @description factura_emitida o factura_recibida_sii.
+             * @description factura_emitida, factura_emitida_sii o factura_recibida_sii.
              */
             ref_tipo: string;
             /**
@@ -17288,9 +20649,15 @@ export interface components {
             ref_id: number;
             /**
              * Id Linea
-             * @description La linea de su desglose.
+             * @description La linea de su desglose. 0 si el importe es de la cabecera.
              */
             id_linea: number;
+            /**
+             * Parte
+             * @description Una linea puede ir a varias casillas: cada una es una parte.
+             * @default 0
+             */
+            parte: number;
             /**
              * Casilla Base
              * @description Casilla a la que fue la base.
@@ -17334,6 +20701,60 @@ export interface components {
              * @description Clave de idempotencia para evitar duplicados en reintentos
              */
             idempotencia_clave?: string | null;
+        };
+        /** Ejecucion */
+        Ejecucion: {
+            /** Id */
+            id: number;
+            /** Lote */
+            lote: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Version */
+            version: number;
+            /** Orden */
+            orden: number;
+            /** Papel */
+            papel: string;
+            /** Parametros */
+            parametros?: unknown;
+            /** Id Borrador */
+            id_borrador: number;
+            /** Ejercicio */
+            ejercicio: number;
+            /** Asiento */
+            asiento: number;
+            /**
+             * Estado
+             * @description borrador, contabilizado o descartado.
+             */
+            estado: string;
+            /** Usuario */
+            usuario?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+        };
+        /** Ejecuciones */
+        Ejecuciones: {
+            /**
+             * Id Obligado
+             * @default 0
+             */
+            id_obligado: number | null;
+            /** Id Programacion */
+            id_programacion?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
         };
         /** Ejecutar */
         Ejecutar: {
@@ -17563,6 +20984,24 @@ export interface components {
              */
             id_dir3: number;
         };
+        /** EnviarEnlace */
+        EnviarEnlace: {
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Email
+             * @description Correo del cliente. Sin indicar: el del mandato o el de su ficha.
+             */
+            email?: string | null;
+        };
         /** EnviarPorId */
         EnviarPorId: {
             /**
@@ -17662,6 +21101,21 @@ export interface components {
              */
             sin_resolver: number;
         };
+        /** ErrorCampo */
+        ErrorCampo: {
+            /**
+             * Ruta
+             * @description Dónde va el error: parametros.valor, parametros.detalle[2].base, asientos[0].lineas[1].cuenta, general…
+             */
+            ruta: string;
+            /** Mensaje */
+            mensaje: string;
+            /**
+             * Fila
+             * @description Si sale de una línea repetida por una tabla, la fila (desde 1).
+             */
+            fila?: number | null;
+        };
         /**
          * ErrorResponseHTTP
          * @description Respuesta de error para HTTPException.
@@ -17712,24 +21166,6 @@ export interface components {
             fecha_desde: string;
             /** Fecha Hasta */
             fecha_hasta: string;
-        };
-        /** ExportarExcel */
-        ExportarExcel: {
-            /**
-             * Id Obligado
-             * @description ID del obligado para filtrar las facturas a exportar
-             */
-            id_obligado: number;
-            /**
-             * Desde Fecha
-             * @description Fecha inicial (inclusive) en formato YYYY-MM-DD
-             */
-            desde_fecha?: string | null;
-            /**
-             * Hasta Fecha
-             * @description Fecha final (inclusive) en formato YYYY-MM-DD
-             */
-            hasta_fecha?: string | null;
         };
         /** Factura */
         Factura: {
@@ -17880,7 +21316,7 @@ export interface components {
             le_faltan_cuentas: boolean;
             /**
              * Cuentas Que Faltan
-             * @description Cuales: gasto, iva y/o retencion. La de retencion solo cuenta si la factura lleva IRPF.
+             * @description Cuales: gasto, iva, retencion y/o suplidos, suplidos_2, suplidos_3. La de retencion solo cuenta si la factura lleva IRPF; la de un suplido, si lleva ese suplido.
              */
             cuentas_que_faltan?: string[];
             /**
@@ -18704,6 +22140,27 @@ export interface components {
             /** Id Obligado */
             id_obligado?: number | null;
         };
+        /** FirmadoPapel */
+        FirmadoPapel: {
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Fecha Firma
+             * Format: date
+             * @description Fecha en que el cliente firmó el papel.
+             */
+            fecha_firma: string;
+            /** Anotacion */
+            anotacion?: string | null;
+        };
         /** GenerarCodigo */
         GenerarCodigo: {
             /**
@@ -18732,6 +22189,11 @@ export interface components {
              * @default true
              */
             marcar_enviada: boolean;
+            /**
+             * Generar Mandatos
+             * @description false = no generar mandatos sin firmar en esta remesa aunque la empresa lo tenga activado. Sin indicar, se sigue la configuración de mandatos de la empresa.
+             */
+            generar_mandatos?: boolean | null;
         };
         /** GrupoEmitidas */
         GrupoEmitidas: {
@@ -19122,6 +22584,47 @@ export interface components {
              */
             id_obra: number;
         };
+        /** LineaCalculada */
+        LineaCalculada: {
+            /** Cuenta */
+            cuenta: string;
+            /** Debe */
+            debe: number;
+            /** Haber */
+            haber: number;
+            /**
+             * Concepto
+             * @default
+             */
+            concepto: string;
+            /**
+             * Documento
+             * @default
+             */
+            documento: string;
+            /**
+             * Id Obra
+             * @default 0
+             */
+            id_obra: number;
+            /** Id Tipo Iva */
+            id_tipo_iva?: number | null;
+            /**
+             * Linea Plantilla
+             * @description Línea de la plantilla de la que sale. Vacío en la del autocuadre.
+             */
+            linea_plantilla?: number | null;
+            /**
+             * Fila
+             * @description Fila de la tabla, si es una línea repetida.
+             */
+            fila?: number | null;
+            /**
+             * Autocuadre
+             * @default false
+             */
+            autocuadre: boolean;
+        };
         /** LineaDeAmortizacion */
         LineaDeAmortizacion: {
             /**
@@ -19237,6 +22740,51 @@ export interface components {
             /** Numero Registros */
             numero_registros: number;
         };
+        /** ListarLineas */
+        ListarLineas: {
+            /**
+             * Id Obligado
+             * @description id_obligado: entero. Ej: 1
+             */
+            id_obligado: number;
+            /**
+             * Id Receptor
+             * @description id_receptor: entero, cliente del que se quieren las líneas. Ej: 102
+             */
+            id_receptor: number;
+            /**
+             * Fecha Desde
+             * @description fecha_desde: YYYY-MM-DD sobre fecha_emision. Ej: "2026-01-01"
+             */
+            fecha_desde?: string | null;
+            /**
+             * Fecha Hasta
+             * @description fecha_hasta: YYYY-MM-DD sobre fecha_emision. Ej: "2026-12-31"
+             */
+            fecha_hasta?: string | null;
+            /**
+             * Descripcion
+             * @description descripcion: texto a buscar dentro de la descripción de la línea. Ej: "pan"
+             */
+            descripcion?: string | null;
+            /**
+             * Offset
+             * @description offset: entero. Ej: 0
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description limit: entero máximo de registros. Ej: 100
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Orden
+             * @description orden: fecha_emision, numero_factura, descripcion, cantidad, importe o id, con ASC/DESC. Ej: "fecha_emision DESC". Por defecto, las más recientes primero.
+             */
+            orden?: string | null;
+        };
         /**
          * ListarNumerica
          * @description Como Listar, pero devuelve los Decimal como numero (no texto).
@@ -19309,6 +22857,13 @@ export interface components {
         ListarTipo_ModeloFormaRespuesta_: {
             /** Registros */
             registros: components["schemas"]["ModeloFormaRespuesta"][];
+            /** Numero Registros */
+            numero_registros: number;
+        };
+        /** ListarTipo[ModelosArticulos.ModeloHistorialPreciosRespuesta] */
+        ListarTipo_ModeloHistorialPreciosRespuesta_: {
+            /** Registros */
+            registros: components["schemas"]["ModeloHistorialPreciosRespuesta"][];
             /** Numero Registros */
             numero_registros: number;
         };
@@ -19418,6 +22973,78 @@ export interface components {
              * @description Cuentas que guarda cada ficha.
              */
             campos?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_cuentas_maestros__CampoDeCuenta"][];
+        };
+        /** MarcaAceptacion */
+        MarcaAceptacion: {
+            /**
+             * Id
+             * @description ID del capítulo o la partida
+             */
+            id: number;
+            /**
+             * Aceptado
+             * @description true = el cliente lo acepta; false = lo excluye. Excluir un capítulo excluye todo lo que cuelga de él.
+             */
+            aceptado: boolean;
+        };
+        /** MarcaAceptacionSubcontrata */
+        MarcaAceptacionSubcontrata: {
+            /**
+             * Id
+             * @description ID del capítulo o la partida del presupuesto de la subcontratista
+             */
+            id: number;
+            /**
+             * Aceptado
+             * @description true = se acepta; false = se excluye
+             */
+            aceptado: boolean;
+        };
+        /** MemoriaEnLista */
+        MemoriaEnLista: {
+            /** Id */
+            id: number;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Modelo
+             * @description normal, abreviado o pymes.
+             */
+            modelo: string;
+            /** Version */
+            version: number;
+            /**
+             * Estado
+             * @description 0 borrador, 1 revisada, 2 formulada.
+             */
+            estado: number;
+            /** Estado Texto */
+            estado_texto: string;
+            /** Fecha Formulacion */
+            fecha_formulacion?: string | null;
+            /** Formulada Por */
+            formulada_por?: string | null;
+        };
+        /** MiGrupo */
+        MiGrupo: {
+            /**
+             * Id Obligado
+             * @description Empresa de la que se quiere saber el grupo (se validará acceso)
+             */
+            id_obligado?: number | null;
+        };
+        /** Miembro */
+        Miembro: {
+            /**
+             * Id Grupo
+             * @description ID del grupo
+             */
+            id_grupo: number;
+            /**
+             * Id Obligado
+             * @description Empresa que entra o sale del grupo
+             */
+            id_obligado: number;
         };
         /** ModeloAbrir */
         ModeloAbrir: {
@@ -19575,6 +23202,12 @@ export interface components {
             usuario: string;
             /** Password */
             password: string;
+            /**
+             * Id Rol
+             * @description Rol del usuario que se crea con la ficha: 2 administrador, 6 desarrollador. Mismos privilegios.
+             * @default 2
+             */
+            id_rol: number;
         };
         /** ModeloAdministradorCrearApiKey */
         ModeloAdministradorCrearApiKey: {
@@ -20137,6 +23770,43 @@ export interface components {
              */
             id_bien_padre: number | null;
         };
+        /** ModeloApartado */
+        ModeloApartado: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Memoria */
+            id_memoria: number;
+            /**
+             * Codigo Apartado
+             * @description Codigo del apartado en el catalogo de la GD.
+             */
+            codigo_apartado: string;
+            /**
+             * Titulo
+             * @description Titulo del apartado, con su numero. Se guarda una copia.
+             * @default
+             */
+            titulo: string;
+            /**
+             * Texto
+             * @description Texto del apartado, en Markdown.
+             * @default
+             */
+            texto: string;
+            /**
+             * Datos
+             * @description JSON en texto: cada dato con su valor, su origen y su referencia. El SIF solo comprueba que sea JSON.
+             */
+            datos?: string | null;
+            /**
+             * Pendientes
+             * @description JSON en texto: los datos que faltan.
+             */
+            pendientes?: string | null;
+        };
         /** ModeloApuntesSinFicha */
         ModeloApuntesSinFicha: {
             /**
@@ -20194,6 +23864,11 @@ export interface components {
              */
             precio_venta?: number | string | null;
             /**
+             * Margen
+             * @description % de margen sobre el precio de compra (0–999.99). Con la regla activa en el obligado, precio_venta = precio_compra * (1 + margen/100)
+             */
+            margen?: number | string | null;
+            /**
              * Descuento
              * @description % Descuento (0–999.99) (DECIMAL(5,2))
              */
@@ -20313,6 +23988,11 @@ export interface components {
              * @description Indica si el artículo controla stock
              */
             controla_stock?: boolean | null;
+            /**
+             * Generico
+             * @description Indica si el artículo es genérico
+             */
+            generico?: boolean | null;
             /**
              * Stock Actual
              * @description Stock actual del artículo (DECIMAL(14,4))
@@ -20363,6 +24043,11 @@ export interface components {
              */
             precio_venta?: number | string | null;
             /**
+             * Margen
+             * @description % de margen sobre el precio de compra (0–999.99). Con la regla activa en el obligado, precio_venta = precio_compra * (1 + margen/100)
+             */
+            margen?: number | string | null;
+            /**
              * Descuento
              * @description % Descuento (0–999.99) (DECIMAL(5,2))
              */
@@ -20483,6 +24168,11 @@ export interface components {
              */
             controla_stock?: boolean | null;
             /**
+             * Generico
+             * @description Indica si el artículo es genérico
+             */
+            generico?: boolean | null;
+            /**
              * Stock Actual
              * @description Stock actual del artículo (DECIMAL(14,4))
              */
@@ -20506,6 +24196,75 @@ export interface components {
              * @default 0
              */
             id_obligado: number | null;
+        };
+        /**
+         * ModeloArticuloExportar
+         * @description Filtros del Excel de precios. Los mismos del listado, más los de precios y proveedor.
+         *     Cada filtro admite el formato {"op": "...", "valor": ...} o un valor suelto: un texto en
+         *     descripcion/categoria busca "que contenga" y cualquier otro valor suelto equivale a "=".
+         */
+        ModeloArticuloExportar: {
+            /**
+             * Id Obligado
+             * @description ID del obligado a listar (omitible si rol=4; se autofija)
+             * @default 0
+             */
+            id_obligado: number | null;
+            /** @description Código del artículo */
+            codigo?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Nombre o descripción del artículo */
+            descripcion?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Descripción de la categoría asociada */
+            categoria?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Código EAN del artículo */
+            codigo_ean?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por categoría del artículo */
+            id_categoria?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por tipo de IVA del artículo. Con {"op": "=", "valor": null} salen los que aún no lo tienen asignado */
+            id_tipo_iva?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por porcentaje de IVA del artículo */
+            iva?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por grupo económico del artículo */
+            id_grupo_economico?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por tipo de recurso del artículo */
+            tipo_recurso?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por régimen (propia/alquilada). Para el selector de maquinaria del parte: tipo_recurso=maquinaria + regimen=propia */
+            regimen?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por unidad de medida del artículo */
+            id_unidad?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por estado activo del artículo */
+            activo?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por marca del artículo */
+            marca?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por control de stock del artículo */
+            controla_stock?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por artículo genérico */
+            generico?: components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Offset
+             * @description Desplazamiento inicial para la paginación
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description Número máximo de registros a devolver
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Orden
+             * @description Cláusula ORDER BY segura, p.ej. 'id DESC'
+             */
+            orden?: string | null;
+            /** @description Filtro por proveedor habitual del artículo */
+            id_emisor_hab?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por precio de compra, p.ej. {"op": "=", "valor": 0} para los que no lo tienen */
+            precio_compra?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por precio de venta */
+            precio_venta?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por margen, p.ej. {"op": ">", "valor": 0} para los que tienen margen */
+            margen?: components["schemas"]["FiltroCampo"] | null;
         };
         /** ModeloArticuloListar */
         ModeloArticuloListar: {
@@ -20543,6 +24302,8 @@ export interface components {
             marca?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtro por control de stock del artículo */
             controla_stock?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtro por artículo genérico */
+            generico?: components["schemas"]["FiltroCampo"] | null;
             /**
              * Offset
              * @description Desplazamiento inicial para la paginación
@@ -20612,6 +24373,21 @@ export interface components {
              * @description Precio unitario de venta (4 decimales)
              */
             precio_venta?: string | null;
+            /**
+             * Margen
+             * @description % de margen sobre el precio de compra (2 decimales)
+             */
+            margen?: string | null;
+            /**
+             * Fecha Cambio Precio Venta
+             * @description Último cambio automático del precio de venta por la regla de margen
+             */
+            fecha_cambio_precio_venta?: string | null;
+            /**
+             * Fecha Ultima Compra
+             * @description Fecha de la última compra de la que viene el precio de compra
+             */
+            fecha_ultima_compra?: string | null;
             /**
              * Descuento
              * @description % Descuento (2 decimales)
@@ -20746,6 +24522,11 @@ export interface components {
              */
             controla_stock?: number | null;
             /**
+             * Generico
+             * @description Indica si el artículo es genérico (1 = sí, 0 = no)
+             */
+            generico?: number | null;
+            /**
              * Stock Actual
              * @description Stock actual del artículo (4 decimales)
              */
@@ -20856,6 +24637,26 @@ export interface components {
              * @description ID del borrador.
              */
             id: number;
+        };
+        /** ModeloCambiarEstado */
+        ModeloCambiarEstado: {
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Estado
+             * @description 0 = anular, 2 = activar (desde pendiente de firma).
+             * @enum {integer}
+             */
+            estado: 0 | 2;
         };
         /** ModeloCanjear */
         ModeloCanjear: {
@@ -21391,6 +25192,61 @@ export interface components {
             activo?: components["schemas"]["FiltroCampo"] | null;
             fecha_fin_validez?: components["schemas"]["FiltroCampo"] | null;
         };
+        /** ModeloCertificadoListarCartera */
+        ModeloCertificadoListarCartera: {
+            /**
+             * Offset
+             * @description Número de registros a omitir
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description Cantidad máxima de registros a devolver
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Orden
+             * @description Orden SQL, por ejemplo 'fecha_fin_validez ASC'
+             * @default fecha_fin_validez ASC
+             */
+            orden: string;
+            activo?: components["schemas"]["FiltroCampo"] | null;
+            fecha_fin_validez?: components["schemas"]["FiltroCampo"] | null;
+        };
+        /** ModeloCodigo */
+        ModeloCodigo: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
+            codigo: string;
+        };
+        /** ModeloComprobar */
+        ModeloComprobar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Definicion */
+            definicion: {
+                [key: string]: unknown;
+            };
+        };
         /** ModeloComprobarTraspaso */
         ModeloComprobarTraspaso: {
             /**
@@ -21448,14 +25304,6 @@ export interface components {
              * @description Uno de: consulta, apuntes, cierre, admin.
              */
             nivel: string;
-        };
-        /** ModeloConmutar */
-        ModeloConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa cuya contabilidad se quiere abrir.
-             */
-            id_obligado: number;
         };
         /** ModeloConvertirPagoFraccionado */
         ModeloConvertirPagoFraccionado: {
@@ -21800,6 +25648,21 @@ export interface components {
             /** Id Obligado */
             id_obligado?: number | null;
         };
+        /** ModeloDatosContables */
+        ModeloDatosContables: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Cuadro
+             * @description Nombre del cuadro. Vacio = la lista de cuadros.
+             */
+            cuadro?: string | null;
+        };
         /** ModeloDesdeFactura */
         ModeloDesdeFactura: {
             /**
@@ -21953,30 +25816,33 @@ export interface components {
              */
             simular: boolean | null;
         };
-        /** ModeloEditar */
-        ModeloEditar: {
+        /** ModeloDuplicar */
+        ModeloDuplicar: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
              */
             id_obligado?: number | null;
             /**
-             * Ejercicio
-             * @description Ejercicio del que se quiere el plan. Si no se indica, el de la configuracion de la empresa.
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
              */
-            ejercicio?: number | null;
-            /** Codigo */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
             codigo: string;
+            /** Codigo Nuevo */
+            codigo_nuevo: string;
             /**
-             * Descripcion
-             * @description Titulo nuevo. Si no se manda, se deja el que tiene.
+             * Nombre
+             * @description Vacío = el de la original con «(copia)».
+             * @default
              */
-            descripcion?: string | null;
-            /**
-             * Auxiliar
-             * @description Cambia si la cuenta admite apuntes. Si no se manda, se deja como esta.
-             */
-            auxiliar?: boolean | null;
+            nombre: string;
         };
         /** ModeloEditarBien */
         ModeloEditarBien: {
@@ -22123,37 +25989,38 @@ export interface components {
             /** Documento */
             documento?: string | null;
         };
-        /** ModeloEjecutar */
-        ModeloEjecutar: {
+        /**
+         * ModeloEjecuciones
+         * @description Sin id ni código, las de todas las plantillas.
+         */
+        ModeloEjecuciones: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
              */
             id_obligado?: number | null;
             /**
-             * Id Importacion
-             * @description La que devolvio /subir.
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
              */
-            id_importacion: number;
+            id: number;
             /**
-             * Mapeo
-             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
              */
-            mapeo?: {
-                [key: string]: unknown;
-            } | null;
+            codigo: string;
             /**
-             * Opciones
-             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
+             * Limite
+             * @default 100
              */
-            opciones?: {
-                [key: string]: unknown;
-            } | null;
+            limite: number;
             /**
-             * Ejercicio
-             * @description Solo para el diario: fuerza el ejercicio. Sin esto, el de la fecha de cada asiento.
+             * Desplazamiento
+             * @default 0
              */
-            ejercicio?: number | null;
+            desplazamiento: number;
         };
         /** ModeloEjercicio */
         ModeloEjercicio: {
@@ -22197,17 +26064,6 @@ export interface components {
              * @description Diario que se borra.
              */
             codigo: string;
-        };
-        /** ModeloEmpresa */
-        ModeloEmpresa: {
-            /** Id Obligado */
-            id_obligado: number;
-            /** Nombrerazon */
-            NombreRazon?: string | null;
-            /** Nif */
-            NIF?: string | null;
-            /** Nivel */
-            nivel: string;
         };
         /** ModeloEnlazar */
         ModeloEnlazar: {
@@ -22339,6 +26195,99 @@ export interface components {
              * @description False retira la cuenta; True la vuelve a activar.
              */
             activa: boolean;
+        };
+        /** ModeloFacturarCertificacion */
+        ModeloFacturarCertificacion: {
+            /**
+             * Id
+             * @description ID de la certificación (aceptada)
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Serie
+             * @description Serie de la factura. Vacío = la de la certificación
+             */
+            id_serie?: number | null;
+            /**
+             * Fecha
+             * @description Fecha de la factura. Vacío = hoy
+             */
+            fecha?: string | null;
+        };
+        /** ModeloFichero */
+        ModeloFichero: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Forma De Pago
+             * @description A ingresar: I (ingreso, por defecto), U (domiciliacion) o G (cuenta corriente). A devolver: D (transferencia, por defecto) o V (cuenta corriente). En las demas se ignora.
+             * @default
+             */
+            forma_de_pago: string;
+            /**
+             * Iban
+             * @description Cuenta para domiciliar el ingreso (U) o cobrar la devolucion (D). Espanola.
+             * @default
+             */
+            iban: string;
+            /**
+             * Bic
+             * @description Codigo SWIFT-BIC de la cuenta. Opcional en una cuenta espanola.
+             * @default
+             */
+            bic: string;
+            /**
+             * Devolucion Mensual
+             * @description Inscrita en el registro de devolucion mensual (art. 30 RIVA).
+             * @default false
+             */
+            devolucion_mensual: boolean;
+            /**
+             * Criterio Caja
+             * @description Acogida al regimen especial del criterio de caja.
+             * @default false
+             */
+            criterio_caja: boolean;
+            /**
+             * Destinatario Criterio Caja
+             * @description Destinataria de operaciones con criterio de caja.
+             * @default false
+             */
+            destinatario_criterio_caja: boolean;
+            /**
+             * Sii Voluntario
+             * @description Acogida VOLUNTARIAMENTE al SII. Las obligadas por ley van a false.
+             * @default false
+             */
+            sii_voluntario: boolean;
+            /**
+             * Exonerado 390
+             * @description Exonerada del 390. En el ultimo periodo eso pide la pagina 4, que aun no se genera.
+             * @default false
+             */
+            exonerado_390: boolean;
+            /**
+             * Gasolinas
+             * @description Con derecho a deducir pagos a cuenta de gasolinas (modelo 319). Solo cuenta en periodos mensuales a partir del 02.
+             * @default false
+             */
+            gasolinas: boolean;
+            /**
+             * Aceptar Avisos
+             * @description Generarlo aunque la declaracion tenga avisos de facturas sin colocar.
+             * @default false
+             */
+            aceptar_avisos: boolean;
         };
         /** ModeloFijarContadorAlbaran */
         ModeloFijarContadorAlbaran: {
@@ -22518,7 +26467,7 @@ export interface components {
             id_factura: number;
             /**
              * Cuentas
-             * @description gasto, iva y/o retencion -> codigo. Cadena vacia borra la cuenta de la factura y vuelve a mandar la del proveedor.
+             * @description gasto, iva, retencion, suplidos, suplidos_2 y/o suplidos_3 -> codigo. Cadena vacia borra la cuenta de la factura y vuelve a mandar la del proveedor.
              */
             cuentas: {
                 [key: string]: string;
@@ -22544,7 +26493,7 @@ export interface components {
             ids: number[];
             /**
              * Cuentas
-             * @description gasto, iva y/o retencion -> codigo.
+             * @description gasto, iva, retencion, suplidos, suplidos_2 y/o suplidos_3 -> codigo.
              */
             cuentas: {
                 [key: string]: string;
@@ -22910,6 +26859,101 @@ export interface components {
              */
             id_obligado: number | null;
         };
+        /** ModeloHistorialPreciosListar */
+        ModeloHistorialPreciosListar: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (omitible si rol=4; se autofija)
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Id Articulo
+             * @description Solo los cambios de este artículo. Omitido: todos los de la empresa
+             */
+            id_articulo?: number | null;
+            /**
+             * Desde
+             * @description Fecha inicial (inclusive), AAAA-MM-DD
+             */
+            desde?: string | null;
+            /**
+             * Hasta
+             * @description Fecha final (inclusive), AAAA-MM-DD
+             */
+            hasta?: string | null;
+            /**
+             * Offset
+             * @description Desplazamiento inicial
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description Máximo de filas a devolver (1–1000)
+             * @default 100
+             */
+            limit: number;
+        };
+        /** ModeloHistorialPreciosRespuesta */
+        ModeloHistorialPreciosRespuesta: {
+            /** Id */
+            id: number;
+            /** Id Articulo */
+            id_articulo: number;
+            /**
+             * Codigo
+             * @description Código del artículo (vacío si el artículo ya no existe)
+             */
+            codigo?: string | null;
+            /**
+             * Descripcion
+             * @description Descripción del artículo (vacío si el artículo ya no existe)
+             */
+            descripcion?: string | null;
+            /**
+             * Fecha Hora
+             * Format: date-time
+             * @description Momento del cambio
+             */
+            fecha_hora: string;
+            /**
+             * Precio Compra Anterior
+             * @description Vacío en el alta del artículo
+             */
+            precio_compra_anterior?: string | null;
+            /** Precio Compra Nuevo */
+            precio_compra_nuevo?: string | null;
+            /**
+             * Precio Venta Anterior
+             * @description Vacío en el alta del artículo
+             */
+            precio_venta_anterior?: string | null;
+            /** Precio Venta Nuevo */
+            precio_venta_nuevo?: string | null;
+            /**
+             * Margen Anterior
+             * @description Vacío en el alta del artículo
+             */
+            margen_anterior?: string | null;
+            /** Margen Nuevo */
+            margen_nuevo?: string | null;
+            /**
+             * Origen
+             * @description manual, albaran:ID, factura_recibida:ID, recalculo_masivo o sistema
+             */
+            origen: string;
+            /**
+             * Id Usuario
+             * @description Usuario responsable; vacío si no se conoce
+             */
+            id_usuario?: number | null;
+            /**
+             * Usuario
+             * @description Nombre de usuario responsable
+             */
+            usuario?: string | null;
+        };
         /**
          * ModeloHistoricoBorrador
          * @description Que versiones archivadas se piden. Con `id_borrador`, la historia de uno; sin el, lo
@@ -22942,11 +26986,6 @@ export interface components {
              * @default 100
              */
             limit: number | null;
-        };
-        /** ModeloId */
-        ModeloId: {
-            /** Id */
-            id: number;
         };
         /** ModeloImpersonar */
         ModeloImpersonar: {
@@ -22981,6 +27020,60 @@ export interface components {
              * @description La que devolvio /subir.
              */
             id_importacion: number;
+        };
+        /** ModeloImportarPreciosRespuesta */
+        ModeloImportarPreciosRespuesta: {
+            /**
+             * Aplicado
+             * @description True solo si los cambios se han guardado
+             */
+            aplicado: boolean;
+            /**
+             * Simulado
+             * @description True si se pidió solo simular
+             */
+            simulado: boolean;
+            /**
+             * Mensaje
+             * @description Resumen en lenguaje llano
+             */
+            mensaje: string;
+            /**
+             * Filas Leidas
+             * @description Filas con datos que había en el Excel
+             */
+            filas_leidas: number;
+            /**
+             * Num Cambios
+             * @description Artículos que cambian (o han cambiado)
+             */
+            num_cambios: number;
+            /**
+             * Sin Cambios
+             * @description Filas cuyos precios ya eran los que tiene el artículo
+             */
+            sin_cambios: number;
+            /**
+             * Errores
+             * @description Lista de {linea, mensaje}. Con algún error no se aplica nada
+             */
+            errores?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Avisos
+             * @description Lista de {linea, mensaje}. No impiden aplicar
+             */
+            avisos?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Cambios
+             * @description Solo al simular (máx. 500): id, codigo, descripcion, anterior, nuevo y precio_venta_resultante
+             */
+            cambios?: {
+                [key: string]: unknown;
+            }[];
         };
         /** ModeloInformeExcel */
         ModeloInformeExcel: {
@@ -23118,6 +27211,39 @@ export interface components {
              * @default epigrafes
              */
             detalle: string | null;
+        };
+        /** ModeloLibroIva */
+        ModeloLibroIva: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Mes (01 a 12) o trimestre (1T a 4T).
+             */
+            periodo: string;
+            /**
+             * Libro
+             * @description Libro registro de facturas expedidas (ventas) o recibidas (compras).
+             * @enum {string}
+             */
+            libro: "expedidas" | "recibidas";
+            /**
+             * Limite
+             * @description Renglones por pagina.
+             * @default 500
+             */
+            limite: number;
+            /**
+             * Desplazamiento
+             * @description Renglones que se saltan.
+             * @default 0
+             */
+            desplazamiento: number;
         };
         /** ModeloLinea */
         ModeloLinea: {
@@ -23742,6 +27868,8 @@ export interface components {
             /** Id Rol */
             id_rol?: number | components["schemas"]["FiltroCampo"] | null;
             rol?: components["schemas"]["FiltroCampo"] | null;
+            desde_fecha?: components["schemas"]["FiltroCampo"] | null;
+            hasta_fecha?: components["schemas"]["FiltroCampo"] | null;
         };
         /** ModeloLogRequestListar */
         ModeloLogRequestListar: {
@@ -23776,6 +27904,8 @@ export interface components {
             status_code?: number | components["schemas"]["FiltroCampo"] | null;
             key_id?: components["schemas"]["FiltroCampo"] | null;
             fecha_hora?: components["schemas"]["FiltroCampo"] | null;
+            desde_fecha?: components["schemas"]["FiltroCampo"] | null;
+            hasta_fecha?: components["schemas"]["FiltroCampo"] | null;
         };
         /** ModeloMantenimientoActualizar */
         ModeloMantenimientoActualizar: {
@@ -24142,9 +28272,24 @@ export interface components {
             id_tipo: number | null;
             /**
              * Iban
-             * @description IBAN asociado.
+             * @description IBAN asociado. Obligatorio y validado en domiciliaciones SEPA (tipos 5 y 6).
              */
             iban?: string | null;
+            /**
+             * Bic
+             * @description BIC del banco de la cuenta. Opcional.
+             */
+            bic?: string | null;
+            /**
+             * Sufijo Acreedor
+             * @description Domiciliación SEPA: sufijo del identificador de acreedor (por defecto 000).
+             */
+            sufijo_acreedor?: string | null;
+            /**
+             * Identificador Acreedor
+             * @description Domiciliación SEPA: identificador de acreedor. Vacío = se calcula con el NIF de la empresa y el sufijo.
+             */
+            identificador_acreedor?: string | null;
             /**
              * Cta Contable Pagos
              * @description Cuenta contable para pagos.
@@ -24226,9 +28371,24 @@ export interface components {
             id_tipo: number;
             /**
              * Iban
-             * @description IBAN asociado.
+             * @description IBAN asociado. Obligatorio y validado en domiciliaciones SEPA (tipos 5 y 6).
              */
             iban?: string | null;
+            /**
+             * Bic
+             * @description BIC del banco de la cuenta. Opcional.
+             */
+            bic?: string | null;
+            /**
+             * Sufijo Acreedor
+             * @description Domiciliación SEPA: sufijo del identificador de acreedor (por defecto 000).
+             */
+            sufijo_acreedor?: string | null;
+            /**
+             * Identificador Acreedor
+             * @description Domiciliación SEPA: identificador de acreedor. Vacío = se calcula con el NIF de la empresa y el sufijo.
+             */
+            identificador_acreedor?: string | null;
             /**
              * Cta Contable Pagos
              * @description Cuenta contable para pagos.
@@ -24351,6 +28511,12 @@ export interface components {
             negociable: number | null;
             /** Iban */
             iban: string | null;
+            /** Bic */
+            bic?: string | null;
+            /** Sufijo Acreedor */
+            sufijo_acreedor?: string | null;
+            /** Identificador Acreedor */
+            identificador_acreedor?: string | null;
             /** Cta Contable Pagos */
             cta_contable_pagos: string | null;
             /** Cta Contable Cobros */
@@ -24372,6 +28538,89 @@ export interface components {
             /** Nombrerazon Obligado */
             NombreRazon_obligado: string | null;
         };
+        /** ModeloMemoria */
+        ModeloMemoria: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Memoria */
+            id_memoria: number;
+        };
+        /** ModeloModificar */
+        ModeloModificar: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (autofijable para rol 4).
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Referencia
+             * @description Referencia única del mandato. Si se omite al crear, se genera.
+             */
+            referencia?: string | null;
+            /**
+             * Fecha Firma
+             * @description Fecha de firma. Obligatoria salvo en pendiente de firma.
+             */
+            fecha_firma?: string | null;
+            /**
+             * Esquema
+             * @description CORE (por defecto) o B2B.
+             */
+            esquema?: ("CORE" | "B2B") | null;
+            /**
+             * Tipo Pago
+             * @description recurrente (por defecto) o unico.
+             */
+            tipo_pago?: ("recurrente" | "unico") | null;
+            /**
+             * Iban Deudor
+             * @description IBAN del deudor. Si se omite al crear, se toma de la ficha del cliente.
+             */
+            iban_deudor?: string | null;
+            /**
+             * Bic Deudor
+             * @description BIC del banco del deudor. Opcional.
+             */
+            bic_deudor?: string | null;
+            /**
+             * Nombre Deudor
+             * @description Si se omite al crear, se toma de la ficha del cliente.
+             */
+            nombre_deudor?: string | null;
+            /** Nif Deudor */
+            nif_deudor?: string | null;
+            /** Direccion Deudor */
+            direccion_deudor?: string | null;
+            /** Codigo Postal Deudor */
+            codigo_postal_deudor?: string | null;
+            /** Localidad Deudor */
+            localidad_deudor?: string | null;
+            /** Provincia Deudor */
+            provincia_deudor?: string | null;
+            /**
+             * Pais Deudor
+             * @description Código ISO de 2 letras.
+             */
+            pais_deudor?: string | null;
+            /**
+             * Id Acreedor
+             * @description Identificador de acreedor con el que se firmó.
+             */
+            id_acreedor?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Anotacion */
+            anotacion?: string | null;
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+        };
         /** ModeloModulos */
         ModeloModulos: {
             /**
@@ -24389,6 +28638,11 @@ export interface components {
              * @description 1 = la empresa tiene contratado proyectos y obras.
              */
             proyectos_obras: number;
+            /**
+             * Hosting
+             * @description 1 = la empresa tiene contratado el módulo de hosting.
+             */
+            hosting: number;
             /**
              * Modo Vf
              * @description 1 = la empresa factura por VeriFactu.
@@ -24579,6 +28833,11 @@ export interface components {
              */
             proyectos_obras?: number | null;
             /**
+             * Hosting
+             * @description Indica si el obligado tiene activo el módulo de hosting. 0=No, 1=Sí
+             */
+            hosting?: number | null;
+            /**
              * Configuracion
              * @description JSON de opciones de configuración del obligado
              */
@@ -24589,6 +28848,41 @@ export interface components {
              * @default 1
              */
             descuento_en_cascada: number | null;
+            /**
+             * Recalcular Precio Venta
+             * @description Regla de precios: 1=el precio de venta de un artículo se recalcula solo (compra + margen) cuando cambia su precio de compra o su margen; 0=no. Activarla no cambia los precios existentes: para eso, el endpoint de recalcular precios de venta de artículos
+             */
+            recalcular_precio_venta?: number | null;
+            /**
+             * Id Estado
+             * @description Solo superadministrador. 0=Inactivo, 1=Activo, 2=Suspendido, 3=Cancelado
+             */
+            id_estado?: number | null;
+            /**
+             * Id Plan
+             * @description Solo superadministrador. Identificador del plan contratado
+             */
+            id_plan?: number | null;
+            /**
+             * Fecha Expiracion
+             * @description Solo superadministrador. Fecha de expiración del plan (AAAA-MM-DD)
+             */
+            fecha_expiracion?: string | null;
+            /**
+             * Dias Prueba
+             * @description Solo superadministrador. Días de prueba concedidos
+             */
+            dias_prueba?: number | null;
+            /**
+             * Fecha Fin Prueba
+             * @description Solo superadministrador. Fin del periodo de prueba (AAAA-MM-DD)
+             */
+            fecha_fin_prueba?: string | null;
+            /**
+             * Modo Vf O Sii
+             * @description Solo superadministrador. 0=No envía, 1=Verifactu, 2=SII
+             */
+            modo_vf_o_sii?: number | null;
             /** Usuario */
             usuario: string;
             /** Password */
@@ -24694,6 +28988,11 @@ export interface components {
              */
             cuenta_contable_retencion?: string | null;
             /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable de los suplidos de este proveedor por defecto. Cada suplido de la factura puede llevar la suya, que manda sobre esta.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
              * Cta Contable
              * @description Cuenta contable del emisor en la contabilidad de este programa. No confundir con cuenta_contable_gasto, que es la del gasto.
              */
@@ -24731,6 +29030,41 @@ export interface components {
              * @default 0
              */
             id_origen: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones internas del emisor.
+             */
+            observaciones?: string | null;
+            /**
+             * Tipo Persona
+             * @description 'F' = persona física, 'J' = entidad. Vacío = se deduce del NIF (DNI/NIE = persona física).
+             */
+            tipo_persona?: string | null;
+            /**
+             * Nombre
+             * @description Nombre de pila del emisor si es persona física. Se usa en la factura electrónica y en el modelo 347.
+             */
+            nombre?: string | null;
+            /**
+             * Primer Apellido
+             * @description Primer apellido del emisor si es persona física.
+             */
+            primer_apellido?: string | null;
+            /**
+             * Segundo Apellido
+             * @description Segundo apellido del emisor si es persona física.
+             */
+            segundo_apellido?: string | null;
+            /**
+             * Nif Representante
+             * @description NIF español del representante legal (persona física) si el emisor es menor de 14 años (modelo 347). Se rechaza si no es válido. Cadena vacía para borrarlo.
+             */
+            NIF_representante?: string | null;
+            /**
+             * Nombre Representante
+             * @description Nombre y apellidos del representante legal del emisor.
+             */
+            nombre_representante?: string | null;
         };
         /** ModeloObligadoEmisorEliminar */
         ModeloObligadoEmisorEliminar: {
@@ -24879,6 +29213,11 @@ export interface components {
              */
             cuenta_contable_retencion?: string | null;
             /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable de los suplidos de este proveedor por defecto. Cada suplido de la factura puede llevar la suya, que manda sobre esta.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
              * Cta Contable
              * @description Cuenta contable del emisor en la contabilidad de este programa. No confundir con cuenta_contable_gasto, que es la del gasto.
              */
@@ -24916,6 +29255,41 @@ export interface components {
              * @default 0
              */
             id_origen: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones internas del emisor.
+             */
+            observaciones?: string | null;
+            /**
+             * Tipo Persona
+             * @description 'F' = persona física, 'J' = entidad. Vacío = se deduce del NIF (DNI/NIE = persona física).
+             */
+            tipo_persona?: string | null;
+            /**
+             * Nombre
+             * @description Nombre de pila del emisor si es persona física. Se usa en la factura electrónica y en el modelo 347.
+             */
+            nombre?: string | null;
+            /**
+             * Primer Apellido
+             * @description Primer apellido del emisor si es persona física.
+             */
+            primer_apellido?: string | null;
+            /**
+             * Segundo Apellido
+             * @description Segundo apellido del emisor si es persona física.
+             */
+            segundo_apellido?: string | null;
+            /**
+             * Nif Representante
+             * @description NIF español del representante legal (persona física) si el emisor es menor de 14 años (modelo 347). Se rechaza si no es válido. Cadena vacía para borrarlo.
+             */
+            NIF_representante?: string | null;
+            /**
+             * Nombre Representante
+             * @description Nombre y apellidos del representante legal del emisor.
+             */
+            nombre_representante?: string | null;
             /**
              * Id
              * @description ID del emisor a modificar.
@@ -24967,6 +29341,13 @@ export interface components {
             control_horario?: components["schemas"]["FiltroCampo"] | null;
             taller_mecanica?: components["schemas"]["FiltroCampo"] | null;
             proyectos_obras?: components["schemas"]["FiltroCampo"] | null;
+            hosting?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por fecha de alta */
+            fecha_alta?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por fecha de expiración del plan */
+            fecha_expiracion?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por fin del periodo de prueba */
+            fecha_fin_prueba?: components["schemas"]["FiltroCampo"] | null;
         };
         /** ModeloObligadoModificar */
         ModeloObligadoModificar: {
@@ -25120,6 +29501,11 @@ export interface components {
              */
             proyectos_obras?: number | null;
             /**
+             * Hosting
+             * @description Indica si el obligado tiene activo el módulo de hosting. 0=No, 1=Sí
+             */
+            hosting?: number | null;
+            /**
              * Configuracion
              * @description JSON de opciones de configuración del obligado
              */
@@ -25130,6 +29516,41 @@ export interface components {
              * @default 1
              */
             descuento_en_cascada: number | null;
+            /**
+             * Recalcular Precio Venta
+             * @description Regla de precios: 1=el precio de venta de un artículo se recalcula solo (compra + margen) cuando cambia su precio de compra o su margen; 0=no. Activarla no cambia los precios existentes: para eso, el endpoint de recalcular precios de venta de artículos
+             */
+            recalcular_precio_venta?: number | null;
+            /**
+             * Id Estado
+             * @description Solo superadministrador. 0=Inactivo, 1=Activo, 2=Suspendido, 3=Cancelado
+             */
+            id_estado?: number | null;
+            /**
+             * Id Plan
+             * @description Solo superadministrador. Identificador del plan contratado
+             */
+            id_plan?: number | null;
+            /**
+             * Fecha Expiracion
+             * @description Solo superadministrador. Fecha de expiración del plan (AAAA-MM-DD)
+             */
+            fecha_expiracion?: string | null;
+            /**
+             * Dias Prueba
+             * @description Solo superadministrador. Días de prueba concedidos
+             */
+            dias_prueba?: number | null;
+            /**
+             * Fecha Fin Prueba
+             * @description Solo superadministrador. Fin del periodo de prueba (AAAA-MM-DD)
+             */
+            fecha_fin_prueba?: string | null;
+            /**
+             * Modo Vf O Sii
+             * @description Solo superadministrador. 0=No envía, 1=Verifactu, 2=SII
+             */
+            modo_vf_o_sii?: number | null;
             /** Usuario */
             usuario?: string | null;
             /** Password */
@@ -25199,8 +29620,11 @@ export interface components {
             id_obligado?: number | null;
             /** Nombrerazon */
             NombreRazon: string;
-            /** Nif */
-            NIF: string;
+            /**
+             * Nif
+             * @description NIF del receptor. Puede omitirse: el receptor sin NIF solo admite facturas simplificadas.
+             */
+            NIF?: string | null;
             /** Nombrerazon Obligado */
             NombreRazon_obligado?: string | null;
             /** Nif Obligado */
@@ -25222,6 +29646,11 @@ export interface components {
              * @description Nota o mención de una línea (máx. 50 caracteres) que se imprime en la factura del receptor si tiene valor.
              */
             nota_factura?: string | null;
+            /**
+             * Iban
+             * @description IBAN de la cuenta bancaria del receptor. Admite espacios o guiones; se guarda compactado. Se rechaza si no es válido (país, longitud o dígitos de control). Cadena vacía para borrarlo.
+             */
+            iban?: string | null;
             /**
              * Direccion
              * @description Dirección postal del receptor.
@@ -25272,6 +29701,11 @@ export interface components {
              * @description Número de cuenta contable alternativo del receptor.
              */
             cuenta_contable?: string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta de la contabilidad donde van los suplidos que se cobran a este cliente. La factura la toma de aquí si no trae la suya.
+             */
+            cuenta_contable_suplidos?: string | null;
             /**
              * Tiponif
              * @description Tipo de NIF, según el país del receptor. (Opcional)<br />'02' = NIF_IVA (Valor por defecto) <- Receptores Nacionales o Intracomunitarios <br />'03' = pasaporte<br />'04' = documento_oficial_expedido_territorio_residencia<br />'05' = certificado_residencia<br />'06' = otro_documento_probatorio <- Mayoría de receptores de otros paises<br />'07' = no_censado <br />
@@ -25342,6 +29776,41 @@ export interface components {
              * @default 0
              */
             id_origen: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones internas del receptor. No se imprimen en la factura.
+             */
+            observaciones?: string | null;
+            /**
+             * Tipo Persona
+             * @description 'F' = persona física, 'J' = entidad. Vacío = se deduce del NIF (DNI/NIE = persona física).
+             */
+            tipo_persona?: string | null;
+            /**
+             * Nombre
+             * @description Nombre de pila del receptor si es persona física. Se usa en la factura electrónica y en el modelo 347.
+             */
+            nombre?: string | null;
+            /**
+             * Primer Apellido
+             * @description Primer apellido del receptor si es persona física.
+             */
+            primer_apellido?: string | null;
+            /**
+             * Segundo Apellido
+             * @description Segundo apellido del receptor si es persona física.
+             */
+            segundo_apellido?: string | null;
+            /**
+             * Nif Representante
+             * @description NIF español del representante legal (persona física) si el receptor es menor de 14 años (modelo 347). Se rechaza si no es válido. Cadena vacía para borrarlo.
+             */
+            NIF_representante?: string | null;
+            /**
+             * Nombre Representante
+             * @description Nombre y apellidos del representante legal del receptor.
+             */
+            nombre_representante?: string | null;
         };
         /** ModeloObligadoReceptorEliminar */
         ModeloObligadoReceptorEliminar: {
@@ -25394,6 +29863,7 @@ export interface components {
             telefono?: components["schemas"]["FiltroCampo"] | null;
             movil?: components["schemas"]["FiltroCampo"] | null;
             cuenta_contable?: components["schemas"]["FiltroCampo"] | null;
+            iban?: components["schemas"]["FiltroCampo"] | null;
             aplicar_iva?: components["schemas"]["FiltroCampo"] | null;
             aplicar_re?: components["schemas"]["FiltroCampo"] | null;
             id_OperacionExenta?: components["schemas"]["FiltroCampo"] | null;
@@ -25445,6 +29915,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Iban
+             * @description IBAN de la cuenta bancaria del receptor. Admite espacios o guiones; se guarda compactado. Se rechaza si no es válido (país, longitud o dígitos de control). Cadena vacía para borrarlo.
+             */
+            iban?: string | null;
+            /**
              * Direccion
              * @description Dirección postal del receptor.
              */
@@ -25494,6 +29969,11 @@ export interface components {
              * @description Número de cuenta contable alternativo del receptor.
              */
             cuenta_contable?: string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta de la contabilidad donde van los suplidos que se cobran a este cliente. La factura la toma de aquí si no trae la suya.
+             */
+            cuenta_contable_suplidos?: string | null;
             /**
              * Tiponif
              * @description Tipo de NIF, según el país del receptor. (Opcional)<br />'02' = NIF_IVA (Valor por defecto) <- Receptores Nacionales o Intracomunitarios <br />'03' = pasaporte<br />'04' = documento_oficial_expedido_territorio_residencia<br />'05' = certificado_residencia<br />'06' = otro_documento_probatorio <- Mayoría de receptores de otros paises<br />'07' = no_censado <br />
@@ -25564,6 +30044,41 @@ export interface components {
              * @default 0
              */
             id_origen: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones internas del receptor. No se imprimen en la factura.
+             */
+            observaciones?: string | null;
+            /**
+             * Tipo Persona
+             * @description 'F' = persona física, 'J' = entidad. Vacío = se deduce del NIF (DNI/NIE = persona física).
+             */
+            tipo_persona?: string | null;
+            /**
+             * Nombre
+             * @description Nombre de pila del receptor si es persona física. Se usa en la factura electrónica y en el modelo 347.
+             */
+            nombre?: string | null;
+            /**
+             * Primer Apellido
+             * @description Primer apellido del receptor si es persona física.
+             */
+            primer_apellido?: string | null;
+            /**
+             * Segundo Apellido
+             * @description Segundo apellido del receptor si es persona física.
+             */
+            segundo_apellido?: string | null;
+            /**
+             * Nif Representante
+             * @description NIF español del representante legal (persona física) si el receptor es menor de 14 años (modelo 347). Se rechaza si no es válido. Cadena vacía para borrarlo.
+             */
+            NIF_representante?: string | null;
+            /**
+             * Nombre Representante
+             * @description Nombre y apellidos del representante legal del receptor.
+             */
+            nombre_representante?: string | null;
             /**
              * Id
              * @description ID del receptor a modificar.
@@ -25628,6 +30143,19 @@ export interface components {
              * @default 0
              */
             id_gestion: number | null;
+        };
+        /** ModeloOpciones */
+        ModeloOpciones: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Origen
+             * @description Uno de: obras, diarios, tipos_iva.
+             */
+            origen: string;
         };
         /** ModeloOpenAIConsulta */
         ModeloOpenAIConsulta: {
@@ -25971,6 +30499,40 @@ export interface components {
              */
             incluir_borradores: boolean | null;
         };
+        /** ModeloPrevisualizar */
+        ModeloPrevisualizar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
+            codigo: string;
+            /**
+             * Definicion
+             * @description Para probar una plantilla sin guardarla (el editor).
+             */
+            definicion?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Parametros
+             * @description Datos tecleados, por clave. Una tabla es una lista de objetos.
+             */
+            parametros?: {
+                [key: string]: unknown;
+            };
+        };
         /** ModeloPrintTicket */
         ModeloPrintTicket: {
             /**
@@ -26029,6 +30591,328 @@ export interface components {
             id_obligado?: number | null;
             /** Id Tipo Iva */
             id_tipo_iva: number;
+        };
+        /** ModeloRecalcularPrecios */
+        ModeloRecalcularPrecios: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (omitible si rol=4; se autofija)
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Simular
+             * @description True (por defecto): solo cuenta y enseña qué cambiaría, sin guardar nada. False: aplica los cambios
+             * @default true
+             */
+            simular: boolean;
+        };
+        /** ModeloRecalcularPreciosRespuesta */
+        ModeloRecalcularPreciosRespuesta: {
+            /**
+             * Simulado
+             * @description True si no se ha guardado nada
+             */
+            simulado: boolean;
+            /**
+             * Num Articulos
+             * @description Artículos que cambian (o han cambiado) de precio de venta
+             */
+            num_articulos: number;
+            /**
+             * Detalle
+             * @description Solo en simulación: hasta 200 artículos con precio actual y nuevo
+             */
+            detalle?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ModeloReceptorEstablecimientoCrear */
+        ModeloReceptorEstablecimientoCrear: {
+            /**
+             * Idempotencia Clave
+             * @description Clave opcional para control idempotente; si se omite, la petición se trata de manera estándar.
+             */
+            idempotencia_clave?: string | null;
+            /**
+             * Descripcion
+             * @description Nombre del establecimiento.
+             */
+            descripcion: string;
+            /**
+             * Direccion
+             * @description Dirección del establecimiento.
+             */
+            direccion?: string | null;
+            /**
+             * Ciudad
+             * @description Ciudad del establecimiento.
+             */
+            ciudad?: string | null;
+            /**
+             * Codigo Postal
+             * @description Código postal del establecimiento.
+             */
+            codigo_postal?: string | null;
+            /**
+             * Provincia
+             * @description Provincia del establecimiento.
+             */
+            provincia?: string | null;
+            /**
+             * Telefono
+             * @description Teléfono del establecimiento.
+             */
+            telefono?: string | null;
+            /**
+             * Movil
+             * @description Móvil del establecimiento.
+             */
+            movil?: string | null;
+            /**
+             * Email
+             * @description Email del establecimiento.
+             */
+            email?: string | null;
+            /**
+             * Codigo Pais
+             * @description Código ISO 3166-1 del país del establecimiento.
+             */
+            codigo_pais?: string | null;
+            /**
+             * Id Residencia
+             * @description Lugar de residencia: 0 = nacional, 1 = canarias, 2 = ceuta_melilla, 3 = intracomunitario, 4 = extracomunitario.
+             */
+            id_residencia?: number | null;
+            /**
+             * Persona Contacto
+             * @description Nombre de la persona de contacto.
+             */
+            persona_contacto?: string | null;
+            /**
+             * Email Contacto
+             * @description Email de la persona de contacto.
+             */
+            email_contacto?: string | null;
+            /**
+             * Telefono Contacto
+             * @description Teléfono de la persona de contacto.
+             */
+            telefono_contacto?: string | null;
+            /**
+             * Id Zona
+             * @description ID de la zona del establecimiento.
+             */
+            id_zona?: number | null;
+            /**
+             * Id Ruta
+             * @description ID de la ruta del establecimiento.
+             */
+            id_ruta?: number | null;
+            /**
+             * Id Medio Pago
+             * @description ID del medio de pago del establecimiento.
+             */
+            id_medio_pago?: number | null;
+            /**
+             * Id Forma Pago
+             * @description ID de la forma de pago del establecimiento.
+             */
+            id_forma_pago?: number | null;
+            /**
+             * Direccion Facturacion
+             * @description 1 = el establecimiento es dirección de facturación.
+             */
+            direccion_facturacion?: number | null;
+            /**
+             * Direccion Entrega
+             * @description 1 = el establecimiento es dirección de entrega.
+             */
+            direccion_entrega?: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones.
+             */
+            observaciones?: string | null;
+            /**
+             * Id Obligado
+             * @description ID del obligado al que pertenece el cliente.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente (receptor) al que pertenece el establecimiento.
+             */
+            id_receptor: number;
+        };
+        /** ModeloReceptorEstablecimientoId */
+        ModeloReceptorEstablecimientoId: {
+            /**
+             * Id
+             * @description ID del establecimiento.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado al que pertenece el cliente.
+             */
+            id_obligado?: number | null;
+        };
+        /** ModeloReceptorEstablecimientoListar */
+        ModeloReceptorEstablecimientoListar: {
+            /**
+             * Offset
+             * @description Número de registros a omitir
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @description Cantidad máxima de registros a devolver
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Orden
+             * @description Campos por los que se ordenan los registros. Formato: 'campo ASC|DESC, campo2 ASC|DESC'.
+             * @default id
+             */
+            orden: string;
+            /**
+             * Id Obligado
+             * @description ID del obligado al que pertenece el cliente.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente (receptor) cuyos establecimientos se listan.
+             */
+            id_receptor: number;
+            id?: components["schemas"]["FiltroCampo"] | null;
+            descripcion?: components["schemas"]["FiltroCampo"] | null;
+            ciudad?: components["schemas"]["FiltroCampo"] | null;
+            codigo_postal?: components["schemas"]["FiltroCampo"] | null;
+            provincia?: components["schemas"]["FiltroCampo"] | null;
+            direccion_facturacion?: components["schemas"]["FiltroCampo"] | null;
+            direccion_entrega?: components["schemas"]["FiltroCampo"] | null;
+        };
+        /** ModeloReceptorEstablecimientoModificar */
+        ModeloReceptorEstablecimientoModificar: {
+            /**
+             * Idempotencia Clave
+             * @description Clave opcional para control idempotente; si se omite, la petición se trata de manera estándar.
+             */
+            idempotencia_clave?: string | null;
+            /**
+             * Descripcion
+             * @description Nombre del establecimiento.
+             */
+            descripcion?: string | null;
+            /**
+             * Direccion
+             * @description Dirección del establecimiento.
+             */
+            direccion?: string | null;
+            /**
+             * Ciudad
+             * @description Ciudad del establecimiento.
+             */
+            ciudad?: string | null;
+            /**
+             * Codigo Postal
+             * @description Código postal del establecimiento.
+             */
+            codigo_postal?: string | null;
+            /**
+             * Provincia
+             * @description Provincia del establecimiento.
+             */
+            provincia?: string | null;
+            /**
+             * Telefono
+             * @description Teléfono del establecimiento.
+             */
+            telefono?: string | null;
+            /**
+             * Movil
+             * @description Móvil del establecimiento.
+             */
+            movil?: string | null;
+            /**
+             * Email
+             * @description Email del establecimiento.
+             */
+            email?: string | null;
+            /**
+             * Codigo Pais
+             * @description Código ISO 3166-1 del país del establecimiento.
+             */
+            codigo_pais?: string | null;
+            /**
+             * Id Residencia
+             * @description Lugar de residencia: 0 = nacional, 1 = canarias, 2 = ceuta_melilla, 3 = intracomunitario, 4 = extracomunitario.
+             */
+            id_residencia?: number | null;
+            /**
+             * Persona Contacto
+             * @description Nombre de la persona de contacto.
+             */
+            persona_contacto?: string | null;
+            /**
+             * Email Contacto
+             * @description Email de la persona de contacto.
+             */
+            email_contacto?: string | null;
+            /**
+             * Telefono Contacto
+             * @description Teléfono de la persona de contacto.
+             */
+            telefono_contacto?: string | null;
+            /**
+             * Id Zona
+             * @description ID de la zona del establecimiento.
+             */
+            id_zona?: number | null;
+            /**
+             * Id Ruta
+             * @description ID de la ruta del establecimiento.
+             */
+            id_ruta?: number | null;
+            /**
+             * Id Medio Pago
+             * @description ID del medio de pago del establecimiento.
+             */
+            id_medio_pago?: number | null;
+            /**
+             * Id Forma Pago
+             * @description ID de la forma de pago del establecimiento.
+             */
+            id_forma_pago?: number | null;
+            /**
+             * Direccion Facturacion
+             * @description 1 = el establecimiento es dirección de facturación.
+             */
+            direccion_facturacion?: number | null;
+            /**
+             * Direccion Entrega
+             * @description 1 = el establecimiento es dirección de entrega.
+             */
+            direccion_entrega?: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones.
+             */
+            observaciones?: string | null;
+            /**
+             * Id
+             * @description ID del establecimiento a modificar.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado al que pertenece el cliente.
+             */
+            id_obligado?: number | null;
         };
         /** ModeloRenumerar */
         ModeloRenumerar: {
@@ -26527,6 +31411,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno)
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Irpf
              * @description Porcentaje de retención IRPF aplicado
              */
@@ -26546,6 +31435,41 @@ export interface components {
              * @description Importe de suplidos
              */
             importe_suplidos?: string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Descripción del 2º suplido
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido
+             */
+            importe_suplidos_2?: string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Descripción del 3er suplido
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido
+             */
+            importe_suplidos_3?: string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Importe Total
              * @description Importe total de la factura
@@ -26889,6 +31813,18 @@ export interface components {
             registros: components["schemas"]["ModeloRespuestaTiposNIF"][];
             /** Total */
             total: number;
+        };
+        /** ModeloRevisado */
+        ModeloRevisado: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Memoria */
+            id_memoria: number;
+            /** Codigo Apartado */
+            codigo_apartado: string;
         };
         /** ModeloRevisarAuxiliares */
         ModeloRevisarAuxiliares: {
@@ -27321,6 +32257,97 @@ export interface components {
              */
             incluir_borradores: boolean | null;
         };
+        /** ModeloSuperadminResumen */
+        ModeloSuperadminResumen: {
+            empresas: components["schemas"]["ModeloSuperadminResumenEmpresas"];
+            usuarios: components["schemas"]["ModeloSuperadminResumenUsuarios"];
+            asesorias: components["schemas"]["ModeloSuperadminResumenConteo"];
+            desarrolladores: components["schemas"]["ModeloSuperadminResumenConteo"];
+            servicio: components["schemas"]["ModeloSuperadminResumenServicio"];
+            certificados: components["schemas"]["ModeloSuperadminResumenCertificados"];
+            logs_24h: components["schemas"]["ModeloSuperadminResumenLogs"];
+        };
+        /** ModeloSuperadminResumenCertificadoProximo */
+        ModeloSuperadminResumenCertificadoProximo: {
+            /** Id Obligado */
+            id_obligado: number;
+            /** Nombrerazon */
+            NombreRazon: string;
+            /** Fecha Fin Validez */
+            fecha_fin_validez?: string | null;
+        };
+        /** ModeloSuperadminResumenCertificados */
+        ModeloSuperadminResumenCertificados: {
+            /** Activos */
+            activos: number;
+            /** Caducan 60D */
+            caducan_60d: number;
+            /** Proximos */
+            proximos: components["schemas"]["ModeloSuperadminResumenCertificadoProximo"][];
+        };
+        /** ModeloSuperadminResumenConteo */
+        ModeloSuperadminResumenConteo: {
+            /** Total */
+            total: number;
+        };
+        /** ModeloSuperadminResumenEmpresas */
+        ModeloSuperadminResumenEmpresas: {
+            /** Total */
+            total: number;
+            /** Activas */
+            activas: number;
+            /** Suspendidas */
+            suspendidas: number;
+            /** Altas Mes */
+            altas_mes: number;
+        };
+        /** ModeloSuperadminResumenLogError */
+        ModeloSuperadminResumenLogError: {
+            /** Fecha Hora */
+            fecha_hora?: string | null;
+            /** Status Code */
+            status_code: number;
+            /** Metodo Http */
+            metodo_http?: string | null;
+            /** Ruta */
+            ruta?: string | null;
+        };
+        /** ModeloSuperadminResumenLogs */
+        ModeloSuperadminResumenLogs: {
+            /** Total */
+            total: number;
+            /** Errores */
+            errores: number;
+            /** Ultimos Errores */
+            ultimos_errores: components["schemas"]["ModeloSuperadminResumenLogError"][];
+        };
+        /** ModeloSuperadminResumenServicio */
+        ModeloSuperadminResumenServicio: {
+            /** Bloqueadas */
+            bloqueadas: number;
+            /** Vencen 30D */
+            vencen_30d: number;
+            /** En Prueba */
+            en_prueba: number;
+            /** Proximas */
+            proximas: components["schemas"]["ModeloSuperadminResumenServicioProxima"][];
+        };
+        /** ModeloSuperadminResumenServicioProxima */
+        ModeloSuperadminResumenServicioProxima: {
+            /** Id */
+            id: number;
+            /** Nombrerazon */
+            NombreRazon: string;
+            /** Fecha */
+            fecha?: string | null;
+        };
+        /** ModeloSuperadminResumenUsuarios */
+        ModeloSuperadminResumenUsuarios: {
+            /** Total */
+            total: number;
+            /** Activos */
+            activos: number;
+        };
         /** ModeloSustituir */
         ModeloSustituir: {
             /**
@@ -27615,94 +32642,6 @@ export interface components {
         ModeloUsuarioRespuestaOperacion: {
             /** Num Filas */
             num_filas: number;
-        };
-        /**
-         * ModeloUsuarioSesion
-         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
-         *
-         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
-         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
-         */
-        ModeloUsuarioSesion: {
-            /**
-             * Id
-             * @description Id del usuario.
-             */
-            id?: number | null;
-            /**
-             * Usuario
-             * @description Nombre con el que entra.
-             */
-            usuario?: string | null;
-            /**
-             * Nombre Real
-             * @description Nombre de la persona.
-             */
-            nombre_real?: string | null;
-            /** Email */
-            email?: string | null;
-            /**
-             * Id Rol
-             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario.
-             */
-            id_rol?: number | null;
-            /**
-             * Rol
-             * @description Nombre del rol, para mostrarlo.
-             */
-            rol?: string | null;
-            /**
-             * Id Estado
-             * @description 1 = usuario activo.
-             */
-            id_estado?: number | null;
-            /**
-             * Id Obligado
-             * @description Empresa a la que pertenece el usuario, si es de una sola.
-             */
-            id_obligado?: number | null;
-            /** Id Representante */
-            id_representante?: number | null;
-            /** Id Administrador */
-            id_administrador?: number | null;
-            /**
-             * Nombrerazon
-             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
-             */
-            NombreRazon?: string | null;
-            /** Fecha Alta */
-            fecha_alta?: string | null;
-            /** Fecha Hora Actualizacion */
-            fecha_hora_actualizacion?: string | null;
-            /**
-             * Modulos Json
-             * @description Modulos contratados, tal y como vienen de la base de datos.
-             */
-            modulos_json?: unknown | null;
-            /** @description Los mismos modulos, ya resueltos. */
-            modulos?: components["schemas"]["ModeloModulos"] | null;
-            /**
-             * Conta Id Obligado
-             * @description Empresa de contabilidad activa en esta sesion. No aparece si aun no se ha elegido ninguna.
-             */
-            conta_id_obligado?: number | null;
-            /**
-             * Permisos Operario
-             * @description Solo para el rol 5.
-             */
-            permisos_operario?: unknown[] | null;
-            /** @description Solo para el rol 5. */
-            perfil_operario?: components["schemas"]["ModeloPerfilOperario"] | null;
-            /**
-             * Permisos Perfil
-             * @description Solo para el rol 5.
-             */
-            permisos_perfil?: unknown[] | null;
-            /**
-             * Instalacion
-             * @description Instalacion a la que pertenece el token.
-             */
-            instalacion?: string | null;
         };
         /** ModeloVehiculoActualizar */
         ModeloVehiculoActualizar: {
@@ -28148,6 +33087,31 @@ export interface components {
              */
             nombre_receptor?: string | null;
         };
+        /** ModeloVigente */
+        ModeloVigente: {
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente.
+             */
+            id_receptor: number;
+            /**
+             * Esquema
+             * @default CORE
+             * @enum {string}
+             */
+            esquema: "CORE" | "B2B";
+            /**
+             * Iban
+             * @description Solo el mandato de esta cuenta.
+             */
+            iban?: string | null;
+        };
         /** ModeloVigentes */
         ModeloVigentes: {
             /**
@@ -28383,6 +33347,16 @@ export interface components {
              * @description ID exacto del borrador/factura
              */
             id?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente (receptor). Con un entero se devuelven todas sus facturas, incluidas las emitidas sin ficha de cliente que solo guardan su NIF.
+             */
+            id_receptor?: number | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente. Ej: 7 o {"op":"=","valor":7}
+             */
+            id_establecimiento_entrega?: number | components["schemas"]["FiltroCampo"] | null;
             NombreRazon_obligado?: components["schemas"]["FiltroCampo"] | null;
             NIF_obligado?: components["schemas"]["FiltroCampo"] | null;
             NombreRazon_receptor?: components["schemas"]["FiltroCampo"] | null;
@@ -28622,6 +33596,26 @@ export interface components {
              */
             importe_suplidos_fe?: string | null;
             /**
+             * Descripcion Suplidos 2 Fe
+             * @description Descripción del 2º suplido en la original
+             */
+            descripcion_suplidos_2_fe?: string | null;
+            /**
+             * Importe Suplidos 2 Fe
+             * @description Importe del 2º suplido en la original
+             */
+            importe_suplidos_2_fe?: string | null;
+            /**
+             * Descripcion Suplidos 3 Fe
+             * @description Descripción del 3er suplido en la original
+             */
+            descripcion_suplidos_3_fe?: string | null;
+            /**
+             * Importe Suplidos 3 Fe
+             * @description Importe del 3er suplido en la original
+             */
+            importe_suplidos_3_fe?: string | null;
+            /**
              * Importe Total Fe
              * @description Importe total de la factura original
              */
@@ -28855,6 +33849,41 @@ export interface components {
              */
             importe_suplidos?: number | string | null;
             /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Descripción del 2º suplido.
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido.
+             */
+            importe_suplidos_2?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Descripción del 3er suplido.
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido.
+             */
+            importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido.
+             */
+            cuenta_contable_suplidos_3?: string | null;
+            /**
              * Baseimponibleacoste
              * @description Base imponible a coste.
              */
@@ -28985,6 +34014,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno). Solo se imprime; no se comunica al SII. Debe pertenecer al cliente.
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Rectificativa No Relacionada
              * @description Rectificativa no relacionada (0/1).
              */
@@ -29035,6 +34069,13 @@ export interface components {
         ObtenerFacturaRespuesta: {
             registro: components["schemas"]["FacturaSimplificada"];
         };
+        /** Opcion */
+        Opcion: {
+            /** Valor */
+            valor: number | string;
+            /** Etiqueta */
+            etiqueta: string;
+        };
         /**
          * OperacionesExentaEnum
          * @description ID de las causas de exención de una factura en el sistema Multiplika Sif.<br />
@@ -29048,6 +34089,21 @@ export interface components {
          * @enum {integer}
          */
         OperacionesExentaEnum: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        /** ParametroResuelto */
+        ParametroResuelto: {
+            /** Clave */
+            clave: string;
+            /**
+             * Valor
+             * @description Ya convertido y con el valor por defecto puesto. Fechas AAAA-MM-DD.
+             */
+            valor?: unknown;
+            /**
+             * Visible
+             * @description false = la pantalla lo oculta.
+             */
+            visible: boolean;
+        };
         /** Pendiente */
         Pendiente: {
             /**
@@ -29060,6 +34116,25 @@ export interface components {
              * @description Por que sigue en los libros.
              */
             motivo: string;
+        };
+        /** Pendientes */
+        Pendientes: {
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
         };
         /** Perceptor */
         Perceptor: {
@@ -29219,6 +34294,27 @@ export interface components {
              * @description Ultima vez que se guardo.
              */
             fecha_hora_actualizacion: string;
+        };
+        /** PlantillaEnLista */
+        PlantillaEnLista: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Activa */
+            activa: boolean;
+            /** Version Actual */
+            version_actual: number;
+            /** Usuario */
+            usuario?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Hora Actualizacion */
+            fecha_hora_actualizacion?: string | null;
         };
         /** ProbarConexion */
         ProbarConexion: {
@@ -29386,6 +34482,83 @@ export interface components {
              */
             orden: string;
         };
+        /** RecursoAnadir */
+        RecursoAnadir: {
+            /**
+             * Tipo
+             * @description Qué se prevé
+             * @enum {string}
+             */
+            tipo: "personal" | "maquina" | "material" | "subcontrata";
+            /**
+             * Id Obligado Recurso
+             * @description Empresa del grupo a la que pertenece. Vacío = la dueña de la obra
+             */
+            id_obligado_recurso?: number | null;
+            /**
+             * Id Operario
+             * @description Operario concreto, si ya se sabe
+             */
+            id_operario?: number | null;
+            /**
+             * Id Articulo
+             * @description Máquina o material concreto, si ya se sabe
+             */
+            id_articulo?: number | null;
+            /**
+             * Id Subcontrata Grupo
+             * @description Subcontrata del grupo (tipo subcontrata)
+             */
+            id_subcontrata_grupo?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /**
+             * Cantidad Prevista
+             * @description Horas (personal y máquinas) o unidades (material)
+             */
+            cantidad_prevista?: number | null;
+            /**
+             * Id
+             * @description ID de la línea de planificación
+             */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** RecursoId */
+        RecursoId: {
+            /**
+             * Id Recurso
+             * @description ID del recurso planificado
+             */
+            id_recurso: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** RecursoModificar */
+        RecursoModificar: {
+            /**
+             * Id Recurso
+             * @description ID del recurso planificado
+             */
+            id_recurso: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Tipo */
+            tipo?: ("personal" | "maquina" | "material" | "subcontrata") | null;
+            /** Id Obligado Recurso */
+            id_obligado_recurso?: number | null;
+            /** Id Operario */
+            id_operario?: number | null;
+            /** Id Articulo */
+            id_articulo?: number | null;
+            /** Id Subcontrata Grupo */
+            id_subcontrata_grupo?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Cantidad Prevista */
+            cantidad_prevista?: number | null;
+        };
         /** Reenviar */
         Reenviar: {
             /** Id Obligado */
@@ -29470,9 +34643,124 @@ export interface components {
             id_obligado?: number | null;
             /**
              * Tipo
-             * @description 'email' o 'verifactu'
+             * @description 'email', 'verifactu', 'generacion' o 'accion'
              */
             tipo: string;
+        };
+        /** RenglonLibroIva */
+        RenglonLibroIva: {
+            /**
+             * Origen
+             * @description De que libro de facturacion viene: verifactu o sii.
+             */
+            origen: string;
+            /**
+             * Id Factura
+             * @description ID de la factura en facturacion.
+             */
+            id_factura: number;
+            /**
+             * Fecha Expedicion
+             * @description Fecha de la factura.
+             */
+            fecha_expedicion?: string | null;
+            /**
+             * Fecha Operacion
+             * @description Expedidas: fecha de la operacion, si es distinta.
+             */
+            fecha_operacion?: string | null;
+            /**
+             * Fecha Registro
+             * @description Recibidas: fecha en que se registro, que decide el periodo.
+             */
+            fecha_registro?: string | null;
+            /**
+             * Numero Factura
+             * @description Serie y numero.
+             */
+            numero_factura?: string | null;
+            /**
+             * Tipo Factura
+             * @description F1, F2, R1... segun la AEAT.
+             * @default
+             */
+            tipo_factura: string;
+            /**
+             * Nif
+             * @description NIF del cliente (expedidas) o del proveedor (recibidas).
+             */
+            nif?: string | null;
+            /**
+             * Nombre
+             * @description Nombre o razon social del cliente o del proveedor.
+             */
+            nombre?: string | null;
+            /**
+             * Calificacion
+             * @description Expedidas: S1, S2, N1 o N2.
+             */
+            calificacion?: string | null;
+            /**
+             * Exencion
+             * @description Expedidas: causa de exencion E1 a E6, vacio si no esta exenta.
+             */
+            exencion?: string | null;
+            /**
+             * Clave Regimen
+             * @description Recibidas: clave de regimen de la AEAT, 01, 09...
+             */
+            clave_regimen?: string | null;
+            /**
+             * Isp
+             * @description Recibidas: 1 si es inversion del sujeto pasivo.
+             */
+            isp?: number | null;
+            /**
+             * Bien Inversion
+             * @description Recibidas: 1 si es un bien de inversion.
+             */
+            bien_inversion?: number | null;
+            /**
+             * Tipo Iva
+             * @description Porcentaje de IVA del renglon.
+             */
+            tipo_iva?: number | null;
+            /**
+             * Base
+             * @description Base imponible.
+             */
+            base?: number | null;
+            /**
+             * Cuota
+             * @description Cuota de IVA repercutida o soportada.
+             */
+            cuota?: number | null;
+            /**
+             * Cuota Deducible
+             * @description Recibidas: la parte de la cuota que se deduce.
+             */
+            cuota_deducible?: number | null;
+            /**
+             * Tipo Recargo
+             * @description Porcentaje de recargo de equivalencia.
+             */
+            tipo_recargo?: number | null;
+            /**
+             * Recargo
+             * @description Cuota del recargo de equivalencia.
+             */
+            recargo?: number | null;
+            /**
+             * Total
+             * @description Base mas cuota mas recargo del renglon.
+             */
+            total?: number | null;
+            /**
+             * Computa
+             * @description False en la factura de canje (F3): se anota, pero su IVA no cuenta porque ya lo declararon sus tickets. No entra en `totales`.
+             * @default true
+             */
+            computa: boolean;
         };
         /** RespId */
         RespId: {
@@ -29592,6 +34880,24 @@ export interface components {
              * @description Facturas contabilizadas que se han anulado y aun no se han revertido.
              */
             anulaciones?: components["schemas"]["AnulacionPendiente"][];
+        };
+        /** RespuestaApartado */
+        RespuestaApartado: {
+            /** Id Memoria */
+            id_memoria: number;
+            /** Codigo Apartado */
+            codigo_apartado: string;
+            /** Estado */
+            estado: number;
+            /** Estado Texto */
+            estado_texto: string;
+            /**
+             * Estado Memoria
+             * @description Solo al marcar revisado: la memoria pasa a revisada cuando lo estan todos sus apartados.
+             */
+            estado_memoria?: number | null;
+            /** Estado Memoria Texto */
+            estado_memoria_texto?: string | null;
         };
         /** RespuestaApuntesSinFicha */
         RespuestaApuntesSinFicha: {
@@ -29877,6 +35183,13 @@ export interface components {
              */
             asiento_cierre?: number | null;
         };
+        /** RespuestaComprobar */
+        RespuestaComprobar: {
+            /** Valida */
+            valida: boolean;
+            /** Errores */
+            errores?: components["schemas"]["ErrorCampo"][];
+        };
         /** RespuestaComprobarTraspaso */
         RespuestaComprobarTraspaso: {
             /**
@@ -30069,19 +35382,6 @@ export interface components {
              * @description Asiento de cierre, ya en el libro.
              */
             asiento_cierre?: number | null;
-        };
-        /** RespuestaConmutar */
-        RespuestaConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa que queda activa.
-             */
-            id_obligado: number;
-            /**
-             * Nivel
-             * @description Nivel de acceso del usuario sobre esa contabilidad.
-             */
-            nivel: string;
         };
         /** RespuestaContabilizarPeriodo */
         RespuestaContabilizarPeriodo: {
@@ -30408,7 +35708,7 @@ export interface components {
             resultado: number;
             /**
              * Tipo Resultado
-             * @description ingresar, compensar, devolver o sin_actividad.
+             * @description ingresar, compensar, devolver, resultado_cero o sin_actividad.
              */
             tipo_resultado: string;
             /**
@@ -30561,73 +35861,12 @@ export interface components {
              */
             modificado: boolean;
         };
-        /** RespuestaEjecutar */
-        RespuestaEjecutar: {
-            /**
-             * Id Importacion
-             * @description Importacion ejecutada.
-             */
-            id_importacion: number;
-            /**
-             * Destino
-             * @description plan, diario o inmovilizado.
-             */
-            destino: string;
-            /**
-             * Estado
-             * @description 'ensayada' si fue un ensayo, 'importada' si se escribio.
-             */
-            estado: string;
-            /**
-             * Ensayo
-             * @description True = no se ha escrito nada.
-             */
-            ensayo: boolean;
-            /**
-             * Filas Leidas
-             * @description Filas de datos del archivo.
-             */
-            filas_leidas: number;
-            /**
-             * Filas Ok
-             * @description Registros que entran o han entrado.
-             */
-            filas_ok: number;
-            /**
-             * Filas Omitidas
-             * @description Saltados porque el registro ya existia.
-             */
-            filas_omitidas: number;
-            /**
-             * Filas Apartadas
-             * @description Filas que no entran por algun problema.
-             */
-            filas_apartadas: number;
-            /**
-             * Asientos Ok
-             * @description Solo diario: asientos que entran.
-             */
-            asientos_ok?: number | null;
-            /**
-             * Asientos Omitidos
-             * @description Solo diario: asientos ya importados antes.
-             */
-            asientos_omitidos?: number | null;
-            /**
-             * Asientos Apartados
-             * @description Solo diario: asientos con problemas.
-             */
-            asientos_apartados?: number | null;
-            /**
-             * Incidencias
-             * @description Lo que no entro y por que.
-             */
-            incidencias?: components["schemas"]["Incidencia"][];
-            /**
-             * Asientos
-             * @description Solo diario: correspondencia de numeros.
-             */
-            asientos?: components["schemas"]["AsientoImportado"][];
+        /** RespuestaEjecuciones */
+        RespuestaEjecuciones: {
+            /** Ejecuciones */
+            ejecuciones?: components["schemas"]["Ejecucion"][];
+            /** Total */
+            total: number;
         };
         /** RespuestaEmpresaActual */
         RespuestaEmpresaActual: {
@@ -30636,24 +35875,6 @@ export interface components {
              * @description Empresa activa en esta sesion. 0 si no hay ninguna.
              */
             id_obligado: number;
-        };
-        /** RespuestaEmpresas */
-        RespuestaEmpresas: {
-            /**
-             * Activa
-             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
-             */
-            activa: number;
-            /**
-             * Puede Conmutar
-             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
-             */
-            puede_conmutar: boolean;
-            /**
-             * Empresas
-             * @description Contabilidades a las que llega este usuario, con su nivel.
-             */
-            empresas?: components["schemas"]["ModeloEmpresa"][];
         };
         /** RespuestaEnlazarCliente */
         RespuestaEnlazarCliente: {
@@ -31259,13 +36480,55 @@ export interface components {
              */
             cuadra: boolean;
         };
-        /** RespuestaListado */
-        RespuestaListado: {
+        /** RespuestaLibroIva */
+        RespuestaLibroIva: {
             /**
-             * Declaraciones
-             * @description De la mas reciente a la mas antigua.
+             * Libro
+             * @description expedidas o recibidas.
              */
-            declaraciones?: components["schemas"]["DeclaracionEnLista"][];
+            libro: string;
+            /**
+             * Ejercicio
+             * @description Ejercicio.
+             */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Periodo.
+             */
+            periodo: string;
+            /**
+             * Desde
+             * Format: date
+             * @description Primer dia del periodo.
+             */
+            desde: string;
+            /**
+             * Hasta
+             * Format: date
+             * @description Ultimo dia del periodo.
+             */
+            hasta: string;
+            /**
+             * Total
+             * @description Renglones del periodo en total, no solo los de esta pagina.
+             */
+            total: number;
+            /**
+             * Renglones
+             * @description Un renglon por factura y tipo de IVA.
+             */
+            renglones?: components["schemas"]["RenglonLibroIva"][];
+            /**
+             * Totales
+             * @description Totales del periodo por tipo de IVA, sin las facturas de canje.
+             */
+            totales?: components["schemas"]["TotalLibroIva"][];
+        };
+        /** RespuestaListar */
+        RespuestaListar: {
+            /** Plantillas */
+            plantillas?: components["schemas"]["PlantillaEnLista"][];
         };
         /** RespuestaListarAccesos */
         RespuestaListarAccesos: {
@@ -31501,10 +36764,35 @@ export interface components {
              */
             apuntes_en_borrador: number;
         };
-        /** RespuestaMe */
-        RespuestaMe: {
-            /** @description Los datos del usuario que ha entrado. */
-            user: components["schemas"]["ModeloUsuarioSesion"];
+        /** RespuestaMemoria */
+        RespuestaMemoria: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado: number;
+            /** Ejercicio */
+            ejercicio: number;
+            /** Modelo */
+            modelo: string;
+            /** Version */
+            version: number;
+            /**
+             * Estado
+             * @description 0 borrador, 1 revisada, 2 formulada.
+             */
+            estado: number;
+            /** Estado Texto */
+            estado_texto: string;
+            /** Fecha Formulacion */
+            fecha_formulacion?: string | null;
+            /** Formulada Por */
+            formulada_por?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Modificacion */
+            fecha_modificacion?: string | null;
+            /** Apartados */
+            apartados?: components["schemas"]["Apartado"][];
         };
         /** RespuestaObtener */
         RespuestaObtener: {
@@ -31530,6 +36818,11 @@ export interface components {
              * @description Lineas del asiento, en orden de pase.
              */
             lineas?: components["schemas"]["ApunteDiario"][];
+        };
+        /** RespuestaOpciones */
+        RespuestaOpciones: {
+            /** Opciones */
+            opciones?: components["schemas"]["Opcion"][];
         };
         /** RespuestaOrigenTerceros */
         RespuestaOrigenTerceros: {
@@ -31646,6 +36939,42 @@ export interface components {
              * @description Planes disponibles.
              */
             planes?: components["schemas"]["PlanCargado"][];
+        };
+        /** RespuestaPlantilla */
+        RespuestaPlantilla: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Activa */
+            activa: boolean;
+            /** Version Actual */
+            version_actual: number;
+            /** Usuario */
+            usuario?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Hora Actualizacion */
+            fecha_hora_actualizacion?: string | null;
+            /** Id Version */
+            id_version: number;
+            /**
+             * Version
+             * @description Versión que se devuelve.
+             */
+            version: number;
+            /** Definicion */
+            definicion: {
+                [key: string]: unknown;
+            };
+            /** Version Usuario */
+            version_usuario?: string | null;
+            /** Version Fecha */
+            version_fecha?: string | null;
         };
         /** RespuestaPlantillaEliminada */
         RespuestaPlantillaEliminada: {
@@ -31813,67 +37142,6 @@ export interface components {
              * @description Los dos borradores creados. Vacío si se simuló.
              */
             borradores?: components["schemas"]["BorradorDelCierre"][];
-        };
-        /** RespuestaPrevisualizar */
-        RespuestaPrevisualizar: {
-            /**
-             * Id Importacion
-             * @description Importacion consultada.
-             */
-            id_importacion: number;
-            /**
-             * Destino
-             * @description plan, diario o inmovilizado.
-             */
-            destino: string;
-            /**
-             * Cabeceras
-             * @description Columnas del archivo.
-             */
-            cabeceras?: string[];
-            /**
-             * Filas Leidas
-             * @description Filas de datos.
-             */
-            filas_leidas: number;
-            /**
-             * Mapeo
-             * @description Mapeo efectivo, tal como se guardo.
-             */
-            mapeo?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Mapeo Columnas
-             * @description El mismo mapeo con los numeros ya traducidos al nombre real de cada columna.
-             */
-            mapeo_columnas?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Opciones
-             * @description Opciones efectivas.
-             */
-            opciones?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Faltan Obligatorios
-             * @description Lo que falta por mapear.
-             */
-            faltan_obligatorios?: string[];
-            /**
-             * Avisos
-             * @description Columnas mapeadas que el archivo no trae, si las hay.
-             */
-            avisos?: string[];
-            /**
-             * Previsualizacion
-             * @description Primeras filas.
-             */
-            previsualizacion?: {
-                [key: string]: unknown;
-            }[];
         };
         /** RespuestaProbarConexion */
         RespuestaProbarConexion: {
@@ -32360,6 +37628,14 @@ export interface components {
             /** @description Como queda el destino. */
             destino: components["schemas"]["Borrador"];
         };
+        /** RespuestaVersiones */
+        RespuestaVersiones: {
+            /**
+             * Versiones
+             * @description De la más reciente a la más antigua.
+             */
+            versiones?: components["schemas"]["VersionPlantilla"][];
+        };
         /** RespuestaVisibilidad */
         RespuestaVisibilidad: {
             /**
@@ -32487,6 +37763,24 @@ export interface components {
              */
             id_obligado?: number | null;
         };
+        /** Subcontrata */
+        Subcontrata: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Subcontrata Grupo
+             * @description Subcontrata del grupo vigente de la misma partida
+             */
+            id_subcontrata_grupo: number;
+        };
         /** Subobras */
         Subobras: {
             /**
@@ -32544,6 +37838,251 @@ export interface components {
              */
             apuntes: number;
         };
+        /** TajoEliminar */
+        TajoEliminar: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la orden (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "personal" | "maquinaria" | "material" | "subcontrata" | "avance";
+            /**
+             * Id Linea
+             * @description id_linea que devuelve tajo/listar
+             */
+            id_linea: number;
+        };
+        /** TajoListar */
+        TajoListar: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la orden (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /** Fecha Desde */
+            fecha_desde?: string | null;
+            /** Fecha Hasta */
+            fecha_hasta?: string | null;
+        };
+        /** TajoMaquinaria */
+        TajoMaquinaria: {
+            /**
+             * Id Articulo
+             * @description Máquina (artículo). Su empresa decide a qué obra y partida van sus horas
+             */
+            id_articulo: number;
+            /** Horas */
+            horas: number;
+            /**
+             * Coste Hora
+             * @description Vacío = el de la ficha de obra de la máquina
+             */
+            coste_hora?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
+        /** TajoMaterial */
+        TajoMaterial: {
+            /**
+             * Id Obligado Empresa
+             * @description Empresa de la que sale el material. Vacío = la dueña de la obra
+             */
+            id_obligado_empresa?: number | null;
+            /**
+             * Id Articulo
+             * @description Artículo; tiene que ser de esa empresa
+             */
+            id_articulo?: number | null;
+            /** Cantidad */
+            cantidad: number;
+            /** Precio Coste */
+            precio_coste?: number | null;
+            /** Id Almacen */
+            id_almacen?: number | null;
+            /** Id Lote */
+            id_lote?: number | null;
+            /** Lote */
+            lote?: string | null;
+            /** Id Unidad */
+            id_unidad?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
+        /** TajoModificar */
+        TajoModificar: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la orden (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description Qué clase de apunte se corrige
+             * @enum {string}
+             */
+            tipo: "personal" | "maquinaria" | "material" | "subcontrata" | "avance";
+            /**
+             * Id Linea
+             * @description id_linea que devuelve tajo/listar
+             */
+            id_linea: number;
+            /**
+             * Horas Normales
+             * @description personal
+             */
+            horas_normales?: number | null;
+            /**
+             * Horas Extra
+             * @description personal
+             */
+            horas_extra?: number | null;
+            /**
+             * Horas
+             * @description maquinaria
+             */
+            horas?: number | null;
+            /**
+             * Coste Hora
+             * @description personal y maquinaria; solo de la empresa dueña de la obra
+             */
+            coste_hora?: number | null;
+            /**
+             * Cantidad
+             * @description material, subcontrata y avance
+             */
+            cantidad?: number | null;
+            /**
+             * Precio Coste
+             * @description material; solo de la empresa dueña de la obra
+             */
+            precio_coste?: number | null;
+            /**
+             * Id Almacen
+             * @description material
+             */
+            id_almacen?: number | null;
+            /**
+             * Id Lote
+             * @description material
+             */
+            id_lote?: number | null;
+            /**
+             * Lote
+             * @description material
+             */
+            lote?: string | null;
+            /**
+             * Fecha
+             * @description avance
+             */
+            fecha?: string | null;
+            /**
+             * Observaciones
+             * @description avance
+             */
+            observaciones?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
+        /** TajoPersonal */
+        TajoPersonal: {
+            /**
+             * Id Operario
+             * @description Operario. Su empresa decide a qué obra y partida van sus horas
+             */
+            id_operario: number;
+            /**
+             * Horas Normales
+             * @default 0
+             */
+            horas_normales: number | null;
+            /**
+             * Horas Extra
+             * @default 0
+             */
+            horas_extra: number | null;
+            /**
+             * Coste Hora
+             * @description Coste por hora del operario. Obligatorio: el operario no tiene coste por hora en su ficha.
+             */
+            coste_hora?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
+        /** TajoRegistrar */
+        TajoRegistrar: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo (en curso)
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la orden (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Fecha
+             * Format: date
+             * @description Día que se apunta
+             */
+            fecha: string;
+            /** Personal */
+            personal?: components["schemas"]["TajoPersonal"][] | null;
+            /** Maquinaria */
+            maquinaria?: components["schemas"]["TajoMaquinaria"][] | null;
+            /** Material */
+            material?: components["schemas"]["TajoMaterial"][] | null;
+            /**
+             * Subcontratas
+             * @description Avance de subcontratas de fuera del grupo. Se registra como recepción contra su pedido.
+             */
+            subcontratas?: components["schemas"]["TajoSubcontrata"][] | null;
+            /**
+             * Cantidad Ejecutada
+             * @description Unidades de la partida hechas ese día (en la unidad de la partida). Se guarda como apunte de avance.
+             */
+            cantidad_ejecutada?: number | null;
+            /**
+             * Observaciones Avance
+             * @description Comentario del avance
+             */
+            observaciones_avance?: string | null;
+        };
+        /** TajoSubcontrata */
+        TajoSubcontrata: {
+            /**
+             * Id Linea Pedido
+             * @description Línea del pedido a la subcontrata de fuera del grupo (tipo certificación, de esta obra y partida)
+             */
+            id_linea_pedido: number;
+            /**
+             * Cantidad
+             * @description Avance que se da por hecho, en la unidad de la línea de pedido
+             */
+            cantidad: number;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
         /** Tercero */
         Tercero: {
             /**
@@ -32594,6 +38133,34 @@ export interface components {
              * @description NIF, tal y como esta hoy en gestion.
              */
             NIF?: string | null;
+        };
+        /** TotalLibroIva */
+        TotalLibroIva: {
+            /**
+             * Tipo Iva
+             * @description Porcentaje de IVA.
+             */
+            tipo_iva?: number | null;
+            /**
+             * Base
+             * @description Suma de bases del periodo a ese tipo.
+             */
+            base?: number | null;
+            /**
+             * Cuota
+             * @description Suma de cuotas.
+             */
+            cuota?: number | null;
+            /**
+             * Recargo
+             * @description Suma de recargos.
+             */
+            recargo?: number | null;
+            /**
+             * Cuota Deducible
+             * @description Recibidas: suma de la cuota deducible.
+             */
+            cuota_deducible?: number | null;
         };
         /** Totales */
         Totales: {
@@ -32666,6 +38233,25 @@ export interface components {
              * @description Recargo de equivalencia acumulado del tipo.
              */
             recargo?: number | null;
+        };
+        /** TrimestresItem */
+        TrimestresItem: {
+            /**
+             * Anio
+             * @description Año del trimestre.
+             */
+            anio: number;
+            /**
+             * Trimestre
+             * @description Número de trimestre (1-4).
+             */
+            trimestre: number;
+            /**
+             * Base
+             * @description Base imponible acumulada del trimestre.
+             * @default 0
+             */
+            base: string;
         };
         /**
          * UnidadesEnum
@@ -32840,6 +38426,15 @@ export interface components {
              * @description Las lineas que tenia entonces.
              */
             lineas?: components["schemas"]["LineaHistoricoBorrador"][];
+        };
+        /** VersionPlantilla */
+        VersionPlantilla: {
+            /** Version */
+            version: number;
+            /** Usuario */
+            usuario?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
         };
         /** VistaCierre */
         VistaCierre: {
@@ -33276,6 +38871,11 @@ export interface components {
              */
             referencia_obligado?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno). Debe pertenecer al cliente. Solo se imprime en el PDF; no se envía a VeriFactu, donde el receptor sigue siendo el cliente.
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Fecha Transaccion
              * @description Fecha en que se entregó el bien o se prestó el servicio, si es diferente a la fecha de emisión de la factura.<br />Este campo indica cuándo ocurrió realmente la transacción, no cuándo se emitió o se pagó la factura.<br /> Esta fecha no puede ser superior a la fecha de emisión de la factura, salvo que ClaveRegimen=14 o 15.El formato válido es: YYYY-MM-DD, aunque admite otros formatos.
              */
@@ -33292,6 +38892,51 @@ export interface components {
              * @default 0
              */
             importe_irpf: number | string | null;
+            /**
+             * Descripcion Suplidos
+             * @description Texto del 1er suplido.
+             */
+            descripcion_suplidos?: string | null;
+            /**
+             * Importe Suplidos
+             * @description Importe del 1er suplido. No suma a la base ni al IVA; se añade al total a pagar.
+             */
+            importe_suplidos?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Texto del 2º suplido.
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido.
+             */
+            importe_suplidos_2?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Texto del 3er suplido.
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido.
+             */
+            importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Id Tipo
              * @description ID del tipo de factura. (Opcional)<br />0 = F1 Ordinaria (Valor por defecto)<br />1 = F2 Simplificada<br />2 = F3 Canje<br />3 = R1 Factura Rectificativa (Error fundado en derecho y Art. 80 Uno Dos y Seis LIVA)<br />4 = R2 Factura Rectificativa (Art. 80.3)<br />5 = R3 Factura Rectificativa (Art. 80.4)<br />6 = R4 Factura Rectificativa (Resto)<br />7 = R5 Factura Rectificativa en facturas simplificadas<br />
@@ -33367,6 +39012,24 @@ export interface components {
              */
             descuento_pp?: number | string | null;
         };
+        /** ExportarExcel */
+        apps__apisif__v1__metodos___api_facturas_emitidas__ModelosFE__ExportarExcel: {
+            /**
+             * Id Obligado
+             * @description ID del obligado para filtrar las facturas a exportar
+             */
+            id_obligado: number;
+            /**
+             * Desde Fecha
+             * @description Fecha inicial (inclusive) en formato YYYY-MM-DD
+             */
+            desde_fecha?: string | null;
+            /**
+             * Hasta Fecha
+             * @description Fecha final (inclusive) en formato YYYY-MM-DD
+             */
+            hasta_fecha?: string | null;
+        };
         /** Listar */
         apps__apisif__v1__metodos___api_facturas_emitidas__ModelosFE__Listar: {
             /**
@@ -33396,6 +39059,16 @@ export interface components {
              * @description ID exacto del borrador/factura
              */
             id?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente (receptor). Con un entero se devuelven todas sus facturas, incluidas las emitidas sin ficha de cliente que solo guardan su NIF.
+             */
+            id_receptor?: number | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente. Ej: 7 o {"op":"=","valor":7}
+             */
+            id_establecimiento_entrega?: number | components["schemas"]["FiltroCampo"] | null;
             NombreRazon_obligado?: components["schemas"]["FiltroCampo"] | null;
             NIF_obligado?: components["schemas"]["FiltroCampo"] | null;
             NombreRazon_receptor?: components["schemas"]["FiltroCampo"] | null;
@@ -34126,6 +39799,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno). Debe pertenecer al cliente (id_receptor). Solo se imprime en el PDF; no se envía a VeriFactu.
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Irpf
              * @description Porcentaje de retención IRPF aplicado; si no se envía o es null se toma como 0.
              * @default 0
@@ -34137,6 +39815,51 @@ export interface components {
              * @default 0
              */
             importe_irpf: number | string | null;
+            /**
+             * Descripcion Suplidos
+             * @description Texto del 1er suplido.
+             */
+            descripcion_suplidos?: string | null;
+            /**
+             * Importe Suplidos
+             * @description Importe del 1er suplido. No suma a la base ni al IVA; se añade al total a pagar.
+             */
+            importe_suplidos?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Texto del 2º suplido.
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido.
+             */
+            importe_suplidos_2?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Texto del 3er suplido.
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido.
+             */
+            importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Id Tipo
              * @description ID del tipo de factura. (Opcional)<br />0 = F1 Ordinaria (Valor por defecto)<br />1 = F2 Simplificada<br />2 = F3 Canje<br />3 = R1 Factura Rectificativa (Error fundado en derecho y Art. 80 Uno Dos y Seis LIVA)<br />4 = R2 Factura Rectificativa (Art. 80.3)<br />5 = R3 Factura Rectificativa (Art. 80.4)<br />6 = R4 Factura Rectificativa (Resto)<br />7 = R5 Factura Rectificativa en facturas simplificadas<br />
@@ -34302,6 +40025,11 @@ export interface components {
              */
             nota_factura?: string | null;
             /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va la factura (0 = ninguno). Debe pertenecer al cliente (id_receptor). Solo se imprime en el PDF; no se envía a VeriFactu.
+             */
+            id_establecimiento_entrega?: number | null;
+            /**
              * Irpf
              * @description Porcentaje de retención IRPF aplicado; si no se envía o es null se toma como 0.
              * @default 0
@@ -34313,6 +40041,51 @@ export interface components {
              * @default 0
              */
             importe_irpf: number | string | null;
+            /**
+             * Descripcion Suplidos
+             * @description Texto del 1er suplido.
+             */
+            descripcion_suplidos?: string | null;
+            /**
+             * Importe Suplidos
+             * @description Importe del 1er suplido. No suma a la base ni al IVA; se añade al total a pagar.
+             */
+            importe_suplidos?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Descripcion Suplidos 2
+             * @description Texto del 2º suplido.
+             */
+            descripcion_suplidos_2?: string | null;
+            /**
+             * Importe Suplidos 2
+             * @description Importe del 2º suplido.
+             */
+            importe_suplidos_2?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Descripcion Suplidos 3
+             * @description Texto del 3er suplido.
+             */
+            descripcion_suplidos_3?: string | null;
+            /**
+             * Importe Suplidos 3
+             * @description Importe del 3er suplido.
+             */
+            importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido. Vacía = la de la ficha del cliente.
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Id Tipo
              * @description ID del tipo de factura. (Opcional)<br />0 = F1 Ordinaria (Valor por defecto)<br />1 = F2 Simplificada<br />2 = F3 Canje<br />3 = R1 Factura Rectificativa (Error fundado en derecho y Art. 80 Uno Dos y Seis LIVA)<br />4 = R2 Factura Rectificativa (Art. 80.3)<br />5 = R3 Factura Rectificativa (Art. 80.4)<br />6 = R4 Factura Rectificativa (Resto)<br />7 = R5 Factura Rectificativa en facturas simplificadas<br />
@@ -34400,6 +40173,16 @@ export interface components {
              * @description ID exacto del borrador/factura
              */
             id?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente (receptor). Con un entero se devuelven todas sus facturas, incluidas las emitidas sin ficha de cliente que solo guardan su NIF.
+             */
+            id_receptor?: number | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente. Ej: 7 o {"op":"=","valor":7}
+             */
+            id_establecimiento_entrega?: number | components["schemas"]["FiltroCampo"] | null;
             NombreRazon_obligado?: components["schemas"]["FiltroCampo"] | null;
             NIF_obligado?: components["schemas"]["FiltroCampo"] | null;
             NombreRazon_receptor?: components["schemas"]["FiltroCampo"] | null;
@@ -34510,6 +40293,60 @@ export interface components {
              */
             orden: string | null;
         };
+        /** ModeloRespuestaNumFilas */
+        apps__apisif__v1__metodos___api_grupos_obligados__ModeloRespuestaNumFilas: {
+            /** Num Filas */
+            num_filas: number;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Crear: {
+            /**
+             * Nombre
+             * @description Nombre del grupo
+             */
+            nombre: string;
+            /**
+             * Observaciones
+             * @description Observaciones
+             */
+            observaciones?: string | null;
+            /**
+             * Id Administrador
+             * @description Solo el superadministrador: administrador que gestionará el grupo. Para el administrador es siempre él mismo.
+             */
+            id_administrador?: number | null;
+        };
+        /** Id */
+        apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Id: {
+            /**
+             * Id
+             * @description ID del grupo
+             */
+            id: number;
+        };
+        /** Modificar */
+        apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Modificar: {
+            /**
+             * Id
+             * @description ID del grupo
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del grupo
+             */
+            nombre?: string | null;
+            /**
+             * Estado
+             * @description 0 = inactivo (no se puede operar entre sus empresas), 1 = activo
+             */
+            estado?: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones
+             */
+            observaciones?: string | null;
+        };
         /** ModeloAdministradorCertificadoListar */
         apps__apisif__v1__metodos___api_sistema__ModeloAdministradorCertificadoListar: {
             /**
@@ -34535,6 +40372,124 @@ export interface components {
             fecha_fin_validez?: components["schemas"]["FiltroCampo"] | null;
         };
         /** Actualizar */
+        apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Activa */
+            activa?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Metodo */
+            metodo?: string | null;
+            /** Cabeceras */
+            cabeceras?: {
+                [key: string]: unknown;
+            } | null;
+            /** Cuerpo Plantilla */
+            cuerpo_plantilla?: string | null;
+            /** Nombre Cabecera Secreto */
+            nombre_cabecera_secreto?: string | null;
+            /**
+             * Secreto
+             * @description Si se envía, reemplaza el secreto guardado
+             */
+            secreto?: string | null;
+            /** Timeout Segundos */
+            timeout_segundos?: number | null;
+            /** Reintentos Maximos */
+            reintentos_maximos?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Servicio */
+            id_servicio: number;
+            /**
+             * Activa
+             * @default 1
+             */
+            activa: number | null;
+            /** Nombre */
+            nombre: string;
+            /** Url */
+            url: string;
+            /**
+             * Metodo
+             * @default POST
+             */
+            metodo: string | null;
+            /**
+             * Cabeceras
+             * @description Cabeceras HTTP, admiten variables tipo {{receptor.nif}}
+             */
+            cabeceras?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Cuerpo Plantilla
+             * @description Cuerpo de la petición, admite variables tipo {{parametros.dominio}}
+             * @default
+             */
+            cuerpo_plantilla: string | null;
+            /**
+             * Nombre Cabecera Secreto
+             * @description Cabecera donde va el secreto, ej. Authorization
+             * @default
+             */
+            nombre_cabecera_secreto: string | null;
+            /**
+             * Secreto
+             * @description API key o token, se guarda cifrado
+             */
+            secreto?: string | null;
+            /**
+             * Timeout Segundos
+             * @default 30
+             */
+            timeout_segundos: number | null;
+            /**
+             * Reintentos Maximos
+             * @default 3
+             */
+            reintentos_maximos: number | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Obtener: {
+            /** Id */
+            id?: number | null;
+            /** Id Servicio */
+            id_servicio?: number | null;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
         apps__apisif__v1__metodos__autofacturas___api_configuracion__ModelosConfiguracion__Actualizar: {
             /** Id Obligado */
             id_obligado?: number | null;
@@ -34557,6 +40512,11 @@ export interface components {
             reintentos_verifactu?: number | null;
             /** Intervalo Reintentos Verifactu Horas */
             intervalo_reintentos_verifactu_horas?: number | null;
+            /**
+             * Consolidar Mismo Dia
+             * @description 1=Agrupa en una sola factura las suscripciones del mismo receptor generadas en la misma pasada
+             */
+            consolidar_mismo_dia?: number | null;
         };
         /** Obtener */
         apps__apisif__v1__metodos__autofacturas___api_configuracion__ModelosConfiguracion__Obtener: {
@@ -34606,9 +40566,14 @@ export interface components {
             id_obligado?: number | null;
             /**
              * Tipo
-             * @description 'aprobacion' o 'email'
+             * @description 'aprobacion', 'email' o 'accion'
              */
             tipo: string;
+            /**
+             * Id Servicio
+             * @description Solo aplica para tipo 'accion'
+             */
+            id_servicio?: number | null;
             /**
              * Offset
              * @default 0
@@ -34643,6 +40608,8 @@ export interface components {
             periodicidad?: number | null;
             /** Dia Facturacion */
             dia_facturacion?: number | null;
+            /** Modo Periodo */
+            modo_periodo?: number | null;
             /** Precio Unitario */
             precio_unitario?: number | null;
             /** Id Unidad */
@@ -34699,11 +40666,20 @@ export interface components {
             descripcion_factura?: string | null;
             /**
              * Periodicidad
-             * @description 1=Diaria, 2=Semanal, 3=Mensual, 4=Trimestral, 5=Anual
+             * @description 1=Diaria, 2=Semanal, 3=Mensual, 4=Trimestral, 5=Anual, 6=Semestral
              */
             periodicidad: number;
-            /** Dia Facturacion */
+            /**
+             * Dia Facturacion
+             * @description Día de facturación en modo calendario (modo_periodo=0); ignorado en modo aniversario
+             */
             dia_facturacion: number;
+            /**
+             * Modo Periodo
+             * @description 0=Calendario (fechas fijas de mes/trimestre/año), 1=Aniversario (cada suscripción se factura en su propia fecha)
+             * @default 0
+             */
+            modo_periodo: number | null;
             /**
              * Precio Unitario
              * @description Si se omite y se indica id_articulo, se toma del precio de venta del artículo
@@ -34822,6 +40798,19 @@ export interface components {
             enviar_email?: number | null;
             /** Id Serie Facturacion */
             id_serie_facturacion?: number | null;
+            /**
+             * Parametros Accion
+             * @description Datos propios de esta suscripción para la acción del servicio (ej. {'dominio': 'miempresa.com'})
+             */
+            parametros_accion?: {
+                [key: string]: unknown;
+            } | null;
+            /** Proxima Facturacion */
+            proxima_facturacion?: string | null;
+            /** Dia Ancla */
+            dia_ancla?: number | null;
+            /** Id Cabecera */
+            id_cabecera?: number | null;
         };
         /** CambiarEstado */
         apps__apisif__v1__metodos__autofacturas___api_suscripciones__ModelosSuscripciones__CambiarEstado: {
@@ -34861,6 +40850,28 @@ export interface components {
             enviar_email: number | null;
             /** Id Serie Facturacion */
             id_serie_facturacion?: number | null;
+            /**
+             * Parametros Accion
+             * @description Datos propios de esta suscripción para la acción del servicio (ej. {'dominio': 'miempresa.com'})
+             */
+            parametros_accion?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Proxima Facturacion
+             * @description Solo tiene efecto si el servicio está en modo aniversario: fecha de la próxima renovación, si ya se conoce (ej. al migrar desde otro sistema). Si no se indica, se usa fecha_inicio
+             */
+            proxima_facturacion?: string | null;
+            /**
+             * Dia Ancla
+             * @description Solo modo aniversario: día del mes de referencia. Si no se indica, se toma de proxima_facturacion
+             */
+            dia_ancla?: number | null;
+            /**
+             * Id Cabecera
+             * @description Si se indica, esta línea se agrupa con las demás de la misma cabecera (msif_autofacturas_suscripciones_cabeceras) en una sola factura
+             */
+            id_cabecera?: number | null;
         };
         /** Eliminar */
         apps__apisif__v1__metodos__autofacturas___api_suscripciones__ModelosSuscripciones__Eliminar: {
@@ -34892,11 +40903,79 @@ export interface components {
             id_receptor?: number | null;
             /** Id Servicio */
             id_servicio?: number | null;
+            /** Id Cabecera */
+            id_cabecera?: number | null;
             /** Estado */
             estado?: number | null;
         };
         /** Obtener */
         apps__apisif__v1__metodos__autofacturas___api_suscripciones__ModelosSuscripciones__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Estado */
+            estado?: number | null;
+            /** Id Serie Facturacion */
+            id_serie_facturacion?: number | null;
+            /** Notas */
+            notas?: string | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor: number;
+            /** Nombre */
+            nombre?: string | null;
+            /** Estado */
+            estado?: number | null;
+            /** Id Serie Facturacion */
+            id_serie_facturacion?: number | null;
+            /** Notas */
+            notas?: string | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Listar: {
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Orden
+             * @default id ASC
+             */
+            orden: string;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor?: number | null;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Obtener: {
             /** Id */
             id: number;
             /** Id Obligado */
@@ -35494,6 +41573,116 @@ export interface components {
              * @description Mes (01 a 12) o trimestre (1T a 4T).
              */
             periodo: string;
+            /**
+             * Cuotas A Compensar
+             * @description Cuotas a compensar que vienen de periodos anteriores (casilla 110). Si no se manda, se toman de la declaracion confirmada del periodo anterior; si no la hay, se pone 0 y sale un aviso.
+             */
+            cuotas_a_compensar?: number | null;
+            /**
+             * Solicitar Devolucion
+             * @description Si sale a devolver, pedir la devolucion en vez de compensar. Solo en el ultimo periodo del ejercicio, salvo devolucion mensual.
+             * @default false
+             */
+            solicitar_devolucion: boolean;
+            /**
+             * Devolucion Mensual
+             * @description La empresa esta inscrita en el registro de devolucion mensual: puede pedir la devolucion en cualquier periodo.
+             * @default false
+             */
+            devolucion_mensual: boolean;
+        };
+        /** RespuestaListado */
+        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaListado: {
+            /**
+             * Declaraciones
+             * @description De la mas reciente a la mas antigua.
+             */
+            declaraciones?: components["schemas"]["DeclaracionEnLista"][];
+        };
+        /** RespuestaPrevisualizar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaPrevisualizar: {
+            /**
+             * Id Obligado
+             * @description Empresa.
+             */
+            id_obligado: number;
+            /**
+             * Modelo
+             * @description 303.
+             */
+            modelo: string;
+            /**
+             * Ejercicio
+             * @description Ejercicio.
+             */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Periodo.
+             */
+            periodo: string;
+            /**
+             * Resultado
+             * @description Resultado de la liquidacion, casilla 71.
+             */
+            resultado: number;
+            /**
+             * Tipo Resultado
+             * @description ingresar, compensar, devolver, resultado_cero o sin_actividad.
+             */
+            tipo_resultado: string;
+            /**
+             * Casillas
+             * @description Las casillas con importe, en el orden del modelo.
+             */
+            casillas?: components["schemas"]["CasillaPrevista"][];
+            /**
+             * Avisos
+             * @description Lo que no se supo colocar y quedaria fuera.
+             */
+            avisos?: components["schemas"]["AvisoDeclaracion"][];
+            /**
+             * Importe Apartado
+             * @description Suma de lo que queda fuera por los avisos.
+             */
+            importe_apartado: number;
+            /**
+             * Facturas
+             * @description Facturas que entran en el calculo.
+             */
+            facturas: number;
+        };
+        /** ModeloEjecutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Importacion
+             * @description La que devolvio /subir.
+             */
+            id_importacion: number;
+            /**
+             * Mapeo
+             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
+             */
+            mapeo?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Opciones
+             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
+             */
+            opciones?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Ejercicio
+             * @description Solo para el diario: fuerza el ejercicio. Sin esto, el de la fecha de cada asiento.
+             */
+            ejercicio?: number | null;
         };
         /** ModeloPreparar */
         apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloPreparar: {
@@ -35554,6 +41743,532 @@ export interface components {
              * @description False = queda algo de esta importacion en los libros.
              */
             completo: boolean;
+        };
+        /** RespuestaEjecutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar: {
+            /**
+             * Id Importacion
+             * @description Importacion ejecutada.
+             */
+            id_importacion: number;
+            /**
+             * Destino
+             * @description plan, diario o inmovilizado.
+             */
+            destino: string;
+            /**
+             * Estado
+             * @description 'ensayada' si fue un ensayo, 'importada' si se escribio.
+             */
+            estado: string;
+            /**
+             * Ensayo
+             * @description True = no se ha escrito nada.
+             */
+            ensayo: boolean;
+            /**
+             * Filas Leidas
+             * @description Filas de datos del archivo.
+             */
+            filas_leidas: number;
+            /**
+             * Filas Ok
+             * @description Registros que entran o han entrado.
+             */
+            filas_ok: number;
+            /**
+             * Filas Omitidas
+             * @description Saltados porque el registro ya existia.
+             */
+            filas_omitidas: number;
+            /**
+             * Filas Apartadas
+             * @description Filas que no entran por algun problema.
+             */
+            filas_apartadas: number;
+            /**
+             * Asientos Ok
+             * @description Solo diario: asientos que entran.
+             */
+            asientos_ok?: number | null;
+            /**
+             * Asientos Omitidos
+             * @description Solo diario: asientos ya importados antes.
+             */
+            asientos_omitidos?: number | null;
+            /**
+             * Asientos Apartados
+             * @description Solo diario: asientos con problemas.
+             */
+            asientos_apartados?: number | null;
+            /**
+             * Incidencias
+             * @description Lo que no entro y por que.
+             */
+            incidencias?: components["schemas"]["Incidencia"][];
+            /**
+             * Asientos
+             * @description Solo diario: correspondencia de numeros.
+             */
+            asientos?: components["schemas"]["AsientoImportado"][];
+        };
+        /** RespuestaPrevisualizar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaPrevisualizar: {
+            /**
+             * Id Importacion
+             * @description Importacion consultada.
+             */
+            id_importacion: number;
+            /**
+             * Destino
+             * @description plan, diario o inmovilizado.
+             */
+            destino: string;
+            /**
+             * Cabeceras
+             * @description Columnas del archivo.
+             */
+            cabeceras?: string[];
+            /**
+             * Filas Leidas
+             * @description Filas de datos.
+             */
+            filas_leidas: number;
+            /**
+             * Mapeo
+             * @description Mapeo efectivo, tal como se guardo.
+             */
+            mapeo?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Mapeo Columnas
+             * @description El mismo mapeo con los numeros ya traducidos al nombre real de cada columna.
+             */
+            mapeo_columnas?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Opciones
+             * @description Opciones efectivas.
+             */
+            opciones?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Faltan Obligatorios
+             * @description Lo que falta por mapear.
+             */
+            faltan_obligatorios?: string[];
+            /**
+             * Avisos
+             * @description Columnas mapeadas que el archivo no trae, si las hay.
+             */
+            avisos?: string[];
+            /**
+             * Previsualizacion
+             * @description Primeras filas.
+             */
+            previsualizacion?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ModeloCrear */
+        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloCrear: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Modelo
+             * @description Modelo de memoria.
+             * @enum {string}
+             */
+            modelo: "normal" | "abreviado" | "pymes";
+            /**
+             * Copiar Anterior
+             * @description Copiar los textos de la ultima version del ejercicio anterior. Si no la hay, se crea vacia.
+             * @default false
+             */
+            copiar_anterior: boolean;
+        };
+        /** ModeloListar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloListar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Ejercicio
+             * @description 0 = todos los ejercicios.
+             * @default 0
+             */
+            ejercicio: number;
+        };
+        /** RespuestaListado */
+        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__RespuestaListado: {
+            /**
+             * Memorias
+             * @description De la mas reciente a la mas antigua.
+             */
+            memorias?: components["schemas"]["MemoriaEnLista"][];
+        };
+        /** ModeloEditar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plan__ModeloEditar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Ejercicio
+             * @description Ejercicio del que se quiere el plan. Si no se indica, el de la configuracion de la empresa.
+             */
+            ejercicio?: number | null;
+            /** Codigo */
+            codigo: string;
+            /**
+             * Descripcion
+             * @description Titulo nuevo. Si no se manda, se deja el que tiene.
+             */
+            descripcion?: string | null;
+            /**
+             * Auxiliar
+             * @description Cambia si la cuenta admite apuntes. Si no se manda, se deja como esta.
+             */
+            auxiliar?: boolean | null;
+        };
+        /** ModeloCrear */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloCrear: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Codigo
+             * @description Se guarda en mayúsculas. Único en la empresa.
+             */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Descripcion
+             * @default
+             */
+            descripcion: string;
+            /**
+             * Definicion
+             * @description Definición de la plantilla: parametros, variables, asientos y opciones.
+             */
+            definicion: {
+                [key: string]: unknown;
+            };
+        };
+        /** ModeloEditar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEditar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
+            codigo: string;
+            /** Nombre */
+            nombre?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /**
+             * Definicion
+             * @description Si cambia, se guarda como versión nueva. La anterior se conserva.
+             */
+            definicion?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ModeloEjecutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEjecutar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
+            codigo: string;
+            /** Parametros */
+            parametros?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Version
+             * @description Versión con la que se previsualizó. Si ya no es la vigente, se para.
+             * @default 0
+             */
+            version: number;
+        };
+        /** ModeloListar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloListar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Incluir Inactivas
+             * @description También las retiradas.
+             * @default false
+             */
+            incluir_inactivas: boolean;
+        };
+        /** ModeloObtener */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloObtener: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             * @default
+             */
+            codigo: string;
+            /**
+             * Version
+             * @description 0 = la vigente.
+             * @default 0
+             */
+            version: number;
+        };
+        /** RespuestaEjecutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaEjecutar: {
+            /**
+             * Lote
+             * @description Agrupa los asientos de esta ejecución.
+             */
+            lote: number;
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Version */
+            version: number;
+            /** En Borrador */
+            en_borrador: boolean;
+            /**
+             * Estado
+             * @description borrador o libro: dónde ha quedado.
+             */
+            estado: string;
+            /** Asientos */
+            asientos: components["schemas"]["AsientoGrabado"][];
+        };
+        /** RespuestaPrevisualizar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaPrevisualizar: {
+            /** Id */
+            id?: number | null;
+            /** Codigo */
+            codigo?: string | null;
+            /** Version */
+            version?: number | null;
+            /**
+             * Estado Inicial
+             * @description borrador o libro: cómo se grabará.
+             */
+            estado_inicial: string;
+            /** Parametros */
+            parametros?: components["schemas"]["ParametroResuelto"][];
+            /** Variables */
+            variables?: {
+                [key: string]: unknown;
+            };
+            /** Asientos */
+            asientos?: components["schemas"]["AsientoCalculado"][];
+            /** Errores */
+            errores?: components["schemas"]["ErrorCampo"][];
+            /**
+             * Valido
+             * @description true = se puede ejecutar.
+             */
+            valido: boolean;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+        };
+        /** ModeloConmutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa cuya contabilidad se quiere abrir.
+             */
+            id_obligado: number;
+        };
+        /** ModeloEmpresa */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloEmpresa: {
+            /** Id Obligado */
+            id_obligado: number;
+            /** Nombrerazon */
+            NombreRazon?: string | null;
+            /** Nif */
+            NIF?: string | null;
+            /** Nivel */
+            nivel: string;
+        };
+        /**
+         * ModeloUsuarioSesion
+         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
+         *
+         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
+         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
+         */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloUsuarioSesion: {
+            /**
+             * Id
+             * @description Id del usuario.
+             */
+            id?: number | null;
+            /**
+             * Usuario
+             * @description Nombre con el que entra.
+             */
+            usuario?: string | null;
+            /**
+             * Nombre Real
+             * @description Nombre de la persona.
+             */
+            nombre_real?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Id Rol
+             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
+             */
+            id_rol?: number | null;
+            /**
+             * Rol
+             * @description Nombre del rol, para mostrarlo.
+             */
+            rol?: string | null;
+            /**
+             * Id Estado
+             * @description 1 = usuario activo.
+             */
+            id_estado?: number | null;
+            /**
+             * Id Obligado
+             * @description Empresa a la que pertenece el usuario, si es de una sola.
+             */
+            id_obligado?: number | null;
+            /** Id Representante */
+            id_representante?: number | null;
+            /** Id Administrador */
+            id_administrador?: number | null;
+            /**
+             * Nombrerazon
+             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
+             */
+            NombreRazon?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Hora Actualizacion */
+            fecha_hora_actualizacion?: string | null;
+            /**
+             * Modulos Json
+             * @description Modulos contratados, tal y como vienen de la base de datos.
+             */
+            modulos_json?: unknown | null;
+            /** @description Los mismos modulos, ya resueltos. */
+            modulos?: components["schemas"]["ModeloModulos"] | null;
+            /**
+             * Conta Id Obligado
+             * @description Empresa de contabilidad activa en esta sesion. No aparece si aun no se ha elegido ninguna.
+             */
+            conta_id_obligado?: number | null;
+            /**
+             * Permisos Operario
+             * @description Solo para el rol 5.
+             */
+            permisos_operario?: unknown[] | null;
+            /** @description Solo para el rol 5. */
+            perfil_operario?: components["schemas"]["ModeloPerfilOperario"] | null;
+            /**
+             * Permisos Perfil
+             * @description Solo para el rol 5.
+             */
+            permisos_perfil?: unknown[] | null;
+            /**
+             * Instalacion
+             * @description Instalacion a la que pertenece el token.
+             */
+            instalacion?: string | null;
+        };
+        /** RespuestaConmutar */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa que queda activa.
+             */
+            id_obligado: number;
+            /**
+             * Nivel
+             * @description Nivel de acceso del usuario sobre esa contabilidad.
+             */
+            nivel: string;
+        };
+        /** RespuestaEmpresas */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaEmpresas: {
+            /**
+             * Activa
+             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
+             */
+            activa: number;
+            /**
+             * Puede Conmutar
+             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
+             */
+            puede_conmutar: boolean;
+            /**
+             * Empresas
+             * @description Contabilidades a las que llega este usuario, con su nivel.
+             */
+            empresas?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloEmpresa"][];
+        };
+        /** RespuestaMe */
+        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaMe: {
+            /** @description Los datos del usuario que ha entrado. */
+            user: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloUsuarioSesion"];
         };
         /** Actualizar */
         apps__apisif__v1__metodos__debug___api_errores__ModelosDebugErroresResoluciones__Actualizar: {
@@ -36132,6 +42847,11 @@ export interface components {
              * @description ID receptor. Ej: 99 o {"op":"=","valor":99}
              */
             id_receptor?: number | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente. Ej: 7 o {"op":"=","valor":7}
+             */
+            id_establecimiento_entrega?: number | components["schemas"]["FiltroCampo"] | null;
             /**
              * Id Tipo
              * @description ID tipo factura. Ej: 1 o {"op":"in","valor":[1,2]}
@@ -36941,6 +43661,24 @@ export interface components {
              */
             id_obligado?: number | null;
         };
+        /** ExportarExcel */
+        apps__apisif__v1__metodos__facturas_recibidas___api_facturas_recibidas_sii__ModelosFRSii__ExportarExcel: {
+            /**
+             * Id Obligado
+             * @description ID del obligado para filtrar las facturas a exportar
+             */
+            id_obligado: number;
+            /**
+             * Desde Fecha
+             * @description Fecha contable inicial (inclusive) en formato YYYY-MM-DD
+             */
+            desde_fecha?: string | null;
+            /**
+             * Hasta Fecha
+             * @description Fecha contable final (inclusive) en formato YYYY-MM-DD
+             */
+            hasta_fecha?: string | null;
+        };
         /** Listar */
         apps__apisif__v1__metodos__facturas_recibidas___api_facturas_recibidas_sii__ModelosFRSii__Listar: {
             /**
@@ -37428,6 +44166,21 @@ export interface components {
              * @description Importe suplidos 3.
              */
             importe_suplidos_3?: number | string | null;
+            /**
+             * Cuenta Contable Suplidos
+             * @description Cuenta contable del 1er suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos?: string | null;
+            /**
+             * Cuenta Contable Suplidos 2
+             * @description Cuenta contable del 2º suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos_2?: string | null;
+            /**
+             * Cuenta Contable Suplidos 3
+             * @description Cuenta contable del 3er suplido. Vacía = la de la ficha del proveedor.
+             */
+            cuenta_contable_suplidos_3?: string | null;
             /**
              * Tiporectificativa
              * @description Tipo rectificativa.
@@ -38160,6 +44913,1027 @@ export interface components {
              * @default true
              */
             incluir_dias: boolean;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Id Ip */
+            id_ip?: number | null;
+            /** Precio */
+            precio?: number | null;
+            /** Periodicidad Propia */
+            periodicidad_propia?: number | null;
+            /** Fecha Vencimiento */
+            fecha_vencimiento?: string | null;
+            /** Fecha Caducidad */
+            fecha_caducidad?: string | null;
+            /** Id Suscripcion Autofactura */
+            id_suscripcion_autofactura?: number | null;
+            /** Id Servicio Autofactura */
+            id_servicio_autofactura?: number | null;
+            /** Activo */
+            activo?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Servicio */
+            id_servicio: number;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Descripcion
+             * @default
+             */
+            descripcion: string | null;
+            /** Id Ip */
+            id_ip?: number | null;
+            /**
+             * Precio
+             * @default 0
+             */
+            precio: number | null;
+            /** Periodicidad Propia */
+            periodicidad_propia?: number | null;
+            /** Fecha Vencimiento */
+            fecha_vencimiento?: string | null;
+            /** Fecha Caducidad */
+            fecha_caducidad?: string | null;
+            /**
+             * Id Servicio Autofactura
+             * @description Servicio de autofacturas que controla el precio de este complemento
+             */
+            id_servicio_autofactura?: number | null;
+            /**
+             * Activo
+             * @default 1
+             */
+            activo: number | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Servicio */
+            id_servicio?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Organizacion */
+            organizacion?: string | null;
+            /** Identificacion Fiscal */
+            identificacion_fiscal?: string | null;
+            /** Identificador */
+            identificador?: string | null;
+            /** Direccion */
+            direccion?: string | null;
+            /** Ciudad */
+            ciudad?: string | null;
+            /** Provincia */
+            provincia?: string | null;
+            /** Codigo Postal */
+            codigo_postal?: string | null;
+            /** Codigo Pais */
+            codigo_pais?: string | null;
+            /** Telefono */
+            telefono?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Notas */
+            notas?: string | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor: number;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Organizacion
+             * @default
+             */
+            organizacion: string | null;
+            /**
+             * Identificacion Fiscal
+             * @default
+             */
+            identificacion_fiscal: string | null;
+            /**
+             * Identificador
+             * @default
+             */
+            identificador: string | null;
+            /**
+             * Direccion
+             * @default
+             */
+            direccion: string | null;
+            /**
+             * Ciudad
+             * @default
+             */
+            ciudad: string | null;
+            /**
+             * Provincia
+             * @default
+             */
+            provincia: string | null;
+            /**
+             * Codigo Postal
+             * @default
+             */
+            codigo_postal: string | null;
+            /**
+             * Codigo Pais
+             * @default
+             */
+            codigo_pais: string | null;
+            /**
+             * Telefono
+             * @default
+             */
+            telefono: string | null;
+            /**
+             * Email
+             * @default
+             */
+            email: string | null;
+            /**
+             * Notas
+             * @default
+             */
+            notas: string | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Registrador */
+            id_registrador?: number | null;
+            /** Id Externo Registrador */
+            id_externo_registrador?: string | null;
+            /** Id Servicio */
+            id_servicio?: number | null;
+            /** Id Contacto Titular */
+            id_contacto_titular?: number | null;
+            /** Id Contacto Administrativo */
+            id_contacto_administrativo?: number | null;
+            /** Id Contacto Tecnico */
+            id_contacto_tecnico?: number | null;
+            /** Id Contacto Facturacion */
+            id_contacto_facturacion?: number | null;
+            /** Servidores Nombre */
+            servidores_nombre?: unknown[] | null;
+            /** Bloqueo Registrador */
+            bloqueo_registrador?: number | null;
+            /** Proteccion Privacidad */
+            proteccion_privacidad?: number | null;
+            /** Auto Renovar */
+            auto_renovar?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /** Fecha Caducidad */
+            fecha_caducidad?: string | null;
+            /** Fecha Vencimiento */
+            fecha_vencimiento?: string | null;
+            /** Id Suscripcion Autofactura */
+            id_suscripcion_autofactura?: number | null;
+            /** Id Servicio Autofactura */
+            id_servicio_autofactura?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor: number;
+            /** Nombre Dominio */
+            nombre_dominio: string;
+            /** Tld */
+            tld: string;
+            /** Id Registrador */
+            id_registrador: number;
+            /** Id Servicio */
+            id_servicio?: number | null;
+            /**
+             * Id Servicio Autofactura
+             * @description Servicio de autofacturas (msif_autofacturas_servicios) que controla el precio de este dominio
+             */
+            id_servicio_autofactura?: number | null;
+            /** Id Contacto Titular */
+            id_contacto_titular?: number | null;
+            /** Id Contacto Administrativo */
+            id_contacto_administrativo?: number | null;
+            /** Id Contacto Tecnico */
+            id_contacto_tecnico?: number | null;
+            /** Id Contacto Facturacion */
+            id_contacto_facturacion?: number | null;
+            /** Servidores Nombre */
+            servidores_nombre?: unknown[] | null;
+            /**
+             * Bloqueo Registrador
+             * @default 0
+             */
+            bloqueo_registrador: number | null;
+            /**
+             * Proteccion Privacidad
+             * @default 0
+             */
+            proteccion_privacidad: number | null;
+            /**
+             * Auto Renovar
+             * @default 1
+             */
+            auto_renovar: number | null;
+            /**
+             * Estado
+             * @default 1
+             */
+            estado: number | null;
+            /** Fecha Registro */
+            fecha_registro?: string | null;
+            /**
+             * Fecha Caducidad
+             * Format: date
+             * @description Cuándo caduca de verdad el registro en el proveedor
+             */
+            fecha_caducidad: string;
+            /**
+             * Fecha Vencimiento
+             * Format: date
+             * @description Cuándo se emite la factura y se cobra al cliente
+             */
+            fecha_vencimiento: string;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Direccion Ip */
+            direccion_ip?: string | null;
+            /** Tipo */
+            tipo?: number | null;
+            /** Id Servidor */
+            id_servidor?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /** Notas */
+            notas?: string | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Direccion Ip */
+            direccion_ip: string;
+            /**
+             * Tipo
+             * @default 1
+             */
+            tipo: number | null;
+            /** Id Servidor */
+            id_servidor?: number | null;
+            /**
+             * Estado
+             * @default 1
+             */
+            estado: number | null;
+            /**
+             * Notas
+             * @default
+             */
+            notas: string | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Ram Gb */
+            ram_gb?: number | null;
+            /** Disco Gb */
+            disco_gb?: number | null;
+            /** Cpu Nucleos */
+            cpu_nucleos?: number | null;
+            /** Precio */
+            precio?: number | null;
+            /** Periodicidad */
+            periodicidad?: number | null;
+            /** Id Servicio Autofactura */
+            id_servicio_autofactura?: number | null;
+            /** Activo */
+            activo?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description 1=VPS, 2=Alojamiento compartido
+             */
+            tipo: number;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Descripcion
+             * @default
+             */
+            descripcion: string | null;
+            /**
+             * Ram Gb
+             * @default 0
+             */
+            ram_gb: number | null;
+            /**
+             * Disco Gb
+             * @default 0
+             */
+            disco_gb: number | null;
+            /**
+             * Cpu Nucleos
+             * @default 0
+             */
+            cpu_nucleos: number | null;
+            /**
+             * Precio
+             * @default 0
+             */
+            precio: number | null;
+            /**
+             * Periodicidad
+             * @description 1=Diaria, 2=Semanal, 3=Mensual, 4=Trimestral, 5=Anual, 6=Semestral
+             */
+            periodicidad: number;
+            /**
+             * Id Servicio Autofactura
+             * @description Servicio de autofacturas que se copia al servicio de hosting al crearlo desde este plan
+             */
+            id_servicio_autofactura?: number | null;
+            /**
+             * Activo
+             * @default 1
+             */
+            activo: number | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Tipo */
+            tipo?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Url Api */
+            url_api?: string | null;
+            /** Entorno */
+            entorno?: string | null;
+            /** Activo */
+            activo?: number | null;
+            /**
+             * Credenciales
+             * @description Si se envía, reemplaza las credenciales guardadas
+             */
+            credenciales?: {
+                [key: string]: unknown;
+            } | null;
+            /** Notas */
+            notas?: string | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Codigo Conector
+             * @description Nombre del fichero en lib/registradores_dominios/
+             */
+            codigo_conector: string;
+            /** Url Api */
+            url_api: string;
+            /**
+             * Entorno
+             * @default produccion
+             */
+            entorno: string | null;
+            /**
+             * Activo
+             * @default 1
+             */
+            activo: number | null;
+            /**
+             * Credenciales
+             * @description Se guarda cifrado, nunca se devuelve por API
+             */
+            credenciales?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Notas
+             * @default
+             */
+            notas: string | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_renovaciones__ModelosRenovaciones__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Dominio */
+            id_dominio?: number | null;
+            /** Id Servicio */
+            id_servicio?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Plan */
+            id_plan?: number | null;
+            /** Id Servidor */
+            id_servidor?: number | null;
+            /** Id Ip */
+            id_ip?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Ram Gb */
+            ram_gb?: number | null;
+            /** Disco Gb */
+            disco_gb?: number | null;
+            /** Cpu Nucleos */
+            cpu_nucleos?: number | null;
+            /** Sistema Operativo */
+            sistema_operativo?: string | null;
+            /** Panel Control */
+            panel_control?: string | null;
+            /** Estado */
+            estado?: number | null;
+            /** Periodicidad */
+            periodicidad?: number | null;
+            /** Fecha Baja */
+            fecha_baja?: string | null;
+            /** Fecha Vencimiento */
+            fecha_vencimiento?: string | null;
+            /** Fecha Caducidad */
+            fecha_caducidad?: string | null;
+            /** Id Suscripcion Autofactura */
+            id_suscripcion_autofactura?: number | null;
+            /** Id Servicio Autofactura */
+            id_servicio_autofactura?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor: number;
+            /**
+             * Tipo
+             * @description 1=VPS, 2=Alojamiento compartido
+             */
+            tipo: number;
+            /** Id Plan */
+            id_plan?: number | null;
+            /** Id Servidor */
+            id_servidor?: number | null;
+            /** Id Ip */
+            id_ip?: number | null;
+            /** Nombre */
+            nombre: string;
+            /** Ram Gb */
+            ram_gb?: number | null;
+            /** Disco Gb */
+            disco_gb?: number | null;
+            /** Cpu Nucleos */
+            cpu_nucleos?: number | null;
+            /**
+             * Sistema Operativo
+             * @default
+             */
+            sistema_operativo: string | null;
+            /**
+             * Panel Control
+             * @default
+             */
+            panel_control: string | null;
+            /**
+             * Estado
+             * @default 1
+             */
+            estado: number | null;
+            /**
+             * Periodicidad
+             * @description 1=Diaria, 2=Semanal, 3=Mensual, 4=Trimestral, 5=Anual, 6=Semestral
+             */
+            periodicidad: number;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Vencimiento */
+            fecha_vencimiento?: string | null;
+            /**
+             * Fecha Caducidad
+             * @description Cuándo caduca de verdad el servicio en el proveedor/servidor, si aplica
+             */
+            fecha_caducidad?: string | null;
+            /**
+             * Id Servicio Autofactura
+             * @description Servicio de autofacturas que controla el precio; si no se indica y hay id_plan, se copia del plan
+             */
+            id_servicio_autofactura?: number | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Id Receptor */
+            id_receptor?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Actualizar */
+        apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Actualizar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Ip Gestion */
+            ip_gestion?: string | null;
+            /** Datacenter */
+            datacenter?: string | null;
+            /** Proveedor */
+            proveedor?: string | null;
+            /** Tipo */
+            tipo?: number | null;
+            /** Ram Gb */
+            ram_gb?: number | null;
+            /** Disco Gb */
+            disco_gb?: number | null;
+            /** Cpu Nucleos */
+            cpu_nucleos?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /** Panel Control */
+            panel_control?: string | null;
+            /** Url Panel */
+            url_panel?: string | null;
+            /** Ssh Puerto */
+            ssh_puerto?: number | null;
+            /** Credenciales */
+            credenciales?: string | null;
+            /** Notas */
+            notas?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Baja */
+            fecha_baja?: string | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Crear: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Nombre */
+            nombre: string;
+            /** Ip Gestion */
+            ip_gestion?: string | null;
+            /**
+             * Datacenter
+             * @default
+             */
+            datacenter: string | null;
+            /**
+             * Proveedor
+             * @default
+             */
+            proveedor: string | null;
+            /** Tipo */
+            tipo: number;
+            /**
+             * Ram Gb
+             * @default 0
+             */
+            ram_gb: number | null;
+            /**
+             * Disco Gb
+             * @default 0
+             */
+            disco_gb: number | null;
+            /**
+             * Cpu Nucleos
+             * @default 0
+             */
+            cpu_nucleos: number | null;
+            /**
+             * Estado
+             * @default 1
+             */
+            estado: number | null;
+            /**
+             * Panel Control
+             * @default
+             */
+            panel_control: string | null;
+            /**
+             * Url Panel
+             * @default
+             */
+            url_panel: string | null;
+            /**
+             * Ssh Puerto
+             * @default 22
+             */
+            ssh_puerto: number | null;
+            /**
+             * Credenciales
+             * @description JSON con los accesos del servidor, se guarda cifrado
+             */
+            credenciales?: string | null;
+            /**
+             * Notas
+             * @default
+             */
+            notas: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Baja */
+            fecha_baja?: string | null;
+        };
+        /** Eliminar */
+        apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Eliminar: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Obtener */
+        apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Obtener: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** ModeloConmutar */
+        apps__apisif__v1__metodos__hosting___api_sesion__ModeloConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa cuyo hosting se quiere gestionar.
+             */
+            id_obligado: number;
+        };
+        /** ModeloEmpresa */
+        apps__apisif__v1__metodos__hosting___api_sesion__ModeloEmpresa: {
+            /** Id Obligado */
+            id_obligado: number;
+            /** Nombrerazon */
+            NombreRazon?: string | null;
+            /** Nif */
+            NIF?: string | null;
+        };
+        /**
+         * ModeloUsuarioSesion
+         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
+         *
+         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
+         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
+         */
+        apps__apisif__v1__metodos__hosting___api_sesion__ModeloUsuarioSesion: {
+            /**
+             * Id
+             * @description Id del usuario.
+             */
+            id?: number | null;
+            /**
+             * Usuario
+             * @description Nombre con el que entra.
+             */
+            usuario?: string | null;
+            /**
+             * Nombre Real
+             * @description Nombre de la persona.
+             */
+            nombre_real?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Id Rol
+             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
+             */
+            id_rol?: number | null;
+            /**
+             * Rol
+             * @description Nombre del rol, para mostrarlo.
+             */
+            rol?: string | null;
+            /**
+             * Id Estado
+             * @description 1 = usuario activo.
+             */
+            id_estado?: number | null;
+            /**
+             * Id Obligado
+             * @description Empresa a la que pertenece el usuario, si es de una sola.
+             */
+            id_obligado?: number | null;
+            /** Id Representante */
+            id_representante?: number | null;
+            /** Id Administrador */
+            id_administrador?: number | null;
+            /**
+             * Nombrerazon
+             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
+             */
+            NombreRazon?: string | null;
+            /**
+             * Hosting Id Obligado
+             * @description Empresa de hosting activa en esta sesion. No aparece si aun no se ha elegido ninguna.
+             */
+            hosting_id_obligado?: number | null;
+        };
+        /** RespuestaConmutar */
+        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa que queda activa.
+             */
+            id_obligado: number;
+        };
+        /** RespuestaEmpresas */
+        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaEmpresas: {
+            /**
+             * Activa
+             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
+             */
+            activa: number;
+            /**
+             * Puede Conmutar
+             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
+             */
+            puede_conmutar: boolean;
+            /**
+             * Empresas
+             * @description Obligados de hosting a los que llega este usuario.
+             */
+            empresas?: components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloEmpresa"][];
+        };
+        /** RespuestaMe */
+        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaMe: {
+            /** @description Los datos del usuario que ha entrado. */
+            user: components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloUsuarioSesion"];
         };
         /** ModeloRespuestaNumFilas */
         apps__apisif__v1__metodos__lotes___api_lotes__ModeloRespuestaNumFilas: {
@@ -39492,6 +47266,11 @@ export interface components {
              */
             cta_contable_re_rep: string | null;
         };
+        /** ModeloId */
+        apps__apisif__v1__metodos__maestros___api_tipos_iva__ModeloId: {
+            /** Id */
+            id: number;
+        };
         /** ModeloListar */
         apps__apisif__v1__metodos__maestros___api_tipos_iva__ModeloListar: {
             /**
@@ -40792,6 +48571,148 @@ export interface components {
              */
             id_obligado?: number | null;
         };
+        /** Crear */
+        apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Crear: {
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la obra (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Obra
+             * @description Obra
+             */
+            id_obra: number;
+            /**
+             * Id Concepto
+             * @description Partida aceptada del presupuesto de la obra. Una orden, una partida.
+             */
+            id_concepto: number;
+            /**
+             * Descripcion
+             * @description Qué hay que hacer
+             */
+            descripcion?: string | null;
+            /**
+             * Fecha Inicio Prevista
+             * @description Inicio previsto
+             */
+            fecha_inicio_prevista?: string | null;
+            /**
+             * Fecha Fin Prevista
+             * @description Fin previsto
+             */
+            fecha_fin_prevista?: string | null;
+            /**
+             * Horas Previstas
+             * @description Horas previstas. Pasarse solo avisa.
+             */
+            horas_previstas?: number | null;
+            /**
+             * Importe Previsto
+             * @description Coste previsto. Pasarse solo avisa.
+             */
+            importe_previsto?: number | null;
+            /**
+             * Id Encargado
+             * @description Operario de la empresa que hace de encargado
+             */
+            id_encargado?: number | null;
+            /**
+             * Observaciones
+             * @description Observaciones
+             */
+            observaciones?: string | null;
+            /**
+             * Ids Subcontratas
+             * @description Subcontratas del grupo que figuran en la orden. Vacío = todas las vigentes de la partida.
+             */
+            ids_subcontratas?: number[] | null;
+        };
+        /** Estado */
+        apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Estado: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Estado
+             * @description 0=Planificada 1=En curso 2=Terminada 3=Anulada
+             */
+            estado: number;
+        };
+        /** Id */
+        apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Id: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Listar: {
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /** Id Obra */
+            id_obra?: number | null;
+            /** Id Concepto */
+            id_concepto?: number | null;
+            /** Estado */
+            estado?: number | null;
+            /** Id Encargado */
+            id_encargado?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+        };
+        /** Modificar */
+        apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Modificar: {
+            /**
+             * Id
+             * @description ID de la orden de trabajo
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Fecha Inicio Prevista */
+            fecha_inicio_prevista?: string | null;
+            /** Fecha Fin Prevista */
+            fecha_fin_prevista?: string | null;
+            /** Horas Previstas */
+            horas_previstas?: number | null;
+            /** Importe Previsto */
+            importe_previsto?: number | null;
+            /** Id Encargado */
+            id_encargado?: number | null;
+            /** Observaciones */
+            observaciones?: string | null;
+        };
         /** ModeloRespuestaNumFilas */
         apps__apisif__v1__metodos__proyectos___api_partes_trabajo__ModeloRespuestaNumFilas: {
             /** Num Filas */
@@ -40814,6 +48735,11 @@ export interface components {
              * @description ID del obligado (se validará acceso)
              */
             id_obligado?: number | null;
+            /**
+             * Id Concepto
+             * @description Partida o capítulo del presupuesto de obra al que se imputa. No puede estar excluido por el cliente.
+             */
+            id_concepto?: number | null;
             /**
              * Id Grupo Economico
              * @description ID del grupo económico
@@ -40852,6 +48778,11 @@ export interface components {
              * @description ID del obligado (se validará acceso)
              */
             id_obligado?: number | null;
+            /**
+             * Id Concepto
+             * @description Partida o capítulo del presupuesto de obra al que se imputa. No puede estar excluido por el cliente.
+             */
+            id_concepto?: number | null;
             /**
              * Id Grupo Economico
              * @description ID del grupo económico
@@ -41049,6 +48980,11 @@ export interface components {
              */
             id_obligado?: number | null;
             /**
+             * Id Concepto
+             * @description Partida o capítulo del presupuesto de obra al que se imputa. No puede estar excluido por el cliente.
+             */
+            id_concepto?: number | null;
+            /**
              * Id Articulo
              * @description ID del artículo consumido
              */
@@ -41116,6 +49052,11 @@ export interface components {
              * @description ID del obligado (se validará acceso)
              */
             id_obligado?: number | null;
+            /**
+             * Id Concepto
+             * @description Partida o capítulo del presupuesto de obra al que se imputa. No puede estar excluido por el cliente.
+             */
+            id_concepto?: number | null;
             /**
              * Id Articulo
              * @description ID del artículo consumido
@@ -41378,6 +49319,80 @@ export interface components {
              */
             id_obligado?: number | null;
         };
+        /** Crear */
+        apps__apisif__v1__metodos__proyectos___api_planificacion__M__Crear: {
+            /**
+             * Id Obligado
+             * @description Empresa dueña de la obra (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Obra
+             * @description Obra
+             */
+            id_obra: number;
+            /**
+             * Id Concepto
+             * @description Partida aceptada que se planifica
+             */
+            id_concepto: number;
+            /** Fecha Inicio Prevista */
+            fecha_inicio_prevista?: string | null;
+            /** Fecha Fin Prevista */
+            fecha_fin_prevista?: string | null;
+            /**
+             * Orden
+             * @description Orden dentro de la planificación
+             */
+            orden?: number | null;
+            /**
+             * Id Planificacion Precedente
+             * @description Partida planificada que debería terminar antes. Solo avisa.
+             */
+            id_planificacion_precedente?: number | null;
+            /** Observaciones */
+            observaciones?: string | null;
+        };
+        /** Id */
+        apps__apisif__v1__metodos__proyectos___api_planificacion__M__Id: {
+            /**
+             * Id
+             * @description ID de la línea de planificación
+             */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__proyectos___api_planificacion__M__Listar: {
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /**
+             * Id Obra
+             * @description Obra
+             */
+            id_obra: number;
+        };
+        /** Modificar */
+        apps__apisif__v1__metodos__proyectos___api_planificacion__M__Modificar: {
+            /**
+             * Id
+             * @description ID de la línea de planificación
+             */
+            id: number;
+            /** Id Obligado */
+            id_obligado?: number | null;
+            /** Fecha Inicio Prevista */
+            fecha_inicio_prevista?: string | null;
+            /** Fecha Fin Prevista */
+            fecha_fin_prevista?: string | null;
+            /** Orden */
+            orden?: number | null;
+            /** Id Planificacion Precedente */
+            id_planificacion_precedente?: number | null;
+            /** Observaciones */
+            observaciones?: string | null;
+        };
         /** ModeloRespuestaNumFilas */
         apps__apisif__v1__metodos__proyectos___api_presupuesto_obra__ModeloRespuestaNumFilas: {
             /** Num Filas */
@@ -41603,6 +49618,11 @@ export interface components {
              */
             id_grupo_economico?: number | null;
             /**
+             * Id Concepto Origen
+             * @description Solo en un presupuesto adicional: la partida del principal que este concepto modifica
+             */
+            id_concepto_origen?: number | null;
+            /**
              * Cantidad
              * @description Cantidad prevista (si la partida no tiene mediciones)
              */
@@ -41671,6 +49691,11 @@ export interface components {
              * @description ID del grupo económico (qué clase de gasto)
              */
             id_grupo_economico?: number | null;
+            /**
+             * Id Concepto Origen
+             * @description Solo en un presupuesto adicional: la partida del principal que este concepto modifica. Vacío = partida nueva.
+             */
+            id_concepto_origen?: number | null;
             /**
              * Resumen
              * @description Descripción corta
@@ -41825,6 +49850,11 @@ export interface components {
              */
             id_obra: number;
             /**
+             * Id Presupuesto Principal
+             * @description Solo para un presupuesto adicional: el principal ya aceptado al que se une. Vacío = es un presupuesto principal.
+             */
+            id_presupuesto_principal?: number | null;
+            /**
              * Descripcion
              * @description Descripción
              */
@@ -41876,6 +49906,11 @@ export interface components {
              * @description Estado del presupuesto
              */
             estado?: number | null;
+            /**
+             * Id Presupuesto Principal
+             * @description Solo los adicionales de este presupuesto principal
+             */
+            id_presupuesto_principal?: number | null;
             /**
              * Offset
              * @description Número de registros a omitir
@@ -42143,6 +50178,70 @@ export interface components {
              * @description ID del obligado (se validará acceso)
              */
             id_obligado?: number | null;
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Crear: {
+            /**
+             * Id Obligado
+             * @description Empresa contratante (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Concepto
+             * @description Partida o capítulo aceptado de la obra de la contratante que se subcontrata
+             */
+            id_concepto: number;
+            /**
+             * Id Obligado Subcontratista
+             * @description Empresa del mismo grupo que hará el trabajo
+             */
+            id_obligado_subcontratista: number;
+            /**
+             * Codigo Obra
+             * @description Código de la obra que se crea en la subcontratista. Vacío = código de la obra + código de la partida
+             */
+            codigo_obra?: string | null;
+            /**
+             * Observaciones
+             * @description Observaciones
+             */
+            observaciones?: string | null;
+        };
+        /** Id */
+        apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Id: {
+            /**
+             * Id
+             * @description ID de la subcontrata
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+        };
+        /** Listar */
+        apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Listar: {
+            /**
+             * Id Obligado
+             * @description Empresa (se validará acceso)
+             */
+            id_obligado?: number | null;
+            /**
+             * Papel
+             * @description Solo las que encarga, solo las que hace, o vacío = las dos
+             */
+            papel?: ("contratante" | "subcontratista") | null;
+            /**
+             * Id Obra
+             * @description Obra de cualquiera de los dos lados
+             */
+            id_obra?: number | null;
+            /**
+             * Estado
+             * @description 0=Propuesta 1=Vigente 2=Cerrada
+             */
+            estado?: number | null;
         };
         /** ModeloRespuestaNumFilas */
         apps__apisif__v1__metodos__taller_mecanica___api_vehiculos__ModeloRespuestaNumFilas: {
@@ -43118,6 +51217,8 @@ export interface components {
             id_obligado?: number | null;
             /** @description Filtra por receptor */
             id_receptor?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por establecimiento del cliente */
+            id_establecimiento_entrega?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra por estado */
             id_estado_msif?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra fecha emisión desde */
@@ -43773,6 +51874,11 @@ export interface components {
              * @description Texto libre: numero_factura / receptor / anotacion
              */
             texto?: string | null;
+            /**
+             * Situacion
+             * @description Recibos domiciliados: pendiente_remesar | remesado (en una remesa sin abonar) | abonado (el banco pagó la remesa) | impagado (devuelto por el banco)
+             */
+            situacion?: ("pendiente_remesar" | "remesado" | "abonado" | "impagado") | null;
         };
         /** Obtener */
         apps__apisif__v1__metodos__ventas___api_gestion_cobros__ModelosCobros__Obtener: {
@@ -43827,7 +51933,7 @@ export interface components {
             id_obligado?: number | null;
             /**
              * Nuevo Estado
-             * @description 0 Borrador / 1 Enviada / 2 Cobrada / 3 Parc.impagada / 4 Cerrada
+             * @description 0 Borrador / 1 Enviada / 2 Abonada (el banco la ha pagado) / 3 Parc.impagada / 4 Cerrada
              */
             nuevo_estado: number;
         };
@@ -43928,6 +52034,174 @@ export interface components {
              */
             incluir_fichero: boolean;
         };
+        /** ModeloRespuestaNumFilas */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModeloRespuestaNumFilas: {
+            /** Num Filas */
+            num_filas: number;
+        };
+        /** Obligado */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosFirma__Obligado: {
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+        };
+        /** ModeloCrear */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloCrear: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (autofijable para rol 4).
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Referencia
+             * @description Referencia única del mandato. Si se omite al crear, se genera.
+             */
+            referencia?: string | null;
+            /**
+             * Fecha Firma
+             * @description Fecha de firma. Obligatoria salvo en pendiente de firma.
+             */
+            fecha_firma?: string | null;
+            /**
+             * Esquema
+             * @description CORE (por defecto) o B2B.
+             */
+            esquema?: ("CORE" | "B2B") | null;
+            /**
+             * Tipo Pago
+             * @description recurrente (por defecto) o unico.
+             */
+            tipo_pago?: ("recurrente" | "unico") | null;
+            /**
+             * Iban Deudor
+             * @description IBAN del deudor. Si se omite al crear, se toma de la ficha del cliente.
+             */
+            iban_deudor?: string | null;
+            /**
+             * Bic Deudor
+             * @description BIC del banco del deudor. Opcional.
+             */
+            bic_deudor?: string | null;
+            /**
+             * Nombre Deudor
+             * @description Si se omite al crear, se toma de la ficha del cliente.
+             */
+            nombre_deudor?: string | null;
+            /** Nif Deudor */
+            nif_deudor?: string | null;
+            /** Direccion Deudor */
+            direccion_deudor?: string | null;
+            /** Codigo Postal Deudor */
+            codigo_postal_deudor?: string | null;
+            /** Localidad Deudor */
+            localidad_deudor?: string | null;
+            /** Provincia Deudor */
+            provincia_deudor?: string | null;
+            /**
+             * Pais Deudor
+             * @description Código ISO de 2 letras.
+             */
+            pais_deudor?: string | null;
+            /**
+             * Id Acreedor
+             * @description Identificador de acreedor con el que se firmó.
+             */
+            id_acreedor?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Anotacion */
+            anotacion?: string | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente deudor.
+             */
+            id_receptor: number;
+            /**
+             * Estado
+             * @description 1 = pendiente de firma, 2 = activo (por defecto).
+             */
+            estado?: (1 | 2) | null;
+            /**
+             * Id Origen
+             * @description ID en un sistema anterior.
+             */
+            id_origen?: number | null;
+        };
+        /** ModeloId */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId: {
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+        };
+        /** ModeloListar */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloListar: {
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Orden
+             * @description Orden SQL permitido.
+             * @default id DESC
+             */
+            orden: string | null;
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             */
+            id_obligado?: number | components["schemas"]["FiltroCampo"] | null;
+            /** Id Receptor */
+            id_receptor?: number | components["schemas"]["FiltroCampo"] | null;
+            /** Referencia */
+            referencia?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Esquema */
+            esquema?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Tipo Pago */
+            tipo_pago?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Estado */
+            estado?: number | components["schemas"]["FiltroCampo"] | null;
+            /** Iban Deudor */
+            iban_deudor?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Nombrerazon Receptor */
+            NombreRazon_receptor?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Nif Receptor */
+            NIF_receptor?: string | components["schemas"]["FiltroCampo"] | null;
+            /** Id Origen */
+            id_origen?: number | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Origen
+             * @description manual | al_remesar | importado
+             */
+            origen?: string | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Estado Firma
+             * @description sin_firmar | enlace_enviado | enlace_caducado | firmado_internet | firmado_papel
+             */
+            estado_firma?: string | components["schemas"]["FiltroCampo"] | null;
+            /**
+             * Caducado
+             * @description true = solo caducados (36 meses sin cargos); false = solo no caducados.
+             */
+            caducado?: boolean | null;
+        };
         /** Actualizar */
         apps__apisif__v1__metodos__ventas___api_pedidos__ModelosPedidos__Actualizar: {
             /**
@@ -43955,6 +52229,11 @@ export interface components {
              * @description ID del receptor
              */
             id_receptor?: number | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va el documento (0 = ninguno). Debe pertenecer al cliente (id_receptor).
+             */
+            id_establecimiento_entrega?: number | null;
             /**
              * Id Vehiculo
              * @description ID del vehículo
@@ -44180,6 +52459,12 @@ export interface components {
              * @description ID del receptor
              */
             id_receptor: number;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va el documento (0 = ninguno). Debe pertenecer al cliente (id_receptor).
+             * @default 0
+             */
+            id_establecimiento_entrega: number | null;
             /**
              * Id Vehiculo
              * @description ID del vehículo
@@ -44642,6 +52927,8 @@ export interface components {
             id_obligado?: number | null;
             /** @description Filtra por receptor */
             id_receptor?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por establecimiento del cliente */
+            id_establecimiento_entrega?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra por estado */
             id_estado_msif?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra fecha emisión desde */
@@ -44715,6 +53002,11 @@ export interface components {
              * @description ID del receptor
              */
             id_receptor?: number | null;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va el documento (0 = ninguno). Debe pertenecer al cliente (id_receptor).
+             */
+            id_establecimiento_entrega?: number | null;
             /**
              * Id Vehiculo
              * @description ID del vehículo
@@ -44925,6 +53217,12 @@ export interface components {
              * @description ID del receptor
              */
             id_receptor: number;
+            /**
+             * Id Establecimiento Entrega
+             * @description ID del establecimiento del cliente al que va el documento (0 = ninguno). Debe pertenecer al cliente (id_receptor).
+             * @default 0
+             */
+            id_establecimiento_entrega: number | null;
             /**
              * Id Vehiculo
              * @description ID del vehículo
@@ -45379,6 +53677,8 @@ export interface components {
             id_obligado?: number | null;
             /** @description Filtra por receptor */
             id_receptor?: components["schemas"]["FiltroCampo"] | null;
+            /** @description Filtra por establecimiento del cliente */
+            id_establecimiento_entrega?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra por estado */
             id_estado_msif?: components["schemas"]["FiltroCampo"] | null;
             /** @description Filtra por nombre/razón social del receptor */
@@ -45439,6 +53739,158 @@ export interface components {
              * @description Lista de IDs de presupuestos
              */
             list_ids: number[];
+        };
+        /** Crear */
+        apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Crear: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (autofijable para rol 4).
+             * @default 0
+             */
+            id_obligado: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Activo */
+            activo?: boolean | null;
+            /**
+             * Id Medio Pago
+             * @description Medio de pago del banco (domiciliación tipo 5 o 6).
+             */
+            id_medio_pago: number;
+            /**
+             * Dias Semana
+             * @description Días de la semana separados por comas: 1=lunes ... 7=domingo.
+             */
+            dias_semana?: string | null;
+            /**
+             * Dias Mes
+             * @description Días del mes separados por comas (31 = último día).
+             */
+            dias_mes?: string | null;
+            /**
+             * Hora
+             * @description Hora a partir de la que se lanza.
+             */
+            hora?: number | null;
+            /**
+             * Dias Antelacion
+             * @description Entran los recibos que vencen hasta hoy más estos días.
+             */
+            dias_antelacion?: number | null;
+            /**
+             * Importe Minimo
+             * @description Si el total no llega, no se crea la remesa (0 = sin mínimo).
+             */
+            importe_minimo?: number | string | null;
+            /**
+             * Ids Receptores Excluidos
+             * @description Clientes que nunca entran.
+             */
+            ids_receptores_excluidos?: number[] | null;
+            /**
+             * Generar Fichero
+             * @description Dejar también generado el fichero SEPA (la remesa sigue en borrador).
+             */
+            generar_fichero?: boolean | null;
+            /**
+             * Dias Abono Automatico
+             * @description Marcar abonadas las remesas enviadas de este banco tras estos días sin devoluciones (0 = nunca).
+             */
+            dias_abono_automatico?: number | null;
+            /**
+             * Email Aviso
+             * @description Correo al que se avisa de cada ejecución.
+             */
+            email_aviso?: string | null;
+        };
+        /** Id */
+        apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Id: {
+            /**
+             * Id
+             * @description ID de la programación.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @default 0
+             */
+            id_obligado: number | null;
+        };
+        /** Modificar */
+        apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Modificar: {
+            /**
+             * Id Obligado
+             * @description ID del obligado (autofijable para rol 4).
+             * @default 0
+             */
+            id_obligado: number | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Activo */
+            activo?: boolean | null;
+            /**
+             * Id Medio Pago
+             * @description Medio de pago del banco (domiciliación tipo 5 o 6).
+             */
+            id_medio_pago?: number | null;
+            /**
+             * Dias Semana
+             * @description Días de la semana separados por comas: 1=lunes ... 7=domingo.
+             */
+            dias_semana?: string | null;
+            /**
+             * Dias Mes
+             * @description Días del mes separados por comas (31 = último día).
+             */
+            dias_mes?: string | null;
+            /**
+             * Hora
+             * @description Hora a partir de la que se lanza.
+             */
+            hora?: number | null;
+            /**
+             * Dias Antelacion
+             * @description Entran los recibos que vencen hasta hoy más estos días.
+             */
+            dias_antelacion?: number | null;
+            /**
+             * Importe Minimo
+             * @description Si el total no llega, no se crea la remesa (0 = sin mínimo).
+             */
+            importe_minimo?: number | string | null;
+            /**
+             * Ids Receptores Excluidos
+             * @description Clientes que nunca entran.
+             */
+            ids_receptores_excluidos?: number[] | null;
+            /**
+             * Generar Fichero
+             * @description Dejar también generado el fichero SEPA (la remesa sigue en borrador).
+             */
+            generar_fichero?: boolean | null;
+            /**
+             * Dias Abono Automatico
+             * @description Marcar abonadas las remesas enviadas de este banco tras estos días sin devoluciones (0 = nunca).
+             */
+            dias_abono_automatico?: number | null;
+            /**
+             * Email Aviso
+             * @description Correo al que se avisa de cada ejecución.
+             */
+            email_aviso?: string | null;
+            /**
+             * Id
+             * @description ID de la programación.
+             */
+            id: number;
+        };
+        /** Obligado */
+        apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Obligado: {
+            /**
+             * Id Obligado
+             * @default 0
+             */
+            id_obligado: number | null;
         };
     };
     responses: never;
@@ -45808,13 +54260,58 @@ export interface operations {
                     "application/json": components["schemas"]["ListarTipo_ModeloRespuestaDetelle_"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
                 };
             };
         };
@@ -45975,6 +54472,84 @@ export interface operations {
             };
         };
     };
+    listar_lineas_apisif_v1_facturas_emitidas_lineas_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListarLineas"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     listar_recibos_apisif_v1_facturas_emitidas_recibos_listar_post: {
         parameters: {
             query?: never;
@@ -46062,7 +54637,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExportarExcel"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_facturas_emitidas__ModelosFE__ExportarExcel"];
             };
         };
         responses: {
@@ -46140,7 +54715,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExportarExcel"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_facturas_emitidas__ModelosFE__ExportarExcel"];
             };
         };
         responses: {
@@ -46222,22 +54797,68 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description PDF binario de las facturas solicitadas */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                    "application/pdf": unknown;
                 };
             };
-            /** @description Validation Error */
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
                 };
             };
         };
@@ -46255,22 +54876,72 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description PDF codificado en Base64 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "pdf_base64": "JVBERi0xLjQK…"
+                     *     }
+                     */
                     "application/json": unknown;
                 };
             };
-            /** @description Validation Error */
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
                 };
             };
         };
@@ -46362,12 +55033,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Catálogo id → tipo */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "registros": [
+                     *         {
+                     *           "id": 0,
+                     *           "tipo": "F1 Ordinaria"
+                     *         },
+                     *         {
+                     *           "id": 1,
+                     *           "tipo": "F2 Simplificada"
+                     *         },
+                     *         {
+                     *           "id": 3,
+                     *           "tipo": "R1 Factura Rectificativa (Error fundado en derecho y Art. 80 Uno Dos y Seis LIVA)"
+                     *         }
+                     *       ]
+                     *     }
+                     */
                     "application/json": unknown;
                 };
             };
@@ -46382,12 +55071,26 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Catálogo id → tipo */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "registros": [
+                     *         {
+                     *           "id": "S",
+                     *           "tipo": "Por sustitución"
+                     *         },
+                     *         {
+                     *           "id": "I",
+                     *           "tipo": "Por diferencia"
+                     *         }
+                     *       ]
+                     *     }
+                     */
                     "application/json": unknown;
                 };
             };
@@ -47372,6 +56075,272 @@ export interface operations {
             };
         };
     };
+    listar_apisif_v1_contabilidad_memoria_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__RespuestaListado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_apisif_v1_contabilidad_memoria_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloMemoria"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaMemoria"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_apisif_v1_contabilidad_memoria_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloCrear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaMemoria"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guardar_apartado_apisif_v1_contabilidad_memoria_guardar_apartado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloApartado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaApartado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    marcar_revisado_apisif_v1_contabilidad_memoria_marcar_revisado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloRevisado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaApartado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    formular_apisif_v1_contabilidad_memoria_formular_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloMemoria"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaMemoria"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nueva_version_apisif_v1_contabilidad_memoria_nueva_version_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloMemoria"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaMemoria"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    datos_contables_apisif_v1_contabilidad_memoria_datos_contables_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloDatosContables"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     familias_apisif_v1_contabilidad_cuentas_maestros_familias_post: {
         parameters: {
             query?: never;
@@ -48173,7 +57142,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloEditar"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plan__ModeloEditar"];
             };
         };
         responses: {
@@ -49517,6 +58486,39 @@ export interface operations {
             };
         };
     };
+    previsualizar_apisif_v1_contabilidad_declaraciones_previsualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloPreparar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaPrevisualizar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     preparar_apisif_v1_contabilidad_declaraciones_preparar_post: {
         parameters: {
             query?: never;
@@ -49602,7 +58604,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaListado"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaListado"];
                 };
             };
             /** @description Validation Error */
@@ -49636,6 +58638,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RespuestaDocumentos"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fichero_apisif_v1_contabilidad_declaraciones_fichero_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloFichero"];
+            };
+        };
+        responses: {
+            /** @description El fichero, en ISO-8859-1. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
                 };
             };
             /** @description Validation Error */
@@ -50546,7 +59581,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaPrevisualizar"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaPrevisualizar"];
                 };
             };
             /** @description Validation Error */
@@ -50569,7 +59604,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloEjecutar"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar"];
             };
         };
         responses: {
@@ -50579,7 +59614,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaEjecutar"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar"];
                 };
             };
             /** @description Validation Error */
@@ -50602,7 +59637,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloEjecutar"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar"];
             };
         };
         responses: {
@@ -50612,7 +59647,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaEjecutar"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar"];
                 };
             };
             /** @description Validation Error */
@@ -50976,6 +60011,470 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RespuestaAbrirEjercicio"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalogo_apisif_v1_contabilidad_plantillas_catalogo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPeticionConta"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opciones_apisif_v1_contabilidad_plantillas_opciones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloOpciones"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaOpciones"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_apisif_v1_contabilidad_plantillas_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaListar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_apisif_v1_contabilidad_plantillas_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloObtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    versiones_apisif_v1_contabilidad_plantillas_versiones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCodigo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaVersiones"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_apisif_v1_contabilidad_plantillas_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloCrear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editar_apisif_v1_contabilidad_plantillas_editar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEditar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    desactivar_apisif_v1_contabilidad_plantillas_desactivar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCodigo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlantillaEnLista"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activar_apisif_v1_contabilidad_plantillas_activar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCodigo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlantillaEnLista"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicar_apisif_v1_contabilidad_plantillas_duplicar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloDuplicar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comprobar_definicion_apisif_v1_contabilidad_plantillas_comprobar_definicion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloComprobar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaComprobar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    previsualizar_apisif_v1_contabilidad_plantillas_previsualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPrevisualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaPrevisualizar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ejecutar_apisif_v1_contabilidad_plantillas_ejecutar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEjecutar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaEjecutar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ejecuciones_apisif_v1_contabilidad_plantillas_ejecuciones_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloEjecuciones"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaEjecuciones"];
                 };
             };
             /** @description Validation Error */
@@ -51451,6 +60950,39 @@ export interface operations {
             };
         };
     };
+    libros_iva_apisif_v1_contabilidad_fiscal_libros_iva_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloLibroIva"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaLibroIva"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listar_empresas_apisif_v1_contabilidad_sesion_empresas_post: {
         parameters: {
             query?: never;
@@ -51466,7 +60998,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaEmpresas"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaEmpresas"];
                 };
             };
         };
@@ -51500,7 +61032,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloConmutar"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloConmutar"];
             };
         };
         responses: {
@@ -51510,7 +61042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaConmutar"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaConmutar"];
                 };
             };
             /** @description Validation Error */
@@ -51539,7 +61071,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaMe"];
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaMe"];
                 };
             };
         };
@@ -55373,6 +64905,162 @@ export interface operations {
             };
         };
     };
+    candidatos_recibos_apisif_v1_remesas_candidatos_recibos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidatosRecibos"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_desde_recibos_apisif_v1_remesas_crear_desde_recibos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearDesdeRecibos"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     actualizar_apisif_v1_remesas_actualizar_post: {
         parameters: {
             query?: never;
@@ -55759,6 +65447,501 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_mandato_apisif_v1_mandatos_sepa_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloCrear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaBase"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modificar_mandato_apisif_v1_mandatos_sepa_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloModificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cambiar_estado_mandato_apisif_v1_mandatos_sepa_cambiar_estado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCambiarEstado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_mandato_apisif_v1_mandatos_sepa_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_mandato_apisif_v1_mandatos_sepa_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mandato_vigente_apisif_v1_mandatos_sepa_vigente_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloVigente"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_mandatos_apisif_v1_mandatos_sepa_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    marcar_firmado_papel_apisif_v1_mandatos_sepa_firmado_papel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirmadoPapel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eventos_mandato_apisif_v1_mandatos_sepa_eventos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pendientes_firma_apisif_v1_mandatos_sepa_pendientes_firma_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Pendientes"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_configuracion_apisif_v1_mandatos_sepa_configuracion_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosFirma__Obligado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guardar_configuracion_apisif_v1_mandatos_sepa_configuracion_guardar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Configuracion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_enlace_apisif_v1_mandatos_sepa_enviar_enlace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnviarEnlace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    anular_enlace_apisif_v1_mandatos_sepa_anular_enlace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pdf_mandato_apisif_v1_mandatos_sepa_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -58169,6 +68352,204 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_apisif_v1_remesas_programacion_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modificar_apisif_v1_remesas_programacion_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Modificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_apisif_v1_remesas_programacion_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_apisif_v1_remesas_programacion_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Obligado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ejecutar_ahora_apisif_v1_remesas_programacion_ejecutar_ahora_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_remesas_programacion__Modelos__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_ejecuciones_apisif_v1_remesas_programacion_ejecuciones_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Ejecuciones"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -64630,7 +75011,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExportarExcel"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__facturas_recibidas___api_facturas_recibidas_sii__ModelosFRSii__ExportarExcel"];
             };
         };
         responses: {
@@ -65557,6 +75938,396 @@ export interface operations {
             };
         };
     };
+    crear_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaId"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_cabeceras_apisif_v1_autofacturas_suscripciones_cabeceras_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_cabecera_apisif_v1_autofacturas_suscripciones_cabeceras_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_suscripciones_cabeceras__ModelosSuscripcionesCabeceras__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     crear_servicio_apisif_v1_autofacturas_servicios_crear_post: {
         parameters: {
             query?: never;
@@ -65947,6 +76718,396 @@ export interface operations {
             };
         };
     };
+    crear_accion_apisif_v1_autofacturas_acciones_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_accion_apisif_v1_autofacturas_acciones_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_acciones_apisif_v1_autofacturas_acciones_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_accion_apisif_v1_autofacturas_acciones_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_accion_apisif_v1_autofacturas_acciones_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_acciones__ModelosAcciones__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     listar_ejecuciones_apisif_v1_autofacturas_ejecuciones_listar_post: {
         parameters: {
             query?: never;
@@ -66260,6 +77421,84 @@ export interface operations {
         };
     };
     pendientes_email_apisif_v1_autofacturas_ejecuciones_pendientes_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__autofacturas___api_ejecuciones__ModelosEjecuciones__ListarPendientes"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    pendientes_accion_apisif_v1_autofacturas_ejecuciones_pendientes_accion_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -69375,6 +80614,3297 @@ export interface operations {
             };
         };
     };
+    crear_plan_apisif_v1_hosting_planes_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_plan_apisif_v1_hosting_planes_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_planes_apisif_v1_hosting_planes_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_plan_apisif_v1_hosting_planes_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_plan_apisif_v1_hosting_planes_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_planes__ModelosPlanes__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_contacto_apisif_v1_hosting_contactos_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_contacto_apisif_v1_hosting_contactos_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_contactos_apisif_v1_hosting_contactos_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_contacto_apisif_v1_hosting_contactos_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_contacto_apisif_v1_hosting_contactos_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_contactos__ModelosContactos__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_ip_apisif_v1_hosting_ips_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_ip_apisif_v1_hosting_ips_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_ips_apisif_v1_hosting_ips_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_ip_apisif_v1_hosting_ips_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_ip_apisif_v1_hosting_ips_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_ips__ModelosIPs__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_renovaciones_apisif_v1_hosting_renovaciones_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_renovaciones__ModelosRenovaciones__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_servicio_apisif_v1_hosting_servicios_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_servicio_apisif_v1_hosting_servicios_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_servicios_apisif_v1_hosting_servicios_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_servicio_apisif_v1_hosting_servicios_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_servicio_apisif_v1_hosting_servicios_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servicios__ModelosServicios__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_complemento_apisif_v1_hosting_complementos_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_complemento_apisif_v1_hosting_complementos_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_complementos_apisif_v1_hosting_complementos_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_complemento_apisif_v1_hosting_complementos_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_complemento_apisif_v1_hosting_complementos_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_complementos__ModelosComplementos__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_servidor_apisif_v1_hosting_servidores_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_servidor_apisif_v1_hosting_servidores_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_servidores_apisif_v1_hosting_servidores_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_servidor_apisif_v1_hosting_servidores_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_servidor_apisif_v1_hosting_servidores_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_servidores__ModelosServidores__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_dominio_apisif_v1_hosting_dominios_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_dominio_apisif_v1_hosting_dominios_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_dominios_apisif_v1_hosting_dominios_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_dominio_apisif_v1_hosting_dominios_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_dominio_apisif_v1_hosting_dominios_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_dominios__ModelosDominios__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_registrador_apisif_v1_hosting_registradores_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_registrador_apisif_v1_hosting_registradores_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Obtener"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_registradores_apisif_v1_hosting_registradores_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    actualizar_registrador_apisif_v1_hosting_registradores_actualizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Actualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_registrador_apisif_v1_hosting_registradores_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_registradores__ModelosRegistradores__Eliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaExito"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_empresas_apisif_v1_hosting_sesion_empresas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaEmpresas"];
+                };
+            };
+        };
+    };
+    empresa_actual_apisif_v1_hosting_sesion_actual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaEmpresaActual"];
+                };
+            };
+        };
+    };
+    conmutar_apisif_v1_hosting_sesion_conmutar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloConmutar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaConmutar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_apisif_v1_hosting_sesion_me_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaMe"];
+                };
+            };
+        };
+    };
     listar_facturas_apisif_v1_facturas_comun_listar_post: {
         parameters: {
             query?: never;
@@ -70154,7 +84684,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloId"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__maestros___api_tipos_iva__ModeloId"];
             };
         };
         responses: {
@@ -70259,7 +84789,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloId"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__maestros___api_tipos_iva__ModeloId"];
             };
         };
         responses: {
@@ -71730,6 +86260,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["apps__apisif__v1__metodos__maestros___api_articulos__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recalcular_precios_venta_apisif_v1_maestros_articulos_recalcular_precios_venta_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloRecalcularPrecios"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRecalcularPreciosRespuesta"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    historial_precios_apisif_v1_maestros_articulos_historial_precios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloHistorialPreciosListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListarTipo_ModeloHistorialPreciosRespuesta_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportar_excel_apisif_v1_maestros_articulos_exportar_excel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloArticuloExportar"];
+            };
+        };
+        responses: {
+            /** @description Fichero Excel (.xlsx) con los artículos que cumplen los filtros */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    importar_excel_apisif_v1_maestros_articulos_importar_excel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_importar_excel_apisif_v1_maestros_articulos_importar_excel_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloImportarPreciosRespuesta"];
                 };
             };
             /** @description Validation Error */
@@ -75565,6 +90227,84 @@ export interface operations {
             };
         };
     };
+    listar_certificado_cartera_apisif_v1_obligados_certificados_listar_cartera_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCertificadoListarCartera"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     eliminar_certificado_apisif_v1_obligados_certificados_eliminar_post: {
         parameters: {
             query?: never;
@@ -76051,6 +90791,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_establecimiento_apisif_v1_obligados_receptores_establecimientos_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloReceptorEstablecimientoCrear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaCreacion"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_establecimiento_apisif_v1_obligados_receptores_establecimientos_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloReceptorEstablecimientoModificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaActualizacion"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_establecimiento_apisif_v1_obligados_receptores_establecimientos_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloReceptorEstablecimientoId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_establecimientos_apisif_v1_obligados_receptores_establecimientos_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloReceptorEstablecimientoListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_establecimiento_apisif_v1_obligados_receptores_establecimientos_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloReceptorEstablecimientoId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaActualizacion"];
                 };
             };
             /** @description Solicitud inválida */
@@ -79694,6 +94824,626 @@ export interface operations {
             };
         };
     };
+    crear_grupo_apisif_v1_grupos_obligados_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaBase"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_grupos_apisif_v1_grupos_obligados_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_grupo_apisif_v1_grupos_obligados_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_grupo_apisif_v1_grupos_obligados_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Modificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_grupo_apisif_v1_grupos_obligados_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModelosGrupos__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    anadir_miembro_apisif_v1_grupos_obligados_miembros_anadir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Miembro"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloRespuestaBase"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    quitar_miembro_apisif_v1_grupos_obligados_miembros_quitar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Miembro"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos___api_grupos_obligados__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    mi_grupo_apisif_v1_grupos_obligados_mi_grupo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MiGrupo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     crear_presupuesto_obra_apisif_v1_proyectos_presupuesto_obra_crear_post: {
         parameters: {
             query?: never;
@@ -80572,6 +96322,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    aceptacion_partidas_apisif_v1_proyectos_presupuesto_obra_partidas_aceptacion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Aceptacion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_presupuesto_obra__ModeloRespuestaNumFilas"];
                 };
             };
             /** @description Solicitud inválida */
@@ -81742,6 +97570,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_certificaciones__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    facturar_certificacion_apisif_v1_proyectos_certificaciones_facturar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloFacturarCertificacion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Solicitud inválida */
@@ -83672,6 +99578,1020 @@ export interface operations {
             };
         };
     };
+    crear_subcontrata_apisif_v1_proyectos_subcontratas_grupo_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    aceptar_subcontrata_apisif_v1_proyectos_subcontratas_grupo_aceptar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Aceptar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    cerrar_subcontrata_apisif_v1_proyectos_subcontratas_grupo_cerrar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_subcontrata_apisif_v1_proyectos_subcontratas_grupo_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_subcontratas_apisif_v1_proyectos_subcontratas_grupo_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_subcontratas_grupo__M__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_linea_apisif_v1_proyectos_planificacion_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_planificacion__M__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_planificacion_apisif_v1_proyectos_planificacion_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_planificacion__M__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_linea_apisif_v1_proyectos_planificacion_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_planificacion__M__Modificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_linea_apisif_v1_proyectos_planificacion_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_planificacion__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    anadir_recurso_apisif_v1_proyectos_planificacion_recursos_anadir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecursoAnadir"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_recurso_apisif_v1_proyectos_planificacion_recursos_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecursoModificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_recurso_apisif_v1_proyectos_planificacion_recursos_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecursoId"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_ot_apisif_v1_proyectos_planificacion_crear_ot_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_planificacion__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
     crear_obra_apisif_v1_proyectos_obras_crear_post: {
         parameters: {
             query?: never;
@@ -84238,6 +101158,1020 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_obras__ModeloRespuestaNumFilas"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    crear_ot_apisif_v1_proyectos_ordenes_trabajo_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Crear"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_ot_apisif_v1_proyectos_ordenes_trabajo_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Listar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    obtener_ot_apisif_v1_proyectos_ordenes_trabajo_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_ot_apisif_v1_proyectos_ordenes_trabajo_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Modificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    estado_ot_apisif_v1_proyectos_ordenes_trabajo_cambiar_estado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Estado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_ot_apisif_v1_proyectos_ordenes_trabajo_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    anadir_subcontrata_ot_apisif_v1_proyectos_ordenes_trabajo_subcontratas_anadir_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Subcontrata"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    quitar_subcontrata_ot_apisif_v1_proyectos_ordenes_trabajo_subcontratas_quitar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Subcontrata"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    recursos_ot_apisif_v1_proyectos_ordenes_trabajo_recursos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__proyectos___api_ordenes_trabajo__M__Id"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    registrar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_registrar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TajoRegistrar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    listar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TajoListar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    modificar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TajoModificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    eliminar_tajo_apisif_v1_proyectos_ordenes_trabajo_tajo_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TajoEliminar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Solicitud inválida */
@@ -86109,6 +104043,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModeloSifCertificadoRespuestaListado"];
+                };
+            };
+            /** @description Solicitud inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No autorizado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Prohibido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description No encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+            /** @description Error de validación */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseHTTP"];
+                };
+            };
+        };
+    };
+    resumen_apisif_v1_sistema_superadmin_resumen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloSuperadminResumen"];
                 };
             };
             /** @description Solicitud inválida */

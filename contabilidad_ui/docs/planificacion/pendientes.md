@@ -8,6 +8,13 @@ Actualizado: 28/08/2026
 
 ## Pedir al backend
 
+### Asientos predefinidos: la definición escrita a mano
+
+Las respuestas de plantillas ya salen de los tipos generados, pero la forma de
+una definición y la del catálogo no: el OpenAPI las declara como objeto libre.
+Están copiadas de `esquema.py` en `src/api/plantillas.ts`. Pedido en [5.11] del
+canal compartido; cuando lo declaren, `npm run api:types` y quitar la copia.
+
 ### Crear solas en el plan las cuentas que falten, durante el traspaso
 
 Hoy, si un maestro de facturación apunta a una cuenta que no está en el plan, la

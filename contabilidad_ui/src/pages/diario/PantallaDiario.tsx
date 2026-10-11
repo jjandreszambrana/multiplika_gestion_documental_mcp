@@ -43,6 +43,7 @@ import { sumarSeleccion } from './sumas'
 import { useApuntes } from './useApuntes'
 import AvisoTrasConfirmar from '../inmovilizado/AvisoTrasConfirmar'
 import ModalMayor from '../informes/ModalMayor'
+import DialogoAsientoPredefinido from '../plantillas/DialogoAsientoPredefinido'
 
 interface Props {
   ejercicio: number | null
@@ -71,6 +72,9 @@ const ORDEN_DE_FABRICA = columnasDelDiario(() => {}).map((c) => String(c.id ?? c
 export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuario }: Props) {
   const puedeApuntar = alcanza(nivel, 'apuntes')
   const [editando, setEditando] = useState(false)
+  const [conPlantilla, setConPlantilla] = useState(false)
+  /** El borrador que acaba de crear una plantilla, para ofrecer abrirlo. */
+  const [borradorDePlantilla, setBorradorDePlantilla] = useState<number | null>(null)
   const [idBorrador, setIdBorrador] = useState<number | null>(null)
   const [viendoBorradores, setViendoBorradores] = useState(false)
   const [sinConfirmar, setSinConfirmar] = useState(0)
@@ -307,6 +311,7 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
               onClick={() => {
                 setIdBorrador(borradorMarcado)
                 setConfirmado(null)
+                setBorradorDePlantilla(null)
                 setEditando(true)
               }}
             >
@@ -416,9 +421,20 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
               </Button>
             )}
             <Button
+              variant="default"
+              onClick={() => {
+                setConfirmado(null)
+                setBorradorDePlantilla(null)
+                setConPlantilla(true)
+              }}
+            >
+              Asiento predefinido…
+            </Button>
+            <Button
               onClick={() => {
                 setIdBorrador(null)
                 setConfirmado(null)
+                setBorradorDePlantilla(null)
                 setEditando(true)
               }}
             >
@@ -443,8 +459,32 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
       )}
 
       {confirmado && (
-        <Alert color="green" p="xs" withCloseButton onClose={() => setConfirmado(null)}>
-          <Text size="sm">{confirmado}</Text>
+        <Alert
+          color="green"
+          p="xs"
+          withCloseButton
+          onClose={() => {
+            setConfirmado(null)
+            setBorradorDePlantilla(null)
+          }}
+        >
+          <Group gap="sm">
+            <Text size="sm">{confirmado}</Text>
+            {borradorDePlantilla !== null && (
+              <Button
+                size="compact-xs"
+                variant="light"
+                onClick={() => {
+                  setIdBorrador(borradorDePlantilla)
+                  setConfirmado(null)
+                  setBorradorDePlantilla(null)
+                  setEditando(true)
+                }}
+              >
+                Abrir el borrador…
+              </Button>
+            )}
+          </Group>
         </Alert>
       )}
 
@@ -496,6 +536,18 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
         }}
       />
 
+      <DialogoAsientoPredefinido
+        abierto={conPlantilla}
+        ancho={ancho}
+        alCerrar={() => setConPlantilla(false)}
+        alHecho={(hecho) => {
+          setConPlantilla(false)
+          setConfirmado(hecho.aviso)
+          setBorradorDePlantilla(hecho.idBorrador)
+          setRecarga((n) => n + 1)
+        }}
+      />
+
       <EditorAsiento
         abierto={editando}
         ejercicio={ejercicio}
@@ -527,6 +579,7 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
           // Si el asiento ha metido algo en una cuenta de inmovilizado, se
           // pregunta por su ficha. Después de confirmar, nunca al teclear.
           setAsientoRecienConfirmado(confirmacion.asiento)
+          setBorradorDePlantilla(null)
           setConfirmado(
             `Asiento ${confirmacion.asiento} registrado en el diario ${confirmacion.diario}.`,
           )
@@ -579,6 +632,7 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
           setViendoBorradores(false)
           setIdBorrador(id)
           setConfirmado(null)
+          setBorradorDePlantilla(null)
           setEditando(true)
         }}
       />

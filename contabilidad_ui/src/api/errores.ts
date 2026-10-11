@@ -3,12 +3,15 @@ export class ErrorApi extends Error {
   readonly estado: number
   /** Texto del backend. En un 400 está escrito para el contable: se muestra tal cual. */
   readonly detalle: string
+  /** El cuerpo entero, para las respuestas que traen más que un texto. */
+  readonly cuerpo: unknown
 
-  constructor(estado: number, detalle: string) {
+  constructor(estado: number, detalle: string, cuerpo: unknown = null) {
     super(detalle)
     this.name = 'ErrorApi'
     this.estado = estado
     this.detalle = detalle
+    this.cuerpo = cuerpo
   }
 
   /** No hay sesión: hay que ir a login. */

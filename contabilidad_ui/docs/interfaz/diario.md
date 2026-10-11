@@ -236,6 +236,23 @@ puede quedar descuadrado, si se queda sin líneas **no se tira**, hace falta niv
 
 Al terminar se recarga y **queda marcado el borrador de destino**.
 
+## Asiento predefinido
+
+`Asiento predefinido…`, junto a `Asiento nuevo…` y solo para quien puede hacer
+apuntes, abre una ventana con dos mitades: a la izquierda se elige la plantilla
+y se rellenan sus datos; a la derecha, «Así quedará el asiento», con lo que
+calcula el servidor a cada cambio (300 ms después de la última tecla, cortando
+la petición anterior).
+
+- La pantalla no calcula nada. Los rótulos y ayudas de cada dato los escribe
+  quien diseña la plantilla; qué datos se ven y sus valores por defecto los dice
+  el servidor. Un dato sin tocar enseña el valor que el servidor ha puesto.
+- Los errores salen junto a su dato o su celda; los del asiento, encima del
+  asiento; los que no tienen sitio, arriba.
+- El botón dice `Crear borrador` o `Apuntar en el libro` según la plantilla, y
+  solo se puede pulsar sin errores y con todo cuadrado. Al terminar, el aviso
+  verde del diario y se recarga.
+
 ## Lo que la API no tiene
 
 Filtrar por tercero, y no se ha pedido: `razon` y `cif` son los del momento del

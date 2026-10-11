@@ -27,6 +27,12 @@ export const SECCIONES: Seccion[] = [
   { id: 'asientos', etiqueta: 'Entrada asientos', nivelMinimo: 'consulta', grupo: 'Diario' },
   { id: 'eliminados', etiqueta: 'Asientos eliminados', nivelMinimo: 'consulta', grupo: 'Diario' },
   {
+    id: 'plantillas',
+    etiqueta: 'Asientos predefinidos',
+    nivelMinimo: 'consulta',
+    grupo: 'Diario',
+  },
+  {
     id: 'traspaso_emitidas',
     etiqueta: 'Facturas emitidas',
     nivelMinimo: 'consulta',

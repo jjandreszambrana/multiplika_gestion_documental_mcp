@@ -66,13 +66,16 @@ function textoDe(cuerpo: unknown, clave: string): string | null {
  */
 async function leerError(respuesta: Response): Promise<ErrorApi> {
   let detalle = `Error ${respuesta.status}`
+  let cuerpo: unknown = null
   try {
-    const cuerpo: unknown = await respuesta.json()
+    cuerpo = await respuesta.json()
     detalle = textoDe(cuerpo, 'detail') ?? textoDe(cuerpo, 'message') ?? detalle
   } catch {
     // El cuerpo no era JSON: nos quedamos con el código. Nunca se silencia.
   }
-  return new ErrorApi(respuesta.status, detalle)
+  // El cuerpo entero se guarda: hay errores que traen más que el texto, como
+  // la lista de campos de las plantillas de asiento.
+  return new ErrorApi(respuesta.status, detalle, cuerpo)
 }
 
 async function ejecutar<T>(ruta: string, init: RequestInit): Promise<T> {
