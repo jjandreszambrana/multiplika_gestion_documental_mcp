@@ -78,7 +78,7 @@ function AccionesPendientes({ acciones, confirmando, onResolver }) {
 // cambiar de pantalla, así la conversación (y una respuesta en camino)
 // sigue intacta. Por eso la lista de conversaciones va en un desplegable
 // en vez de en una columna: no cabe en un panel estrecho.
-export default function Chat({ proyecto, onCerrar }) {
+export default function Chat({ proyecto, peticion, onCerrar }) {
   const [conversaciones, setConversaciones] = useState([])
   const [idConversacionActual, setIdConversacionActual] = useState(null)
   const [cargandoLista, setCargandoLista] = useState(true)
@@ -92,6 +92,11 @@ export default function Chat({ proyecto, onCerrar }) {
   const [aRenombrar, setARenombrar] = useState(null)
   const [tituloRenombrar, setTituloRenombrar] = useState("")
   const finalRef = useRef(null)
+
+  // Una petición que llega de otra pantalla se deja escrita, sin enviar.
+  useEffect(() => {
+    if (peticion?.texto) setEntrada(peticion.texto)
+  }, [peticion])
 
   async function seleccionar(id) {
     setIdConversacionActual(id)

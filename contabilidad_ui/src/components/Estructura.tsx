@@ -185,7 +185,12 @@ export default function Estructura({
             ancho={configuracion.anchocuentas}
           />
         ) : seccion === 'plantillas' ? (
-          <PantallaPlantillas nivel={nivel} ancho={configuracion.anchocuentas} />
+          <PantallaPlantillas
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
+            nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
+            conIA={embebido}
+          />
         ) : seccion === 'eliminados' ? (
           <PantallaEliminados
             key={ejercicio ?? 'sin-ejercicio'}

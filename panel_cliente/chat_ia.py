@@ -49,6 +49,11 @@ SYSTEM_PROMPT = (
 )
 
 MAX_TURNOS_HERRAMIENTA = 8  # llamadas a herramientas de solo lectura encadenadas antes de rendirse
+# Tareas que de verdad necesitan muchos pasos (buscar varias cuentas, probar,
+# corregir y volver a probar): en cuanto la IA usa una de estas herramientas,
+# el freno de esa pregunta se amplía. El resto sigue con el de siempre.
+MAX_TURNOS_TAREA_LARGA = 15
+HERRAMIENTAS_TAREA_LARGA = {"guia_plantillas_asiento_gd", "probar_plantilla_asiento_gd"}
 MAX_TOKENS_RESPUESTA = 16000  # incluye lo que gasta en pensar antes de responder o elegir herramienta
 
 # confirmacion_id -> estado necesario para retomar el turno tras confirmar/rechazar
@@ -205,7 +210,9 @@ async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_r
         )
         tools, por_nombre = await _herramientas_anthropic(mcp)
 
-        for _ in range(MAX_TURNOS_HERRAMIENTA):
+        limite, turno = MAX_TURNOS_HERRAMIENTA, 0
+        while turno < limite:
+            turno += 1
             respuesta = await _pedir_a_claude(id_proyecto, mensajes, tools, contexto_inicial)
             uso = respuesta.usage
             print(
@@ -221,6 +228,8 @@ async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_r
                 return {"tipo": "respuesta", "texto": texto}
 
             llamadas = [b for b in respuesta.content if b.type == "tool_use"]
+            if any(b.name in HERRAMIENTAS_TAREA_LARGA for b in llamadas):
+                limite = MAX_TURNOS_TAREA_LARGA
             ids_escritura = {b.id for b in llamadas if not _es_solo_lectura(por_nombre[b.name])}
             escrituras = [b for b in llamadas if b.id in ids_escritura]
 

@@ -3,6 +3,7 @@ import { IconPlus } from '@tabler/icons-react'
 import type { Variable } from '../../../api/plantillas'
 import CasillaFormula from './CasillaFormula'
 import { mover } from './definicion'
+import { NOTA } from './notas'
 import { AccionesDeFila } from './SeccionDatos'
 
 interface Props {
@@ -23,7 +24,7 @@ export default function SeccionCalculos({ variables, errores, alCambiar }: Props
   return (
     <Stack gap="xs">
       <Text size="sm" c="dimmed">
-        Cada cálculo puede usar los datos y los cálculos que tiene encima.
+        {NOTA.calculos}
       </Text>
       {variables.map((v, i) => {
         const err = (campo: string) => errores.get(`variables[${i}].${campo}`)
@@ -32,6 +33,7 @@ export default function SeccionCalculos({ variables, errores, alCambiar }: Props
             <TextInput
               size="xs"
               aria-label="Clave"
+              description={NOTA.claveCalculo}
               placeholder="cuota"
               value={v.clave}
               onChange={(e) => cambiar(i, { clave: e.currentTarget.value })}
@@ -45,6 +47,7 @@ export default function SeccionCalculos({ variables, errores, alCambiar }: Props
             <div style={{ flex: 1 }}>
               <CasillaFormula
                 ariaLabel="Fórmula"
+                nota={NOTA.formula}
                 placeholder="redondear(valor * pct / 100)"
                 valor={v.expr}
                 alCambiar={(expr) => cambiar(i, { expr })}

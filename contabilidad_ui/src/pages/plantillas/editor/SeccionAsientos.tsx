@@ -4,7 +4,9 @@ import type { AsientoPlantilla, Linea, Parametro } from '../../../api/plantillas
 import type { DiarioContable } from '../../../api/diarios'
 import CasillaFormula from './CasillaFormula'
 import { lineaVacia, mover } from './definicion'
+import { NOTA } from './notas'
 import { AccionesDeFila } from './SeccionDatos'
+import TituloConNota from './TituloConNota'
 
 interface Props {
   asientos: AsientoPlantilla[]
@@ -15,15 +17,15 @@ interface Props {
 }
 
 /** Las columnas de la hoja de líneas, en el orden en que se rellenan. */
-const COLUMNAS: { campo: keyof Linea; titulo: string; ancho: number }[] = [
-  { campo: 'cuenta', titulo: 'Cuenta', ancho: 170 },
-  { campo: 'debe', titulo: 'Debe', ancho: 160 },
-  { campo: 'haber', titulo: 'Haber', ancho: 160 },
-  { campo: 'concepto', titulo: 'Concepto', ancho: 200 },
-  { campo: 'documento', titulo: 'Documento', ancho: 130 },
-  { campo: 'id_obra', titulo: 'Obra', ancho: 120 },
-  { campo: 'id_tipo_iva', titulo: 'Tipo de IVA', ancho: 120 },
-  { campo: 'si', titulo: 'Solo si', ancho: 140 },
+const COLUMNAS: { campo: keyof Linea; titulo: string; ancho: number; nota: string }[] = [
+  { campo: 'cuenta', titulo: 'Cuenta', ancho: 170, nota: NOTA.cuenta },
+  { campo: 'debe', titulo: 'Debe', ancho: 160, nota: NOTA.importe },
+  { campo: 'haber', titulo: 'Haber', ancho: 160, nota: NOTA.importe },
+  { campo: 'concepto', titulo: 'Concepto', ancho: 200, nota: NOTA.conceptoLinea },
+  { campo: 'documento', titulo: 'Documento', ancho: 130, nota: NOTA.documento },
+  { campo: 'id_obra', titulo: 'Obra', ancho: 120, nota: NOTA.obra },
+  { campo: 'id_tipo_iva', titulo: 'Tipo de IVA', ancho: 120, nota: NOTA.tipoIva },
+  { campo: 'si', titulo: 'Solo si', ancho: 140, nota: NOTA.soloSi },
 ]
 
 /**
@@ -71,6 +73,7 @@ export default function SeccionAsientos({ asientos, parametros, diarios, errores
               <Group align="flex-start" gap="xs" grow>
                 <CasillaFormula
                   label="Fecha"
+                  nota={NOTA.fechaAsiento}
                   placeholder="fecha"
                   valor={a.fecha}
                   alCambiar={(fecha) => cambiarAsiento(i, { fecha })}
@@ -78,6 +81,7 @@ export default function SeccionAsientos({ asientos, parametros, diarios, errores
                 />
                 <CasillaFormula
                   label="Concepto"
+                  nota={NOTA.conceptoAsiento}
                   placeholder="'Nómina ' + formato(fecha, 'MM/AAAA')"
                   valor={a.concepto}
                   alCambiar={(concepto) => cambiarAsiento(i, { concepto })}
@@ -86,6 +90,7 @@ export default function SeccionAsientos({ asientos, parametros, diarios, errores
                 <Select
                   size="xs"
                   label="Diario"
+                  description={NOTA.diarioAsiento}
                   placeholder="El de la plantilla"
                   data={diarios.map((d) => ({ value: d.codigo, label: `${d.codigo} · ${d.descripcion ?? ''}` }))}
                   value={a.diario || null}
@@ -101,10 +106,12 @@ export default function SeccionAsientos({ asientos, parametros, diarios, errores
                     <Table.Tr>
                       {COLUMNAS.map((c) => (
                         <Table.Th key={c.campo} w={c.ancho}>
-                          {c.titulo}
+                          <TituloConNota titulo={c.titulo} nota={c.nota} />
                         </Table.Th>
                       ))}
-                      <Table.Th w={150}>Una por cada fila de</Table.Th>
+                      <Table.Th w={150}>
+                        <TituloConNota titulo="Una por cada fila de" nota={NOTA.repetirPor} />
+                      </Table.Th>
                       <Table.Th w={80} />
                     </Table.Tr>
                   </Table.Thead>

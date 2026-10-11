@@ -17,6 +17,8 @@ interface Props {
   /** Sin rótulo, dentro de una celda: el `aria-label` dice qué es. */
   ariaLabel?: string
   readOnly?: boolean
+  /** Nota aclaratoria debajo; mientras se escribe una función, se ve su firma en su lugar. */
+  nota?: string
 }
 
 const MAXIMO = 10
@@ -37,6 +39,7 @@ export default function CasillaFormula({
   extra = [],
   ariaLabel,
   readOnly,
+  nota,
 }: Props) {
   const { catalogo, nombres } = useFormulas()
   const plan = usePlanEnMemoria()
@@ -83,7 +86,7 @@ export default function CasillaFormula({
       onChange={alCambiar}
       filter={({ options }) => options}
       renderOption={({ option }) => <Text size="xs">{sugerencias.get(option.value) ?? option.value}</Text>}
-      description={abierta ? abierta.firma : undefined}
+      description={abierta ? abierta.firma : nota}
       error={error}
       readOnly={readOnly}
       comboboxProps={{ width: 420, position: 'bottom-start' }}

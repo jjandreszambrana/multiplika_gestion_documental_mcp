@@ -19,6 +19,7 @@ import type { OpcionParametro, Parametro, TipoParametro } from '../../../api/pla
 import CasillaFormula from './CasillaFormula'
 import { useFormulas } from './ContextoFormulas'
 import { mover, NOMBRE_DE_ORIGEN, NOMBRE_DE_TIPO, parametroVacio } from './definicion'
+import { NOTA } from './notas'
 
 interface Props {
   parametros: Parametro[]
@@ -78,6 +79,11 @@ function OpcionesFijas({
 }) {
   return (
     <Stack gap={4}>
+      {opciones.length > 0 && (
+        <Text size="xs" c="dimmed">
+          {`Valor: ${NOTA.valorOpcion} Lo que se ve: ${NOTA.etiquetaOpcion}`}
+        </Text>
+      )}
       {opciones.map((o, i) => (
         <Group key={i} gap="xs" wrap="nowrap">
           <TextInput
@@ -158,6 +164,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                   <TextInput
                     size="xs"
                     label="Clave"
+                    description={NOTA.clave}
                     placeholder="cuota_mensual"
                     value={p.clave}
                     onChange={(e) => cambiar(i, { clave: e.currentTarget.value })}
@@ -167,6 +174,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                   <Select
                     size="xs"
                     label="Tipo"
+                    description={NOTA.tipo}
                     data={TIPOS.filter((t) => !enTabla || t !== 'tabla').map((t) => ({
                       value: t,
                       label: NOMBRE_DE_TIPO[t],
@@ -179,7 +187,8 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                   <TextInput
                     size="xs"
                     label="Rótulo"
-                    placeholder="Lo que lee el contable"
+                    description={NOTA.rotulo}
+                    placeholder="Importe bruto"
                     value={p.etiqueta ?? ''}
                     onChange={(e) => cambiar(i, { etiqueta: e.currentTarget.value })}
                     error={texto(err('etiqueta'))}
@@ -187,6 +196,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                   <Checkbox
                     size="xs"
                     label="Obligatorio"
+                    description={NOTA.obligatorio}
                     checked={p.obligatorio === true}
                     onChange={(e) => cambiar(i, { obligatorio: e.currentTarget.checked })}
                     mt={26}
@@ -203,6 +213,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
               <SimpleGrid cols={{ base: 1, md: enTabla ? 3 : 4 }} spacing="xs">
                 <CasillaFormula
                   label="Valor por defecto"
+                  nota={NOTA.defecto}
                   valor={p.defecto}
                   alCambiar={(v) => cambiar(i, { defecto: v })}
                   errores={err('defecto')}
@@ -210,6 +221,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 {!enTabla && (
                   <CasillaFormula
                     label="Cuándo se ve"
+                    nota={NOTA.visibleSi}
                     placeholder="Siempre"
                     valor={p.visible_si}
                     alCambiar={(v) => cambiar(i, { visible_si: v })}
@@ -218,6 +230,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 )}
                 <CasillaFormula
                   label="Comprobación"
+                  nota={NOTA.validacion}
                   valor={p.validacion}
                   alCambiar={(v) => cambiar(i, { validacion: v })}
                   errores={err('validacion')}
@@ -226,6 +239,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 <TextInput
                   size="xs"
                   label="Mensaje si no se cumple"
+                  description={NOTA.mensajeValidacion}
                   value={p.mensaje_validacion ?? ''}
                   onChange={(e) => cambiar(i, { mensaje_validacion: e.currentTarget.value })}
                   error={texto(err('mensaje_validacion'))}
@@ -236,7 +250,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 <TextInput
                   size="xs"
                   label="Ayuda"
-                  placeholder="Texto que sale debajo de la casilla"
+                  description={NOTA.ayuda}
                   value={p.ayuda ?? ''}
                   onChange={(e) => cambiar(i, { ayuda: e.currentTarget.value })}
                   error={texto(err('ayuda'))}
@@ -259,6 +273,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 <NumberInput
                   size="xs"
                   label="Largo máximo"
+                  description={NOTA.largoMaximo}
                   min={1}
                   max={255}
                   allowDecimal={false}
@@ -273,6 +288,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                 <NumberInput
                   size="xs"
                   label="Decimales"
+                  description={NOTA.decimales}
                   min={0}
                   max={6}
                   allowDecimal={false}
@@ -302,6 +318,9 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                     ]}
                     style={{ alignSelf: 'flex-start' }}
                   />
+                  <Text size="xs" c="dimmed">
+                    {NOTA.origenOpciones}
+                  </Text>
                   {conOrigen ? (
                     <Select
                       size="xs"
@@ -333,6 +352,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                     <NumberInput
                       size="xs"
                       label="Filas mínimas"
+                      description={NOTA.filasMinimas}
                       min={0}
                       max={200}
                       allowDecimal={false}
@@ -344,6 +364,7 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                     <NumberInput
                       size="xs"
                       label="Filas máximas"
+                      description={NOTA.filasMaximas}
                       min={1}
                       max={200}
                       allowDecimal={false}
@@ -355,6 +376,9 @@ export default function SeccionDatos({ parametros, ruta, errores, alCambiar, enT
                   </Group>
                   <Text size="sm" fw={500}>
                     Columnas
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {NOTA.columnas}
                   </Text>
                   {err('columnas') && (
                     <Text size="xs" c="red">

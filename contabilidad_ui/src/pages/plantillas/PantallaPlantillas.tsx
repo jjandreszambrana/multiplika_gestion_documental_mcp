@@ -16,6 +16,21 @@ interface Props {
   nivel: string
   /** Dígitos de una subcuenta en esta empresa. */
   ancho: number
+  /** Para la petición a la IA: se dice en qué empresa. */
+  nombreEmpresa: string
+  /** Dentro del panel de la GD, que tiene el chat de IA. Fuera no hay a quién pedírselo. */
+  conIA: boolean
+}
+
+/**
+ * Abre el chat del panel de la GD con la petición empezada, sin enviarla: el
+ * contable termina de contar qué asiento quiere. El panel escucha este evento.
+ */
+function pedirALaIA(nombreEmpresa: string) {
+  const texto =
+    `Quiero crear una plantilla de asiento (asiento predefinido) para ${nombreEmpresa}. ` +
+    'Prepárala, pruébala y enséñame el asiento antes de guardarla. El asiento es: '
+  window.dispatchEvent(new CustomEvent('gd:preguntar-ia', { detail: { texto } }))
 }
 
 /** Abierta en el editor: un id, o `nueva`. */
@@ -26,7 +41,7 @@ type Editando = number | 'nueva' | null
  * Diseñarlas es de quien lleva el cierre; el resto las ve sin tocarlas. Usarlas
  * se hace desde la entrada de asientos.
  */
-export default function PantallaPlantillas({ nivel, ancho }: Props) {
+export default function PantallaPlantillas({ nivel, ancho, nombreEmpresa, conIA }: Props) {
   const puedeDisenar = alcanza(nivel, 'cierre')
   const [conRetiradas, setConRetiradas] = useState(false)
   const [plantillas, setPlantillas] = useState<ResumenPlantilla[]>([])
@@ -176,7 +191,16 @@ export default function PantallaPlantillas({ nivel, ancho }: Props) {
                 checked={conRetiradas}
                 onChange={(e) => setConRetiradas(e.currentTarget.checked)}
               />
-              {puedeDisenar && <Button onClick={() => setEditando('nueva')}>Plantilla nueva…</Button>}
+              {puedeDisenar && (
+                <Group gap="xs">
+                  {conIA && (
+                    <Button variant="default" onClick={() => pedirALaIA(nombreEmpresa)}>
+                      Crear con ayuda de la IA…
+                    </Button>
+                  )}
+                  <Button onClick={() => setEditando('nueva')}>Plantilla nueva…</Button>
+                </Group>
+              )}
             </Group>
             {error && <Alert color="red">{error}</Alert>}
             {errorAccion && (

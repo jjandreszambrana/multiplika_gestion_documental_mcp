@@ -150,6 +150,7 @@ ACCIONES_MCP = {
     "anadir_preguntas_geo_gd": ("añadió preguntas de GEO a la web", "activo_digital", "id_activo", None),
     "quitar_pregunta_geo_gd": ("quitó una pregunta de GEO", None, None, None),
     "medir_geo_gd": ("midió la presencia en las IAs de la web", "activo_digital", "id_activo", None),
+    "guardar_plantilla_asiento_gd": ("guardó retirada la plantilla de asiento", None, None, "nombre"),
 }
 
 _usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))

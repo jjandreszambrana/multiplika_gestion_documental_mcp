@@ -304,6 +304,20 @@ async def reenviar(
     return await cliente.crudo("POST", ruta, json={**cuerpo, "id_obligado": id_obligado})
 
 
+async def pedir_con_errores(config: dict, id_usuario: int | None, id_empresa: int, ruta: str, cuerpo: dict) -> tuple[int, dict]:
+    """Como `pedir`, pero un 400 no se convierte en excepción: vuelve con su
+    código y su JSON entero. Las plantillas de asiento devuelven ahí la lista
+    de errores por campo (`errores`), que `pedir` recortaría."""
+    respuesta = await reenviar(config, id_usuario, id_empresa, ruta, json.dumps(cuerpo).encode())
+    try:
+        datos = respuesta.json()
+    except ValueError:
+        datos = {"message": respuesta.text[:300]}
+    if respuesta.status_code >= 400 and respuesta.status_code != 400:
+        raise ValueError(f"SIF respondió {respuesta.status_code} en {ruta}: {datos.get('message') or datos.get('detail') or ''}")
+    return respuesta.status_code, datos if isinstance(datos, dict) else {"datos": datos}
+
+
 async def empresas_del_acceso(config: dict, acceso: dict) -> list[dict]:
     filas = await AsyncDatabase(**config).query(
         f'SELECT e.id AS id_empresa, e.nombre, e.id_obligado_sif FROM "{_T_AE}" ae JOIN "{_T_EMP}" e ON e.id = ae.id_empresa '

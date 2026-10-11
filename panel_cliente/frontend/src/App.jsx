@@ -204,6 +204,23 @@ export default function App() {
     setChatAbierto((abierto) => !abierto)
   }
 
+  // Otra pantalla (la de plantillas de asiento, p. ej.) puede abrir el chat con
+  // una petición ya empezada: se deja escrita, sin enviar, para que el usuario
+  // la complete. Va por un evento del navegador porque esas pantallas son de
+  // contabilidad_ui, que no conoce el panel.
+  const [peticionChat, setPeticionChat] = useState(null)
+  useEffect(() => {
+    function alPedir(evento) {
+      const texto = evento.detail?.texto
+      if (typeof texto !== "string" || !texto) return
+      setChatMontado(true)
+      setChatAbierto(true)
+      setPeticionChat({ texto, cuando: Date.now() })
+    }
+    window.addEventListener("gd:preguntar-ia", alPedir)
+    return () => window.removeEventListener("gd:preguntar-ia", alPedir)
+  }, [])
+
   function empezarRedimension(evento) {
     evento.preventDefault()
     setRedimensionando(true)
@@ -550,7 +567,7 @@ export default function App() {
               cursor: "col-resize", zIndex: 1, touchAction: "none",
             }}
           />
-          {chatMontado && <Chat proyecto={proyecto} onCerrar={() => setChatAbierto(false)} />}
+          {chatMontado && <Chat proyecto={proyecto} peticion={peticionChat} onCerrar={() => setChatAbierto(false)} />}
         </AppShell.Aside>
       )}
     </AppShell>

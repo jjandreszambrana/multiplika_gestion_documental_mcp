@@ -38,6 +38,7 @@ import SeccionAsientos from './SeccionAsientos'
 import SeccionCalculos from './SeccionCalculos'
 import SeccionDatos from './SeccionDatos'
 import SeccionOpciones from './SeccionOpciones'
+import { NOTA } from './notas'
 
 interface Props {
   /** Nulo para una plantilla nueva. */
@@ -280,6 +281,7 @@ export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, alCer
                     <SimpleGrid cols={2} spacing="sm">
                       <Select
                         label="Diario"
+                        description={NOTA.diario}
                         data={diarios.map((d) => ({
                           value: d.codigo,
                           label: `${d.codigo} · ${d.descripcion ?? ''}`,
@@ -292,6 +294,9 @@ export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, alCer
                       <Stack gap={4}>
                         <Text size="sm" fw={500}>
                           Cómo se graba
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {NOTA.comoSeGraba}
                         </Text>
                         <SegmentedControl
                           value={opciones.estado_inicial ?? 'borrador'}
