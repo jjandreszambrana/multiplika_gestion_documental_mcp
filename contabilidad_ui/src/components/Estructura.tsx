@@ -188,6 +188,7 @@ export default function Estructura({
           <PantallaPlantillas
             nivel={nivel}
             ancho={configuracion.anchocuentas}
+            ejercicio={ejercicio}
             nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
             conIA={embebido}
           />

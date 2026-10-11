@@ -13,6 +13,8 @@ interface Props {
   estado: EstadoPrevisualizacion
   /** Dígitos de una subcuenta en esta empresa. */
   ancho: number
+  /** Para dar de alta subcuentas al vuelo y mirar su mayor. */
+  ejercicio: number | null
   /** Lo que va encima de los datos: el selector de plantilla, por ejemplo. */
   cabecera?: ReactNode
 }
@@ -28,7 +30,7 @@ function nombreDelTercero(valor: unknown): string | undefined {
  * sale, calculado por el servidor. Lo usan la pantalla de hacer un asiento y
  * la prueba del editor: es la misma cosa.
  */
-export default function FormularioPlantilla({ parametros, estado, ancho, cabecera }: Props) {
+export default function FormularioPlantilla({ parametros, estado, ancho, ejercicio, cabecera }: Props) {
   const { valores, tocados, previa, errorPrevia, pendiente, cambiar } = estado
   const asientos = useMemo(() => previa?.asientos ?? [], [previa])
   const resueltos = useMemo(
@@ -72,6 +74,7 @@ export default function FormularioPlantilla({ parametros, estado, ancho, cabecer
                   errores={errores.porDato.get(p.clave)}
                   erroresDeCelda={errores.porCelda}
                   ancho={ancho}
+                  ejercicio={ejercicio}
                   alCambiar={(nuevas: FilaTabla[]) => cambiar(p.clave, nuevas)}
                 />
               )
@@ -89,6 +92,7 @@ export default function FormularioPlantilla({ parametros, estado, ancho, cabecer
                 valor={valor}
                 errores={errores.porDato.get(p.clave)}
                 ancho={ancho}
+                ejercicio={ejercicio}
                 alCambiar={(v) => cambiar(p.clave, v)}
                 nota={p.tipo === 'tercero' ? nombreDelTercero(resuelto?.valor) : undefined}
               />

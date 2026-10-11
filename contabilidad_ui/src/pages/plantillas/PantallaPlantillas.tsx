@@ -16,6 +16,7 @@ interface Props {
   nivel: string
   /** Dígitos de una subcuenta en esta empresa. */
   ancho: number
+  ejercicio: number | null
   /** Para la petición a la IA: se dice en qué empresa. */
   nombreEmpresa: string
   /** Dentro del panel de la GD, que tiene el chat de IA. Fuera no hay a quién pedírselo. */
@@ -41,7 +42,7 @@ type Editando = number | 'nueva' | null
  * Diseñarlas es de quien lleva el cierre; el resto las ve sin tocarlas. Usarlas
  * se hace desde la entrada de asientos.
  */
-export default function PantallaPlantillas({ nivel, ancho, nombreEmpresa, conIA }: Props) {
+export default function PantallaPlantillas({ nivel, ancho, ejercicio, nombreEmpresa, conIA }: Props) {
   const puedeDisenar = alcanza(nivel, 'cierre')
   const [conRetiradas, setConRetiradas] = useState(false)
   const [plantillas, setPlantillas] = useState<ResumenPlantilla[]>([])
@@ -222,6 +223,7 @@ export default function PantallaPlantillas({ nivel, ancho, nombreEmpresa, conIA 
           idPlantilla={editando === 'nueva' ? null : editando}
           soloLectura={!puedeDisenar}
           ancho={ancho}
+          ejercicio={ejercicio}
           alCerrar={(huboCambios) => {
             setEditando(null)
             if (huboCambios) recargar()

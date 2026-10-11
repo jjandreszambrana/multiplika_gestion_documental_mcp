@@ -1,8 +1,8 @@
-import { Checkbox, Select, Stack, Text, TextInput } from '@mantine/core'
+import { Checkbox, Select, TextInput } from '@mantine/core'
 import type { Parametro } from '../../api/plantillas'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
-import CasillaCuenta from '../diario/CasillaCuenta'
+import CasillaSubcuenta from './CasillaSubcuenta'
 import CasillaTercero from './CasillaTercero'
 import type { ValorSimple } from './valores'
 
@@ -12,6 +12,8 @@ interface Props {
   errores: string[] | undefined
   /** Dígitos de una subcuenta en esta empresa, para el punto de la cuenta. */
   ancho: number
+  /** Para dar de alta una subcuenta nueva y mirar su mayor. */
+  ejercicio: number | null
   alCambiar: (valor: ValorSimple) => void
   /** En una celda de tabla, sin rótulo: el rótulo es la cabecera de la columna. */
   enTabla?: boolean
@@ -29,6 +31,7 @@ export default function CampoDato({
   valor,
   errores,
   ancho,
+  ejercicio,
   alCambiar,
   enTabla = false,
   nota,
@@ -86,25 +89,16 @@ export default function CampoDato({
       )
     case 'cuenta':
       return (
-        <Stack gap={2}>
-          <CasillaCuenta
-            size={size}
-            label={label}
-            valor={texto}
-            ancho={ancho}
-            alCambiar={alCambiar}
-          />
-          {description && (
-            <Text size="xs" c="dimmed">
-              {description}
-            </Text>
-          )}
-          {error && (
-            <Text size="xs" c="red">
-              {error}
-            </Text>
-          )}
-        </Stack>
+        <CasillaSubcuenta
+          size={size}
+          label={label}
+          description={description}
+          error={error}
+          valor={texto}
+          ancho={ancho}
+          ejercicio={ejercicio}
+          alCambiar={alCambiar}
+        />
       )
     case 'tercero':
       return (

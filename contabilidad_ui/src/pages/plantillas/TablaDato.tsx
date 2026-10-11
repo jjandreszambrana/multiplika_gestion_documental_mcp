@@ -13,6 +13,7 @@ interface Props {
   errores: string[] | undefined
   erroresDeCelda: Map<string, string[]>
   ancho: number
+  ejercicio: number | null
   alCambiar: (filas: FilaTabla[]) => void
 }
 
@@ -35,6 +36,7 @@ export default function TablaDato({
   errores,
   erroresDeCelda,
   ancho,
+  ejercicio,
   alCambiar,
 }: Props) {
   const columnas = p.columnas ?? []
@@ -83,6 +85,7 @@ export default function TablaDato({
                       valor={valor}
                       errores={erroresDeCelda.get(claveDeCelda(p.clave, i + 1, c.clave))}
                       ancho={ancho}
+                      ejercicio={ejercicio}
                       alCambiar={(v) => cambiarCelda(i, c.clave, v)}
                       enTabla
                     />

@@ -539,6 +539,7 @@ export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuari
       <DialogoAsientoPredefinido
         abierto={conPlantilla}
         ancho={ancho}
+        ejercicio={ejercicio}
         alCerrar={() => setConPlantilla(false)}
         alHecho={(hecho) => {
           setConPlantilla(false)

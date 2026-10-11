@@ -46,6 +46,7 @@ interface Props {
   /** Para quien no llega a `cierre`: se ve todo, no se cambia nada. */
   soloLectura: boolean
   ancho: number
+  ejercicio: number | null
   /** `true` si se ha guardado algo y la lista tiene que refrescarse. */
   alCerrar: (huboCambios: boolean) => void
 }
@@ -72,7 +73,7 @@ function Cuenta({ n }: { n: number }) {
  * líneas salen. Comprobar y probar los hace el servidor; aquí no se valida
  * ni se calcula nada.
  */
-export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, alCerrar }: Props) {
+export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, ejercicio, alCerrar }: Props) {
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -394,6 +395,7 @@ export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, alCer
             <DialogoProbar
               definicion={paraEnviar}
               ancho={ancho}
+              ejercicio={ejercicio}
               alCerrar={() => setProbando(false)}
               alDefinicionRota={(lista) => {
                 setErrores(lista)

@@ -26,6 +26,7 @@ interface Props {
   abierto: boolean
   /** Dígitos de una subcuenta en esta empresa. */
   ancho: number
+  ejercicio: number | null
   alCerrar: () => void
   alHecho: (hecho: Hecho) => void
 }
@@ -53,7 +54,7 @@ function hechoDe(ejecucion: Ejecucion): Hecho {
  * que se ve es lo que se graba: el servidor lo vuelve a calcular al grabar, y
  * si entretanto alguien ha cambiado la plantilla, no graba.
  */
-export default function DialogoAsientoPredefinido({ abierto, ancho, alCerrar, alHecho }: Props) {
+export default function DialogoAsientoPredefinido({ abierto, ancho, ejercicio, alCerrar, alHecho }: Props) {
   const [plantillas, setPlantillas] = useState<ResumenPlantilla[] | null>(null)
   const [errorLista, setErrorLista] = useState<string | null>(null)
   const [idElegido, setIdElegido] = useState<number | null>(null)
@@ -191,6 +192,7 @@ export default function DialogoAsientoPredefinido({ abierto, ancho, alCerrar, al
             parametros={parametros}
             estado={estado}
             ancho={ancho}
+            ejercicio={ejercicio}
             cabecera={selector}
           />
         )}

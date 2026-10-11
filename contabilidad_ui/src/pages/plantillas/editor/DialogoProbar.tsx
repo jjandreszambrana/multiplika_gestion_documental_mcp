@@ -9,6 +9,7 @@ interface Props {
   /** La que hay en el editor, sin guardar. */
   definicion: Definicion
   ancho: number
+  ejercicio: number | null
   alCerrar: () => void
   /** La plantilla tiene errores: se vuelve al editor con ellos marcados. */
   alDefinicionRota: (errores: ErrorCampo[]) => void
@@ -18,7 +19,7 @@ interface Props {
  * La plantilla del editor, sin guardar, con datos de prueba: lo mismo que verá
  * el contable al usarla. No graba nada.
  */
-export default function DialogoProbar({ definicion, ancho, alCerrar, alDefinicionRota }: Props) {
+export default function DialogoProbar({ definicion, ancho, ejercicio, alCerrar, alDefinicionRota }: Props) {
   const [lista, setLista] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,7 +45,12 @@ export default function DialogoProbar({ definicion, ancho, alCerrar, alDefinicio
         {error && <Alert color="red">{error}</Alert>}
         {!lista && !error && <Loader size="sm" />}
         {lista && (
-          <FormularioPlantilla parametros={definicion.parametros} estado={estado} ancho={ancho} />
+          <FormularioPlantilla
+            parametros={definicion.parametros}
+            estado={estado}
+            ancho={ancho}
+            ejercicio={ejercicio}
+          />
         )}
         <Group justify="flex-end">
           <Button variant="default" onClick={alCerrar}>
