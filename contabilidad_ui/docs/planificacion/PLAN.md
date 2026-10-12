@@ -19,6 +19,15 @@ por aquí:
   parte.
 - **Fase 12 — Importar:** falta el historial de importaciones y deshacer una.
 
+- **Fase 13 — Bandeja y conexión con otro programa:** hecha la conexión con
+  Codiplika. Falta la bandeja y el traspaso de cobros (ver la fase).
+
+Avisos del backend del 11-12/10/2026 que aún no tienen pantalla: selector de
+ventas del SII en emitidas ([5.13]), exportar/importar plantillas y la marca
+«De serie» en la lista ([5.11], [5.12]). Y quitar la definición de plantilla
+escrita a mano en `src/api/plantillas.ts`: ya viene en los tipos
+(`PlantillaAsientoDefinicion`).
+
 Fuera de las fases, dos cosas que conviene decidir pronto: **la sección elegida
 se pierde al recargar** —no hay direcciones propias— y **nada comprueba el
 código al subirlo a GitHub**.
@@ -345,6 +354,10 @@ cuando la factura la pide.
 
 Está en `docs/interfaz/traspasos.md`.
 
+**Desde el 12/10/2026 ([5.21]) el traspaso no confirma nada:** crea borradores.
+El resumen lo dice («Se han creado N borradores…») y lleva al diario con la
+lista de borradores abierta. Tirar un borrador devuelve la factura a pendiente.
+
 ### Fase 8 — Fiscal — a medias
 
 #### IVA y retenciones — hecho el 02/09/2026
@@ -537,6 +550,24 @@ a propósito el 27/08/2026: son irreversibles y piden su propia confirmación.
 **Tienen sección propia desde el 30/08/2026**, más arriba. Para avisar antes de
 intentarlo, `/ejercicios/listar` trae `apuntes_en_borrador`, y el cierre se
 niega mientras quede alguno.
+
+### Fase 13 — Bandeja y conexión con otro programa — empezada
+
+Para empresas que facturan, cobran y pagan también con otro programa (hoy
+Codiplika). Canal: [5.14]–[5.21].
+
+- **Conexión con Codiplika — hecha el 12/10/2026.** Utilidades → «Conexión con
+  Codiplika», roles del SIF 1, 2 y 4. Se elige un túnel de los permitidos en el
+  servidor, se prueba y se activa. Está en `docs/interfaz/conexiones.md`.
+- **Bandeja — pendiente.** Dos pestañas (facturas y cobros/pagos), filtro por
+  estado y periodo, detalle con desglose; contabilizar, resolver conflicto
+  (`sif` o `importada`), descartar y deshacer. Aparte, la lista de lecturas con
+  «Deshacer lectura» y «Deshacer exportación» (ensayo primero). Botón «Traer de
+  Codiplika» con dos fechas, ensayo y confirmación, visible solo si la empresa
+  tiene la conexión activa. Ayuda `bandeja_erp`.
+- **Traspaso de cobros — pendiente.** Como el de facturas: periodo, pendientes
+  con su motivo, contabilizar (en borrador) y, aparte, cobros anulados que
+  siguen en los libros con «Revertir» pidiendo la fecha. Ayuda `traspaso_cobros`.
 
 ### Fase 11 — Accesos — pendiente
 

@@ -247,6 +247,14 @@ Coste de una revisión programada, con números aproximados: sumas y saldos de u
 
 ## Fase 5: la interfaz de contabilidad dentro de la GD
 
+**Estado (2026-10-12): hecha y desplegada solo en Adimel (p1 y p2).** Lo de abajo es el planteamiento original; lo que cambió: no hay paquete compartido (copia en `contabilidad_ui/`, ver arriba), el componente `Embebido.tsx` va por el proxy `/v1/proyectos/{id}/contabilidad/sif/proxy/{id_empresa}/...`, que deja pasar `contabilidad/*` y además `maestros/conexiones_externas/*` (la conexión con Codiplika, que en el SIF vive fuera de contabilidad). Lo último añadido:
+
+- Asientos predefinidos (usar, editor, historial; ayuda `plantillas_de_asiento`) y la IA que prepara plantillas ([plantillas-de-asiento-con-ia.md](plantillas-de-asiento-con-ia.md)).
+- Conexión con Codiplika (Utilidades), roles del SIF 1, 2 y 4; se elige un túnel de `/maestros/conexiones_externas/tuneles`.
+- Traspaso: desde [5.21] todo nace en borrador y el resumen lleva a los borradores.
+
+Pendiente de pantalla (avisos del backend en el canal, sin hacer): selector SII en emitidas ([5.13]), traspaso de cobros ([5.14]), bandeja de otro programa con «Traer de Codiplika» y deshacer exportación ([5.15], [5.16], [5.20]), exportar/importar plantillas y marca «De serie» ([5.11], [5.12]). Detalle en `contabilidad_ui/docs/planificacion/PLAN.md`.
+
 Viabilidad revisada el 2026-10-10 (`/home/jjandres/desarrollos/python3/multiplika_conta_ui`): es viable.
 
 **Decidido (usuario, 2026-10-10)**: no se comparte código con la app de contabilidad independiente. Se ha copiado entera en `contabilidad_ui/` dentro de este repo y se trabaja solo para la GD. Por eso el punto 2 de abajo cambia: no hace falta separar un paquete para dos apps, basta con un componente raíz "embebido" dentro de esta copia.

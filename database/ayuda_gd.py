@@ -545,7 +545,20 @@ esta gestión documental"; sin activar, ni sale en el menú ni la IA lo usa.
 - **Biblioteca**: el índice y el buscador de temas. En cada tema se \
   pueden abrir las normas que cita, con su texto literal del BOE.
 - **Contabilidad**: las pantallas de la contabilidad del SIF (diario, \
-  mayor, balances, IVA...) sin salir de la GD ni volver a entrar.
+  mayor, balances, IVA...) sin salir de la GD ni volver a entrar. Lo que \
+  se pasa desde facturación (facturas y cobros) entra como **borrador**: \
+  no está en el libro hasta que el contable lo confirma. Al terminar el \
+  traspaso, un botón lleva a la lista de borradores.
+- **Asientos predefinidos** (dentro de Contabilidad): plantillas de \
+  asiento que se rellenan con unos pocos datos, como una nómina o una \
+  amortización. Hay unas **de serie**, comunes a todas las empresas, que \
+  se duplican y se retocan; y la IA puede preparar una nueva a partir de \
+  lo que le cuentes. Al usarla, el asiento sale en borrador.
+- **Conexión con Codiplika** (dentro de Contabilidad → Utilidades): para \
+  empresas que también facturan con Codiplika. Se elige por dónde se llega \
+  (lo deja preparado el administrador de los servidores), se prueba, se \
+  mira que lo que sale es de esa empresa y se activa. La ven el \
+  administrador y el usuario de la propia empresa.
 - **Propuestas**: lo que propone la IA (asientos, correcciones, \
   apartados de la memoria) y los avisos de la revisión nocturna. Aceptar \
   un asiento no lo apunta en el SIF: lo pasas tú. Aceptar un apartado de \

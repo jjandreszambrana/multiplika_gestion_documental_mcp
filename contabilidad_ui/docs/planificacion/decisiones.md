@@ -921,3 +921,21 @@ La API prepara el 303 desde el 01/09/2026, pero la pantalla no se hace todavía:
   justo la lista que se enseña ante un requerimiento de Hacienda.
 
 Los datos que trae la API, campo a campo, están en `fiscal_303.md`.
+
+## El traspaso no confirma: todo nace en borrador (12/10/2026)
+
+Decisión del usuario, aplicada en el backend ([5.21]): nada entra en el libro
+hasta que el contable lo da por bueno. Facturas, cobros y los inversos de las
+anulaciones se crean como borradores. La pantalla no confirma nada por su
+cuenta: dice cuántos borradores ha creado y lleva al diario con su lista
+abierta, donde se revisan y confirman como cualquier otro.
+
+## La conexión con otro programa: quién y por dónde (12/10/2026)
+
+La configuran el superadministrador (1), el administrador (2) y el usuario de
+la propia empresa (4); representantes y operarios no (el SIF les da 403, y la
+sección no se les enseña). No se escriben máquinas ni llaves: se elige un túnel
+de los que el administrador de los servidores ha permitido en ese SIF. Primero
+se pensó solo para el superadministrador y con los datos del túnel a mano; el
+backend lo cambió en [5.19] para que la empresa no pudiera apuntar a otras
+máquinas.

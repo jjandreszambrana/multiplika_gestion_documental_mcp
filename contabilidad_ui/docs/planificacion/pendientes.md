@@ -10,10 +10,11 @@ Actualizado: 28/08/2026
 
 ### Asientos predefinidos: la definición escrita a mano
 
-Las respuestas de plantillas ya salen de los tipos generados, pero la forma de
-una definición y la del catálogo no: el OpenAPI las declara como objeto libre.
-Están copiadas de `esquema.py` en `src/api/plantillas.ts`. Pedido en [5.11] del
-canal compartido; cuando lo declaren, `npm run api:types` y quitar la copia.
+**Resuelto en el backend ([5.11], 11/10/2026)**: las respuestas declaran
+`PlantillaAsientoDefinicion` y el catálogo `RespuestaCatalogoPlantillas`. Los
+tipos ya están regenerados; falta quitar la copia escrita a mano en
+`src/api/plantillas.ts` y usar esos. En las peticiones la definición sigue
+siendo objeto libre a propósito (así vuelve con sus errores por campo).
 
 ### Crear solas en el plan las cuentas que falten, durante el traspaso
 
