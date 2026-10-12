@@ -1,10 +1,33 @@
-import { Alert, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, List, Paper, Stack, Table, Text, Title } from '@mantine/core'
 import type { AsientoGenerado, ResultadoPeriodo, ResultadoReintento } from '../../api/contabilizar'
 import { formatearEntero } from '../../lib/format'
 
 interface Props {
   resultado: ResultadoPeriodo | null
   reintento: ResultadoReintento | null
+  alVerBorradores: () => void
+}
+
+/**
+ * Desde el 12/10/2026 el traspaso no confirma nada: cada factura entra como
+ * borrador y el contable la confirma. Se dice cuántos y se lleva a ellos.
+ */
+function AvisoBorradores({ cuantos, alVer }: { cuantos: number; alVer: () => void }) {
+  if (cuantos === 0) return null
+  return (
+    <Alert color="yellow">
+      <Group justify="space-between" gap="sm">
+        <Text size="sm">
+          {cuantos === 1
+            ? 'Se ha creado 1 borrador. No entra en el libro hasta que lo confirmes.'
+            : `Se han creado ${formatearEntero(cuantos)} borradores. No entran en el libro hasta que los confirmes.`}
+        </Text>
+        <Button size="xs" onClick={alVer}>
+          Ver los borradores
+        </Button>
+      </Group>
+    </Alert>
+  )
 }
 
 function Cuenta({ rotulo, cuantas }: { rotulo: string; cuantas: number }) {
@@ -66,7 +89,7 @@ function Asientos({ asientos }: { asientos: AsientoGenerado[] }) {
 }
 
 /** Cómo ha ido lo último que se lanzó: contabilizar el periodo o reintentar. */
-export default function ResumenTraspaso({ resultado, reintento }: Props) {
+export default function ResumenTraspaso({ resultado, reintento, alVerBorradores }: Props) {
   if (reintento) {
     return (
       <Alert color="blue" title="Reintento terminado">
@@ -77,6 +100,7 @@ export default function ResumenTraspaso({ resultado, reintento }: Props) {
             <Cuenta rotulo="Siguen pendientes" cuantas={reintento.siguen_pendientes} />
           </Group>
           <Motivos motivos={reintento.motivos ?? {}} />
+          <AvisoBorradores cuantos={reintento.resueltas} alVer={alVerBorradores} />
         </Stack>
       </Alert>
     )
@@ -90,12 +114,13 @@ export default function ResumenTraspaso({ resultado, reintento }: Props) {
         <Title order={5}>Resultado</Title>
 
         <Group gap="xl">
-          <Cuenta rotulo="Contabilizadas" cuantas={resultado.contabilizadas} />
+          <Cuenta rotulo="En borrador" cuantas={resultado.contabilizadas} />
           <Cuenta rotulo="Ya tenían asiento" cuantas={resultado.ya_contabilizadas} />
           <Cuenta rotulo="Anuladas" cuantas={resultado.anuladas} />
           <Cuenta rotulo="Quedan pendientes" cuantas={resultado.pendientes} />
         </Group>
 
+        <AvisoBorradores cuantos={resultado.contabilizadas} alVer={alVerBorradores} />
         <Motivos motivos={resultado.motivos ?? {}} />
         <Asientos asientos={resultado.asientos ?? []} />
       </Stack>

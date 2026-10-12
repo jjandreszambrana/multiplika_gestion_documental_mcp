@@ -23,6 +23,8 @@ interface Props {
   tipo: TipoFactura
   nivel: string
   ancho: number
+  /** Lleva al diario con la lista de borradores abierta. */
+  alVerBorradores: () => void
 }
 
 const TEXTOS = {
@@ -53,7 +55,13 @@ const AYUDA = {
   recibidas: 'traspaso_facturas_recibidas',
 }
 
-export default function PantallaTraspasos({ ejercicio, tipo, nivel, ancho }: Props) {
+export default function PantallaTraspasos({
+  ejercicio,
+  tipo,
+  nivel,
+  ancho,
+  alVerBorradores,
+}: Props) {
   const textos = tipo === EMITIDAS ? TEXTOS.emitidas : TEXTOS.recibidas
   const [periodo, setPeriodo] = useState(TODO_EL_EJERCICIO)
 
@@ -112,7 +120,11 @@ export default function PantallaTraspasos({ ejercicio, tipo, nivel, ancho }: Pro
         </Group>
       </Group>
 
-      <ResumenTraspaso resultado={resultado} reintento={reintento} />
+      <ResumenTraspaso
+        resultado={resultado}
+        reintento={reintento}
+        alVerBorradores={alVerBorradores}
+      />
 
       {esEmitidas && <BloqueAnulaciones nivel={nivel} />}
 
@@ -143,7 +155,7 @@ export default function PantallaTraspasos({ ejercicio, tipo, nivel, ancho }: Pro
         texto={`Se van a contabilizar ${formatearEntero(cuantasEntran)} facturas de ${comoSeLlama(
           periodo,
           ejercicio,
-        )}. La que no se pueda queda anotada con su motivo y no frena a las demás.`}
+        )}. Entran como borradores: no pasan al libro hasta que los confirmes. La que no se pueda queda anotada con su motivo y no frena a las demás.`}
         rotulo="Contabilizar"
         alCerrar={() => setPreguntando(null)}
         alConfirmar={async () => {

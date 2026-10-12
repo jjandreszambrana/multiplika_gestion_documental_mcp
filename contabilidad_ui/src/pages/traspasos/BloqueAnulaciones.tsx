@@ -104,7 +104,7 @@ export default function BloqueAnulaciones({ nivel }: Props) {
       <DialogoConfirmar
         abierto={preguntando}
         titulo="Revertir las anulaciones"
-        texto="Se genera un asiento inverso por cada anulación. El asiento original no se borra."
+        texto="Por cada anulación se crea un asiento inverso en borrador, que hay que confirmar. Si el asiento de la factura aún era un borrador, se tira en vez de hacer el inverso."
         rotulo="Revertir"
         alCerrar={() => setPreguntando(false)}
         alConfirmar={async () => {

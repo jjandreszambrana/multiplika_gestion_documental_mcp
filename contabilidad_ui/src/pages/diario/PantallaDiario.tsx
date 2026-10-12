@@ -54,6 +54,8 @@ interface Props {
   ancho: number
   /** Identifica a quién se le guardan las columnas en este equipo. */
   usuario: string
+  /** Entrar con la lista de borradores abierta, como al llegar desde un traspaso. */
+  conBorradoresAbiertos?: boolean
 }
 
 const PREFERENCIA_COLUMNAS = 'diario.columnas'
@@ -69,14 +71,21 @@ const consultaDe = (ejercicio: number | null) =>
 // dependen de qué se haga al pinchar una cuenta.
 const ORDEN_DE_FABRICA = columnasDelDiario(() => {}).map((c) => String(c.id ?? c.accessorKey))
 
-export default function PantallaDiario({ ejercicio, cierre, nivel, ancho, usuario }: Props) {
+export default function PantallaDiario({
+  ejercicio,
+  cierre,
+  nivel,
+  ancho,
+  usuario,
+  conBorradoresAbiertos = false,
+}: Props) {
   const puedeApuntar = alcanza(nivel, 'apuntes')
   const [editando, setEditando] = useState(false)
   const [conPlantilla, setConPlantilla] = useState(false)
   /** El borrador que acaba de crear una plantilla, para ofrecer abrirlo. */
   const [borradorDePlantilla, setBorradorDePlantilla] = useState<number | null>(null)
   const [idBorrador, setIdBorrador] = useState<number | null>(null)
-  const [viendoBorradores, setViendoBorradores] = useState(false)
+  const [viendoBorradores, setViendoBorradores] = useState(conBorradoresAbiertos)
   const [sinConfirmar, setSinConfirmar] = useState(0)
   const [recarga, setRecarga] = useState(0)
   const [confirmado, setConfirmado] = useState<string | null>(null)

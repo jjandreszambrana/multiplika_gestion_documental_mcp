@@ -128,3 +128,13 @@ sujeto pasivo y criterio de caja— son del backend, no de la pantalla. Están e
 `/sincronizacion/comprobar_traspaso` se montó y **se retiró el 28/08/2026**:
 anunciaba que nada frenaba el traspaso justo al lado de una lista donde no
 entraba ninguna factura. Lo que frena a cada una se ve en su propia fila.
+
+## Todo nace en borrador (desde el 12/10/2026)
+
+El traspaso ya no confirma asientos: cada factura entra como borrador y el
+contable la confirma en el diario. Tras contabilizar o reintentar, el resumen
+dice «Se han creado N borradores. No entran en el libro hasta que los
+confirmes.» con un botón «Ver los borradores», que abre el diario con la lista
+de borradores. La cifra del resumen se llama «En borrador». Al revertir una
+anulación, el inverso también nace en borrador; si el asiento de la factura aún
+era borrador, se tira en vez de hacer el inverso.

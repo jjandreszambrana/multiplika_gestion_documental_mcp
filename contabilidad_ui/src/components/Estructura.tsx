@@ -85,6 +85,16 @@ export default function Estructura({
   )
   const [errorEjercicios, setErrorEjercicios] = useState<string | null>(null)
   const [seccion, setSeccion] = useState(SECCION_DE_ENTRADA)
+  // Al llegar desde un traspaso, el diario se abre con sus borradores a la vista.
+  const [aBorradores, setABorradores] = useState(false)
+  const elegirSeccion = useCallback((id: string) => {
+    setABorradores(false)
+    setSeccion(id)
+  }, [])
+  const irABorradores = useCallback(() => {
+    setABorradores(true)
+    setSeccion('asientos')
+  }, [])
   // Dentro de la GD no llega el usuario: se pregunta al SIF quién es la
   // clave con la que se entra. Si falla, se esconde lo que depende del rol.
   const [rolSif, setRolSif] = useState<number | null>(usuario?.id_rol ?? null)
@@ -161,7 +171,7 @@ export default function Estructura({
   )
 
   const menu = (
-    <MenuModulo nivel={nivel} rol={rolSif} activa={seccion} alElegir={setSeccion} />
+    <MenuModulo nivel={nivel} rol={rolSif} activa={seccion} alElegir={elegirSeccion} />
   )
 
   const contenido = (
@@ -194,6 +204,7 @@ export default function Estructura({
             nivel={nivel}
             ancho={configuracion.anchocuentas}
             usuario={usuario?.usuario ?? 'anonimo'}
+            conBorradoresAbiertos={aBorradores}
           />
         ) : seccion === 'plan' ? (
           <PantallaPlan
@@ -290,6 +301,7 @@ export default function Estructura({
             tipo={seccion === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
             nivel={nivel}
             ancho={configuracion.anchocuentas}
+            alVerBorradores={irABorradores}
           />
         ) : (
           <Text c="dimmed">{etiqueta}: pantalla pendiente.</Text>
