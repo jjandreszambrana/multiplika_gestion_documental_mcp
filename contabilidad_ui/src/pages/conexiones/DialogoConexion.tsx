@@ -157,12 +157,14 @@ export default function DialogoConexion({
           />
 
           <Checkbox
-            label="Marcar en Codiplika lo que se traiga, para que no salga otra vez en su paso a Keme"
+            label="Dejar marcado en Codiplika lo que se traiga aquí"
+            description="Así Codiplika no lo vuelve a mandar a Keme (el otro programa de contabilidad) y no se contabiliza dos veces. Márcalo cuando dejéis de usar Keme."
             checked={marcar}
             onChange={(e) => setMarcar(e.currentTarget.checked)}
           />
           <Checkbox
-            label="La cuenta de cada proveedor se forma con su número interno, no con su código"
+            label="Cuentas de proveedor según el número de ficha de Codiplika"
+            description="Márcalo si en vuestra contabilidad la cuenta de cada proveedor (400…) lleva el número que Codiplika le da al darlo de alta. Déjalo sin marcar si lleva el código que le pusisteis vosotros. Tiene que ser igual que como se hacía hasta ahora."
             checked={ctaProvDesdeId}
             onChange={(e) => setCtaProvDesdeId(e.currentTarget.checked)}
           />
