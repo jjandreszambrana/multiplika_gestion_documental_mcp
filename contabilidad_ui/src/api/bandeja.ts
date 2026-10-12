@@ -152,10 +152,26 @@ export interface ResultadoDeshacer {
   no_se_pueden: { id: number; motivo: string }[]
 }
 
+/** Lo que el otro programa dice del documento que no se puede traer, para
+ * encontrarlo allí ([5.25] del canal). Todo opcional: lo que no venga no sale. */
+export interface DatosIncidencia {
+  libro?: string | null
+  fecha?: string | null
+  numero?: string | null
+  tercero?: string | null
+  nif?: string | null
+  base?: string | number | null
+  cuota?: string | number | null
+  total?: string | number | null
+  factura?: string | null
+  forma_pago?: string | null
+}
+
 export interface Incidencia {
   tipo: string
   id_origen: string
   faltas: string[]
+  datos?: DatosIncidencia | null
 }
 
 export interface Lectura {

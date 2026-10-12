@@ -1,10 +1,11 @@
-import { Alert, Button, Checkbox, Group, List, Modal, Stack, Text } from '@mantine/core'
+import { Alert, Button, Checkbox, Group, List, Modal, Stack, Table, Text } from '@mantine/core'
+import Decimal from 'decimal.js'
 import { useState } from 'react'
 import { leerCodiplika, type Incidencia, type ResultadoLeerErp } from '../../api/bandeja'
 import { textoDeError } from '../../api/errores'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import { fechaParaApi } from '../../lib/fecha'
-import { formatearEntero } from '../../lib/format'
+import { formatearEntero, formatearFecha, formatearImporte } from '../../lib/format'
 
 interface Props {
   abierto: boolean
@@ -28,18 +29,58 @@ function recuento(resultado: ResultadoLeerErp): string {
   return `${formatearEntero(facturas)} facturas y ${formatearEntero(movimientos)} cobros y pagos`
 }
 
+const LIBROS: Record<string, string> = { emitida: 'Emitida', recibida: 'Recibida', cobro: 'Cobro', pago: 'Pago' }
+
+function importe(valor: string | number | null | undefined): string {
+  return valor === null || valor === undefined || valor === '' ? '' : formatearImporte(new Decimal(String(valor)))
+}
+
+/** Lo que no se puede traer, con lo necesario para encontrarlo en Codiplika. */
 function Incidencias({ incidencias }: { incidencias: Incidencia[] }) {
   if (incidencias.length === 0) return null
   return (
-    <Alert color="orange" title="No se pueden traer porque les falta información">
-      <List size="sm">
-        {incidencias.map((incidencia) => (
-          <List.Item key={`${incidencia.tipo}.${incidencia.id_origen}`}>
-            {incidencia.tipo === 'facturas' ? 'Factura' : 'Cobro o pago'} {incidencia.id_origen}:{' '}
-            {incidencia.faltas.join(', ')}
-          </List.Item>
-        ))}
-      </List>
+    <Alert color="orange" title="No se pueden traer: hay que revisarlos en Codiplika">
+      <Table.ScrollContainer minWidth={640}>
+        <Table fz="xs" verticalSpacing={4}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Qué es</Table.Th>
+              <Table.Th>Fecha</Table.Th>
+              <Table.Th>Número</Table.Th>
+              <Table.Th>Cliente o proveedor</Table.Th>
+              <Table.Th ta="right">Base</Table.Th>
+              <Table.Th ta="right">IVA</Table.Th>
+              <Table.Th ta="right">Total</Table.Th>
+              <Table.Th>Por qué no se trae</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {incidencias.map((incidencia) => {
+              const d = incidencia.datos ?? {}
+              const que =
+                (d.libro && LIBROS[d.libro]) || (incidencia.tipo === 'facturas' ? 'Factura' : 'Cobro o pago')
+              return (
+                <Table.Tr key={`${incidencia.tipo}.${incidencia.id_origen}`}>
+                  <Table.Td>{que}</Table.Td>
+                  <Table.Td>{formatearFecha(d.fecha)}</Table.Td>
+                  <Table.Td>
+                    {d.numero || d.factura || incidencia.id_origen}
+                    {d.factura && d.numero && <Text fz="xs" c="dimmed">Factura {d.factura}</Text>}
+                  </Table.Td>
+                  <Table.Td>
+                    {d.tercero}
+                    {d.nif && <Text fz="xs" c="dimmed">{d.nif}</Text>}
+                  </Table.Td>
+                  <Table.Td ta="right">{importe(d.base)}</Table.Td>
+                  <Table.Td ta="right">{importe(d.cuota)}</Table.Td>
+                  <Table.Td ta="right">{importe(d.total)}</Table.Td>
+                  <Table.Td>{incidencia.faltas.join('. ')}</Table.Td>
+                </Table.Tr>
+              )
+            })}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
     </Alert>
   )
 }
@@ -136,7 +177,7 @@ export default function DialogoTraerCodiplika({ abierto, ejercicio, alCerrar, al
       opened={abierto}
       onClose={alCerrar}
       title="Traer de Codiplika"
-      size="lg"
+      size="xl"
       centered
       // Al volver a abrirlo se empieza de cero.
       onExitTransitionEnd={() => {
