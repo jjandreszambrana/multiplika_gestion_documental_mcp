@@ -9,6 +9,7 @@ import TablaLecturas from './TablaLecturas'
 interface Props {
   ejercicio: number | null
   nivel: string
+  nombreEmpresa: string
   /** Lleva al diario con la lista de borradores abierta. */
   alVerBorradores: () => void
 }
@@ -23,7 +24,7 @@ const TITULO = 'Bandeja de Codiplika'
  * confirman en el diario; una factura que ya está en la facturación no se
  * contabiliza dos veces.
  */
-export default function PantallaBandeja({ ejercicio, nivel, alVerBorradores }: Props) {
+export default function PantallaBandeja({ ejercicio, nivel, nombreEmpresa, alVerBorradores }: Props) {
   const [trayendo, setTrayendo] = useState(false)
   // Sube al traer o deshacer una lectura: las tres pestañas vuelven a leer.
   const [refresco, setRefresco] = useState(0)
@@ -77,6 +78,7 @@ export default function PantallaBandeja({ ejercicio, nivel, alVerBorradores }: P
       <DialogoTraerCodiplika
         abierto={trayendo}
         ejercicio={ejercicio}
+        nombreEmpresa={nombreEmpresa}
         alCerrar={() => setTrayendo(false)}
         alTraido={recargar}
       />

@@ -10,6 +10,7 @@ import { formatearEntero, formatearFecha, formatearImporte } from '../../lib/for
 interface Props {
   abierto: boolean
   ejercicio: number
+  nombreEmpresa: string
   alCerrar: () => void
   /** Tras traer de verdad: las listas tienen que volver a leerse. */
   alTraido: () => void
@@ -35,11 +36,52 @@ function importe(valor: string | number | null | undefined): string {
   return valor === null || valor === undefined || valor === '' ? '' : formatearImporte(new Decimal(String(valor)))
 }
 
+/** Una línea por documento, con lo que se sepa, para mandárselo a la IA. */
+function lineaParaIA(incidencia: Incidencia): string {
+  const d = incidencia.datos ?? {}
+  const partes = [
+    (d.libro && LIBROS[d.libro]) || (incidencia.tipo === 'facturas' ? 'Factura' : 'Cobro o pago'),
+    d.fecha && `fecha ${d.fecha}`,
+    d.numero && `número ${d.numero}`,
+    d.factura && `paga la factura ${d.factura}`,
+    d.tercero && `${d.tercero}${d.nif ? ` (${d.nif})` : ''}`,
+    d.base !== undefined && d.base !== null && `base ${d.base}`,
+    d.cuota !== undefined && d.cuota !== null && `IVA ${d.cuota}`,
+    d.total !== undefined && d.total !== null && `total ${d.total}`,
+    d.forma_pago && `forma de pago ${d.forma_pago}`,
+    `referencia ${incidencia.id_origen}`,
+  ].filter(Boolean)
+  return `- ${partes.join(', ')}. Motivo: ${incidencia.faltas.join('. ')}`
+}
+
+/**
+ * Abre una conversación nueva en el chat del panel de la GD y la envía: la IA
+ * explica qué pasa con cada documento y cómo arreglarlo en Codiplika. El
+ * panel escucha este evento (fuera de la GD no hace nada).
+ */
+function preguntarALaIA(incidencias: Incidencia[], nombreEmpresa: string) {
+  const texto =
+    `Al traer a la contabilidad de ${nombreEmpresa || 'la empresa'} las facturas, cobros y pagos ` +
+    'de Codiplika (el programa de gestión), estos documentos no se han podido traer. ' +
+    'Explícame en palabras sencillas qué le pasa a cada uno y qué tengo que hacer para ' +
+    'solucionarlo, en Codiplika o en la contabilidad. Si para alguno necesitas mirar la ' +
+    'contabilidad, consúltala.\n\n' +
+    incidencias.map(lineaParaIA).join('\n')
+  window.dispatchEvent(
+    new CustomEvent('gd:preguntar-ia', {
+      detail: { texto, enviar: true, titulo: 'Codiplika: lo que no se pudo traer' },
+    }),
+  )
+}
+
 /** Lo que no se puede traer, con lo necesario para encontrarlo en Codiplika. */
-function Incidencias({ incidencias }: { incidencias: Incidencia[] }) {
+function Incidencias({ incidencias, nombreEmpresa }: { incidencias: Incidencia[]; nombreEmpresa: string }) {
   if (incidencias.length === 0) return null
   return (
     <Alert color="orange" title="No se pueden traer: hay que revisarlos en Codiplika">
+      <Button size="xs" variant="light" mb="xs" onClick={() => preguntarALaIA(incidencias, nombreEmpresa)}>
+        Preguntar a la IA cómo solucionarlo
+      </Button>
       <Table.ScrollContainer minWidth={640}>
         <Table fz="xs" verticalSpacing={4}>
           <Table.Thead>
@@ -87,7 +129,7 @@ function Incidencias({ incidencias }: { incidencias: Incidencia[] }) {
 }
 
 /** Lo que se sabe de una lectura, de ensayo o de verdad. */
-function Resumen({ resultado }: { resultado: ResultadoLeerErp }) {
+function Resumen({ resultado, nombreEmpresa }: { resultado: ResultadoLeerErp; nombreEmpresa: string }) {
   const ensayo = resultado.ensayo
   return (
     <Stack gap="sm">
@@ -121,7 +163,7 @@ function Resumen({ resultado }: { resultado: ResultadoLeerErp }) {
             : 'No se ha marcado nada en Codiplika.'}
       </Text>
       )}
-      <Incidencias incidencias={resultado.incidencias} />
+      <Incidencias incidencias={resultado.incidencias} nombreEmpresa={nombreEmpresa} />
       {resultado.avisos.length > 0 && (
         <Alert color="yellow" title="Para revisar">
           <List size="sm">
@@ -140,7 +182,7 @@ function Resumen({ resultado }: { resultado: ResultadoLeerErp }) {
  * vendría sin guardar nada; traer de verdad es un segundo paso a propósito,
  * porque además lo marca en Codiplika.
  */
-export default function DialogoTraerCodiplika({ abierto, ejercicio, alCerrar, alTraido }: Props) {
+export default function DialogoTraerCodiplika({ abierto, ejercicio, nombreEmpresa, alCerrar, alTraido }: Props) {
   const [desde, setDesde] = useState<Date | null>(() => fechasPorDefecto(ejercicio)[0])
   const [hasta, setHasta] = useState<Date | null>(() => fechasPorDefecto(ejercicio)[1])
   const [resultado, setResultado] = useState<ResultadoLeerErp | null>(null)
@@ -214,7 +256,7 @@ export default function DialogoTraerCodiplika({ abierto, ejercicio, alCerrar, al
           </Alert>
         )}
 
-        {resultado && <Resumen resultado={resultado} />}
+        {resultado && <Resumen resultado={resultado} nombreEmpresa={nombreEmpresa} />}
 
         {resultado && !traido && (
           <Checkbox

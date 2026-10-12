@@ -93,10 +93,28 @@ export default function Chat({ proyecto, peticion, onCerrar }) {
   const [tituloRenombrar, setTituloRenombrar] = useState("")
   const finalRef = useRef(null)
 
-  // Una petición que llega de otra pantalla se deja escrita, sin enviar.
+  // Una petición que llega de otra pantalla se deja escrita, sin enviar; si
+  // pide `enviar`, se manda sola en una conversación nueva.
   useEffect(() => {
-    if (peticion?.texto) setEntrada(peticion.texto)
-  }, [peticion])
+    if (!peticion?.texto) return
+    if (!peticion.enviar) {
+      setEntrada(peticion.texto)
+      return
+    }
+    ;(async () => {
+      setError(null)
+      try {
+        await Promise.resolve() // los efectos de este render ya han corrido
+        await cargaInicial.current
+        const nueva = await api.crearConversacionChat(proyecto.id, peticion.titulo)
+        setConversaciones((c) => [nueva, ...c])
+        await seleccionar(nueva.id)
+        await mandar(nueva.id, peticion.texto)
+      } catch (err) {
+        setError(err.message)
+      }
+    })()
+  }, [peticion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function seleccionar(id) {
     setIdConversacionActual(id)
@@ -133,8 +151,11 @@ export default function Chat({ proyecto, peticion, onCerrar }) {
     }
   }
 
+  // La carga inicial, para que una petición que llega con el chat recién
+  // abierto espere a que termine y no la pise.
+  const cargaInicial = useRef(null)
   useEffect(() => {
-    cargarConversaciones()
+    cargaInicial.current = cargarConversaciones()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyecto.id])
 
@@ -163,21 +184,25 @@ export default function Chat({ proyecto, peticion, onCerrar }) {
     }
   }
 
-  async function enviar(evento) {
-    evento.preventDefault()
-    const texto = entrada.trim()
-    if (!texto || enviando || !idConversacionActual) return
-    setEntrada("")
+  async function mandar(idConversacion, texto) {
     setError(null)
     setMensajes((m) => [...m, { rol: "user", texto }])
     setEnviando(true)
     try {
-      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, idConversacionActual, texto))
+      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, idConversacion, texto))
     } catch (err) {
       setError(err.message)
     } finally {
       setEnviando(false)
     }
+  }
+
+  async function enviar(evento) {
+    evento.preventDefault()
+    const texto = entrada.trim()
+    if (!texto || enviando || !idConversacionActual) return
+    setEntrada("")
+    await mandar(idConversacionActual, texto)
   }
 
   async function resolverConfirmacion(aceptar) {

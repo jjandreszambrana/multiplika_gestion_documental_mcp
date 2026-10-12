@@ -309,6 +309,7 @@ export default function Estructura({
             key={ejercicio ?? 'sin-ejercicio'}
             ejercicio={ejercicio}
             nivel={nivel}
+            nombreEmpresa={empresa.NombreRazon ?? ''}
             alVerBorradores={irABorradores}
           />
         ) : (

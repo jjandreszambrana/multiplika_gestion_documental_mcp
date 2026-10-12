@@ -215,7 +215,8 @@ export default function App() {
       if (typeof texto !== "string" || !texto) return
       setChatMontado(true)
       setChatAbierto(true)
-      setPeticionChat({ texto, cuando: Date.now() })
+      // `enviar`: se manda solo, en una conversación nueva con `titulo`.
+      setPeticionChat({ texto, enviar: !!evento.detail?.enviar, titulo: evento.detail?.titulo || null, cuando: Date.now() })
     }
     window.addEventListener("gd:preguntar-ia", alPedir)
     return () => window.removeEventListener("gd:preguntar-ia", alPedir)
