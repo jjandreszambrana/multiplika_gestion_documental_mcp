@@ -26,12 +26,15 @@ interface Props {
   alVolver: (() => void) | null
   /** Empresa ya elegida, cuando se llega desde una que no tiene contabilidad. */
   idInicial?: number
+  /** Dentro de la GD: la empresa ya está elegida y no se puede cambiar (el
+   * proxy no deja listar empresas). Su nombre, para enseñarlo. */
+  empresaFija?: string
 }
 
 const EJERCICIO_MINIMO = 1990
 const EJERCICIO_MAXIMO = 2999
 
-export default function PantallaActivar({ alActivada, alVolver, idInicial }: Props) {
+export default function PantallaActivar({ alActivada, alVolver, idInicial, empresaFija }: Props) {
   const [obligados, setObligados] = useState<ObligadoResumen[] | null>(null)
   const [fallaListado, setFallaListado] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
@@ -44,6 +47,7 @@ export default function PantallaActivar({ alActivada, alVolver, idInicial }: Pro
   const [activando, setActivando] = useState(false)
 
   useEffect(() => {
+    if (empresaFija !== undefined) return
     listarObligados()
       .then(setObligados)
       .catch((fallo: unknown) => {
@@ -103,7 +107,9 @@ export default function PantallaActivar({ alActivada, alVolver, idInicial }: Pro
             </Alert>
           )}
 
-          {!fallaListado && (
+          {empresaFija !== undefined && <Text fw={600}>{empresaFija}</Text>}
+
+          {empresaFija === undefined && !fallaListado && (
             <TextInput
               label="Buscar empresa"
               value={busqueda}
@@ -112,7 +118,7 @@ export default function PantallaActivar({ alActivada, alVolver, idInicial }: Pro
             />
           )}
 
-          {fallaListado ? (
+          {empresaFija !== undefined ? null : fallaListado ? (
             <NumberInput
               label="Número de empresa"
               value={elegido ?? ''}

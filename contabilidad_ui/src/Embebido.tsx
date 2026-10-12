@@ -10,6 +10,7 @@ import { configurarCliente } from './api/cliente'
 import { textoDeError } from './api/errores'
 import { listarEmpresas, type Empresa } from './api/sesion'
 import Estructura from './components/Estructura'
+import PantallaActivar from './pages/empresa/PantallaActivar'
 
 /** Lo que el panel anfitrión pone en cada llamada: su dirección, su sesión y la renovación del token. */
 export interface SesionAnfitrion {
@@ -61,6 +62,11 @@ export default function Embebido({
 
   const [nivelSif, setNivelSif] = useState<string | null>(nivel ?? null)
   const [error, setError] = useState<string | null>(null)
+  // Una empresa que se ve sin la contabilidad dada de alta en el SIF (los
+  // administradores ven todas las suyas): quien tiene nivel admin la activa
+  // aquí mismo. `vuelta` rehace las pantallas al terminar.
+  const [activando, setActivando] = useState(false)
+  const [vuelta, setVuelta] = useState(0)
 
   useEffect(() => {
     setError(null)
@@ -91,6 +97,19 @@ export default function Embebido({
     )
   }
   if (!nivelSif) return <Loader size="sm" />
+  if (activando) {
+    return (
+      <PantallaActivar
+        idInicial={idObligado}
+        empresaFija={nombreEmpresa}
+        alVolver={() => setActivando(false)}
+        alActivada={() => {
+          setActivando(false)
+          setVuelta((v) => v + 1)
+        }}
+      />
+    )
+  }
 
   const empresa: Empresa = {
     id_obligado: idObligado,
@@ -102,14 +121,14 @@ export default function Embebido({
   return (
     <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1, weekendDays: [0, 6] }}>
       <Estructura
-        key={`${idProyecto}.${idObligado}`}
+        key={`${idProyecto}.${idObligado}.${vuelta}`}
         embebido
         empresa={empresa}
         nivel={nivelSif}
         usuario={null}
         alCambiarEmpresa={null}
         alSalir={null}
-        alActivarEsta={null}
+        alActivarEsta={nivelSif === 'admin' ? () => setActivando(true) : null}
         ejercicioInicial={ejercicio}
       />
     </DatesProvider>
