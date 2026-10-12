@@ -46,6 +46,13 @@ export const SECCIONES: Seccion[] = [
     nivelMinimo: 'consulta',
     grupo: 'Traspasos',
   },
+  // Lo que llega de Codiplika: se revisa y se contabiliza en borrador.
+  {
+    id: 'bandeja',
+    etiqueta: 'Bandeja de Codiplika',
+    nivelMinimo: 'consulta',
+    grupo: 'Traspasos',
+  },
   // Un grupo desde el principio: detrás del mayor vienen sumas y saldos,
   // balance y pérdidas y ganancias, y no se van a colgar sueltos del menú.
   { id: 'mayor', etiqueta: 'Mayor', nivelMinimo: 'consulta', grupo: 'Informes' },

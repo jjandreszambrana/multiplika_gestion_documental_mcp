@@ -28,6 +28,7 @@ import PantallaSinFicha from '../pages/inmovilizado/PantallaSinFicha'
 import PantallaPlan from '../pages/plan/PantallaPlan'
 import PantallaPlantillas from '../pages/plantillas/PantallaPlantillas'
 import PantallaTraspasos from '../pages/traspasos/PantallaTraspasos'
+import PantallaBandeja from '../pages/bandeja/PantallaBandeja'
 import { EMITIDAS, RECIBIDAS } from '../api/contabilizar'
 import { compiladoEl } from '../lib/compilacion'
 import MenuModulo from './MenuModulo'
@@ -301,6 +302,13 @@ export default function Estructura({
             tipo={seccion === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
             nivel={nivel}
             ancho={configuracion.anchocuentas}
+            alVerBorradores={irABorradores}
+          />
+        ) : seccion === 'bandeja' ? (
+          <PantallaBandeja
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            nivel={nivel}
             alVerBorradores={irABorradores}
           />
         ) : (
