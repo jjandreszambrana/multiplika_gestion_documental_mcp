@@ -63,9 +63,9 @@ function preguntarALaIA(incidencias: Incidencia[], nombreEmpresa: string) {
   const texto =
     `Al traer a la contabilidad de ${nombreEmpresa || 'la empresa'} las facturas, cobros y pagos ` +
     'de Codiplika (el programa de gestión), estos documentos no se han podido traer. ' +
-    'Explícame en palabras sencillas qué le pasa a cada uno y qué tengo que hacer para ' +
-    'solucionarlo, en Codiplika o en la contabilidad. Si para alguno necesitas mirar la ' +
-    'contabilidad, consúltala.\n\n' +
+    'Explícame en palabras sencillas y en pocas líneas qué le pasa a cada uno y qué tengo que ' +
+    'hacer para solucionarlo. Son dudas de facturación: con estos datos basta, no consultes la ' +
+    'contabilidad ni uses herramientas.\n\n' +
     incidencias.map(lineaParaIA).join('\n')
   window.dispatchEvent(
     new CustomEvent('gd:preguntar-ia', {
