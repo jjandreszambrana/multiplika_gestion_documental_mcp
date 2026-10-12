@@ -326,11 +326,19 @@ export function deshacerExportacion(
  * solo dice qué traería; sin él lo guarda y, si la conexión lo permite, lo
  * marca allí para que no vuelva a salir.
  */
-export function leerCodiplika(desde: string, hasta: string, ensayo: boolean): Promise<ResultadoLeerErp> {
+/** `marcar`: si se marca en Codiplika lo que se trae, decidido al traer ([5.24]
+ * del canal). Sin él, manda la opción de la conexión. */
+export function leerCodiplika(
+  desde: string,
+  hasta: string,
+  ensayo: boolean,
+  marcar?: boolean,
+): Promise<ResultadoLeerErp> {
   return pedir<ResultadoLeerErp>('/contabilidad/bandeja/leer_erp', {
     origen: 'codiplika',
     desde,
     hasta,
     ensayo,
+    ...(marcar === undefined ? {} : { marcar }),
   })
 }

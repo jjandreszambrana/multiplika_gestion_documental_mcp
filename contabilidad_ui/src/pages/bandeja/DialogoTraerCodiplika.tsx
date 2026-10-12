@@ -1,4 +1,4 @@
-import { Alert, Button, Group, List, Modal, Stack, Text } from '@mantine/core'
+import { Alert, Button, Checkbox, Group, List, Modal, Stack, Text } from '@mantine/core'
 import { useState } from 'react'
 import { leerCodiplika, type Incidencia, type ResultadoLeerErp } from '../../api/bandeja'
 import { textoDeError } from '../../api/errores'
@@ -72,15 +72,13 @@ function Resumen({ resultado }: { resultado: ResultadoLeerErp }) {
           contabilizarlas: su asiento no se toca.
         </Text>
       )}
+      {!ensayo && (
       <Text size="sm" c="dimmed">
-        {ensayo
-          ? resultado.marca_autorizada
-            ? 'Al traerlos, se marcarán en Codiplika como pasados a contabilidad para que no vuelvan a salir.'
-            : 'No se marcarán en Codiplika: la conexión de esta empresa no lo permite.'
-          : resultado.marcados > 0
+        {resultado.marcados > 0
             ? `Se han marcado ${formatearEntero(resultado.marcados)} en Codiplika (exportación ${resultado.referencia_origen}).`
             : 'No se ha marcado nada en Codiplika.'}
       </Text>
+      )}
       <Incidencias incidencias={resultado.incidencias} />
       {resultado.avisos.length > 0 && (
         <Alert color="yellow" title="Para revisar">
@@ -106,13 +104,21 @@ export default function DialogoTraerCodiplika({ abierto, ejercicio, alCerrar, al
   const [resultado, setResultado] = useState<ResultadoLeerErp | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [trabajando, setTrabajando] = useState(false)
+  // Se decide cada vez; de entrada, lo que diga la conexión.
+  const [marcar, setMarcar] = useState(true)
 
   async function leer(ensayo: boolean) {
     if (!desde || !hasta) return
     setError(null)
     setTrabajando(true)
     try {
-      const leido = await leerCodiplika(fechaParaApi(desde), fechaParaApi(hasta), ensayo)
+      const leido = await leerCodiplika(
+        fechaParaApi(desde),
+        fechaParaApi(hasta),
+        ensayo,
+        ensayo ? undefined : marcar,
+      )
+      if (ensayo) setMarcar(leido.marca_autorizada)
       setResultado(leido)
       if (!ensayo) alTraido()
     } catch (fallo) {
@@ -167,6 +173,15 @@ export default function DialogoTraerCodiplika({ abierto, ejercicio, alCerrar, al
         )}
 
         {resultado && <Resumen resultado={resultado} />}
+
+        {resultado && !traido && (
+          <Checkbox
+            label="Marcar en Codiplika lo que se traiga, para que no vuelva a salir"
+            description="Si no lo marcas, seguirá saliendo en Codiplika como pendiente de pasar a contabilidad."
+            checked={marcar}
+            onChange={(e) => setMarcar(e.currentTarget.checked)}
+          />
+        )}
 
         <Group justify="flex-end">
           <Button variant="default" onClick={alCerrar}>

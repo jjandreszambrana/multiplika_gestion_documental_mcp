@@ -157,6 +157,7 @@ export default function DialogoConexion({
 
           <Checkbox
             label="Marcar en Codiplika lo que se exporte, para que no vuelva a salir"
+            description="Es lo que saldrá marcado al traer; cada vez se puede cambiar."
             checked={marcar}
             onChange={(e) => setMarcar(e.currentTarget.checked)}
           />
