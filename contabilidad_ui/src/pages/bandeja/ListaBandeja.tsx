@@ -203,7 +203,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
           w={200}
         />
         <Select
-          label="Mes"
+          label="Periodo"
           data={MESES}
           value={periodo}
           onChange={(valor) => setPeriodo(valor ?? TODO_EL_EJERCICIO)}
@@ -229,7 +229,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
             onClick={() => setPreguntando('periodo')}
             disabled={!filtroParcial && pendientesDelPeriodo === 0}
           >
-            Contabilizar todo el mes…
+            Contabilizar periodo…
           </Button>
           <Button
             variant="default"
@@ -389,7 +389,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
 
       <DialogoConfirmar
         abierto={preguntando === 'periodo'}
-        titulo="Contabilizar todo el mes"
+        titulo="Contabilizar periodo"
         texto={`${
           filtroParcial
             ? `Se va a contabilizar todo lo que esté por contabilizar de ${comoSeLlama(periodo, ejercicio)}, también lo que no se ve con el tipo o la búsqueda que hay puestos.`
