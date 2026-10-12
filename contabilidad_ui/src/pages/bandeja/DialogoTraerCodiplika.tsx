@@ -66,6 +66,7 @@ function Incidencias({ incidencias }: { incidencias: Incidencia[] }) {
                   <Table.Td>
                     {d.numero || d.factura || incidencia.id_origen}
                     {d.factura && d.numero && <Text fz="xs" c="dimmed">Factura {d.factura}</Text>}
+                    {d.forma_pago && <Text fz="xs" c="dimmed">{d.forma_pago}</Text>}
                   </Table.Td>
                   <Table.Td>
                     {d.tercero}
