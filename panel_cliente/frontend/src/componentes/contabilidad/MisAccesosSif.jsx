@@ -64,12 +64,15 @@ export default function MisAccesosSif({ proyecto, accesos, onCambiar }) {
   const [contrasena, setContrasena] = useState("")
   const [resultado, setResultado] = useState(null)
   const [error, setError] = useState(null)
+  // El fallo al añadir va dentro del formulario, junto al botón: arriba de la
+  // página no se ve y, al repetir, parece que no pasa nada.
+  const [errorFormulario, setErrorFormulario] = useState(null)
   const [trabajando, setTrabajando] = useState(false)
   const formularioAbierto = anadiendo || accesos?.length === 0
 
   const anadir = () => {
     setTrabajando(true)
-    setError(null)
+    setErrorFormulario(null)
     api
       .anadirAccesoSif(proyecto.id, { url, usuario, contrasena })
       .then((r) => {
@@ -79,7 +82,7 @@ export default function MisAccesosSif({ proyecto, accesos, onCambiar }) {
         setAnadiendo(false)
         onCambiar()
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setErrorFormulario(`${err.message}. Probado: usuario «${usuario}» en ${url}.`))
       .finally(() => setTrabajando(false))
   }
 
@@ -110,6 +113,7 @@ export default function MisAccesosSif({ proyecto, accesos, onCambiar }) {
               <TextInput id="acceso-sif-usuario" label="Tu usuario del SIF" value={usuario} onChange={(e) => setUsuario(e.currentTarget.value)} />
               <PasswordInput id="acceso-sif-contrasena" label="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.currentTarget.value)} />
             </SimpleGrid>
+            {errorFormulario && <Alert color="red">{errorFormulario}</Alert>}
             <Group>
               <Button onClick={anadir} loading={trabajando} disabled={!url || !usuario || !contrasena}>Probar y guardar</Button>
               {accesos?.length > 0 && <Button variant="default" onClick={() => setAnadiendo(false)}>Cancelar</Button>}
