@@ -49,7 +49,9 @@ export default function DialogoConexion({
   const [usuario, setUsuario] = useState(conexion?.usuario ?? '')
   const [password, setPassword] = useState('')
   const [marcar, setMarcar] = useState(opciones.marcar ?? false)
-  const [ctaProvDesdeId, setCtaProvDesdeId] = useState(opciones.cta_prov_desde_id ?? true)
+  // Las cuentas de proveedor siguen la política de Codiplika ([5.23] del canal): no se
+  // pregunta; se reenvía lo que hubiera guardado hasta que el SIF deje de usarlo.
+  const ctaProvDesdeId = opciones.cta_prov_desde_id ?? true
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -157,16 +159,9 @@ export default function DialogoConexion({
           />
 
           <Checkbox
-            label="Dejar marcado en Codiplika lo que se traiga aquí"
-            description="Así Codiplika no lo vuelve a mandar a Keme (el otro programa de contabilidad) y no se contabiliza dos veces. Márcalo cuando dejéis de usar Keme."
+            label="Marcar en Codiplika lo que se exporte, para que no vuelva a salir"
             checked={marcar}
             onChange={(e) => setMarcar(e.currentTarget.checked)}
-          />
-          <Checkbox
-            label="Cuentas de proveedor según el número de ficha de Codiplika"
-            description="Márcalo si en vuestra contabilidad la cuenta de cada proveedor (400…) lleva el número que Codiplika le da al darlo de alta. Déjalo sin marcar si lleva el código que le pusisteis vosotros. Tiene que ser igual que como se hacía hasta ahora."
-            checked={ctaProvDesdeId}
-            onChange={(e) => setCtaProvDesdeId(e.currentTarget.checked)}
           />
 
           {conexion?.activa === 1 && (
