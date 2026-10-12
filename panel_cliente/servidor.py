@@ -450,16 +450,19 @@ async def pausa_acceso_sif(
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/usuarios/{accion}")
 async def ver_usuarios_acceso_sif(
-    id_proyecto: int, id_acceso: int, accion: str, id_empresa: int | None = None,
+    id_proyecto: int, id_acceso: int, accion: str, id_empresa: int | None = None, id_obligado: int | None = None,
     proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     """Lecturas para gestionar usuarios del SIF (lista, quién soy, empresas,
-    asesorías, permisos de una empresa)."""
+    asesorías, permisos de una empresa, perfiles de operario de una empresa
+    del SIF)."""
     if accion not in conta_sif.LECTURAS_USUARIOS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa consulta no existe")
     cuerpo = {"limit": 500} if accion != "yo" else {}
     if id_empresa:
         cuerpo = {"id_empresa": id_empresa}
+    if id_obligado:
+        cuerpo["id_obligado"] = id_obligado
     try:
         return await conta_sif.usuarios_sif(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, accion, cuerpo)
     except (ValueError, LookupError) as e:

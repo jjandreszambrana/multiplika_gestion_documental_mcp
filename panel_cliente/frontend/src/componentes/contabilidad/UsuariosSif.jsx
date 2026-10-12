@@ -25,17 +25,23 @@ function tiposQuePuedeCrear(yo) {
     { rol: 2, etiqueta: "De un administrador", campo: "id_administrador", lista: "administradores" },
     { rol: 3, etiqueta: "De una asesoría", campo: "id_representante", lista: "asesorias" },
     { rol: 4, etiqueta: "De una empresa", campo: "id_obligado", lista: "empresas" },
+    { rol: 5, etiqueta: "Operario de una empresa", campo: "id_obligado", lista: "empresas" },
   ]
   if (ROLES_ADMINISTRADOR.includes(rol)) return [
     { rol, etiqueta: "De tu administración", campo: "id_administrador", propio: true },
     { rol: 3, etiqueta: "De una asesoría", campo: "id_representante", lista: "asesorias" },
     { rol: 4, etiqueta: "De una empresa", campo: "id_obligado", lista: "empresas" },
+    { rol: 5, etiqueta: "Operario de una empresa", campo: "id_obligado", lista: "empresas" },
   ]
   if (rol === 3) return [
     { rol: 3, etiqueta: "De tu asesoría", campo: "id_representante", propio: true },
     { rol: 4, etiqueta: "De una empresa que lleváis", campo: "id_obligado", lista: "empresas" },
+    { rol: 5, etiqueta: "Operario de una empresa que lleváis", campo: "id_obligado", lista: "empresas" },
   ]
-  if (rol === 4) return [{ rol: 4, etiqueta: "De tu empresa", campo: "id_obligado", propio: true }]
+  if (rol === 4) return [
+    { rol: 4, etiqueta: "De tu empresa", campo: "id_obligado", propio: true },
+    { rol: 5, etiqueta: "Operario de tu empresa", campo: "id_obligado", propio: true },
+  ]
   return []
 }
 
@@ -52,6 +58,9 @@ function FormularioUsuario({ proyecto, acceso, yo, usuario, onHecho, onCancelar 
   const [tipo, setTipo] = useState(tipos[0])
   const [opciones, setOpciones] = useState([])
   const [aQuienVa, setAQuienVa] = useState(null)
+  // Un operario necesita un perfil (qué puede hacer), de los de su empresa.
+  const [perfiles, setPerfiles] = useState([])
+  const [perfil, setPerfil] = useState(null)
   const [error, setError] = useState(null)
   const [trabajando, setTrabajando] = useState(false)
 
@@ -66,6 +75,17 @@ function FormularioUsuario({ proyecto, acceso, yo, usuario, onHecho, onCancelar 
       .catch((err) => setError(err.message))
   }, [tipo, nuevo, proyecto.id, acceso.id])
 
+  const esOperario = nuevo && tipo?.rol === 5
+  const empresaOperario = esOperario ? (tipo.propio ? yo.id_obligado : aQuienVa) : null
+  useEffect(() => {
+    setPerfil(null)
+    setPerfiles([])
+    if (!empresaOperario) return
+    api.verUsuariosSif(proyecto.id, acceso.id, "perfiles", null, empresaOperario)
+      .then((r) => setPerfiles((r.registros || []).filter((x) => x.estado !== 0).map((x) => ({ value: String(x.id), label: x.nombre }))))
+      .catch((err) => setError(err.message))
+  }, [empresaOperario, proyecto.id, acceso.id])
+
   const cambiar = (campo) => (e) => setDatos({ ...datos, [campo]: e.currentTarget.value })
 
   const guardar = () => {
@@ -75,7 +95,7 @@ function FormularioUsuario({ proyecto, acceso, yo, usuario, onHecho, onCancelar 
     if (nuevo) {
       const vinculo = tipo.propio ? yo[tipo.campo] : Number(aQuienVa)
       peticion = api.cambiarUsuariosSif(proyecto.id, acceso.id, "crear", {
-        ...datos, id_rol: tipo.rol, id_estado: 1, [tipo.campo]: vinculo,
+        ...datos, id_rol: tipo.rol, id_estado: 1, [tipo.campo]: vinculo, ...(esOperario ? { id_perfil: Number(perfil) } : {}),
       })
     } else {
       const cambios = { id: usuario.id, nombre_real: datos.nombre_real, email: datos.email }
@@ -85,7 +105,7 @@ function FormularioUsuario({ proyecto, acceso, yo, usuario, onHecho, onCancelar 
     peticion.then(onHecho).catch((err) => setError(err.message)).finally(() => setTrabajando(false))
   }
 
-  const falta = !datos.nombre_real || !datos.email || (nuevo && (!datos.usuario || !datos.password || (tipo?.lista && !aQuienVa)))
+  const falta = !datos.nombre_real || !datos.email || (nuevo && (!datos.usuario || !datos.password || (tipo?.lista && !aQuienVa) || (esOperario && !perfil)))
   return (
     <Stack gap="sm">
       {nuevo && tipos.length > 1 && (
@@ -99,6 +119,14 @@ function FormularioUsuario({ proyecto, acceso, yo, usuario, onHecho, onCancelar 
         <Select
           id="usuario-sif-vinculo" searchable label={tipo.lista === "empresas" ? "Empresa" : tipo.lista === "asesorias" ? "Asesoría" : "Administrador"}
           data={opciones} value={aQuienVa} onChange={setAQuienVa} nothingFoundMessage="No hay ninguna"
+        />
+      )}
+      {esOperario && empresaOperario && (
+        <Select
+          id="usuario-sif-perfil" label="Qué puede hacer" data={perfiles} value={perfil} onChange={setPerfil}
+          placeholder={perfiles.length ? "Elige un perfil" : "Esta empresa no tiene perfiles de operario"}
+          disabled={!perfiles.length}
+          description="Los perfiles de permisos de la empresa, tal como están en el SIF"
         />
       )}
       <TextInput id="usuario-sif-nombre" label="Nombre y apellidos" value={datos.nombre_real} onChange={cambiar("nombre_real")} />

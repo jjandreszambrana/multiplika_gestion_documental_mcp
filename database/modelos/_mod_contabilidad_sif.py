@@ -364,9 +364,11 @@ RUTAS_USUARIOS = {
     "permisos": "/contabilidad/accesos/listar",
     "conceder": "/contabilidad/accesos/conceder",
     "revocar": "/contabilidad/accesos/revocar",
+    "perfiles": "/operarios/operarios_perfiles/listar",
 }
+ROL_OPERARIO = 5
 ACCIONES_CON_EMPRESA = ("permisos", "conceder", "revocar")
-LECTURAS_USUARIOS = ("yo", "listar", "empresas", "asesorias", "administradores", "permisos")
+LECTURAS_USUARIOS = ("yo", "listar", "empresas", "asesorias", "administradores", "permisos", "perfiles")
 
 
 def _mensaje_sif(datos) -> str:
@@ -398,6 +400,11 @@ async def usuarios_sif(config: dict, id_usuario: int, id_acceso: int, accion: st
         if not empresa:
             raise LookupError("Ese acceso no ve esa empresa")
         cuerpo["id_obligado"] = empresa["id_obligado_sif"]
+    # Un operario sin su ficha de operario entra pero no puede hacer nada: se
+    # crea en la misma acción, con el perfil de permisos elegido.
+    id_perfil = cuerpo.pop("id_perfil", None) if accion == "crear" else None
+    if accion == "crear" and int(cuerpo.get("id_rol") or 0) == ROL_OPERARIO and not id_perfil:
+        raise ValueError("Falta elegir qué puede hacer el operario")
     try:
         cliente = await _cliente(config, acceso)
     except ErrorSIF:
@@ -413,4 +420,21 @@ async def usuarios_sif(config: dict, id_usuario: int, id_acceso: int, accion: st
         datos = {"message": respuesta.text[:300]}
     if respuesta.status_code >= 400:
         raise ValueError(_mensaje_sif(datos))
+    if id_perfil and int(cuerpo.get("id_rol") or 0) == ROL_OPERARIO:
+        ficha = {
+            "id_obligado": cuerpo.get("id_obligado") or None, "id_perfil": int(id_perfil), "nombre": cuerpo.get("nombre_real") or "",
+            "email": cuerpo.get("email") or "", "tiene_acceso": 1, "id_usuario": datos.get("id"),
+        }
+        try:
+            r = await cliente.crudo("POST", "/operarios/operarios/crear", json=ficha)
+        except ErrorSIF as e:
+            r = None
+            error = str(e)
+        if r is None or r.status_code >= 400:
+            if r is not None:
+                try:
+                    error = _mensaje_sif(r.json())
+                except ValueError:
+                    error = r.text[:300]
+            raise ValueError(f"El usuario se ha creado, pero sin permisos de operario ({error}). Avisa a quien administre el SIF")
     return datos if isinstance(datos, dict) else {"datos": datos}
