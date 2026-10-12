@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Tabs, Text, TextInput, Title, Tooltip,
+  ActionIcon, Alert, Anchor, Badge, Box, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Tabs, Text, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconMenu2, IconSearch } from "@tabler/icons-react"
+import { IconMenu2, IconMessageCircle, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
@@ -173,7 +173,7 @@ function Biblioteca({ proyecto }) {
 // Cada usuario vincula sus propios accesos al SIF ([5.9] del canal
 // compartido): las pestañas de una empresa salen cuando tiene alguno, y la
 // empresa elegida dice con qué acceso se habla.
-function Contabilidad({ proyecto }) {
+function Contabilidad({ proyecto, cabecera }) {
   const [accesos, setAccesos] = useState(null)
   const [empresas, setEmpresas] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
@@ -202,6 +202,13 @@ function Contabilidad({ proyecto }) {
       })
   }
   useEffect(cargar, [proyecto.id])
+  // Con acceso al SIF se entra directamente en la contabilidad.
+  const [entrada, setEntrada] = useState(false)
+  useEffect(() => {
+    if (entrada || accesos === null || accesos === undefined) return
+    setEntrada(true)
+    if (accesos.length > 0) abrir("contabilidad")
+  }, [accesos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const conAcceso = accesos?.length > 0
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
@@ -210,13 +217,17 @@ function Contabilidad({ proyecto }) {
 
   return (
     <Tabs value={pestana} onChange={abrir}>
-      <Tabs.List mb="md">
-        <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
-        {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
-        {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
-        {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
-        <Tabs.Tab value="accesos">Mis accesos al SIF</Tabs.Tab>
-      </Tabs.List>
+      {/* El título y las pestañas se quedan arriba al bajar por la página. */}
+      <Box style={STICKY} mb="md">
+        {cabecera}
+        <Tabs.List>
+          {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
+          <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
+          {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
+          {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
+          <Tabs.Tab value="accesos">Mis accesos al SIF</Tabs.Tab>
+        </Tabs.List>
+      </Box>
 
       {deEmpresa && (
         sinAccesoQueFuncione ? (
@@ -251,10 +262,14 @@ function Contabilidad({ proyecto }) {
   )
 }
 
-export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu }) {
-  return (
-    <>
-      <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="wrap">
+const STICKY = {
+  position: "sticky", top: 0, zIndex: 20, background: "var(--mantine-color-body)",
+  marginTop: "calc(-1 * var(--mantine-spacing-xs))", paddingTop: "var(--mantine-spacing-xs)",
+}
+
+export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onAlternarChat }) {
+  const cabecera = (
+      <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="nowrap">
         <Group gap="xs">
           {pantallaCompleta && (
             <Tooltip label="Menú de la gestión documental">
@@ -265,15 +280,28 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
           )}
           <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
         </Group>
+        {onAlternarChat && (
+          <Tooltip label="Chat con la IA">
+            <ActionIcon variant="light" size="lg" aria-label="Abrir o cerrar el chat con la IA" onClick={onAlternarChat}>
+              <IconMessageCircle size={18} />
+            </ActionIcon>
+          </Tooltip>
+        )}
       </Group>
+  )
+  return (
+    <>
       {proyecto.modulo_contable ? (
-        <Contabilidad proyecto={proyecto} />
+        <Contabilidad proyecto={proyecto} cabecera={cabecera} />
       ) : (
+        <>
+        {cabecera}
         <Text c="dimmed">
           Con el apartado activado, la IA de esta gestión documental trabaja como asesor contable y fiscal: consulta una
           biblioteca propia (plan contable, IVA, sociedades, cierre, análisis financiero...) antes de responder y, si cada
           uno pone su acceso al SIF, también la contabilidad real de sus empresas.
         </Text>
+        </>
       )}
     </>
   )

@@ -387,6 +387,7 @@ export default function App() {
                 proyecto={proyecto}
                 pantallaCompleta
                 onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)}
+                onAlternarChat={alternarChat}
               />
             </Container>
           </Box>
