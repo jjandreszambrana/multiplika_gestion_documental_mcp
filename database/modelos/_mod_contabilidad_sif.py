@@ -208,6 +208,15 @@ async def borrar_acceso(config: dict, id_usuario: int, id_acceso: int) -> None:
     await AsyncDatabase(**config).query(f'DELETE FROM "{_T_ACC}" WHERE id = %s', (id_acceso,))
 
 
+async def cambiar_pausa(config: dict, id_usuario: int, id_acceso: int, pausado: bool) -> None:
+    """Un acceso pausado no se usa para nada (empresas, revisión nocturna,
+    usuarios) hasta reanudarlo; no se borra ni se olvida su contraseña."""
+    acceso = await _acceso(config, id_usuario, id_acceso)
+    if pausado:
+        await _olvidar(config, acceso["id_credencial"])
+    await AsyncDatabase(**config).query(f'UPDATE "{_T_ACC}" SET pausado = %s WHERE id = %s', (pausado, id_acceso))
+
+
 async def cambiar_revision(config: dict, id_usuario: int, id_acceso: int, activa: bool) -> None:
     await _acceso(config, id_usuario, id_acceso)
     await AsyncDatabase(**config).query(f'UPDATE "{_T_ACC}" SET revision_automatica = %s WHERE id = %s', (activa, id_acceso))
@@ -215,7 +224,7 @@ async def cambiar_revision(config: dict, id_usuario: int, id_acceso: int, activa
 
 def _publico(acceso: dict) -> dict:
     return {k: acceso.get(k) for k in (
-        "id", "url_sif", "tipo", "nombre_sif", "estado", "revision_automatica", "ultima_comprobacion", "ultimo_error",
+        "id", "url_sif", "tipo", "nombre_sif", "estado", "revision_automatica", "pausado", "ultima_comprobacion", "ultimo_error",
     )}
 
 
@@ -245,7 +254,7 @@ async def empresas_de(config: dict, id_usuario: int | None) -> list[dict]:
     filas = await AsyncDatabase(**config).query(
         f'SELECT e.id AS id_empresa, e.nombre, e.nif, e.url_sif, e.id_obligado_sif, ae.nivel, a.id AS id_acceso '
         f'FROM "{_T_AE}" ae JOIN "{_T_ACC}" a ON a.id = ae.id_acceso JOIN "{_T_EMP}" e ON e.id = ae.id_empresa '
-        f"WHERE a.id_usuario = %s AND a.estado <> 'clave_incorrecta' ORDER BY e.nombre",
+        f"WHERE a.id_usuario = %s AND a.estado <> 'clave_incorrecta' AND NOT a.pausado ORDER BY e.nombre",
         (id_usuario,),
     )
     mejor: dict[int, dict] = {}
@@ -337,3 +346,71 @@ async def pedir_con_acceso(config: dict, acceso: dict, empresa: dict, ruta: str,
         return await cliente.pedir(_ruta_permitida(ruta), {**(cuerpo or {}), "id_obligado": empresa["id_obligado_sif"]})
     except ErrorSIF as e:
         raise ValueError(str(e)) from e
+
+
+# ---------- Usuarios del SIF ----------
+# Desde cada acceso se gestionan los usuarios que ese usuario del SIF puede
+# gestionar. La GD solo reenvía con su sesión: qué ve y qué puede cambiar
+# cada rol lo decide el SIF. No hay borrar: solo desactivar (id_estado 0).
+
+RUTAS_USUARIOS = {
+    "yo": "/contabilidad/sesion/me",
+    "listar": "/usuarios/listar",
+    "crear": "/usuarios/crear",
+    "modificar": "/usuarios/modificar",
+    "empresas": "/obligados/listar",
+    "asesorias": "/representantes/listar",
+    "administradores": "/administradores/listar",
+    "permisos": "/contabilidad/accesos/listar",
+    "conceder": "/contabilidad/accesos/conceder",
+    "revocar": "/contabilidad/accesos/revocar",
+}
+ACCIONES_CON_EMPRESA = ("permisos", "conceder", "revocar")
+LECTURAS_USUARIOS = ("yo", "listar", "empresas", "asesorias", "administradores", "permisos")
+
+
+def _mensaje_sif(datos) -> str:
+    if isinstance(datos, dict):
+        detalle = datos.get("message") or datos.get("mensaje") or datos.get("detail")
+        if isinstance(detalle, dict):
+            detalle = detalle.get("message") or detalle.get("mensaje")
+        if isinstance(detalle, list):  # validación de FastAPI
+            detalle = "; ".join(str(d.get("msg", d)) if isinstance(d, dict) else str(d) for d in detalle)
+        if detalle:
+            return str(detalle)
+    return "El SIF no ha aceptado el cambio"
+
+
+async def usuarios_sif(config: dict, id_usuario: int, id_acceso: int, accion: str, cuerpo: dict | None = None) -> dict:
+    ruta = RUTAS_USUARIOS.get(accion)
+    if not ruta:
+        raise LookupError("Esa acción no existe")
+    acceso = await _acceso(config, id_usuario, id_acceso)
+    if acceso["pausado"]:
+        raise ValueError("Este acceso está pausado: reanúdalo para gestionar sus usuarios")
+    cuerpo = dict(cuerpo or {})
+    if accion == "modificar" and cuerpo.get("id_estado") not in (None, 0, 1):
+        raise ValueError("Un usuario solo se puede activar o desactivar")
+    if accion in ACCIONES_CON_EMPRESA:
+        # La empresa, por el número de la GD y entre las que ve este acceso.
+        empresas = {e["id_empresa"]: e for e in await empresas_del_acceso(config, acceso)}
+        empresa = empresas.get(int(cuerpo.pop("id_empresa", 0) or 0))
+        if not empresa:
+            raise LookupError("Ese acceso no ve esa empresa")
+        cuerpo["id_obligado"] = empresa["id_obligado_sif"]
+    try:
+        cliente = await _cliente(config, acceso)
+    except ErrorSIF:
+        await actualizar_acceso(config, acceso)  # marca el acceso y lanza el error claro
+        raise
+    try:
+        respuesta = await cliente.crudo("POST", ruta, json=cuerpo)
+    except ErrorSIF as e:
+        raise ValueError(str(e)) from e
+    try:
+        datos = respuesta.json()
+    except ValueError:
+        datos = {"message": respuesta.text[:300]}
+    if respuesta.status_code >= 400:
+        raise ValueError(_mensaje_sif(datos))
+    return datos if isinstance(datos, dict) else {"datos": datos}

@@ -37,7 +37,7 @@ from typing import Literal
 from urllib.parse import quote
 
 import anthropic
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -354,6 +354,10 @@ class RevisionAcceso(BaseModel):
     activa: bool
 
 
+class PausaAcceso(BaseModel):
+    pausado: bool
+
+
 class ResolverPropuesta(BaseModel):
     aceptar: bool
     motivo: str | None = None
@@ -430,6 +434,51 @@ async def revision_acceso_sif(
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
     return {"activa": datos.activa}
+
+
+@app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/pausa")
+async def pausa_acceso_sif(
+    id_proyecto: int, id_acceso: int, datos: PausaAcceso,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    try:
+        await conta_sif.cambiar_pausa(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, datos.pausado)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+    return {"pausado": datos.pausado}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/usuarios/{accion}")
+async def ver_usuarios_acceso_sif(
+    id_proyecto: int, id_acceso: int, accion: str, id_empresa: int | None = None,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Lecturas para gestionar usuarios del SIF (lista, quién soy, empresas,
+    asesorías, permisos de una empresa)."""
+    if accion not in conta_sif.LECTURAS_USUARIOS:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa consulta no existe")
+    cuerpo = {"limit": 500} if accion != "yo" else {}
+    if id_empresa:
+        cuerpo = {"id_empresa": id_empresa}
+    try:
+        return await conta_sif.usuarios_sif(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, accion, cuerpo)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/usuarios/{accion}")
+async def usuarios_acceso_sif(
+    id_proyecto: int, id_acceso: int, accion: str, datos: dict = Body(default={}),
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Cambios en los usuarios del SIF desde un acceso: lo que ese usuario del
+    SIF pueda hacer según su rol (lo decide el SIF). Nunca borra."""
+    if accion in conta_sif.LECTURAS_USUARIOS:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa acción no existe")
+    try:
+        return await conta_sif.usuarios_sif(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, accion, datos)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
 
 
 @app.delete("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}", status_code=status.HTTP_204_NO_CONTENT)

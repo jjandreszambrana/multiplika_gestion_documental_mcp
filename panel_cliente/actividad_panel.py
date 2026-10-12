@@ -88,6 +88,8 @@ ACCIONES_PANEL = {
     "actualizar_acceso_sif": ("actualizó las empresas de un acceso suyo al SIF", None, None),
     "revision_acceso_sif": ("cambió la revisión nocturna de un acceso suyo al SIF", None, None),
     "borrar_acceso_sif": ("quitó un acceso suyo a la contabilidad del SIF", None, None),
+    "pausa_acceso_sif": ("pausó o reanudó un acceso suyo al SIF", None, None),
+    "usuarios_acceso_sif": ("gestionó usuarios del SIF desde un acceso suyo", None, None),
     "resolver_propuesta_contable": ("resolvió una propuesta contable", None, "id_propuesta"),
     "crear_memoria": ("creó la memoria anual de una empresa en el SIF", None, None),
     "guardar_apartado_memoria": ("guardó un apartado de la memoria anual en el SIF", None, None),

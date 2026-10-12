@@ -52,6 +52,8 @@ TABLA_CONTA_ACCESOS = Tabla(
                 comentario="activo, sin_empresas o clave_incorrecta"),
         Columna(nombre="revision_automatica", tipo="BOOLEAN", not_null=True, default=False,
                 comentario="Revisión nocturna de sus empresas (scripts/revisar_contabilidad.py)"),
+        Columna(nombre="pausado", tipo="BOOLEAN", not_null=True, default=False,
+                comentario="Pausado por su dueño: no se usa (ni empresas, ni revisión, ni usuarios) hasta reanudarlo"),
         Columna(nombre="ultima_comprobacion", tipo="TIMESTAMP"),
         Columna(nombre="ultimo_error", tipo="MEDIUMTEXT"),
         Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),

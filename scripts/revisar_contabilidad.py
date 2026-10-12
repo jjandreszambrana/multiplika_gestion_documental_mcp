@@ -71,6 +71,8 @@ async def main() -> int:
             print(f"[{proyecto['nombre']}] error: {e}", file=sys.stderr)
             continue
         for acceso in accesos:
+            if acceso["pausado"]:
+                continue
             try:
                 await sif.actualizar_acceso(config, acceso)
             except Exception as e:  # contraseña cambiada, SIF caído...: queda marcado en el acceso

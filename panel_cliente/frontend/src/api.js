@@ -140,6 +140,12 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/actualizar`),
   revisionAccesoSif: (idProyecto, idAcceso, activa) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/revision`, { activa }),
+  pausaAccesoSif: (idProyecto, idAcceso, pausado) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/pausa`, { pausado }),
+  verUsuariosSif: (idProyecto, idAcceso, accion, idEmpresa) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/usuarios/${accion}${idEmpresa ? `?id_empresa=${idEmpresa}` : ""}`),
+  cambiarUsuariosSif: (idProyecto, idAcceso, accion, datos) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/usuarios/${accion}`, datos),
   borrarAccesoSif: (idProyecto, idAcceso) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}`),
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idEmpresa, estado) =>

@@ -1,8 +1,9 @@
 import { useState } from "react"
 import {
-  Alert, Badge, Button, Card, Checkbox, Group, PasswordInput, SimpleGrid, Stack, Text, TextInput, Title,
+  Alert, Badge, Button, Card, Checkbox, Group, PasswordInput, SimpleGrid, Stack, Switch, Text, TextInput, Title,
 } from "@mantine/core"
 import { api } from "../../api"
+import UsuariosSif from "./UsuariosSif"
 
 // Los accesos de cada usuario a la contabilidad del SIF (decisión del
 // usuario, [5.9] del canal compartido): cada uno vincula los suyos y ve lo
@@ -18,7 +19,9 @@ const TIPO = { asesoria: "De una asesoría", empresa: "De una empresa", otro: "D
 
 function Acceso({ proyecto, acceso, onCambiar, onError }) {
   const [trabajando, setTrabajando] = useState(false)
-  const [color, texto] = ESTADO[acceso.estado] || ["gray", acceso.estado]
+  const [viendoUsuarios, setViendoUsuarios] = useState(false)
+  const pausado = !!acceso.pausado
+  const [color, texto] = pausado ? ["gray", "Pausado: no se usa hasta reanudarlo"] : ESTADO[acceso.estado] || ["gray", acceso.estado]
   const ejecutar = (accion) => {
     setTrabajando(true)
     accion().then(onCambiar).catch((err) => onError(err.message)).finally(() => setTrabajando(false))
@@ -35,24 +38,37 @@ function Acceso({ proyecto, acceso, onCambiar, onError }) {
           </Stack>
           <Badge color={color} variant="light">{texto}</Badge>
         </Group>
+        <Switch
+          id={`pausa-${acceso.id}`}
+          label="Usar este acceso (si lo pausas, sus empresas dejan de verse hasta que lo reanudes)"
+          checked={!pausado} disabled={trabajando}
+          onChange={(e) => {
+            const usar = e.currentTarget.checked
+            ejecutar(() => api.pausaAccesoSif(proyecto.id, acceso.id, !usar))
+          }}
+        />
         <Checkbox
           id={`revision-${acceso.id}`}
           label="Revisar cada noche sus empresas (saldos raros y cuadre del IVA) y dejar avisos en Propuestas. No gasta IA."
-          checked={!!acceso.revision_automatica} disabled={trabajando}
+          checked={!!acceso.revision_automatica} disabled={trabajando || pausado}
           onChange={(e) => {
             const activa = e.currentTarget.checked
             ejecutar(() => api.revisionAccesoSif(proyecto.id, acceso.id, activa))
           }}
         />
         <Group gap="xs">
-          <Button size="xs" variant="light" loading={trabajando} onClick={() => ejecutar(() => api.actualizarAccesoSif(proyecto.id, acceso.id))}>
+          <Button size="xs" variant="light" loading={trabajando} disabled={pausado} onClick={() => ejecutar(() => api.actualizarAccesoSif(proyecto.id, acceso.id))}>
             Actualizar sus empresas
+          </Button>
+          <Button size="xs" variant="light" disabled={pausado || acceso.estado === "clave_incorrecta"} onClick={() => setViendoUsuarios(true)}>
+            Usuarios
           </Button>
           <Button size="xs" variant="subtle" color="red" loading={trabajando} onClick={() => ejecutar(() => api.borrarAccesoSif(proyecto.id, acceso.id))}>
             Quitar este acceso
           </Button>
         </Group>
       </Stack>
+      {viendoUsuarios && <UsuariosSif proyecto={proyecto} acceso={acceso} onCerrar={() => setViendoUsuarios(false)} />}
     </Card>
   )
 }
