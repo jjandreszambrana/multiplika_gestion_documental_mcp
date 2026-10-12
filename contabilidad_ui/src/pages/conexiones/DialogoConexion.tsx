@@ -37,7 +37,7 @@ export default function DialogoConexion({
   alCerrar,
   alGuardar,
 }: Props) {
-  const opciones = (conexion?.opciones ?? {}) as { marcar?: boolean; cta_prov_desde_id?: boolean }
+  const opciones = (conexion?.opciones ?? {}) as { marcar?: boolean }
   const [nombre, setNombre] = useState(conexion?.nombre ?? `Codiplika de ${nombreEmpresa}`)
   // Con un solo túnel no hay nada que elegir: se deja puesto.
   const [tunel, setTunel] = useState<string | null>(
@@ -49,9 +49,6 @@ export default function DialogoConexion({
   const [usuario, setUsuario] = useState(conexion?.usuario ?? '')
   const [password, setPassword] = useState('')
   const [marcar, setMarcar] = useState(opciones.marcar ?? false)
-  // Las cuentas de proveedor siguen la política de Codiplika ([5.23] del canal): no se
-  // pregunta; se reenvía lo que hubiera guardado hasta que el SIF deje de usarlo.
-  const ctaProvDesdeId = opciones.cta_prov_desde_id ?? true
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -80,7 +77,7 @@ export default function DialogoConexion({
         base_datos: baseDatos.trim(),
         usuario: usuario.trim(),
         ...(password !== '' && { password }),
-        opciones: { marcar, cta_prov_desde_id: ctaProvDesdeId },
+        opciones: { marcar },
       })
     } catch (fallo) {
       setError(textoDeError(fallo))
