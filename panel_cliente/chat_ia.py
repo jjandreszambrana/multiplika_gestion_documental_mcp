@@ -48,6 +48,15 @@ SYSTEM_PROMPT = (
     "anotar_pregunta_pendiente_enlazada_gd para que su responsable lo cubra."
 )
 
+# Preguntas de otra pantalla que ya traen todo lo necesario (p. ej. lo que no se
+# pudo traer de Codiplika): sin herramientas, porque solo sus definiciones son
+# decenas de miles de tokens por pregunta.
+SYSTEM_PROMPT_SIN_HERRAMIENTAS = (
+    "Eres el asistente de esta empresa dentro de su panel de gestión. Responde en español, "
+    "con palabras sencillas y en pocas líneas, solo con los datos que te dan en la pregunta."
+)
+MAX_TOKENS_SIN_HERRAMIENTAS = 2000
+
 MAX_TURNOS_HERRAMIENTA = 8  # llamadas a herramientas de solo lectura encadenadas antes de rendirse
 # Tareas que de verdad necesitan muchos pasos (buscar varias cuentas, probar,
 # corregir y volver a probar): en cuanto la IA usa una de estas herramientas,
@@ -279,7 +288,25 @@ async def _avanzar(id_proyecto: int, id_conversacion: int, id_usuario: int, id_r
         return {"tipo": "respuesta", "texto": "No he podido terminar — son demasiados pasos seguidos. Prueba a preguntar algo más concreto."}
 
 
-async def enviar_mensaje(id_proyecto: int, id_conversacion: int, id_usuario: int, es_editor: bool, mensaje: str) -> dict:
+async def _responder_sin_herramientas(id_proyecto: int, id_conversacion: int, mensajes: list[dict]) -> dict:
+    clave = await get_anthropic_api_key(id_proyecto)
+    if not clave:
+        raise ValueError("Esta empresa no tiene configurada una clave de API de Claude")
+    respuesta = await anthropic.AsyncAnthropic(api_key=clave).messages.create(
+        model=await get_anthropic_modelo(id_proyecto), max_tokens=MAX_TOKENS_SIN_HERRAMIENTAS,
+        system=SYSTEM_PROMPT_SIN_HERRAMIENTAS, messages=_recortar_resultados_antiguos(mensajes),
+    )
+    uso = respuesta.usage
+    print(f"[chat_ia] proyecto={id_proyecto} sin herramientas: entrada={uso.input_tokens} salida={uso.output_tokens}")
+    texto = "\n".join(b.text for b in respuesta.content if b.type == "text")
+    mensajes.append({"role": "assistant", "content": _bloques_a_dict(respuesta.content)})
+    await ChatConversacionesCRUD(get_db_config(id_proyecto)).guardar_mensajes(id_conversacion, mensajes)
+    return {"tipo": "respuesta", "texto": texto}
+
+
+async def enviar_mensaje(
+    id_proyecto: int, id_conversacion: int, id_usuario: int, es_editor: bool, mensaje: str, sin_herramientas: bool = False,
+) -> dict:
     """Punto de entrada de un mensaje nuevo del cliente, dentro de una
     conversación concreta (el llamador ya comprobó que es suya).
     `es_editor` decide con qué rol de API key interna se conecta al MCP
@@ -288,6 +315,8 @@ async def enviar_mensaje(id_proyecto: int, id_conversacion: int, id_usuario: int
     id_rol = ID_ROL_OPERADOR if es_editor else ID_ROL_INVITADO
     mensajes = await ChatConversacionesCRUD(get_db_config(id_proyecto)).obtener_mensajes(id_conversacion)
     mensajes.append({"role": "user", "content": mensaje})
+    if sin_herramientas:
+        return await _responder_sin_herramientas(id_proyecto, id_conversacion, mensajes)
     return await _avanzar(id_proyecto, id_conversacion, id_usuario, id_rol, mensajes)
 
 

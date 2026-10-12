@@ -626,8 +626,10 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}`, { titulo }),
   eliminarConversacionChat: (idProyecto, idConversacion) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}`),
-  enviarMensajeChat: (idProyecto, idConversacion, mensaje) =>
-    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}/mensajes`, { mensaje }),
+  enviarMensajeChat: (idProyecto, idConversacion, mensaje, sinHerramientas = false) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/conversaciones/${idConversacion}/mensajes`, {
+      mensaje, sin_herramientas: sinHerramientas,
+    }),
   confirmarAccionChat: (idProyecto, confirmacionId, aceptar) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/chat/confirmar`, {
       confirmacion_id: confirmacionId, aceptar,

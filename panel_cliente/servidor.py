@@ -2693,6 +2693,7 @@ async def eliminar_api_key(id_api_key: int, fila: dict = Depends(api_key_de_gest
 
 class MensajeChat(BaseModel):
     mensaje: str
+    sin_herramientas: bool = False  # pregunta que ya trae todo: mucho más barata
 
 
 class ConfirmacionChat(BaseModel):
@@ -2755,7 +2756,7 @@ async def enviar_mensaje_chat(
 ) -> dict:
     _, id_usuario, es_editor = conversacion
     try:
-        return await chat_ia.enviar_mensaje(id_proyecto, id_conversacion, id_usuario, es_editor, datos.mensaje)
+        return await chat_ia.enviar_mensaje(id_proyecto, id_conversacion, id_usuario, es_editor, datos.mensaje, datos.sin_herramientas)
     except ValueError as error:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error))
 

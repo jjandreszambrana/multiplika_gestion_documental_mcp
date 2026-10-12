@@ -109,7 +109,7 @@ export default function Chat({ proyecto, peticion, onCerrar }) {
         const nueva = await api.crearConversacionChat(proyecto.id, peticion.titulo)
         setConversaciones((c) => [nueva, ...c])
         await seleccionar(nueva.id)
-        await mandar(nueva.id, peticion.texto)
+        await mandar(nueva.id, peticion.texto, peticion.sinHerramientas)
       } catch (err) {
         setError(err.message)
       }
@@ -184,12 +184,12 @@ export default function Chat({ proyecto, peticion, onCerrar }) {
     }
   }
 
-  async function mandar(idConversacion, texto) {
+  async function mandar(idConversacion, texto, sinHerramientas = false) {
     setError(null)
     setMensajes((m) => [...m, { rol: "user", texto }])
     setEnviando(true)
     try {
-      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, idConversacion, texto))
+      procesarRespuesta(await api.enviarMensajeChat(proyecto.id, idConversacion, texto, sinHerramientas))
     } catch (err) {
       setError(err.message)
     } finally {
