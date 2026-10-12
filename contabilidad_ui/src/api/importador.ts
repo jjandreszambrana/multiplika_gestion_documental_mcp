@@ -6,7 +6,7 @@ export type Destino = 'plan' | 'diario' | 'inmovilizado'
 
 export type CampoImportable = components['schemas']['CampoImportable']
 export type RespuestaSubir = components['schemas']['RespuestaSubir']
-export type RespuestaEjecutar = components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar']
+export type RespuestaEjecutar = components['schemas']['RespuestaEjecutarImportacion']
 export type Incidencia = components['schemas']['Incidencia']
 export type AsientoImportado = components['schemas']['AsientoImportado']
 

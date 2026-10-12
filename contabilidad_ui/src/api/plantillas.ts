@@ -15,16 +15,15 @@ import type { components } from './types'
  */
 
 type S = components['schemas']
-const P = 'apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__'
 
-export type ResumenPlantilla = S['PlantillaEnLista']
-export type VersionPlantilla = S['VersionPlantilla']
-export type ErrorCampo = S['ErrorCampo']
-export type ParametroResuelto = S['ParametroResuelto']
-export type EjecucionPlantilla = S['Ejecucion']
-export type Ejecucion = S[`${typeof P}RespuestaEjecutar`]
-type RespuestaPrevisualizar = S[`${typeof P}RespuestaPrevisualizar`]
-type AsientoApi = S['AsientoCalculado']
+export type ResumenPlantilla = S['PlantillaAsientoEnLista']
+export type VersionPlantilla = S['VersionPlantillaAsiento']
+export type ErrorCampo = S['ErrorCampoPlantillaAsiento']
+export type ParametroResuelto = S['ParametroResueltoPlantillaAsiento']
+export type EjecucionPlantilla = S['EjecucionPlantillaAsiento']
+export type Ejecucion = S['RespuestaEjecutarPlantillaAsiento']
+type RespuestaPrevisualizar = S['RespuestaPrevisualizarPlantillaAsiento']
+type AsientoApi = S['AsientoCalculadoPlantillaAsiento']
 
 // --- La definición ------------------------------------------------------------
 
@@ -107,7 +106,7 @@ export interface Definicion {
   opciones?: Opciones
 }
 
-export interface Plantilla extends Omit<S['RespuestaPlantilla'], 'definicion'> {
+export interface Plantilla extends Omit<S['RespuestaPlantillaAsiento'], 'definicion'> {
   definicion: Definicion
 }
 
@@ -198,7 +197,7 @@ function normalizarAsiento(a: AsientoApi): AsientoCalculado {
 // --- Usar ------------------------------------------------------------------------
 
 export async function listarPlantillas(incluirInactivas = false): Promise<ResumenPlantilla[]> {
-  const r = await pedir<S['RespuestaListar']>('/contabilidad/plantillas/listar', {
+  const r = await pedir<S['RespuestaListarPlantillasAsiento']>('/contabilidad/plantillas/listar', {
     incluir_inactivas: incluirInactivas,
   })
   return r.plantillas ?? []
@@ -278,8 +277,8 @@ export function obtenerCatalogo(): Promise<Catalogo> {
   return pedir<Catalogo>('/contabilidad/plantillas/catalogo', {})
 }
 
-export function comprobarDefinicion(definicion: Definicion): Promise<S['RespuestaComprobar']> {
-  return pedir<S['RespuestaComprobar']>('/contabilidad/plantillas/comprobar_definicion', {
+export function comprobarDefinicion(definicion: Definicion): Promise<S['RespuestaComprobarPlantillaAsiento']> {
+  return pedir<S['RespuestaComprobarPlantillaAsiento']>('/contabilidad/plantillas/comprobar_definicion', {
     definicion,
   })
 }
@@ -323,7 +322,7 @@ export async function cambiarActiva(id: number, activa: boolean): Promise<void> 
 }
 
 export async function listarVersiones(id: number): Promise<VersionPlantilla[]> {
-  const r = await pedir<S['RespuestaVersiones']>('/contabilidad/plantillas/versiones', { id })
+  const r = await pedir<S['RespuestaVersionesPlantillaAsiento']>('/contabilidad/plantillas/versiones', { id })
   return r.versiones ?? []
 }
 
@@ -339,7 +338,7 @@ const MAXIMO_TANDAS = 50
 export async function listarEjecuciones(id: number | null): Promise<EjecucionPlantilla[]> {
   const todas: EjecucionPlantilla[] = []
   for (let tanda = 0; tanda < MAXIMO_TANDAS; tanda += 1) {
-    const r = await pedir<S['RespuestaEjecuciones']>('/contabilidad/plantillas/ejecuciones/listar', {
+    const r = await pedir<S['RespuestaEjecucionesPlantillaAsiento']>('/contabilidad/plantillas/ejecuciones/listar', {
       ...(id === null ? {} : { id }),
       limite: POR_TANDA,
       desplazamiento: tanda * POR_TANDA,

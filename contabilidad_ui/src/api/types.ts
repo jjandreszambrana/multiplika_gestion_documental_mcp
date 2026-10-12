@@ -1318,6 +1318,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/contabilidad/contabilizar/cobros/pendientes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cobros sin contabilizar */
+        post: operations["cobros_pendientes_apisif_v1_contabilidad_contabilizar_cobros_pendientes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/contabilizar/cobros/periodo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Contabilizar los cobros de un periodo
+         * @description Un asiento por cobro. El que falla se anota como pendiente y no frena al resto.
+         */
+        post: operations["cobros_periodo_apisif_v1_contabilidad_contabilizar_cobros_periodo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/contabilizar/cobros/anulados_pendientes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cobros contabilizados que se han anulado y siguen en los libros */
+        post: operations["cobros_anulados_pendientes_apisif_v1_contabilidad_contabilizar_cobros_anulados_pendientes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/contabilizar/cobros/revertir_anulados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generar el asiento inverso de los cobros anulados
+         * @description El asiento del cobro no se borra: se le añade su inverso.
+         */
+        post: operations["cobros_revertir_anulados_apisif_v1_contabilidad_contabilizar_cobros_revertir_anulados_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/contabilidad/plan/preferencias": {
         parameters: {
             query?: never;
@@ -2687,6 +2761,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/contabilidad/bandeja/guardar_lectura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Meter en la bandeja lo leído de un ERP
+         * @description Reenviar un documento con el mismo `id_origen` no lo duplica: si no ha cambiado no pasa
+         *     nada; si ha cambiado y no tiene asiento, se actualiza; si ya tiene asiento, no se toca y se
+         *     marca `cambio_en_origen`. Con `ensayo` no se guarda nada.
+         */
+        post: operations["guardar_lectura_apisif_v1_contabilidad_bandeja_guardar_lectura_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/leer_erp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Traer a la bandeja lo pendiente del otro programa
+         * @description Por defecto es un **ensayo**: dice qué traería sin guardar nada. Con `ensayo: false` lo
+         *     guarda y, si la conexión de la empresa lo permite, lo marca en el otro programa para que no
+         *     vuelva a salir en su exportación.
+         */
+        post: operations["leer_erp_apisif_v1_contabilidad_bandeja_leer_erp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lo que hay en la bandeja */
+        post: operations["listar_apisif_v1_contabilidad_bandeja_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Un documento de la bandeja con su desglose */
+        post: operations["obtener_apisif_v1_contabilidad_bandeja_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/resolver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decidir sobre un documento de la bandeja */
+        post: operations["resolver_apisif_v1_contabilidad_bandeja_resolver_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/contabilizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pasar a borrador lo pendiente de la bandeja
+         * @description Cada documento por su cuenta. Las cuentas que trae y no existen en el plan se crean.
+         *     Si la factura resulta estar ya en la facturación, no se contabiliza: cuenta la de allí.
+         */
+        post: operations["contabilizar_apisif_v1_contabilidad_bandeja_contabilizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/deshacer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Devolver a pendiente lo que siga en borrador
+         * @description Lo que ya está confirmado no se toca: el libro no se borra.
+         */
+        post: operations["deshacer_apisif_v1_contabilidad_bandeja_deshacer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/lecturas/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lecturas hechas */
+        post: operations["listar_lecturas_apisif_v1_contabilidad_bandeja_lecturas_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/lecturas/deshacer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Quitar de la bandeja lo que trajo una lectura */
+        post: operations["deshacer_lectura_apisif_v1_contabilidad_bandeja_lecturas_deshacer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/contabilidad/configuracion/campos": {
         parameters: {
             query?: never;
@@ -3790,6 +4034,48 @@ export interface paths {
         put?: never;
         /** Qué asientos salieron de las plantillas */
         post: operations["ejecuciones_apisif_v1_contabilidad_plantillas_ejecuciones_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/exportar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sacar plantillas a un fichero para llevarlas a otra contabilidad
+         * @description Lleva la versión vigente de cada una. El historial y lo que se hizo con ellas se quedan aquí.
+         */
+        post: operations["exportar_apisif_v1_contabilidad_plantillas_exportar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/plantillas/importar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Traer plantillas de un fichero exportado
+         * @description Todo o nada: si alguna no vale, no se importa ninguna y responde 400 con `errores`
+         *     (rutas `plantillas[i]…`). Con `ensayar` no graba y los errores van en la respuesta.
+         *     Los `avisos` (cuentas o diarios que aquí no existen) no paran la importación.
+         */
+        post: operations["importar_apisif_v1_contabilidad_plantillas_importar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11877,6 +12163,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apisif/v1/maestros/conexiones_externas/tuneles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Túneles que puede usar este servidor
+         * @description Para elegir el `tunel` de una conexión. Los mantiene el administrador de los servidores.
+         */
+        post: operations["listar_tuneles_apisif_v1_maestros_conexiones_externas_tuneles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/listar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Conexiones externas de una empresa */
+        post: operations["listar_apisif_v1_maestros_conexiones_externas_listar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/obtener": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Una conexión externa */
+        post: operations["obtener_apisif_v1_maestros_conexiones_externas_obtener_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/crear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crear una conexión externa (nace desactivada) */
+        post: operations["crear_apisif_v1_maestros_conexiones_externas_crear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/editar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambiar una conexión externa */
+        post: operations["editar_apisif_v1_maestros_conexiones_externas_editar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/eliminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quitar una conexión externa
+         * @description Lo que ya se trajo con ella se queda donde está.
+         */
+        post: operations["eliminar_apisif_v1_maestros_conexiones_externas_eliminar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/maestros/conexiones_externas/probar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Probar una conexión externa
+         * @description Conecta, solo lee, y devuelve lo que identifica a la empresa del otro lado. No escribe nada
+         *     en el sistema externo. Funciona aunque la conexión esté desactivada.
+         */
+        post: operations["probar_apisif_v1_maestros_conexiones_externas_probar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apisif/v1/maestros/clasificacion_gastos/crear": {
         parameters: {
             query?: never;
@@ -17529,7 +17944,7 @@ export interface components {
             id_tipo_iva?: number | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_recibida_sii, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              */
             ref_tipo?: string | null;
             /**
@@ -17660,7 +18075,7 @@ export interface components {
             id_tipo_iva?: number | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_recibida_sii, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              */
             ref_tipo?: string | null;
             /**
@@ -17930,8 +18345,8 @@ export interface components {
              */
             id_obligado?: number | null;
         };
-        /** AsientoCalculado */
-        AsientoCalculado: {
+        /** AsientoCalculadoPlantillaAsiento */
+        AsientoCalculadoPlantillaAsiento: {
             /** Orden */
             orden: number;
             /**
@@ -17956,7 +18371,7 @@ export interface components {
              */
             diario: string;
             /** Lineas */
-            lineas?: components["schemas"]["LineaCalculada"][];
+            lineas?: components["schemas"]["LineaCalculadaPlantillaAsiento"][];
             /** Total Debe */
             total_debe: number;
             /** Total Haber */
@@ -17965,6 +18380,61 @@ export interface components {
             diferencia: number;
             /** Cuadra */
             cuadra: boolean;
+        };
+        /** AsientoDeBandeja */
+        AsientoDeBandeja: {
+            /** Ref Tipo */
+            ref_tipo: string;
+            /** Ref Id */
+            ref_id: number;
+            /** Id Borrador */
+            id_borrador: number;
+            /** Ejercicio */
+            ejercicio: number;
+            /** Asiento */
+            asiento: number;
+        };
+        /** AsientoDeCobro */
+        AsientoDeCobro: {
+            /**
+             * Ref Tipo
+             * @description cobro o anulacion_cobro.
+             */
+            ref_tipo: string;
+            /**
+             * Ref Id
+             * @description ID del cobro.
+             */
+            ref_id: number;
+            /**
+             * Asiento
+             * @description Número de asiento generado.
+             */
+            asiento: number;
+            /**
+             * Ejercicio
+             * @description Ejercicio del asiento.
+             */
+            ejercicio: number;
+            /**
+             * Asiento Original
+             * @description En una anulación, el asiento que se deshace.
+             */
+            asiento_original?: number | null;
+        };
+        /** AsientoDePlantilla */
+        AsientoDePlantilla: {
+            /** Fecha */
+            fecha: string;
+            /**
+             * Concepto
+             * @default ''
+             */
+            concepto: string;
+            /** Diario */
+            diario?: string | null;
+            /** Lineas */
+            lineas: components["schemas"]["LineaDePlantilla"][];
         };
         /** AsientoDeReversion */
         AsientoDeReversion: {
@@ -18007,7 +18477,7 @@ export interface components {
         AsientoGenerado: {
             /**
              * Ref Tipo
-             * @description Tipo de la factura: factura_emitida o factura_recibida_sii.
+             * @description Tipo de la factura: factura_emitida, factura_emitida_sii o factura_recibida_sii.
              */
             ref_tipo: string;
             /**
@@ -18026,8 +18496,8 @@ export interface components {
              */
             numero_factura?: string | null;
         };
-        /** AsientoGrabado */
-        AsientoGrabado: {
+        /** AsientoGrabadoPlantillaAsiento */
+        AsientoGrabadoPlantillaAsiento: {
             /** Orden */
             orden: number;
             /** Papel */
@@ -18088,6 +18558,13 @@ export interface components {
              * @description 'diario' o 'borrador'.
              */
             destino: string;
+        };
+        /** AutocuadreDePlantilla */
+        AutocuadreDePlantilla: {
+            /** Cuenta */
+            cuenta: string;
+            /** Concepto */
+            concepto?: string | null;
         };
         /** AvisoConfig */
         AvisoConfig: {
@@ -18681,6 +19158,75 @@ export interface components {
              */
             es_borrador: boolean;
         };
+        /**
+         * CampoDeCuentaConfiguracion
+         * @description Una casilla del formulario de cuentas por defecto.
+         */
+        CampoDeCuentaConfiguracion: {
+            /**
+             * Campo
+             * @description Nombre de la columna. Es lo que se manda a /fijar_cuentas.
+             */
+            campo: string;
+            /**
+             * Titulo
+             * @description Rótulo que se pinta al lado de la casilla.
+             */
+            titulo: string;
+            /**
+             * Grupo
+             * @description Bloque en el que va: IVA, Retenciones, Clientes y proveedores, Tesorería, Inmovilizado, Cierre y ajustes.
+             */
+            grupo: string;
+            /**
+             * Tipo
+             * @description 'mayor' = debajo cuelga una cuenta por cada ficha, tipo de IVA o bien, y se escribe corta. 'subcuenta' = hay una sola y el apunte va ahí, así que se escribe con el ancho entero de la empresa.
+             */
+            tipo: string;
+            /**
+             * Obligatoria
+             * @description True = no se puede dejar vacía. /fijar_cuentas la rechaza si se borra.
+             */
+            obligatoria: boolean;
+            /**
+             * Aviso
+             * @description Qué deja de funcionar si se queda vacía.
+             */
+            aviso: string;
+        };
+        /** CampoDeCuentaMaestro */
+        CampoDeCuentaMaestro: {
+            /**
+             * Campo
+             * @description Identificador del campo, el que se manda al fijar.
+             */
+            campo: string;
+            /**
+             * Titulo
+             * @description Nombre del campo para la pantalla.
+             */
+            titulo: string;
+            /**
+             * Usa El Motor
+             * @description False = el motor de asientos NO lee hoy este campo; rellenarlo no cambia ningun asiento.
+             */
+            usa_el_motor: boolean;
+            /**
+             * Consecuencia
+             * @description Que pasa de verdad segun este campo tenga o no cuenta.
+             */
+            consecuencia: string;
+            /**
+             * Hereda
+             * @description True = si esta vacio, rige otro valor (el del maestro comun o el del proveedor).
+             */
+            hereda: boolean;
+            /**
+             * Digitos Maximos
+             * @description Digitos que admite: la mas estrecha entre el ancho de la empresa y la casilla.
+             */
+            digitos_maximos: number;
+        };
         /** CampoImportable */
         CampoImportable: {
             /**
@@ -18831,6 +19377,149 @@ export interface components {
          * @enum {integer}
          */
         ClavesRegimenEnum: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+        /** CobroAnulado */
+        CobroAnulado: {
+            /**
+             * Id
+             * @description ID del cobro anulado.
+             */
+            id: number;
+            /**
+             * Fecha Operacion
+             * @description Fecha del cobro.
+             */
+            fecha_operacion?: string | null;
+            /**
+             * Importe
+             * @description Importe del cobro.
+             */
+            importe?: number | null;
+            /**
+             * Concepto
+             * @description Concepto del cobro.
+             */
+            concepto?: string | null;
+            /**
+             * Ejercicio Original
+             * @description Ejercicio del asiento del cobro.
+             */
+            ejercicio_original: number;
+            /**
+             * Asiento Original
+             * @description Asiento del cobro, que se va a deshacer.
+             */
+            asiento_original: number;
+        };
+        /** CobroPendiente */
+        CobroPendiente: {
+            /**
+             * Id
+             * @description ID del cobro.
+             */
+            id: number;
+            /**
+             * Fecha Operacion
+             * @description Fecha del cobro; es la del asiento.
+             */
+            fecha_operacion?: string | null;
+            /**
+             * Importe
+             * @description Importe. Negativo si es una devolución.
+             */
+            importe?: number | null;
+            /**
+             * Concepto
+             * @description Concepto del cobro.
+             */
+            concepto?: string | null;
+            /**
+             * Referencia
+             * @description Referencia libre del cobro.
+             */
+            referencia?: string | null;
+            /**
+             * Id Estado
+             * @description 2 = cobrado; 4 = devolución.
+             */
+            id_estado?: number | null;
+            /**
+             * Id Receptor
+             * @description ID del cliente.
+             */
+            id_receptor?: number | null;
+            /**
+             * Cliente
+             * @description Nombre del cliente.
+             */
+            cliente?: string | null;
+            /**
+             * Nif Cliente
+             * @description NIF del cliente.
+             */
+            nif_cliente?: string | null;
+            /**
+             * Id Medio Pago
+             * @description Medio de pago del cobro.
+             */
+            id_medio_pago?: number | null;
+            /**
+             * Cta Contable Cobros
+             * @description Cuenta de cobros del medio de pago. Vacía = la de tesorería de la configuración.
+             */
+            cta_contable_cobros?: string | null;
+            /**
+             * Id Remesa
+             * @description Remesa en la que va, si va en una.
+             */
+            id_remesa?: number | null;
+            /**
+             * Id Cobro Origen
+             * @description En una devolución, el cobro que se devuelve.
+             */
+            id_cobro_origen?: number | null;
+            /**
+             * Motivo Frenado
+             * @description Por qué no se pudo contabilizar la última vez, si se intentó.
+             */
+            motivo_frenado?: string | null;
+        };
+        /** ConexionExterna */
+        ConexionExterna: {
+            /** Id */
+            id: number;
+            /** Id Obligado */
+            id_obligado: number;
+            /** Tipo */
+            tipo: string;
+            /** Nombre */
+            nombre: string;
+            /** Activa */
+            activa: number;
+            /** Tunel */
+            tunel: string;
+            /** Host */
+            host: string;
+            /** Puerto */
+            puerto: number;
+            /** Base Datos */
+            base_datos: string;
+            /** Usuario */
+            usuario: string;
+            /** Opciones */
+            opciones?: {
+                [key: string]: unknown;
+            };
+            /** Tiene Password */
+            tiene_password: boolean;
+            /** Ultima Prueba */
+            ultima_prueba?: string | null;
+            /** Resultado Prueba */
+            resultado_prueba?: string | null;
+            /** Fecha Creacion */
+            fecha_creacion?: string | null;
+            /** Fecha Modificacion */
+            fecha_modificacion?: string | null;
+        };
         /** ConfigObtener */
         ConfigObtener: {
             /** Id Obligado */
@@ -19605,6 +20294,17 @@ export interface components {
              */
             descripcion?: string | null;
         };
+        /** CuentaContrapartidaBandeja */
+        CuentaContrapartidaBandeja: {
+            /** Clase */
+            clase: string;
+            /** Cuenta */
+            cuenta?: string | null;
+            /** Importe */
+            importe: number;
+            /** Descripcion */
+            descripcion?: string | null;
+        };
         /** CuentaCreada */
         CuentaCreada: {
             /**
@@ -19740,6 +20440,30 @@ export interface components {
             /**
              * Descripcion
              * @description Titulo con el que se daria de alta en el plan.
+             */
+            descripcion?: string | null;
+        };
+        /** CuentaEntradaBandeja */
+        CuentaEntradaBandeja: {
+            /**
+             * Clase
+             * @description ventas, gasto o suplido.
+             * @enum {string}
+             */
+            clase: "ventas" | "gasto" | "suplido";
+            /**
+             * Cuenta
+             * @description Cuenta contable.
+             */
+            cuenta: string;
+            /**
+             * Importe
+             * @description Importe que va a esa cuenta.
+             */
+            importe: string;
+            /**
+             * Descripcion
+             * @description Texto del suplido, si lo es.
              */
             descripcion?: string | null;
         };
@@ -20635,6 +21359,28 @@ export interface components {
             /** Activo */
             activo?: number | null;
         };
+        /** DocumentoDeLecturaBandeja */
+        DocumentoDeLecturaBandeja: {
+            /** Tipo */
+            tipo: string;
+            /** Id Origen */
+            id_origen: string;
+            /**
+             * Id
+             * @description ID en la bandeja. 0 en ensayo si es nuevo.
+             * @default 0
+             */
+            id: number;
+            /**
+             * Accion
+             * @description nueva, actualizada, sin_cambios o cambiada_en_origen (ya tenía asiento: no se toca).
+             */
+            accion: string;
+            /** Estado */
+            estado: string;
+            /** Motivo */
+            motivo?: string | null;
+        };
         /** DocumentoDeclarado */
         DocumentoDeclarado: {
             /**
@@ -20702,8 +21448,8 @@ export interface components {
              */
             idempotencia_clave?: string | null;
         };
-        /** Ejecucion */
-        Ejecucion: {
+        /** EjecucionPlantillaAsiento */
+        EjecucionPlantillaAsiento: {
             /** Id */
             id: number;
             /** Lote */
@@ -21101,8 +21847,8 @@ export interface components {
              */
             sin_resolver: number;
         };
-        /** ErrorCampo */
-        ErrorCampo: {
+        /** ErrorCampoPlantillaAsiento */
+        ErrorCampoPlantillaAsiento: {
             /**
              * Ruta
              * @description Dónde va el error: parametros.valor, parametros.detalle[2].base, asientos[0].lineas[1].cuenta, general…
@@ -21224,6 +21970,87 @@ export interface components {
             lineas?: {
                 [key: string]: unknown;
             }[];
+        };
+        /** FacturaBandeja */
+        FacturaBandeja: {
+            /** Id */
+            id: number;
+            /** Id Lectura */
+            id_lectura?: number | null;
+            /** Origen */
+            origen: string;
+            /** Id Origen */
+            id_origen: string;
+            /** Estado */
+            estado: string;
+            /** Motivo */
+            motivo?: string | null;
+            /**
+             * Ref Tipo Sif
+             * @description Documento de la facturación con el que coincide.
+             */
+            ref_tipo_sif?: string | null;
+            /** Ref Id Sif */
+            ref_id_sif?: number | null;
+            /**
+             * Cambio En Origen
+             * @description 1 = el ERP lo cambió después de contabilizado.
+             */
+            cambio_en_origen?: number | null;
+            /** Id Borrador */
+            id_borrador?: number | null;
+            /** Ejercicio Asiento */
+            ejercicio_asiento?: number | null;
+            /** Asiento */
+            asiento?: number | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Modificacion */
+            fecha_modificacion?: string | null;
+            /** Libro */
+            libro: string;
+            /** Nif Emisor */
+            nif_emisor: string;
+            /** Numero Factura */
+            numero_factura: string;
+            /** Fecha Expedicion */
+            fecha_expedicion?: string | null;
+            /** Fecha Contable */
+            fecha_contable?: string | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /** Periodo */
+            periodo: string;
+            /** Nif Tercero */
+            nif_tercero?: string | null;
+            /** Nombre Tercero */
+            nombre_tercero?: string | null;
+            /** Cuenta Tercero */
+            cuenta_tercero?: string | null;
+            /** Tipo Factura */
+            tipo_factura?: string | null;
+            /** Tipo Rectificativa */
+            tipo_rectificativa?: string | null;
+            /** Numero Rectificada */
+            numero_rectificada?: string | null;
+            /** Clase Operacion */
+            clase_operacion: string;
+            /** Importe Total */
+            importe_total: number;
+            /** Retencion */
+            retencion: number;
+            /** Cuenta Retencion */
+            cuenta_retencion?: string | null;
+            /**
+             * Iva
+             * @description Solo en /obtener.
+             */
+            iva?: components["schemas"]["TramoIvaBandeja"][] | null;
+            /**
+             * Cuentas
+             * @description Solo en /obtener.
+             */
+            cuentas?: components["schemas"]["CuentaContrapartidaBandeja"][] | null;
         };
         /** FacturaConCuentas */
         FacturaConCuentas: {
@@ -21434,6 +22261,89 @@ export interface components {
              * @description Solo si `id_receptor` es null: fichas de cliente con el mismo NIF que la factura, para que el usuario elija. Es una propuesta, no un enlace.
              */
             clientes_posibles?: components["schemas"]["ProveedorPosible"][];
+        };
+        /** FacturaEntradaBandeja */
+        FacturaEntradaBandeja: {
+            /**
+             * Id Origen
+             * @description Identificador de la factura en el ERP. Reenviarla no la duplica.
+             */
+            id_origen: string;
+            /**
+             * Libro
+             * @description emitida o recibida.
+             * @enum {string}
+             */
+            libro: "emitida" | "recibida";
+            /**
+             * Nif Emisor
+             * @description NIF de quien la expide.
+             */
+            nif_emisor: string;
+            /**
+             * Numero Factura
+             * @description Serie y número tal como se expidió.
+             */
+            numero_factura: string;
+            /**
+             * Fecha Expedicion
+             * Format: date
+             * @description Fecha de expedición.
+             */
+            fecha_expedicion: string;
+            /**
+             * Fecha Contable
+             * @description Recibidas: día en que se registra. Decide el periodo y la fecha del asiento.
+             */
+            fecha_contable?: string | null;
+            /** Nif Tercero */
+            nif_tercero?: string | null;
+            /** Nombre Tercero */
+            nombre_tercero?: string | null;
+            /**
+             * Cuenta Tercero
+             * @description Cuenta del cliente o proveedor.
+             */
+            cuenta_tercero?: string | null;
+            /**
+             * Tipo Factura
+             * @description F1, F2, R1..R5.
+             */
+            tipo_factura?: string | null;
+            /**
+             * Tipo Rectificativa
+             * @description S o I.
+             */
+            tipo_rectificativa?: string | null;
+            /** Numero Rectificada */
+            numero_rectificada?: string | null;
+            /**
+             * Clase Operacion
+             * @description Para el 303. Si no se manda, interior.
+             */
+            clase_operacion?: ("interior" | "intracomunitaria" | "inversion_sujeto_pasivo" | "exenta" | "no_sujeta") | null;
+            /**
+             * Importe Total
+             * @description Total: bases, cuotas, recargo y suplidos, sin descontar la retención.
+             */
+            importe_total: string;
+            /**
+             * Retencion
+             * @description Importe retenido.
+             */
+            retencion?: string | null;
+            /** Cuenta Retencion */
+            cuenta_retencion?: string | null;
+            /**
+             * Iva
+             * @description Desglose por tipo de IVA.
+             */
+            iva?: components["schemas"]["TramoIvaEntradaBandeja"][];
+            /**
+             * Cuentas
+             * @description Cuentas de ventas, gasto o suplidos con su importe.
+             */
+            cuentas: components["schemas"]["CuentaEntradaBandeja"][];
         };
         /** FacturaPendiente */
         FacturaPendiente: {
@@ -21653,6 +22563,17 @@ export interface components {
              * @description Por que no se le han cambiado las cuentas.
              */
             motivo: string;
+        };
+        /** FacturaReferidaBandeja */
+        FacturaReferidaBandeja: {
+            /** Id Origen */
+            id_origen?: string | null;
+            /** Nif Emisor */
+            nif_emisor?: string | null;
+            /** Numero */
+            numero?: string | null;
+            /** Fecha */
+            fecha?: string | null;
         };
         /** FacturaSimplificada */
         FacturaSimplificada: {
@@ -22161,6 +23082,17 @@ export interface components {
             /** Anotacion */
             anotacion?: string | null;
         };
+        /** FuncionCatalogoPlantillas */
+        FuncionCatalogoPlantillas: {
+            /** Nombre */
+            nombre: string;
+            /** Firma */
+            firma: string;
+            /** Descripcion */
+            descripcion: string;
+            /** Ejemplo */
+            ejemplo: string;
+        };
         /** GenerarCodigo */
         GenerarCodigo: {
             /**
@@ -22536,6 +23468,15 @@ export interface components {
              */
             apuntes?: number | null;
         };
+        /** IncidenciaBandeja */
+        IncidenciaBandeja: {
+            /** Tipo */
+            tipo: string;
+            /** Id Origen */
+            id_origen: string;
+            /** Faltas */
+            faltas: string[];
+        };
         /** IniciarPausa */
         IniciarPausa: {
             /** Id Obligado */
@@ -22546,6 +23487,41 @@ export interface components {
              * @default 1
              */
             tipo_pausa: number;
+        };
+        /** LecturaBandeja */
+        LecturaBandeja: {
+            /** Id */
+            id: number;
+            /** Origen */
+            origen: string;
+            /** Desde */
+            desde?: string | null;
+            /** Hasta */
+            hasta?: string | null;
+            /** Referencia Origen */
+            referencia_origen?: string | null;
+            /** Estado */
+            estado: string;
+            /** Leidas */
+            leidas: number;
+            /** Nuevas */
+            nuevas: number;
+            /** Actualizadas */
+            actualizadas: number;
+            /** Sin Cambios */
+            sin_cambios: number;
+            /** Duplicadas */
+            duplicadas: number;
+            /** En Conflicto */
+            en_conflicto: number;
+            /** Cambiadas Contabilizadas */
+            cambiadas_contabilizadas: number;
+            /** Incidencias */
+            incidencias?: components["schemas"]["IncidenciaBandeja"][];
+            /** Usuario */
+            usuario?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
         };
         /** LineaBorrador */
         LineaBorrador: {
@@ -22584,8 +23560,8 @@ export interface components {
              */
             id_obra: number;
         };
-        /** LineaCalculada */
-        LineaCalculada: {
+        /** LineaCalculadaPlantillaAsiento */
+        LineaCalculadaPlantillaAsiento: {
             /** Cuenta */
             cuenta: string;
             /** Debe */
@@ -22652,6 +23628,33 @@ export interface components {
              * @description Cuándo se dotó.
              */
             fecha?: string | null;
+        };
+        /** LineaDePlantilla */
+        LineaDePlantilla: {
+            /** Cuenta */
+            cuenta: string;
+            /**
+             * Debe
+             * @default 0
+             */
+            debe: string;
+            /**
+             * Haber
+             * @default 0
+             */
+            haber: string;
+            /** Concepto */
+            concepto?: string | null;
+            /** Documento */
+            documento?: string | null;
+            /** Id Obra */
+            id_obra?: string | null;
+            /** Id Tipo Iva */
+            id_tipo_iva?: string | null;
+            /** Si */
+            si?: string | null;
+            /** Repetir Por */
+            repetir_por?: string | null;
         };
         /** LineaHistoricoBorrador */
         LineaHistoricoBorrador: {
@@ -22972,7 +23975,7 @@ export interface components {
              * Campos
              * @description Cuentas que guarda cada ficha.
              */
-            campos?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_cuentas_maestros__CampoDeCuenta"][];
+            campos?: components["schemas"]["CampoDeCuentaMaestro"][];
         };
         /** MarcaAceptacion */
         MarcaAceptacion: {
@@ -25215,28 +26218,8 @@ export interface components {
             activo?: components["schemas"]["FiltroCampo"] | null;
             fecha_fin_validez?: components["schemas"]["FiltroCampo"] | null;
         };
-        /** ModeloCodigo */
-        ModeloCodigo: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id
-             * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
-             */
-            id: number;
-            /**
-             * Codigo
-             * @description Código de la plantilla. O esto o `id`.
-             * @default
-             */
-            codigo: string;
-        };
-        /** ModeloComprobar */
-        ModeloComprobar: {
+        /** ModeloComprobarPlantillaAsiento */
+        ModeloComprobarPlantillaAsiento: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
@@ -25263,9 +26246,9 @@ export interface components {
             periodo?: string | null;
             /**
              * Tipo
-             * @description Limita a un tipo de factura: `factura_emitida` o `factura_recibida_sii`. Si no se indica, los dos. Mismo vocabulario que en `/contabilizar/periodo`.
+             * @description Limita a un tipo de factura: `factura_emitida`, `factura_emitida_sii` o `factura_recibida_sii`. Si no se indica, todos. Mismo vocabulario que en `/contabilizar/periodo`.
              */
-            tipo?: ("factura_emitida" | "factura_recibida_sii") | null;
+            tipo?: ("factura_emitida" | "factura_emitida_sii" | "factura_recibida_sii") | null;
         };
         /** ModeloConEjercicio */
         ModeloConEjercicio: {
@@ -25304,6 +26287,46 @@ export interface components {
              * @description Uno de: consulta, apuntes, cierre, admin.
              */
             nivel: string;
+        };
+        /** ModeloConmutar */
+        ModeloConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa cuyo hosting se quiere gestionar.
+             */
+            id_obligado: number;
+        };
+        /** ModeloConmutarConta */
+        ModeloConmutarConta: {
+            /**
+             * Id Obligado
+             * @description Empresa cuya contabilidad se quiere abrir.
+             */
+            id_obligado: number;
+        };
+        /** ModeloContabilizarBandeja */
+        ModeloContabilizarBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description `facturas` o `movimientos` (cobros y pagos).
+             * @default facturas
+             * @enum {string}
+             */
+            tipo: "facturas" | "movimientos";
+            /**
+             * Ids
+             * @description Los que se quieren. Sin ids, todos los pendientes del ejercicio y periodo.
+             */
+            ids?: number[] | null;
+            /** Ejercicio */
+            ejercicio?: number | null;
+            /** Periodo */
+            periodo?: string | null;
         };
         /** ModeloConvertirPagoFraccionado */
         ModeloConvertirPagoFraccionado: {
@@ -25437,7 +26460,7 @@ export interface components {
             diario: string | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_recibida_sii, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              * @default
              */
             ref_tipo: string | null;
@@ -25477,6 +26500,41 @@ export interface components {
              * @default
              */
             concepto: string | null;
+        };
+        /** ModeloCrearConexionExterna */
+        ModeloCrearConexionExterna: {
+            /** Nombre */
+            nombre?: string | null;
+            /** Tunel */
+            tunel: string;
+            /**
+             * Host
+             * @description Servidor de la base de datos visto desde el otro lado del túnel. Normalmente 127.0.0.1.
+             */
+            host?: string | null;
+            /** Puerto */
+            puerto?: number | null;
+            /** Base Datos */
+            base_datos: string;
+            /** Usuario */
+            usuario?: string | null;
+            /**
+             * Password
+             * @description Solo al crear o cambiarla. No se devuelve nunca. Cadena vacía = quitarla.
+             */
+            password?: string | null;
+            opciones?: components["schemas"]["OpcionesConexionExterna"] | null;
+            /**
+             * Id Obligado
+             * @description Empresa. El usuario de la empresa puede omitirlo.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description Sistema externo.
+             * @constant
+             */
+            tipo: "codiplika";
         };
         /** ModeloCrearCuenta */
         ModeloCrearCuenta: {
@@ -25540,6 +26598,28 @@ export interface components {
              */
             descripcion: string | null;
         };
+        /** ModeloCrearMemoria */
+        ModeloCrearMemoria: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Modelo
+             * @description Modelo de memoria.
+             * @enum {string}
+             */
+            modelo: "normal" | "abreviado" | "pymes";
+            /**
+             * Copiar Anterior
+             * @description Copiar los textos de la ultima version del ejercicio anterior. Si no la hay, se crea vacia.
+             * @default false
+             */
+            copiar_anterior: boolean;
+        };
         /** ModeloCrearPlantilla */
         ModeloCrearPlantilla: {
             /**
@@ -25571,6 +26651,33 @@ export interface components {
             opciones?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** ModeloCrearPlantillaAsiento */
+        ModeloCrearPlantillaAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Codigo
+             * @description Se guarda en mayúsculas. Único en la empresa.
+             */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Descripcion
+             * @default
+             */
+            descripcion: string;
+            /**
+             * Definicion
+             * @description Definición de la plantilla: parametros, variables, asientos y opciones.
+             */
+            definicion: {
+                [key: string]: unknown;
+            };
         };
         /** ModeloCrearSubcuenta */
         ModeloCrearSubcuenta: {
@@ -25731,6 +26838,23 @@ export interface components {
              */
             contabilizar: boolean | null;
         };
+        /** ModeloDeshacerBandeja */
+        ModeloDeshacerBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description `facturas` o `movimientos` (cobros y pagos).
+             * @default facturas
+             * @enum {string}
+             */
+            tipo: "facturas" | "movimientos";
+            /** Ids */
+            ids: number[];
+        };
         /** ModeloDestino */
         ModeloDestino: {
             /**
@@ -25816,8 +26940,8 @@ export interface components {
              */
             simular: boolean | null;
         };
-        /** ModeloDuplicar */
-        ModeloDuplicar: {
+        /** ModeloDuplicarPlantillaAsiento */
+        ModeloDuplicarPlantillaAsiento: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
@@ -25826,15 +26950,13 @@ export interface components {
             /**
              * Id
              * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
              */
-            id: number;
+            id?: number | null;
             /**
              * Codigo
              * @description Código de la plantilla. O esto o `id`.
-             * @default
              */
-            codigo: string;
+            codigo?: string | null;
             /** Codigo Nuevo */
             codigo_nuevo: string;
             /**
@@ -25934,6 +27056,65 @@ export interface components {
             /** Concepto */
             concepto?: string | null;
         };
+        /** ModeloEditarConexionExterna */
+        ModeloEditarConexionExterna: {
+            /** Nombre */
+            nombre?: string | null;
+            /**
+             * Tunel
+             * @description Nombre del túnel, de los que da `/tuneles`.
+             */
+            tunel?: string | null;
+            /**
+             * Host
+             * @description Servidor de la base de datos visto desde el otro lado del túnel. Normalmente 127.0.0.1.
+             */
+            host?: string | null;
+            /** Puerto */
+            puerto?: number | null;
+            /** Base Datos */
+            base_datos?: string | null;
+            /** Usuario */
+            usuario?: string | null;
+            /**
+             * Password
+             * @description Solo al crear o cambiarla. No se devuelve nunca. Cadena vacía = quitarla.
+             */
+            password?: string | null;
+            opciones?: components["schemas"]["OpcionesConexionExterna"] | null;
+            /** Id */
+            id: number;
+            /**
+             * Activa
+             * @description Activarla o desactivarla. Cambiar el destino la desactiva sola.
+             */
+            activa?: boolean | null;
+        };
+        /** ModeloEditarCuenta */
+        ModeloEditarCuenta: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Ejercicio
+             * @description Ejercicio del que se quiere el plan. Si no se indica, el de la configuracion de la empresa.
+             */
+            ejercicio?: number | null;
+            /** Codigo */
+            codigo: string;
+            /**
+             * Descripcion
+             * @description Titulo nuevo. Si no se manda, se deja el que tiene.
+             */
+            descripcion?: string | null;
+            /**
+             * Auxiliar
+             * @description Cambia si la cuenta admite apuntes. Si no se manda, se deja como esta.
+             */
+            auxiliar?: boolean | null;
+        };
         /** ModeloEditarDiario */
         ModeloEditarDiario: {
             /**
@@ -25972,6 +27153,35 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** ModeloEditarPlantillaAsiento */
+        ModeloEditarPlantillaAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             */
+            id?: number | null;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             */
+            codigo?: string | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /**
+             * Definicion
+             * @description Si cambia, se guarda como versión nueva. La anterior se conserva.
+             */
+            definicion?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** ModeloEditarTexto */
         ModeloEditarTexto: {
             /**
@@ -25990,10 +27200,10 @@ export interface components {
             documento?: string | null;
         };
         /**
-         * ModeloEjecuciones
+         * ModeloEjecucionesPlantillaAsiento
          * @description Sin id ni código, las de todas las plantillas.
          */
-        ModeloEjecuciones: {
+        ModeloEjecucionesPlantillaAsiento: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
@@ -26002,15 +27212,13 @@ export interface components {
             /**
              * Id
              * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
              */
-            id: number;
+            id?: number | null;
             /**
              * Codigo
              * @description Código de la plantilla. O esto o `id`.
-             * @default
              */
-            codigo: string;
+            codigo?: string | null;
             /**
              * Limite
              * @default 100
@@ -26021,6 +27229,66 @@ export interface components {
              * @default 0
              */
             desplazamiento: number;
+        };
+        /** ModeloEjecutarImportacion */
+        ModeloEjecutarImportacion: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Importacion
+             * @description La que devolvio /subir.
+             */
+            id_importacion: number;
+            /**
+             * Mapeo
+             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
+             */
+            mapeo?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Opciones
+             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
+             */
+            opciones?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Ejercicio
+             * @description Solo para el diario: fuerza el ejercicio. Sin esto, el de la fecha de cada asiento.
+             */
+            ejercicio?: number | null;
+        };
+        /** ModeloEjecutarPlantillaAsiento */
+        ModeloEjecutarPlantillaAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             */
+            id?: number | null;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             */
+            codigo?: string | null;
+            /** Parametros */
+            parametros?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Version
+             * @description Versión con la que se previsualizó. Si ya no es la vigente, se para.
+             * @default 0
+             */
+            version: number;
         };
         /** ModeloEjercicio */
         ModeloEjercicio: {
@@ -26033,9 +27301,9 @@ export interface components {
             ejercicio: number;
             /**
              * Tipo
-             * @description Limita a un tipo de factura: `factura_emitida` o `factura_recibida_sii`. Si no se indica, los dos. Es el mismo vocabulario que las claves de `/contabilizar/pendientes`.
+             * @description Limita a un tipo de factura: `factura_emitida` (ventas de VeriFactu), `factura_emitida_sii` (ventas del SII) o `factura_recibida_sii`. Si no se indica, todos. Es el mismo vocabulario que las claves de `/contabilizar/pendientes`.
              */
-            tipo?: ("factura_emitida" | "factura_recibida_sii") | null;
+            tipo?: ("factura_emitida" | "factura_emitida_sii" | "factura_recibida_sii") | null;
         };
         /** ModeloEjercicioNuevo */
         ModeloEjercicioNuevo: {
@@ -26064,6 +27332,26 @@ export interface components {
              * @description Diario que se borra.
              */
             codigo: string;
+        };
+        /** ModeloEmpresa */
+        ModeloEmpresa: {
+            /** Id Obligado */
+            id_obligado: number;
+            /** Nombrerazon */
+            NombreRazon?: string | null;
+            /** Nif */
+            NIF?: string | null;
+        };
+        /** ModeloEmpresaConta */
+        ModeloEmpresaConta: {
+            /** Id Obligado */
+            id_obligado: number;
+            /** Nombrerazon */
+            NombreRazon?: string | null;
+            /** Nif */
+            NIF?: string | null;
+            /** Nivel */
+            nivel: string;
         };
         /** ModeloEnlazar */
         ModeloEnlazar: {
@@ -26100,6 +27388,12 @@ export interface components {
              * @description Factura emitida sin cliente enlazado.
              */
             id_factura: number;
+            /**
+             * Ref Tipo
+             * @description De qué ventas se trata: `factura_emitida` (VeriFactu, por defecto) o `factura_emitida_sii` (SII). Es el mismo vocabulario que el traspaso.
+             * @default factura_emitida
+             */
+            ref_tipo: ("factura_emitida" | "factura_emitida_sii") | null;
             /**
              * Id Ficha
              * @description Ficha de cliente elegida, de las que vienen en `clientes_posibles`. Si no se manda, se crea una ficha nueva con el nombre y el NIF de la factura.
@@ -26195,6 +27489,25 @@ export interface components {
              * @description False retira la cuenta; True la vuelve a activar.
              */
             activa: boolean;
+        };
+        /** ModeloExportarPlantillasAsiento */
+        ModeloExportarPlantillasAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Plantillas
+             * @description Ids o códigos. Vacío = todas.
+             */
+            plantillas?: (number | string)[];
+            /**
+             * Incluir Inactivas
+             * @description Solo cuenta si no se eligen plantillas: incluir también las retiradas.
+             * @default false
+             */
+            incluir_inactivas: boolean;
         };
         /** ModeloFacturarCertificacion */
         ModeloFacturarCertificacion: {
@@ -26859,6 +28172,38 @@ export interface components {
              */
             id_obligado: number | null;
         };
+        /** ModeloGuardarLecturaBandeja */
+        ModeloGuardarLecturaBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Origen
+             * @description Sistema del que viene: codiplika, …
+             */
+            origen: string;
+            /** Desde */
+            desde?: string | null;
+            /** Hasta */
+            hasta?: string | null;
+            /**
+             * Referencia Origen
+             * @description Cómo llama el ERP a esta lectura.
+             */
+            referencia_origen?: string | null;
+            /**
+             * Ensayo
+             * @description True = no guarda nada; dice qué pasaría.
+             * @default false
+             */
+            ensayo: boolean | null;
+            /** Facturas */
+            facturas?: components["schemas"]["FacturaEntradaBandeja"][];
+            /** Movimientos */
+            movimientos?: components["schemas"]["MovimientoEntradaBandeja"][];
+        };
         /** ModeloHistorialPreciosListar */
         ModeloHistorialPreciosListar: {
             /**
@@ -26987,6 +28332,11 @@ export interface components {
              */
             limit: number | null;
         };
+        /** ModeloIdConexionExterna */
+        ModeloIdConexionExterna: {
+            /** Id */
+            id: number;
+        };
         /** ModeloImpersonar */
         ModeloImpersonar: {
             /**
@@ -27020,6 +28370,34 @@ export interface components {
              * @description La que devolvio /subir.
              */
             id_importacion: number;
+        };
+        /** ModeloImportarPlantillasAsiento */
+        ModeloImportarPlantillasAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Contenido
+             * @description El fichero tal como lo devolvió /exportar.
+             */
+            contenido: {
+                [key: string]: unknown;
+            };
+            /**
+             * Si Existe
+             * @description Si el código ya existe: dejar la que hay, o guardar la del fichero como versión siguiente.
+             * @default saltar
+             * @enum {string}
+             */
+            si_existe: "saltar" | "nueva_version";
+            /**
+             * Ensayar
+             * @description Decir qué pasaría sin grabar nada.
+             * @default false
+             */
+            ensayar: boolean;
         };
         /** ModeloImportarPreciosRespuesta */
         ModeloImportarPreciosRespuesta: {
@@ -27211,6 +28589,49 @@ export interface components {
              * @default epigrafes
              */
             detalle: string | null;
+        };
+        /** ModeloLecturaBandeja */
+        ModeloLecturaBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Lectura */
+            id_lectura: number;
+        };
+        /** ModeloLeerErpBandeja */
+        ModeloLeerErpBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Origen
+             * @description Programa del que se lee.
+             * @default codiplika
+             * @constant
+             */
+            origen: "codiplika";
+            /**
+             * Desde
+             * Format: date
+             * @description Primer día.
+             */
+            desde: string;
+            /**
+             * Hasta
+             * Format: date
+             * @description Último día.
+             */
+            hasta: string;
+            /**
+             * Ensayo
+             * @description True (por defecto) = solo dice qué traería; no guarda ni marca nada.
+             * @default true
+             */
+            ensayo: boolean | null;
         };
         /** ModeloLibroIva */
         ModeloLibroIva: {
@@ -27411,6 +28832,52 @@ export interface components {
              */
             limit: number | null;
         };
+        /** ModeloListarBandeja */
+        ModeloListarBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description `facturas` o `movimientos` (cobros y pagos).
+             * @default facturas
+             * @enum {string}
+             */
+            tipo: "facturas" | "movimientos";
+            /** Estado */
+            estado?: ("pendiente" | "duplicada" | "en_conflicto" | "contabilizada" | "descartada") | null;
+            /**
+             * Libro
+             * @description Facturas: emitida o recibida. Movimientos: cobro o pago.
+             */
+            libro?: string | null;
+            /** Ejercicio */
+            ejercicio?: number | null;
+            /**
+             * Periodo
+             * @description Mes, de 01 a 12.
+             */
+            periodo?: string | null;
+            /**
+             * Buscar
+             * @description Número, NIF o nombre del tercero; en movimientos, concepto.
+             */
+            buscar?: string | null;
+            /** Id Lectura */
+            id_lectura?: number | null;
+            /**
+             * Pagina
+             * @default 1
+             */
+            pagina: number | null;
+            /**
+             * Por Pagina
+             * @default 100
+             */
+            por_pagina: number | null;
+        };
         /** ModeloListarBienesPeticion */
         ModeloListarBienesPeticion: {
             /**
@@ -27460,6 +28927,14 @@ export interface components {
              */
             limit: number | null;
         };
+        /** ModeloListarConexionesExternas */
+        ModeloListarConexionesExternas: {
+            /**
+             * Id Obligado
+             * @description Empresa. El superadministrador puede omitirlo para verlas todas.
+             */
+            id_obligado?: number | null;
+        };
         /** ModeloListarCuentasMaestro */
         ModeloListarCuentasMaestro: {
             /**
@@ -27500,6 +28975,26 @@ export interface components {
              * @default 100
              */
             por_pagina: number | null;
+        };
+        /** ModeloListarDeclaraciones */
+        ModeloListarDeclaraciones: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Ejercicio
+             * @description 0 = todos los ejercicios.
+             * @default 0
+             */
+            ejercicio: number;
+            /**
+             * Modelo
+             * @description Vacio = todos los modelos.
+             * @default
+             */
+            modelo: string;
         };
         /** ModeloListarDiarios */
         ModeloListarDiarios: {
@@ -27688,6 +29183,12 @@ export interface components {
              * @default 100
              */
             por_pagina: number | null;
+            /**
+             * Ref Tipo
+             * @description De qué ventas se trata: `factura_emitida` (VeriFactu, por defecto) o `factura_emitida_sii` (SII). Es el mismo vocabulario que el traspaso.
+             * @default factura_emitida
+             */
+            ref_tipo: ("factura_emitida" | "factura_emitida_sii") | null;
         };
         /** ModeloListarImportaciones */
         ModeloListarImportaciones: {
@@ -27716,6 +29217,20 @@ export interface components {
              * @default 0
              */
             offset: number | null;
+        };
+        /** ModeloListarMemorias */
+        ModeloListarMemorias: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Ejercicio
+             * @description 0 = todos los ejercicios.
+             * @default 0
+             */
+            ejercicio: number;
         };
         /** ModeloListarPlan */
         ModeloListarPlan: {
@@ -27769,6 +29284,26 @@ export interface components {
              * @description Uno de: plan, diario, inmovilizado.
              */
             destino?: string | null;
+        };
+        /** ModeloListarPlantillasAsiento */
+        ModeloListarPlantillasAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Incluir Inactivas
+             * @description También las retiradas.
+             * @default false
+             */
+            incluir_inactivas: boolean;
+            /**
+             * Incluir De Serie
+             * @description También las de serie, comunes a todas las empresas, detrás de las propias.
+             * @default true
+             */
+            incluir_de_serie: boolean;
         };
         /** ModeloListarTerceros */
         ModeloListarTerceros: {
@@ -30102,6 +31637,16 @@ export interface components {
             /** Id Inmovilizado */
             id_inmovilizado: number;
         };
+        /** ModeloObtenerDeclaracion */
+        ModeloObtenerDeclaracion: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+        };
         /** ModeloObtenerFichaCuentas */
         ModeloObtenerFichaCuentas: {
             /**
@@ -30119,6 +31664,30 @@ export interface components {
              * @description ID de la ficha dentro de ese maestro.
              */
             id_ficha: number;
+        };
+        /** ModeloObtenerPlantillaAsiento */
+        ModeloObtenerPlantillaAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             */
+            id?: number | null;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             */
+            codigo?: string | null;
+            /**
+             * Version
+             * @description 0 = la vigente.
+             * @default 0
+             */
+            version: number;
         };
         /** ModeloObtenerTercero */
         ModeloObtenerTercero: {
@@ -30144,8 +31713,8 @@ export interface components {
              */
             id_gestion: number | null;
         };
-        /** ModeloOpciones */
-        ModeloOpciones: {
+        /** ModeloOpcionesPlantillaAsiento */
+        ModeloOpcionesPlantillaAsiento: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
@@ -30311,6 +31880,21 @@ export interface components {
             /** Estado */
             estado?: number | null;
         };
+        /** ModeloPeriodoCobros */
+        ModeloPeriodoCobros: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Mes, de 01 a 12. Si no se indica, el ejercicio entero.
+             */
+            periodo?: string | null;
+        };
         /** ModeloPeriodoContabilizar */
         ModeloPeriodoContabilizar: {
             /**
@@ -30327,9 +31911,9 @@ export interface components {
             periodo?: string | null;
             /**
              * Tipo
-             * @description Limita a un tipo de factura: `factura_emitida` o `factura_recibida_sii`. Si no se indica, los dos. Es el mismo vocabulario que las claves de `/contabilizar/pendientes`.
+             * @description Limita a un tipo de factura: `factura_emitida` (ventas de VeriFactu), `factura_emitida_sii` (ventas del SII) o `factura_recibida_sii`. Si no se indica, todos. Es el mismo vocabulario que las claves de `/contabilizar/pendientes`.
              */
-            tipo?: ("factura_emitida" | "factura_recibida_sii") | null;
+            tipo?: ("factura_emitida" | "factura_emitida_sii" | "factura_recibida_sii") | null;
         };
         /** ModeloPeriodoEstado */
         ModeloPeriodoEstado: {
@@ -30418,6 +32002,24 @@ export interface components {
             /** Id Plantilla */
             id_plantilla: number;
         };
+        /** ModeloPlantillaAsiento */
+        ModeloPlantillaAsiento: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id
+             * @description Id de la plantilla. O esto o `codigo`.
+             */
+            id?: number | null;
+            /**
+             * Codigo
+             * @description Código de la plantilla. O esto o `id`.
+             */
+            codigo?: string | null;
+        };
         /** ModeloPorEjercicio */
         ModeloPorEjercicio: {
             /**
@@ -30499,8 +32101,67 @@ export interface components {
              */
             incluir_borradores: boolean | null;
         };
-        /** ModeloPrevisualizar */
-        ModeloPrevisualizar: {
+        /** ModeloPrepararDeclaracion */
+        ModeloPrepararDeclaracion: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Ejercicio */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Mes (01 a 12) o trimestre (1T a 4T).
+             */
+            periodo: string;
+            /**
+             * Cuotas A Compensar
+             * @description Cuotas a compensar que vienen de periodos anteriores (casilla 110). Si no se manda, se toman de la declaracion confirmada del periodo anterior; si no la hay, se pone 0 y sale un aviso.
+             */
+            cuotas_a_compensar?: number | null;
+            /**
+             * Solicitar Devolucion
+             * @description Si sale a devolver, pedir la devolucion en vez de compensar. Solo en el ultimo periodo del ejercicio, salvo devolucion mensual.
+             * @default false
+             */
+            solicitar_devolucion: boolean;
+            /**
+             * Devolucion Mensual
+             * @description La empresa esta inscrita en el registro de devolucion mensual: puede pedir la devolucion en cualquier periodo.
+             * @default false
+             */
+            devolucion_mensual: boolean;
+        };
+        /** ModeloPrepararImportacion */
+        ModeloPrepararImportacion: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Id Importacion
+             * @description La que devolvio /subir.
+             */
+            id_importacion: number;
+            /**
+             * Mapeo
+             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
+             */
+            mapeo?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Opciones
+             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
+             */
+            opciones?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ModeloPrevisualizarPlantillaAsiento */
+        ModeloPrevisualizarPlantillaAsiento: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
@@ -30509,15 +32170,13 @@ export interface components {
             /**
              * Id
              * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
              */
-            id: number;
+            id?: number | null;
             /**
              * Codigo
              * @description Código de la plantilla. O esto o `id`.
-             * @default
              */
-            codigo: string;
+            codigo?: string | null;
             /**
              * Definicion
              * @description Para probar una plantilla sin guardarla (el editor).
@@ -31173,6 +32832,29 @@ export interface components {
              */
             id_gestion: number;
         };
+        /** ModeloResolverBandeja */
+        ModeloResolverBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description `facturas` o `movimientos` (cobros y pagos).
+             * @default facturas
+             * @enum {string}
+             */
+            tipo: "facturas" | "movimientos";
+            /** Id */
+            id: number;
+            /**
+             * Decision
+             * @description `sif`: en conflicto con la copia de la facturación, vale la de la facturación. `importada`: vale esta. `descartar`: no entra. `recuperar`: una descartada vuelve a evaluarse.
+             * @enum {string}
+             */
+            decision: "sif" | "importada" | "descartar" | "recuperar";
+        };
         /** ModeloResolverPrecio */
         ModeloResolverPrecio: {
             /**
@@ -31813,6 +33495,19 @@ export interface components {
             registros: components["schemas"]["ModeloRespuestaTiposNIF"][];
             /** Total */
             total: number;
+        };
+        /** ModeloRevertirCobros */
+        ModeloRevertirCobros: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Fecha
+             * @description Fecha de los asientos inversos. Si no se indica, hoy: el cobro no guarda cuándo se anuló.
+             */
+            fecha?: string | null;
         };
         /** ModeloRevisado */
         ModeloRevisado: {
@@ -32482,6 +34177,23 @@ export interface components {
              */
             codigo_facturae: string;
         };
+        /** ModeloUnoBandeja */
+        ModeloUnoBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Tipo
+             * @description `facturas` o `movimientos` (cobros y pagos).
+             * @default facturas
+             * @enum {string}
+             */
+            tipo: "facturas" | "movimientos";
+            /** Id */
+            id: number;
+        };
         /** ModeloUsuarioCrear */
         ModeloUsuarioCrear: {
             /**
@@ -32642,6 +34354,154 @@ export interface components {
         ModeloUsuarioRespuestaOperacion: {
             /** Num Filas */
             num_filas: number;
+        };
+        /**
+         * ModeloUsuarioSesion
+         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
+         *
+         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
+         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
+         */
+        ModeloUsuarioSesion: {
+            /**
+             * Id
+             * @description Id del usuario.
+             */
+            id?: number | null;
+            /**
+             * Usuario
+             * @description Nombre con el que entra.
+             */
+            usuario?: string | null;
+            /**
+             * Nombre Real
+             * @description Nombre de la persona.
+             */
+            nombre_real?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Id Rol
+             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
+             */
+            id_rol?: number | null;
+            /**
+             * Rol
+             * @description Nombre del rol, para mostrarlo.
+             */
+            rol?: string | null;
+            /**
+             * Id Estado
+             * @description 1 = usuario activo.
+             */
+            id_estado?: number | null;
+            /**
+             * Id Obligado
+             * @description Empresa a la que pertenece el usuario, si es de una sola.
+             */
+            id_obligado?: number | null;
+            /** Id Representante */
+            id_representante?: number | null;
+            /** Id Administrador */
+            id_administrador?: number | null;
+            /**
+             * Nombrerazon
+             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
+             */
+            NombreRazon?: string | null;
+            /**
+             * Hosting Id Obligado
+             * @description Empresa de hosting activa en esta sesion. No aparece si aun no se ha elegido ninguna.
+             */
+            hosting_id_obligado?: number | null;
+        };
+        /**
+         * ModeloUsuarioSesionConta
+         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
+         *
+         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
+         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
+         */
+        ModeloUsuarioSesionConta: {
+            /**
+             * Id
+             * @description Id del usuario.
+             */
+            id?: number | null;
+            /**
+             * Usuario
+             * @description Nombre con el que entra.
+             */
+            usuario?: string | null;
+            /**
+             * Nombre Real
+             * @description Nombre de la persona.
+             */
+            nombre_real?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Id Rol
+             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
+             */
+            id_rol?: number | null;
+            /**
+             * Rol
+             * @description Nombre del rol, para mostrarlo.
+             */
+            rol?: string | null;
+            /**
+             * Id Estado
+             * @description 1 = usuario activo.
+             */
+            id_estado?: number | null;
+            /**
+             * Id Obligado
+             * @description Empresa a la que pertenece el usuario, si es de una sola.
+             */
+            id_obligado?: number | null;
+            /** Id Representante */
+            id_representante?: number | null;
+            /** Id Administrador */
+            id_administrador?: number | null;
+            /**
+             * Nombrerazon
+             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
+             */
+            NombreRazon?: string | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Hora Actualizacion */
+            fecha_hora_actualizacion?: string | null;
+            /**
+             * Modulos Json
+             * @description Modulos contratados, tal y como vienen de la base de datos.
+             */
+            modulos_json?: unknown | null;
+            /** @description Los mismos modulos, ya resueltos. */
+            modulos?: components["schemas"]["ModeloModulos"] | null;
+            /**
+             * Conta Id Obligado
+             * @description Empresa de contabilidad activa en esta sesion. No aparece si aun no se ha elegido ninguna.
+             */
+            conta_id_obligado?: number | null;
+            /**
+             * Permisos Operario
+             * @description Solo para el rol 5.
+             */
+            permisos_operario?: unknown[] | null;
+            /** @description Solo para el rol 5. */
+            perfil_operario?: components["schemas"]["ModeloPerfilOperario"] | null;
+            /**
+             * Permisos Perfil
+             * @description Solo para el rol 5.
+             */
+            permisos_perfil?: unknown[] | null;
+            /**
+             * Instalacion
+             * @description Instalacion a la que pertenece el token.
+             */
+            instalacion?: string | null;
         };
         /** ModeloVehiculoActualizar */
         ModeloVehiculoActualizar: {
@@ -34024,6 +35884,117 @@ export interface components {
              */
             rectificativa_no_relacionada?: number | null;
         };
+        /** MovimientoBandeja */
+        MovimientoBandeja: {
+            /** Id */
+            id: number;
+            /** Id Lectura */
+            id_lectura?: number | null;
+            /** Origen */
+            origen: string;
+            /** Id Origen */
+            id_origen: string;
+            /** Estado */
+            estado: string;
+            /** Motivo */
+            motivo?: string | null;
+            /**
+             * Ref Tipo Sif
+             * @description Documento de la facturación con el que coincide.
+             */
+            ref_tipo_sif?: string | null;
+            /** Ref Id Sif */
+            ref_id_sif?: number | null;
+            /**
+             * Cambio En Origen
+             * @description 1 = el ERP lo cambió después de contabilizado.
+             */
+            cambio_en_origen?: number | null;
+            /** Id Borrador */
+            id_borrador?: number | null;
+            /** Ejercicio Asiento */
+            ejercicio_asiento?: number | null;
+            /** Asiento */
+            asiento?: number | null;
+            /** Fecha Alta */
+            fecha_alta?: string | null;
+            /** Fecha Modificacion */
+            fecha_modificacion?: string | null;
+            /** Clase */
+            clase: string;
+            /** Fecha */
+            fecha?: string | null;
+            /** Importe */
+            importe: number;
+            /** Concepto */
+            concepto?: string | null;
+            /** Cuenta Tesoreria */
+            cuenta_tesoreria?: string | null;
+            /** Cuenta Tercero */
+            cuenta_tercero?: string | null;
+            /** Nif Tercero */
+            nif_tercero?: string | null;
+            /** Nombre Tercero */
+            nombre_tercero?: string | null;
+            /** Id Origen Factura */
+            id_origen_factura?: string | null;
+            /** Nif Emisor Factura */
+            nif_emisor_factura?: string | null;
+            /** Numero Factura */
+            numero_factura?: string | null;
+            /** Fecha Factura */
+            fecha_factura?: string | null;
+        };
+        /** MovimientoEntradaBandeja */
+        MovimientoEntradaBandeja: {
+            /**
+             * Id Origen
+             * @description Identificador del cobro o pago en el ERP.
+             */
+            id_origen: string;
+            /**
+             * Clase
+             * @description cobro o pago.
+             * @enum {string}
+             */
+            clase: "cobro" | "pago";
+            /**
+             * Fecha
+             * Format: date
+             * @description Fecha. Es la del asiento.
+             */
+            fecha: string;
+            /**
+             * Importe
+             * @description Importe. Negativo si es una devolución.
+             */
+            importe: string;
+            /** Concepto */
+            concepto?: string | null;
+            /**
+             * Cuenta Tesoreria
+             * @description Banco o caja.
+             */
+            cuenta_tesoreria?: string | null;
+            /**
+             * Cuenta Tercero
+             * @description Cliente o proveedor.
+             */
+            cuenta_tercero?: string | null;
+            /** Nif Tercero */
+            nif_tercero?: string | null;
+            /** Nombre Tercero */
+            nombre_tercero?: string | null;
+            /** @description Factura a la que se aplica. */
+            factura?: components["schemas"]["FacturaReferidaBandeja"] | null;
+        };
+        /** NoSePuedeBandeja */
+        NoSePuedeBandeja: {
+            /** Id */
+            id: number;
+            /** Motivo */
+            motivo: string;
+        };
         /** ObraContabilizada */
         ObraContabilizada: {
             /**
@@ -34069,12 +36040,46 @@ export interface components {
         ObtenerFacturaRespuesta: {
             registro: components["schemas"]["FacturaSimplificada"];
         };
-        /** Opcion */
-        Opcion: {
+        /** OpcionDeParametro */
+        OpcionDeParametro: {
+            /** Valor */
+            valor: number | string;
+            /**
+             * Etiqueta
+             * @default
+             */
+            etiqueta: string;
+        };
+        /** OpcionPlantillaAsiento */
+        OpcionPlantillaAsiento: {
             /** Valor */
             valor: number | string;
             /** Etiqueta */
             etiqueta: string;
+        };
+        /** OpcionesConexionExterna */
+        OpcionesConexionExterna: {
+            /**
+             * Marcar
+             * @description Codiplika: marcar como exportado lo que se trae, para que no salga en su exportación a Keme.
+             */
+            marcar?: boolean | null;
+            /**
+             * Cta Prov Desde Id
+             * @description Codiplika: la cuenta del proveedor se forma con su id y no con su código (como esté en esa instalación).
+             */
+            cta_prov_desde_id?: boolean | null;
+        };
+        /** OpcionesDePlantilla */
+        OpcionesDePlantilla: {
+            autocuadre?: components["schemas"]["AutocuadreDePlantilla"] | null;
+            reversion?: components["schemas"]["ReversionDePlantilla"] | null;
+            /**
+             * Estado Inicial
+             * @default borrador
+             * @enum {string}
+             */
+            estado_inicial: "borrador" | "libro";
         };
         /**
          * OperacionesExentaEnum
@@ -34089,8 +36094,66 @@ export interface components {
          * @enum {integer}
          */
         OperacionesExentaEnum: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-        /** ParametroResuelto */
-        ParametroResuelto: {
+        /** ParametroDePlantilla */
+        ParametroDePlantilla: {
+            /** Clave */
+            clave: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "texto" | "numero" | "importe" | "porcentaje" | "fecha" | "booleano" | "seleccion" | "cuenta" | "tercero" | "tabla";
+            /**
+             * Etiqueta
+             * @default
+             */
+            etiqueta: string;
+            /**
+             * Ayuda
+             * @default
+             */
+            ayuda: string;
+            /**
+             * Obligatorio
+             * @default false
+             */
+            obligatorio: boolean;
+            /** Defecto */
+            defecto?: string | null;
+            /** Visible Si */
+            visible_si?: string | null;
+            /** Validacion */
+            validacion?: string | null;
+            /**
+             * Mensaje Validacion
+             * @default
+             */
+            mensaje_validacion: string;
+            /** Filtro */
+            filtro?: string | null;
+            /** Opciones */
+            opciones?: components["schemas"]["OpcionDeParametro"][] | null;
+            /** Origen */
+            origen?: string | null;
+            /** Columnas */
+            columnas?: components["schemas"]["ParametroDePlantilla"][] | null;
+            /**
+             * Filas Minimas
+             * @default 0
+             */
+            filas_minimas: number;
+            /**
+             * Filas Maximas
+             * @default 200
+             */
+            filas_maximas: number;
+            /** Longitud Maxima */
+            longitud_maxima?: number | null;
+            /** Decimales */
+            decimales?: number | null;
+        };
+        /** ParametroResueltoPlantillaAsiento */
+        ParametroResueltoPlantillaAsiento: {
             /** Clave */
             clave: string;
             /**
@@ -34295,8 +36358,23 @@ export interface components {
              */
             fecha_hora_actualizacion: string;
         };
-        /** PlantillaEnLista */
-        PlantillaEnLista: {
+        /** PlantillaAsientoDefinicion */
+        PlantillaAsientoDefinicion: {
+            /**
+             * Diario
+             * @default
+             */
+            diario: string;
+            /** Parametros */
+            parametros?: components["schemas"]["ParametroDePlantilla"][];
+            /** Variables */
+            variables?: components["schemas"]["VariableDePlantilla"][];
+            /** Asientos */
+            asientos: components["schemas"]["AsientoDePlantilla"][];
+            opciones?: components["schemas"]["OpcionesDePlantilla"];
+        };
+        /** PlantillaAsientoEnLista */
+        PlantillaAsientoEnLista: {
             /** Id */
             id: number;
             /** Codigo */
@@ -34307,6 +36385,12 @@ export interface components {
             descripcion?: string | null;
             /** Activa */
             activa: boolean;
+            /**
+             * De Serie
+             * @description Plantilla común a todas las empresas: se ve, se prueba y se duplica, pero no se cambia, ni se retira, ni se usa directamente.
+             * @default false
+             */
+            de_serie: boolean;
             /** Version Actual */
             version_actual: number;
             /** Usuario */
@@ -34315,6 +36399,48 @@ export interface components {
             fecha_alta?: string | null;
             /** Fecha Hora Actualizacion */
             fecha_hora_actualizacion?: string | null;
+        };
+        /** PlantillaAsientoExportada */
+        PlantillaAsientoExportada: {
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Descripcion
+             * @default
+             */
+            descripcion: string;
+            /**
+             * Version
+             * @description Versión de origen. Informativo: en destino nace como la 1 o la siguiente.
+             */
+            version: number;
+            definicion: components["schemas"]["PlantillaAsientoDefinicion"];
+        };
+        /** PlantillaAsientoImportada */
+        PlantillaAsientoImportada: {
+            /** Codigo */
+            codigo?: string | null;
+            /** Nombre */
+            nombre?: string | null;
+            /**
+             * Resultado
+             * @description creada, nueva_version, sin_cambios, saltada o error.
+             */
+            resultado: string;
+            /**
+             * Version
+             * @description Versión con la que queda (o quedaría) en esta empresa.
+             */
+            version?: number | null;
+            /** Errores */
+            errores?: components["schemas"]["ErrorCampoPlantillaAsiento"][];
+            /**
+             * Avisos
+             * @description Cuentas o diarios escritos en la plantilla que no existen aquí. No paran la importación.
+             */
+            avisos?: string[];
         };
         /** ProbarConexion */
         ProbarConexion: {
@@ -34651,7 +36777,7 @@ export interface components {
         RenglonLibroIva: {
             /**
              * Origen
-             * @description De que libro de facturacion viene: verifactu o sii.
+             * @description De que libro viene: verifactu, sii o bandeja (facturas de otro programa sin copia en la facturacion).
              */
             origen: string;
             /**
@@ -35153,12 +37279,30 @@ export interface components {
              * Campos
              * @description En el orden en que conviene enseñarlas.
              */
-            campos?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_configuracion__CampoDeCuenta"][];
+            campos?: components["schemas"]["CampoDeCuentaConfiguracion"][];
             /**
              * Cuantos
              * @description Cuántas cuentas configurables hay.
              */
             cuantos: number;
+        };
+        /** RespuestaCatalogoPlantillas */
+        RespuestaCatalogoPlantillas: {
+            /** Tipos Parametro */
+            tipos_parametro: string[];
+            /** Origenes */
+            origenes: string[];
+            /** Campos Linea */
+            campos_linea: string[];
+            /** Campos Tercero */
+            campos_tercero: string[];
+            /**
+             * Nombres Del Motor
+             * @description Nombres que pone el motor y no pueden ser claves: fila, indice, asiento_fecha, asiento_concepto.
+             */
+            nombres_del_motor: string[];
+            /** Funciones */
+            funciones: components["schemas"]["FuncionCatalogoPlantillas"][];
         };
         /** RespuestaCerrar */
         RespuestaCerrar: {
@@ -35183,12 +37327,38 @@ export interface components {
              */
             asiento_cierre?: number | null;
         };
-        /** RespuestaComprobar */
-        RespuestaComprobar: {
+        /** RespuestaCobrosAnulados */
+        RespuestaCobrosAnulados: {
+            /**
+             * Cuantos
+             * @description Cobros anulados que siguen en los libros.
+             */
+            cuantos: number;
+            /**
+             * Cobros
+             * @description Los cobros.
+             */
+            cobros?: components["schemas"]["CobroAnulado"][];
+        };
+        /** RespuestaCobrosPendientes */
+        RespuestaCobrosPendientes: {
+            /**
+             * Cuantos
+             * @description Cobros sin contabilizar.
+             */
+            cuantos: number;
+            /**
+             * Cobros
+             * @description Los cobros.
+             */
+            cobros?: components["schemas"]["CobroPendiente"][];
+        };
+        /** RespuestaComprobarPlantillaAsiento */
+        RespuestaComprobarPlantillaAsiento: {
             /** Valida */
             valida: boolean;
             /** Errores */
-            errores?: components["schemas"]["ErrorCampo"][];
+            errores?: components["schemas"]["ErrorCampoPlantillaAsiento"][];
         };
         /** RespuestaComprobarTraspaso */
         RespuestaComprobarTraspaso: {
@@ -35383,6 +37553,86 @@ export interface components {
              */
             asiento_cierre?: number | null;
         };
+        /** RespuestaConmutar */
+        RespuestaConmutar: {
+            /**
+             * Id Obligado
+             * @description Empresa que queda activa.
+             */
+            id_obligado: number;
+        };
+        /** RespuestaConmutarConta */
+        RespuestaConmutarConta: {
+            /**
+             * Id Obligado
+             * @description Empresa que queda activa.
+             */
+            id_obligado: number;
+            /**
+             * Nivel
+             * @description Nivel de acceso del usuario sobre esa contabilidad.
+             */
+            nivel: string;
+        };
+        /** RespuestaContabilizarBandeja */
+        RespuestaContabilizarBandeja: {
+            /**
+             * Contabilizados
+             * @description Pasados a borrador.
+             */
+            contabilizados: number;
+            /**
+             * Apartados
+             * @description No se han podido contabilizar; el motivo queda en el documento.
+             */
+            apartados: number;
+            /**
+             * Duplicados
+             * @description Resultaron estar ya en la facturación: cuenta la de allí.
+             */
+            duplicados: number;
+            /** Asientos */
+            asientos?: components["schemas"]["AsientoDeBandeja"][];
+            /** Motivos */
+            motivos?: {
+                [key: string]: number;
+            };
+            /**
+             * Avisos
+             * @description Cuentas que se han ajustado al ancho de la contabilidad.
+             */
+            avisos?: string[];
+        };
+        /** RespuestaContabilizarCobros */
+        RespuestaContabilizarCobros: {
+            /**
+             * Contabilizados
+             * @description Cobros a los que se ha generado asiento.
+             */
+            contabilizados: number;
+            /**
+             * Pendientes
+             * @description Cobros que no se han podido contabilizar y quedan anotados con su motivo.
+             */
+            pendientes: number;
+            /**
+             * Ya Contabilizados
+             * @description Cobros que otro proceso contabilizó a la vez.
+             */
+            ya_contabilizados: number;
+            /**
+             * Asientos
+             * @description Los asientos generados.
+             */
+            asientos?: components["schemas"]["AsientoDeCobro"][];
+            /**
+             * Motivos
+             * @description Cuántos cobros ha frenado cada motivo.
+             */
+            motivos?: {
+                [key: string]: number;
+            };
+        };
         /** RespuestaContabilizarPeriodo */
         RespuestaContabilizarPeriodo: {
             /**
@@ -35405,6 +37655,12 @@ export interface components {
              * @description Facturas anuladas, que no se contabilizan.
              */
             anuladas: number;
+            /**
+             * Ya En Bandeja
+             * @description Facturas que ya habian entrado por la bandeja de un ERP externo: se apuntan a ese asiento y no generan otro.
+             * @default 0
+             */
+            ya_en_bandeja: number;
             /**
              * Asientos
              * @description Los asientos generados, con su factura.
@@ -35788,6 +38044,74 @@ export interface components {
              */
             motivo: string;
         };
+        /** RespuestaDeshacerBandeja */
+        RespuestaDeshacerBandeja: {
+            /** Deshechos */
+            deshechos: number;
+            /** No Se Pueden */
+            no_se_pueden?: components["schemas"]["NoSePuedeBandeja"][];
+        };
+        /** RespuestaDeshacerCierre */
+        RespuestaDeshacerCierre: {
+            /**
+             * Ejercicio
+             * @description Ejercicio.
+             */
+            ejercicio: number;
+            /**
+             * Deshechos
+             * @description Borradores tirados.
+             */
+            deshechos: number;
+        };
+        /** RespuestaDeshacerImportacion */
+        RespuestaDeshacerImportacion: {
+            /**
+             * Id Importacion
+             * @description Importacion deshecha.
+             */
+            id_importacion: number;
+            /**
+             * Destino
+             * @description plan, diario o inmovilizado.
+             */
+            destino: string;
+            /**
+             * Deshechos
+             * @description Registros quitados.
+             */
+            deshechos: number;
+            /**
+             * Pendientes
+             * @description Lo que no se ha podido quitar y por que.
+             */
+            pendientes?: components["schemas"]["Pendiente"][];
+            /**
+             * Estado
+             * @description 'revertida' si salio entera; sigue 'importada' si quedo algo.
+             */
+            estado: string;
+            /**
+             * Completo
+             * @description False = queda algo de esta importacion en los libros.
+             */
+            completo: boolean;
+        };
+        /** RespuestaDeshacerLecturaBandeja */
+        RespuestaDeshacerLecturaBandeja: {
+            /** Id Lectura */
+            id_lectura: number;
+            /**
+             * Quitados
+             * @description Documentos sin asiento que se han quitado de la bandeja.
+             */
+            quitados: number;
+            /**
+             * Se Quedan
+             * @description Documentos con asiento que se quedan. Primero hay que deshacer su contabilización.
+             */
+            se_quedan: number;
+        };
         /** RespuestaDiarioEliminado */
         RespuestaDiarioEliminado: {
             /**
@@ -35861,12 +38185,110 @@ export interface components {
              */
             modificado: boolean;
         };
-        /** RespuestaEjecuciones */
-        RespuestaEjecuciones: {
+        /** RespuestaEjecucionesPlantillaAsiento */
+        RespuestaEjecucionesPlantillaAsiento: {
             /** Ejecuciones */
-            ejecuciones?: components["schemas"]["Ejecucion"][];
+            ejecuciones?: components["schemas"]["EjecucionPlantillaAsiento"][];
             /** Total */
             total: number;
+        };
+        /** RespuestaEjecutarImportacion */
+        RespuestaEjecutarImportacion: {
+            /**
+             * Id Importacion
+             * @description Importacion ejecutada.
+             */
+            id_importacion: number;
+            /**
+             * Destino
+             * @description plan, diario o inmovilizado.
+             */
+            destino: string;
+            /**
+             * Estado
+             * @description 'ensayada' si fue un ensayo, 'importada' si se escribio.
+             */
+            estado: string;
+            /**
+             * Ensayo
+             * @description True = no se ha escrito nada.
+             */
+            ensayo: boolean;
+            /**
+             * Filas Leidas
+             * @description Filas de datos del archivo.
+             */
+            filas_leidas: number;
+            /**
+             * Filas Ok
+             * @description Registros que entran o han entrado.
+             */
+            filas_ok: number;
+            /**
+             * Filas Omitidas
+             * @description Saltados porque el registro ya existia.
+             */
+            filas_omitidas: number;
+            /**
+             * Filas Apartadas
+             * @description Filas que no entran por algun problema.
+             */
+            filas_apartadas: number;
+            /**
+             * Asientos Ok
+             * @description Solo diario: asientos que entran.
+             */
+            asientos_ok?: number | null;
+            /**
+             * Asientos Omitidos
+             * @description Solo diario: asientos ya importados antes.
+             */
+            asientos_omitidos?: number | null;
+            /**
+             * Asientos Apartados
+             * @description Solo diario: asientos con problemas.
+             */
+            asientos_apartados?: number | null;
+            /**
+             * Incidencias
+             * @description Lo que no entro y por que.
+             */
+            incidencias?: components["schemas"]["Incidencia"][];
+            /**
+             * Asientos
+             * @description Solo diario: correspondencia de numeros.
+             */
+            asientos?: components["schemas"]["AsientoImportado"][];
+        };
+        /** RespuestaEjecutarPlantillaAsiento */
+        RespuestaEjecutarPlantillaAsiento: {
+            /**
+             * Lote
+             * @description Agrupa los asientos de esta ejecución.
+             */
+            lote: number;
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Version */
+            version: number;
+            /** En Borrador */
+            en_borrador: boolean;
+            /**
+             * Estado
+             * @description borrador o libro: dónde ha quedado.
+             */
+            estado: string;
+            /** Asientos */
+            asientos: components["schemas"]["AsientoGrabadoPlantillaAsiento"][];
+        };
+        /** RespuestaEliminarConexionExterna */
+        RespuestaEliminarConexionExterna: {
+            /** Id */
+            id: number;
+            /** Eliminada */
+            eliminada: boolean;
         };
         /** RespuestaEmpresaActual */
         RespuestaEmpresaActual: {
@@ -35875,6 +38297,50 @@ export interface components {
              * @description Empresa activa en esta sesion. 0 si no hay ninguna.
              */
             id_obligado: number;
+        };
+        /** RespuestaEmpresaActualConta */
+        RespuestaEmpresaActualConta: {
+            /**
+             * Id Obligado
+             * @description Empresa activa en esta sesion. 0 si no hay ninguna.
+             */
+            id_obligado: number;
+        };
+        /** RespuestaEmpresas */
+        RespuestaEmpresas: {
+            /**
+             * Activa
+             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
+             */
+            activa: number;
+            /**
+             * Puede Conmutar
+             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
+             */
+            puede_conmutar: boolean;
+            /**
+             * Empresas
+             * @description Obligados de hosting a los que llega este usuario.
+             */
+            empresas?: components["schemas"]["ModeloEmpresa"][];
+        };
+        /** RespuestaEmpresasConta */
+        RespuestaEmpresasConta: {
+            /**
+             * Activa
+             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
+             */
+            activa: number;
+            /**
+             * Puede Conmutar
+             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
+             */
+            puede_conmutar: boolean;
+            /**
+             * Empresas
+             * @description Contabilidades a las que llega este usuario, con su nivel.
+             */
+            empresas?: components["schemas"]["ModeloEmpresaConta"][];
         };
         /** RespuestaEnlazarCliente */
         RespuestaEnlazarCliente: {
@@ -36023,6 +38489,23 @@ export interface components {
              */
             estado: number;
         };
+        /** RespuestaExportarPlantillasAsiento */
+        RespuestaExportarPlantillasAsiento: {
+            /**
+             * Formato
+             * @description Siempre sif-plantillas-asiento.
+             */
+            formato: string;
+            /** Version Formato */
+            version_formato: number;
+            /**
+             * Exportado
+             * @description Fecha y hora de la exportación.
+             */
+            exportado: string;
+            /** Plantillas */
+            plantillas: components["schemas"]["PlantillaAsientoExportada"][];
+        };
         /** RespuestaFacturasConCuentas */
         RespuestaFacturasConCuentas: {
             /**
@@ -36135,7 +38618,7 @@ export interface components {
              * Campos De Factura
              * @description Cuentas que lleva una factura recibida.
              */
-            campos_de_factura?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_cuentas_maestros__CampoDeCuenta"][];
+            campos_de_factura?: components["schemas"]["CampoDeCuentaMaestro"][];
         };
         /** RespuestaFichasConCuentas */
         RespuestaFichasConCuentas: {
@@ -36321,6 +38804,37 @@ export interface components {
             /** Num Filas */
             num_filas: number;
         };
+        /** RespuestaGuardarLecturaBandeja */
+        RespuestaGuardarLecturaBandeja: {
+            /**
+             * Id Lectura
+             * @description 0 en ensayo.
+             */
+            id_lectura: number;
+            /** Ensayo */
+            ensayo: boolean;
+            /** Leidas */
+            leidas: number;
+            /** Nuevas */
+            nuevas: number;
+            /** Actualizadas */
+            actualizadas: number;
+            /** Sin Cambios */
+            sin_cambios: number;
+            /** Duplicadas */
+            duplicadas: number;
+            /** En Conflicto */
+            en_conflicto: number;
+            /** Cambiadas Contabilizadas */
+            cambiadas_contabilizadas: number;
+            /**
+             * Incidencias
+             * @description Documentos que no se han podido ni guardar.
+             */
+            incidencias?: components["schemas"]["IncidenciaBandeja"][];
+            /** Documentos */
+            documentos?: components["schemas"]["DocumentoDeLecturaBandeja"][];
+        };
         /** RespuestaHash */
         RespuestaHash: {
             /**
@@ -36402,6 +38916,26 @@ export interface components {
              */
             se_puede_cerrar: boolean;
         };
+        /** RespuestaImportarPlantillasAsiento */
+        RespuestaImportarPlantillasAsiento: {
+            /** Ensayo */
+            ensayo: boolean;
+            /**
+             * Valido
+             * @description false = alguna no vale y no se importaría ninguna.
+             */
+            valido: boolean;
+            /** Plantillas */
+            plantillas: components["schemas"]["PlantillaAsientoImportada"][];
+            /** Creadas */
+            creadas: number;
+            /** Nuevas Versiones */
+            nuevas_versiones: number;
+            /** Sin Cambios */
+            sin_cambios: number;
+            /** Saltadas */
+            saltadas: number;
+        };
         /** RespuestaIva */
         RespuestaIva: {
             /**
@@ -36451,6 +38985,63 @@ export interface components {
              * @description Repercutido menos soportado. Positivo, a ingresar; negativo, a compensar o devolver.
              */
             resultado: number;
+        };
+        /** RespuestaLecturasBandeja */
+        RespuestaLecturasBandeja: {
+            /** Lecturas */
+            lecturas?: components["schemas"]["LecturaBandeja"][];
+        };
+        /** RespuestaLeerErpBandeja */
+        RespuestaLeerErpBandeja: {
+            /**
+             * Id Lectura
+             * @description 0 en ensayo.
+             */
+            id_lectura: number;
+            /** Ensayo */
+            ensayo: boolean;
+            /** Leidas */
+            leidas: number;
+            /** Nuevas */
+            nuevas: number;
+            /** Actualizadas */
+            actualizadas: number;
+            /** Sin Cambios */
+            sin_cambios: number;
+            /** Duplicadas */
+            duplicadas: number;
+            /** En Conflicto */
+            en_conflicto: number;
+            /** Cambiadas Contabilizadas */
+            cambiadas_contabilizadas: number;
+            /**
+             * Incidencias
+             * @description Documentos que no se han podido ni guardar.
+             */
+            incidencias?: components["schemas"]["IncidenciaBandeja"][];
+            /** Documentos */
+            documentos?: components["schemas"]["DocumentoDeLecturaBandeja"][];
+            /**
+             * Avisos
+             * @description Cosas a revisar: cuentas recortadas, marcas que no se pudieron poner…
+             */
+            avisos?: string[];
+            /**
+             * Marca Autorizada
+             * @description Si la conexión de esta empresa permite marcar lo leído en el otro programa.
+             */
+            marca_autorizada: boolean;
+            /**
+             * Marcados
+             * @description Documentos marcados como exportados en el otro programa.
+             */
+            marcados: number;
+            /**
+             * Referencia Origen
+             * @description Número de la exportación en el otro programa.
+             * @default
+             */
+            referencia_origen: string;
         };
         /** RespuestaLibroDiario */
         RespuestaLibroDiario: {
@@ -36525,10 +39116,21 @@ export interface components {
              */
             totales?: components["schemas"]["TotalLibroIva"][];
         };
-        /** RespuestaListar */
-        RespuestaListar: {
-            /** Plantillas */
-            plantillas?: components["schemas"]["PlantillaEnLista"][];
+        /** RespuestaListadoDeclaraciones */
+        RespuestaListadoDeclaraciones: {
+            /**
+             * Declaraciones
+             * @description De la mas reciente a la mas antigua.
+             */
+            declaraciones?: components["schemas"]["DeclaracionEnLista"][];
+        };
+        /** RespuestaListadoMemorias */
+        RespuestaListadoMemorias: {
+            /**
+             * Memorias
+             * @description De la mas reciente a la mas antigua.
+             */
+            memorias?: components["schemas"]["MemoriaEnLista"][];
         };
         /** RespuestaListarAccesos */
         RespuestaListarAccesos: {
@@ -36556,6 +39158,29 @@ export interface components {
              */
             apuntes?: components["schemas"]["ApunteDiario"][];
         };
+        /** RespuestaListarBandeja */
+        RespuestaListarBandeja: {
+            /** Total */
+            total: number;
+            /** Pagina */
+            pagina: number;
+            /** Por Pagina */
+            por_pagina: number;
+            /** Por Estado */
+            por_estado?: {
+                [key: string]: number;
+            };
+            /**
+             * Facturas
+             * @description Si se pidieron facturas.
+             */
+            facturas?: components["schemas"]["FacturaBandeja"][];
+            /**
+             * Movimientos
+             * @description Si se pidieron movimientos.
+             */
+            movimientos?: components["schemas"]["MovimientoBandeja"][];
+        };
         /** RespuestaListarBienes */
         RespuestaListarBienes: {
             /**
@@ -36581,6 +39206,11 @@ export interface components {
              * @description Cuantos hay en total con ese filtro.
              */
             total: number;
+        };
+        /** RespuestaListarConexionesExternas */
+        RespuestaListarConexionesExternas: {
+            /** Conexiones */
+            conexiones?: components["schemas"]["ConexionExterna"][];
         };
         /** RespuestaListarDiarios */
         RespuestaListarDiarios: {
@@ -36678,6 +39308,11 @@ export interface components {
              */
             cuantas: number;
         };
+        /** RespuestaListarPlantillasAsiento */
+        RespuestaListarPlantillasAsiento: {
+            /** Plantillas */
+            plantillas?: components["schemas"]["PlantillaAsientoEnLista"][];
+        };
         /** RespuestaListarTerceros */
         RespuestaListarTerceros: {
             /**
@@ -36764,6 +39399,16 @@ export interface components {
              */
             apuntes_en_borrador: number;
         };
+        /** RespuestaMe */
+        RespuestaMe: {
+            /** @description Los datos del usuario que ha entrado. */
+            user: components["schemas"]["ModeloUsuarioSesion"];
+        };
+        /** RespuestaMeConta */
+        RespuestaMeConta: {
+            /** @description Los datos del usuario que ha entrado. */
+            user: components["schemas"]["ModeloUsuarioSesionConta"];
+        };
         /** RespuestaMemoria */
         RespuestaMemoria: {
             /** Id */
@@ -36819,10 +39464,15 @@ export interface components {
              */
             lineas?: components["schemas"]["ApunteDiario"][];
         };
-        /** RespuestaOpciones */
-        RespuestaOpciones: {
+        /** RespuestaObtenerBandeja */
+        RespuestaObtenerBandeja: {
+            factura?: components["schemas"]["FacturaBandeja"] | null;
+            movimiento?: components["schemas"]["MovimientoBandeja"] | null;
+        };
+        /** RespuestaOpcionesPlantillaAsiento */
+        RespuestaOpcionesPlantillaAsiento: {
             /** Opciones */
-            opciones?: components["schemas"]["Opcion"][];
+            opciones?: components["schemas"]["OpcionPlantillaAsiento"][];
         };
         /** RespuestaOrigenTerceros */
         RespuestaOrigenTerceros: {
@@ -36859,11 +39509,13 @@ export interface components {
         };
         /**
          * RespuestaPendientes
-         * @description Los dos nombres de campo son los valores de REF_EMITIDA y REF_RECIBIDA del modelo.
+         * @description Los nombres de campo son los valores de REF_EMITIDA, REF_EMITIDA_SII y REF_RECIBIDA del modelo.
          */
         RespuestaPendientes: {
-            /** @description Facturas emitidas pendientes de contabilizar. */
+            /** @description Facturas emitidas (VeriFactu) pendientes de contabilizar. */
             factura_emitida: components["schemas"]["GrupoEmitidas"];
+            /** @description Facturas emitidas del SII pendientes de contabilizar. */
+            factura_emitida_sii: components["schemas"]["GrupoEmitidas"];
             /** @description Facturas recibidas pendientes de contabilizar. */
             factura_recibida_sii: components["schemas"]["GrupoRecibidas"];
         };
@@ -36940,8 +39592,8 @@ export interface components {
              */
             planes?: components["schemas"]["PlanCargado"][];
         };
-        /** RespuestaPlantilla */
-        RespuestaPlantilla: {
+        /** RespuestaPlantillaAsiento */
+        RespuestaPlantillaAsiento: {
             /** Id */
             id: number;
             /** Codigo */
@@ -36952,6 +39604,12 @@ export interface components {
             descripcion?: string | null;
             /** Activa */
             activa: boolean;
+            /**
+             * De Serie
+             * @description Plantilla común a todas las empresas: se ve, se prueba y se duplica, pero no se cambia, ni se retira, ni se usa directamente.
+             * @default false
+             */
+            de_serie: boolean;
             /** Version Actual */
             version_actual: number;
             /** Usuario */
@@ -36967,10 +39625,8 @@ export interface components {
              * @description Versión que se devuelve.
              */
             version: number;
-            /** Definicion */
-            definicion: {
-                [key: string]: unknown;
-            };
+            /** @description La misma forma que se manda al crear y editar. Las selecciones con origen traen además sus opciones. */
+            definicion: components["schemas"]["PlantillaAsientoDefinicion"];
             /** Version Usuario */
             version_usuario?: string | null;
             /** Version Fecha */
@@ -37143,6 +39799,154 @@ export interface components {
              */
             borradores?: components["schemas"]["BorradorDelCierre"][];
         };
+        /** RespuestaPrevisualizarDeclaracion */
+        RespuestaPrevisualizarDeclaracion: {
+            /**
+             * Id Obligado
+             * @description Empresa.
+             */
+            id_obligado: number;
+            /**
+             * Modelo
+             * @description 303.
+             */
+            modelo: string;
+            /**
+             * Ejercicio
+             * @description Ejercicio.
+             */
+            ejercicio: number;
+            /**
+             * Periodo
+             * @description Periodo.
+             */
+            periodo: string;
+            /**
+             * Resultado
+             * @description Resultado de la liquidacion, casilla 71.
+             */
+            resultado: number;
+            /**
+             * Tipo Resultado
+             * @description ingresar, compensar, devolver, resultado_cero o sin_actividad.
+             */
+            tipo_resultado: string;
+            /**
+             * Casillas
+             * @description Las casillas con importe, en el orden del modelo.
+             */
+            casillas?: components["schemas"]["CasillaPrevista"][];
+            /**
+             * Avisos
+             * @description Lo que no se supo colocar y quedaria fuera.
+             */
+            avisos?: components["schemas"]["AvisoDeclaracion"][];
+            /**
+             * Importe Apartado
+             * @description Suma de lo que queda fuera por los avisos.
+             */
+            importe_apartado: number;
+            /**
+             * Facturas
+             * @description Facturas que entran en el calculo.
+             */
+            facturas: number;
+        };
+        /** RespuestaPrevisualizarImportacion */
+        RespuestaPrevisualizarImportacion: {
+            /**
+             * Id Importacion
+             * @description Importacion consultada.
+             */
+            id_importacion: number;
+            /**
+             * Destino
+             * @description plan, diario o inmovilizado.
+             */
+            destino: string;
+            /**
+             * Cabeceras
+             * @description Columnas del archivo.
+             */
+            cabeceras?: string[];
+            /**
+             * Filas Leidas
+             * @description Filas de datos.
+             */
+            filas_leidas: number;
+            /**
+             * Mapeo
+             * @description Mapeo efectivo, tal como se guardo.
+             */
+            mapeo?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Mapeo Columnas
+             * @description El mismo mapeo con los numeros ya traducidos al nombre real de cada columna.
+             */
+            mapeo_columnas?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Opciones
+             * @description Opciones efectivas.
+             */
+            opciones?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Faltan Obligatorios
+             * @description Lo que falta por mapear.
+             */
+            faltan_obligatorios?: string[];
+            /**
+             * Avisos
+             * @description Columnas mapeadas que el archivo no trae, si las hay.
+             */
+            avisos?: string[];
+            /**
+             * Previsualizacion
+             * @description Primeras filas.
+             */
+            previsualizacion?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** RespuestaPrevisualizarPlantillaAsiento */
+        RespuestaPrevisualizarPlantillaAsiento: {
+            /** Id */
+            id?: number | null;
+            /** Codigo */
+            codigo?: string | null;
+            /** Version */
+            version?: number | null;
+            /**
+             * Estado Inicial
+             * @description borrador o libro: cómo se grabará.
+             */
+            estado_inicial: string;
+            /** Parametros */
+            parametros?: components["schemas"]["ParametroResueltoPlantillaAsiento"][];
+            /** Variables */
+            variables?: {
+                [key: string]: unknown;
+            };
+            /** Asientos */
+            asientos?: components["schemas"]["AsientoCalculadoPlantillaAsiento"][];
+            /** Errores */
+            errores?: components["schemas"]["ErrorCampoPlantillaAsiento"][];
+            /**
+             * Valido
+             * @description true = se puede ejecutar.
+             */
+            valido: boolean;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+        };
         /** RespuestaProbarConexion */
         RespuestaProbarConexion: {
             /**
@@ -37175,6 +39979,26 @@ export interface components {
              * @description Nombre/Razón social del firmante usado en la prueba
              */
             nombre_firmante: string;
+        };
+        /** RespuestaProbarConexionExterna */
+        RespuestaProbarConexionExterna: {
+            /**
+             * Ok
+             * @description Si se ha podido conectar.
+             */
+            ok: boolean;
+            /**
+             * Mensaje
+             * @description Qué ha pasado.
+             */
+            mensaje: string;
+            /**
+             * Detalle
+             * @description Lo que identifica a la empresa al otro lado: última factura, series, cuántos clientes…
+             */
+            detalle?: {
+                [key: string]: unknown;
+            };
         };
         /** RespuestaReescribirXml */
         RespuestaReescribirXml: {
@@ -37252,6 +40076,15 @@ export interface components {
              */
             periodos_presentados?: string[];
         };
+        /** RespuestaResolverBandeja */
+        RespuestaResolverBandeja: {
+            /** Id */
+            id: number;
+            /** Estado */
+            estado: string;
+            /** Motivo */
+            motivo?: string | null;
+        };
         /** RespuestaRetenciones */
         RespuestaRetenciones: {
             /**
@@ -37300,6 +40133,31 @@ export interface components {
             /**
              * Motivos
              * @description Cuantas anulaciones ha frenado cada motivo.
+             */
+            motivos?: {
+                [key: string]: number;
+            };
+        };
+        /** RespuestaRevertirCobros */
+        RespuestaRevertirCobros: {
+            /**
+             * Revertidos
+             * @description Cobros anulados a los que se ha hecho el asiento inverso.
+             */
+            revertidos: number;
+            /**
+             * Frenados
+             * @description Los que no se han podido revertir.
+             */
+            frenados: number;
+            /**
+             * Asientos
+             * @description Los asientos inversos.
+             */
+            asientos?: components["schemas"]["AsientoDeCobro"][];
+            /**
+             * Motivos
+             * @description Cuántos ha frenado cada motivo.
              */
             motivos?: {
                 [key: string]: number;
@@ -37628,13 +40486,23 @@ export interface components {
             /** @description Como queda el destino. */
             destino: components["schemas"]["Borrador"];
         };
-        /** RespuestaVersiones */
-        RespuestaVersiones: {
+        /** RespuestaTunelesConexionExterna */
+        RespuestaTunelesConexionExterna: {
+            /**
+             * Servidor
+             * @description Este servidor SIF.
+             */
+            servidor: string;
+            /** Tuneles */
+            tuneles?: components["schemas"]["TunelConexionExterna"][];
+        };
+        /** RespuestaVersionesPlantillaAsiento */
+        RespuestaVersionesPlantillaAsiento: {
             /**
              * Versiones
              * @description De la más reciente a la más antigua.
              */
-            versiones?: components["schemas"]["VersionPlantilla"][];
+            versiones?: components["schemas"]["VersionPlantillaAsiento"][];
         };
         /** RespuestaVisibilidad */
         RespuestaVisibilidad: {
@@ -37676,6 +40544,13 @@ export interface components {
              * @description Fecha hasta (incluida).
              */
             fecha_hasta?: string | null;
+        };
+        /** ReversionDePlantilla */
+        ReversionDePlantilla: {
+            /** Fecha */
+            fecha: string;
+            /** Concepto */
+            concepto?: string | null;
         };
         /** Serie */
         Serie: {
@@ -38211,6 +41086,75 @@ export interface components {
              */
             tipo_re?: number | null;
         };
+        /** TramoIvaBandeja */
+        TramoIvaBandeja: {
+            /** Tipo Iva */
+            tipo_iva: number;
+            /** Base */
+            base: number;
+            /** Cuota */
+            cuota: number;
+            /** Tipo Re */
+            tipo_re: number;
+            /** Cuota Re */
+            cuota_re: number;
+            /** Cuota Deducible */
+            cuota_deducible: number;
+            /** Cuenta Iva */
+            cuenta_iva?: string | null;
+            /** Cuenta Re */
+            cuenta_re?: string | null;
+            /** Cuenta Iva Autorepercutido */
+            cuenta_iva_autorepercutido?: string | null;
+        };
+        /** TramoIvaEntradaBandeja */
+        TramoIvaEntradaBandeja: {
+            /**
+             * Tipo Iva
+             * @description Porcentaje de IVA, como texto: "21".
+             */
+            tipo_iva: string;
+            /**
+             * Base
+             * @description Base imponible, como texto.
+             */
+            base: string;
+            /**
+             * Cuota
+             * @description Cuota de IVA.
+             */
+            cuota: string;
+            /**
+             * Tipo Re
+             * @description Porcentaje de recargo de equivalencia.
+             */
+            tipo_re?: string | null;
+            /**
+             * Cuota Re
+             * @description Cuota de recargo.
+             */
+            cuota_re?: string | null;
+            /**
+             * Cuota Deducible
+             * @description Recibidas: lo que se deduce. Si no se manda, la cuota entera.
+             */
+            cuota_deducible?: string | null;
+            /**
+             * Cuenta Iva
+             * @description Cuenta del IVA.
+             */
+            cuenta_iva?: string | null;
+            /**
+             * Cuenta Re
+             * @description Cuenta del recargo.
+             */
+            cuenta_re?: string | null;
+            /**
+             * Cuenta Iva Autorepercutido
+             * @description Recibidas con inversión del sujeto pasivo: cuenta del IVA que se autorrepercute.
+             */
+            cuenta_iva_autorepercutido?: string | null;
+        };
         /** TramoIvaPeriodo */
         TramoIvaPeriodo: {
             /**
@@ -38252,6 +41196,24 @@ export interface components {
              * @default 0
              */
             base: string;
+        };
+        /** TunelConexionExterna */
+        TunelConexionExterna: {
+            /**
+             * Nombre
+             * @description Lo que se guarda en `tunel`.
+             */
+            nombre: string;
+            /**
+             * Destino
+             * @description Máquina a la que lleva.
+             */
+            destino: string;
+            /**
+             * Tunel
+             * @description False = es la misma máquina; se conecta directo.
+             */
+            tunel: boolean;
         };
         /**
          * UnidadesEnum
@@ -38355,6 +41317,13 @@ export interface components {
              */
             tipo?: string | null;
         };
+        /** VariableDePlantilla */
+        VariableDePlantilla: {
+            /** Clave */
+            clave: string;
+            /** Expr */
+            expr: string;
+        };
         /**
          * VersionBorrador
          * @description Como estaba un borrador justo ANTES de un cambio.
@@ -38427,8 +41396,8 @@ export interface components {
              */
             lineas?: components["schemas"]["LineaHistoricoBorrador"][];
         };
-        /** VersionPlantilla */
-        VersionPlantilla: {
+        /** VersionPlantillaAsiento */
+        VersionPlantillaAsiento: {
             /** Version */
             version: number;
             /** Usuario */
@@ -41446,829 +44415,6 @@ export interface components {
             id: number;
             /** Id Obligado */
             id_obligado?: number | null;
-        };
-        /** RespuestaDeshacer */
-        apps__apisif__v1__metodos__contabilidad___api_conta_cierre__RespuestaDeshacer: {
-            /**
-             * Ejercicio
-             * @description Ejercicio.
-             */
-            ejercicio: number;
-            /**
-             * Deshechos
-             * @description Borradores tirados.
-             */
-            deshechos: number;
-        };
-        /**
-         * CampoDeCuenta
-         * @description Una casilla del formulario de cuentas por defecto.
-         */
-        apps__apisif__v1__metodos__contabilidad___api_conta_configuracion__CampoDeCuenta: {
-            /**
-             * Campo
-             * @description Nombre de la columna. Es lo que se manda a /fijar_cuentas.
-             */
-            campo: string;
-            /**
-             * Titulo
-             * @description Rótulo que se pinta al lado de la casilla.
-             */
-            titulo: string;
-            /**
-             * Grupo
-             * @description Bloque en el que va: IVA, Retenciones, Clientes y proveedores, Tesorería, Inmovilizado, Cierre y ajustes.
-             */
-            grupo: string;
-            /**
-             * Tipo
-             * @description 'mayor' = debajo cuelga una cuenta por cada ficha, tipo de IVA o bien, y se escribe corta. 'subcuenta' = hay una sola y el apunte va ahí, así que se escribe con el ancho entero de la empresa.
-             */
-            tipo: string;
-            /**
-             * Obligatoria
-             * @description True = no se puede dejar vacía. /fijar_cuentas la rechaza si se borra.
-             */
-            obligatoria: boolean;
-            /**
-             * Aviso
-             * @description Qué deja de funcionar si se queda vacía.
-             */
-            aviso: string;
-        };
-        /** CampoDeCuenta */
-        apps__apisif__v1__metodos__contabilidad___api_conta_cuentas_maestros__CampoDeCuenta: {
-            /**
-             * Campo
-             * @description Identificador del campo, el que se manda al fijar.
-             */
-            campo: string;
-            /**
-             * Titulo
-             * @description Nombre del campo para la pantalla.
-             */
-            titulo: string;
-            /**
-             * Usa El Motor
-             * @description False = el motor de asientos NO lee hoy este campo; rellenarlo no cambia ningun asiento.
-             */
-            usa_el_motor: boolean;
-            /**
-             * Consecuencia
-             * @description Que pasa de verdad segun este campo tenga o no cuenta.
-             */
-            consecuencia: string;
-            /**
-             * Hereda
-             * @description True = si esta vacio, rige otro valor (el del maestro comun o el del proveedor).
-             */
-            hereda: boolean;
-            /**
-             * Digitos Maximos
-             * @description Digitos que admite: la mas estrecha entre el ancho de la empresa y la casilla.
-             */
-            digitos_maximos: number;
-        };
-        /** ModeloListar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloListar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Ejercicio
-             * @description 0 = todos los ejercicios.
-             * @default 0
-             */
-            ejercicio: number;
-            /**
-             * Modelo
-             * @description Vacio = todos los modelos.
-             * @default
-             */
-            modelo: string;
-        };
-        /** ModeloObtener */
-        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloObtener: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /** Id Declaracion */
-            id_declaracion: number;
-        };
-        /** ModeloPreparar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloPreparar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /** Ejercicio */
-            ejercicio: number;
-            /**
-             * Periodo
-             * @description Mes (01 a 12) o trimestre (1T a 4T).
-             */
-            periodo: string;
-            /**
-             * Cuotas A Compensar
-             * @description Cuotas a compensar que vienen de periodos anteriores (casilla 110). Si no se manda, se toman de la declaracion confirmada del periodo anterior; si no la hay, se pone 0 y sale un aviso.
-             */
-            cuotas_a_compensar?: number | null;
-            /**
-             * Solicitar Devolucion
-             * @description Si sale a devolver, pedir la devolucion en vez de compensar. Solo en el ultimo periodo del ejercicio, salvo devolucion mensual.
-             * @default false
-             */
-            solicitar_devolucion: boolean;
-            /**
-             * Devolucion Mensual
-             * @description La empresa esta inscrita en el registro de devolucion mensual: puede pedir la devolucion en cualquier periodo.
-             * @default false
-             */
-            devolucion_mensual: boolean;
-        };
-        /** RespuestaListado */
-        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaListado: {
-            /**
-             * Declaraciones
-             * @description De la mas reciente a la mas antigua.
-             */
-            declaraciones?: components["schemas"]["DeclaracionEnLista"][];
-        };
-        /** RespuestaPrevisualizar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaPrevisualizar: {
-            /**
-             * Id Obligado
-             * @description Empresa.
-             */
-            id_obligado: number;
-            /**
-             * Modelo
-             * @description 303.
-             */
-            modelo: string;
-            /**
-             * Ejercicio
-             * @description Ejercicio.
-             */
-            ejercicio: number;
-            /**
-             * Periodo
-             * @description Periodo.
-             */
-            periodo: string;
-            /**
-             * Resultado
-             * @description Resultado de la liquidacion, casilla 71.
-             */
-            resultado: number;
-            /**
-             * Tipo Resultado
-             * @description ingresar, compensar, devolver, resultado_cero o sin_actividad.
-             */
-            tipo_resultado: string;
-            /**
-             * Casillas
-             * @description Las casillas con importe, en el orden del modelo.
-             */
-            casillas?: components["schemas"]["CasillaPrevista"][];
-            /**
-             * Avisos
-             * @description Lo que no se supo colocar y quedaria fuera.
-             */
-            avisos?: components["schemas"]["AvisoDeclaracion"][];
-            /**
-             * Importe Apartado
-             * @description Suma de lo que queda fuera por los avisos.
-             */
-            importe_apartado: number;
-            /**
-             * Facturas
-             * @description Facturas que entran en el calculo.
-             */
-            facturas: number;
-        };
-        /** ModeloEjecutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id Importacion
-             * @description La que devolvio /subir.
-             */
-            id_importacion: number;
-            /**
-             * Mapeo
-             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
-             */
-            mapeo?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Opciones
-             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
-             */
-            opciones?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Ejercicio
-             * @description Solo para el diario: fuerza el ejercicio. Sin esto, el de la fecha de cada asiento.
-             */
-            ejercicio?: number | null;
-        };
-        /** ModeloPreparar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloPreparar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id Importacion
-             * @description La que devolvio /subir.
-             */
-            id_importacion: number;
-            /**
-             * Mapeo
-             * @description Campo del sistema -> columna del archivo. La columna se puede indicar por su nombre ('Subcuenta') o por su numero contando desde 1 ('2' o 2). Se suma a lo ya guardado.
-             */
-            mapeo?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Opciones
-             * @description separador, codificacion, formato_fecha, decimal, hoja, diario, si_existe, filas_a_saltar (filas del principio que se tiran) y sin_cabecera (el archivo no tiene fila de titulos: las columnas se llaman columna_1, columna_2...).
-             */
-            opciones?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** RespuestaDeshacer */
-        apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaDeshacer: {
-            /**
-             * Id Importacion
-             * @description Importacion deshecha.
-             */
-            id_importacion: number;
-            /**
-             * Destino
-             * @description plan, diario o inmovilizado.
-             */
-            destino: string;
-            /**
-             * Deshechos
-             * @description Registros quitados.
-             */
-            deshechos: number;
-            /**
-             * Pendientes
-             * @description Lo que no se ha podido quitar y por que.
-             */
-            pendientes?: components["schemas"]["Pendiente"][];
-            /**
-             * Estado
-             * @description 'revertida' si salio entera; sigue 'importada' si quedo algo.
-             */
-            estado: string;
-            /**
-             * Completo
-             * @description False = queda algo de esta importacion en los libros.
-             */
-            completo: boolean;
-        };
-        /** RespuestaEjecutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar: {
-            /**
-             * Id Importacion
-             * @description Importacion ejecutada.
-             */
-            id_importacion: number;
-            /**
-             * Destino
-             * @description plan, diario o inmovilizado.
-             */
-            destino: string;
-            /**
-             * Estado
-             * @description 'ensayada' si fue un ensayo, 'importada' si se escribio.
-             */
-            estado: string;
-            /**
-             * Ensayo
-             * @description True = no se ha escrito nada.
-             */
-            ensayo: boolean;
-            /**
-             * Filas Leidas
-             * @description Filas de datos del archivo.
-             */
-            filas_leidas: number;
-            /**
-             * Filas Ok
-             * @description Registros que entran o han entrado.
-             */
-            filas_ok: number;
-            /**
-             * Filas Omitidas
-             * @description Saltados porque el registro ya existia.
-             */
-            filas_omitidas: number;
-            /**
-             * Filas Apartadas
-             * @description Filas que no entran por algun problema.
-             */
-            filas_apartadas: number;
-            /**
-             * Asientos Ok
-             * @description Solo diario: asientos que entran.
-             */
-            asientos_ok?: number | null;
-            /**
-             * Asientos Omitidos
-             * @description Solo diario: asientos ya importados antes.
-             */
-            asientos_omitidos?: number | null;
-            /**
-             * Asientos Apartados
-             * @description Solo diario: asientos con problemas.
-             */
-            asientos_apartados?: number | null;
-            /**
-             * Incidencias
-             * @description Lo que no entro y por que.
-             */
-            incidencias?: components["schemas"]["Incidencia"][];
-            /**
-             * Asientos
-             * @description Solo diario: correspondencia de numeros.
-             */
-            asientos?: components["schemas"]["AsientoImportado"][];
-        };
-        /** RespuestaPrevisualizar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaPrevisualizar: {
-            /**
-             * Id Importacion
-             * @description Importacion consultada.
-             */
-            id_importacion: number;
-            /**
-             * Destino
-             * @description plan, diario o inmovilizado.
-             */
-            destino: string;
-            /**
-             * Cabeceras
-             * @description Columnas del archivo.
-             */
-            cabeceras?: string[];
-            /**
-             * Filas Leidas
-             * @description Filas de datos.
-             */
-            filas_leidas: number;
-            /**
-             * Mapeo
-             * @description Mapeo efectivo, tal como se guardo.
-             */
-            mapeo?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Mapeo Columnas
-             * @description El mismo mapeo con los numeros ya traducidos al nombre real de cada columna.
-             */
-            mapeo_columnas?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Opciones
-             * @description Opciones efectivas.
-             */
-            opciones?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Faltan Obligatorios
-             * @description Lo que falta por mapear.
-             */
-            faltan_obligatorios?: string[];
-            /**
-             * Avisos
-             * @description Columnas mapeadas que el archivo no trae, si las hay.
-             */
-            avisos?: string[];
-            /**
-             * Previsualizacion
-             * @description Primeras filas.
-             */
-            previsualizacion?: {
-                [key: string]: unknown;
-            }[];
-        };
-        /** ModeloCrear */
-        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloCrear: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /** Ejercicio */
-            ejercicio: number;
-            /**
-             * Modelo
-             * @description Modelo de memoria.
-             * @enum {string}
-             */
-            modelo: "normal" | "abreviado" | "pymes";
-            /**
-             * Copiar Anterior
-             * @description Copiar los textos de la ultima version del ejercicio anterior. Si no la hay, se crea vacia.
-             * @default false
-             */
-            copiar_anterior: boolean;
-        };
-        /** ModeloListar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloListar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Ejercicio
-             * @description 0 = todos los ejercicios.
-             * @default 0
-             */
-            ejercicio: number;
-        };
-        /** RespuestaListado */
-        apps__apisif__v1__metodos__contabilidad___api_conta_memoria__RespuestaListado: {
-            /**
-             * Memorias
-             * @description De la mas reciente a la mas antigua.
-             */
-            memorias?: components["schemas"]["MemoriaEnLista"][];
-        };
-        /** ModeloEditar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plan__ModeloEditar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Ejercicio
-             * @description Ejercicio del que se quiere el plan. Si no se indica, el de la configuracion de la empresa.
-             */
-            ejercicio?: number | null;
-            /** Codigo */
-            codigo: string;
-            /**
-             * Descripcion
-             * @description Titulo nuevo. Si no se manda, se deja el que tiene.
-             */
-            descripcion?: string | null;
-            /**
-             * Auxiliar
-             * @description Cambia si la cuenta admite apuntes. Si no se manda, se deja como esta.
-             */
-            auxiliar?: boolean | null;
-        };
-        /** ModeloCrear */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloCrear: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Codigo
-             * @description Se guarda en mayúsculas. Único en la empresa.
-             */
-            codigo: string;
-            /** Nombre */
-            nombre: string;
-            /**
-             * Descripcion
-             * @default
-             */
-            descripcion: string;
-            /**
-             * Definicion
-             * @description Definición de la plantilla: parametros, variables, asientos y opciones.
-             */
-            definicion: {
-                [key: string]: unknown;
-            };
-        };
-        /** ModeloEditar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEditar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id
-             * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
-             */
-            id: number;
-            /**
-             * Codigo
-             * @description Código de la plantilla. O esto o `id`.
-             * @default
-             */
-            codigo: string;
-            /** Nombre */
-            nombre?: string | null;
-            /** Descripcion */
-            descripcion?: string | null;
-            /**
-             * Definicion
-             * @description Si cambia, se guarda como versión nueva. La anterior se conserva.
-             */
-            definicion?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** ModeloEjecutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEjecutar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id
-             * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
-             */
-            id: number;
-            /**
-             * Codigo
-             * @description Código de la plantilla. O esto o `id`.
-             * @default
-             */
-            codigo: string;
-            /** Parametros */
-            parametros?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Version
-             * @description Versión con la que se previsualizó. Si ya no es la vigente, se para.
-             * @default 0
-             */
-            version: number;
-        };
-        /** ModeloListar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloListar: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Incluir Inactivas
-             * @description También las retiradas.
-             * @default false
-             */
-            incluir_inactivas: boolean;
-        };
-        /** ModeloObtener */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloObtener: {
-            /**
-             * Id Obligado
-             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
-             */
-            id_obligado?: number | null;
-            /**
-             * Id
-             * @description Id de la plantilla. O esto o `codigo`.
-             * @default 0
-             */
-            id: number;
-            /**
-             * Codigo
-             * @description Código de la plantilla. O esto o `id`.
-             * @default
-             */
-            codigo: string;
-            /**
-             * Version
-             * @description 0 = la vigente.
-             * @default 0
-             */
-            version: number;
-        };
-        /** RespuestaEjecutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaEjecutar: {
-            /**
-             * Lote
-             * @description Agrupa los asientos de esta ejecución.
-             */
-            lote: number;
-            /** Id */
-            id: number;
-            /** Codigo */
-            codigo: string;
-            /** Version */
-            version: number;
-            /** En Borrador */
-            en_borrador: boolean;
-            /**
-             * Estado
-             * @description borrador o libro: dónde ha quedado.
-             */
-            estado: string;
-            /** Asientos */
-            asientos: components["schemas"]["AsientoGrabado"][];
-        };
-        /** RespuestaPrevisualizar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaPrevisualizar: {
-            /** Id */
-            id?: number | null;
-            /** Codigo */
-            codigo?: string | null;
-            /** Version */
-            version?: number | null;
-            /**
-             * Estado Inicial
-             * @description borrador o libro: cómo se grabará.
-             */
-            estado_inicial: string;
-            /** Parametros */
-            parametros?: components["schemas"]["ParametroResuelto"][];
-            /** Variables */
-            variables?: {
-                [key: string]: unknown;
-            };
-            /** Asientos */
-            asientos?: components["schemas"]["AsientoCalculado"][];
-            /** Errores */
-            errores?: components["schemas"]["ErrorCampo"][];
-            /**
-             * Valido
-             * @description true = se puede ejecutar.
-             */
-            valido: boolean;
-            /**
-             * Provisional
-             * @default false
-             */
-            provisional: boolean;
-        };
-        /** ModeloConmutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa cuya contabilidad se quiere abrir.
-             */
-            id_obligado: number;
-        };
-        /** ModeloEmpresa */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloEmpresa: {
-            /** Id Obligado */
-            id_obligado: number;
-            /** Nombrerazon */
-            NombreRazon?: string | null;
-            /** Nif */
-            NIF?: string | null;
-            /** Nivel */
-            nivel: string;
-        };
-        /**
-         * ModeloUsuarioSesion
-         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
-         *
-         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
-         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
-         */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloUsuarioSesion: {
-            /**
-             * Id
-             * @description Id del usuario.
-             */
-            id?: number | null;
-            /**
-             * Usuario
-             * @description Nombre con el que entra.
-             */
-            usuario?: string | null;
-            /**
-             * Nombre Real
-             * @description Nombre de la persona.
-             */
-            nombre_real?: string | null;
-            /** Email */
-            email?: string | null;
-            /**
-             * Id Rol
-             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
-             */
-            id_rol?: number | null;
-            /**
-             * Rol
-             * @description Nombre del rol, para mostrarlo.
-             */
-            rol?: string | null;
-            /**
-             * Id Estado
-             * @description 1 = usuario activo.
-             */
-            id_estado?: number | null;
-            /**
-             * Id Obligado
-             * @description Empresa a la que pertenece el usuario, si es de una sola.
-             */
-            id_obligado?: number | null;
-            /** Id Representante */
-            id_representante?: number | null;
-            /** Id Administrador */
-            id_administrador?: number | null;
-            /**
-             * Nombrerazon
-             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
-             */
-            NombreRazon?: string | null;
-            /** Fecha Alta */
-            fecha_alta?: string | null;
-            /** Fecha Hora Actualizacion */
-            fecha_hora_actualizacion?: string | null;
-            /**
-             * Modulos Json
-             * @description Modulos contratados, tal y como vienen de la base de datos.
-             */
-            modulos_json?: unknown | null;
-            /** @description Los mismos modulos, ya resueltos. */
-            modulos?: components["schemas"]["ModeloModulos"] | null;
-            /**
-             * Conta Id Obligado
-             * @description Empresa de contabilidad activa en esta sesion. No aparece si aun no se ha elegido ninguna.
-             */
-            conta_id_obligado?: number | null;
-            /**
-             * Permisos Operario
-             * @description Solo para el rol 5.
-             */
-            permisos_operario?: unknown[] | null;
-            /** @description Solo para el rol 5. */
-            perfil_operario?: components["schemas"]["ModeloPerfilOperario"] | null;
-            /**
-             * Permisos Perfil
-             * @description Solo para el rol 5.
-             */
-            permisos_perfil?: unknown[] | null;
-            /**
-             * Instalacion
-             * @description Instalacion a la que pertenece el token.
-             */
-            instalacion?: string | null;
-        };
-        /** RespuestaConmutar */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa que queda activa.
-             */
-            id_obligado: number;
-            /**
-             * Nivel
-             * @description Nivel de acceso del usuario sobre esa contabilidad.
-             */
-            nivel: string;
-        };
-        /** RespuestaEmpresas */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaEmpresas: {
-            /**
-             * Activa
-             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
-             */
-            activa: number;
-            /**
-             * Puede Conmutar
-             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
-             */
-            puede_conmutar: boolean;
-            /**
-             * Empresas
-             * @description Contabilidades a las que llega este usuario, con su nivel.
-             */
-            empresas?: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloEmpresa"][];
-        };
-        /** RespuestaMe */
-        apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaMe: {
-            /** @description Los datos del usuario que ha entrado. */
-            user: components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloUsuarioSesion"];
         };
         /** Actualizar */
         apps__apisif__v1__metodos__debug___api_errores__ModelosDebugErroresResoluciones__Actualizar: {
@@ -45826,114 +47972,6 @@ export interface components {
             id: number;
             /** Id Obligado */
             id_obligado?: number | null;
-        };
-        /** ModeloConmutar */
-        apps__apisif__v1__metodos__hosting___api_sesion__ModeloConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa cuyo hosting se quiere gestionar.
-             */
-            id_obligado: number;
-        };
-        /** ModeloEmpresa */
-        apps__apisif__v1__metodos__hosting___api_sesion__ModeloEmpresa: {
-            /** Id Obligado */
-            id_obligado: number;
-            /** Nombrerazon */
-            NombreRazon?: string | null;
-            /** Nif */
-            NIF?: string | null;
-        };
-        /**
-         * ModeloUsuarioSesion
-         * @description Quien esta usando la aplicacion. Los mismos datos que devuelve `/usuarios/me`.
-         *
-         *     Se declara campo a campo porque el frontend genera sus tipos desde el esquema: el de
-         *     siempre no lo declara y no se toca, que lo usa toda la aplicacion.
-         */
-        apps__apisif__v1__metodos__hosting___api_sesion__ModeloUsuarioSesion: {
-            /**
-             * Id
-             * @description Id del usuario.
-             */
-            id?: number | null;
-            /**
-             * Usuario
-             * @description Nombre con el que entra.
-             */
-            usuario?: string | null;
-            /**
-             * Nombre Real
-             * @description Nombre de la persona.
-             */
-            nombre_real?: string | null;
-            /** Email */
-            email?: string | null;
-            /**
-             * Id Rol
-             * @description 1 superadmin, 2 administrador, 3 representante, 4 obligado, 5 operario, 6 desarrollador.
-             */
-            id_rol?: number | null;
-            /**
-             * Rol
-             * @description Nombre del rol, para mostrarlo.
-             */
-            rol?: string | null;
-            /**
-             * Id Estado
-             * @description 1 = usuario activo.
-             */
-            id_estado?: number | null;
-            /**
-             * Id Obligado
-             * @description Empresa a la que pertenece el usuario, si es de una sola.
-             */
-            id_obligado?: number | null;
-            /** Id Representante */
-            id_representante?: number | null;
-            /** Id Administrador */
-            id_administrador?: number | null;
-            /**
-             * Nombrerazon
-             * @description Nombre de la empresa, administrador o representante al que cuelga el usuario.
-             */
-            NombreRazon?: string | null;
-            /**
-             * Hosting Id Obligado
-             * @description Empresa de hosting activa en esta sesion. No aparece si aun no se ha elegido ninguna.
-             */
-            hosting_id_obligado?: number | null;
-        };
-        /** RespuestaConmutar */
-        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaConmutar: {
-            /**
-             * Id Obligado
-             * @description Empresa que queda activa.
-             */
-            id_obligado: number;
-        };
-        /** RespuestaEmpresas */
-        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaEmpresas: {
-            /**
-             * Activa
-             * @description Empresa activa ahora mismo. 0 si aun no se ha elegido ninguna.
-             */
-            activa: number;
-            /**
-             * Puede Conmutar
-             * @description False para quien solo tiene una empresa: no hay selector que mostrar.
-             */
-            puede_conmutar: boolean;
-            /**
-             * Empresas
-             * @description Obligados de hosting a los que llega este usuario.
-             */
-            empresas?: components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloEmpresa"][];
-        };
-        /** RespuestaMe */
-        apps__apisif__v1__metodos__hosting___api_sesion__RespuestaMe: {
-            /** @description Los datos del usuario que ha entrado. */
-            user: components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloUsuarioSesion"];
         };
         /** ModeloRespuestaNumFilas */
         apps__apisif__v1__metodos__lotes___api_lotes__ModeloRespuestaNumFilas: {
@@ -56084,7 +58122,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloListar"];
+                "application/json": components["schemas"]["ModeloListarMemorias"];
             };
         };
         responses: {
@@ -56094,7 +58132,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__RespuestaListado"];
+                    "application/json": components["schemas"]["RespuestaListadoMemorias"];
                 };
             };
             /** @description Validation Error */
@@ -56150,7 +58188,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_memoria__ModeloCrear"];
+                "application/json": components["schemas"]["ModeloCrearMemoria"];
             };
         };
         responses: {
@@ -56902,6 +58940,138 @@ export interface operations {
             };
         };
     };
+    cobros_pendientes_apisif_v1_contabilidad_contabilizar_cobros_pendientes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPeriodoCobros"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaCobrosPendientes"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cobros_periodo_apisif_v1_contabilidad_contabilizar_cobros_periodo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPeriodoCobros"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaContabilizarCobros"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cobros_anulados_pendientes_apisif_v1_contabilidad_contabilizar_cobros_anulados_pendientes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPeticionConta"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaCobrosAnulados"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cobros_revertir_anulados_apisif_v1_contabilidad_contabilizar_cobros_revertir_anulados_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloRevertirCobros"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaRevertirCobros"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     preferencias_apisif_v1_contabilidad_plan_preferencias_post: {
         parameters: {
             query?: never;
@@ -57142,7 +59312,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plan__ModeloEditar"];
+                "application/json": components["schemas"]["ModeloEditarCuenta"];
             };
         };
         responses: {
@@ -58495,7 +60665,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloPreparar"];
+                "application/json": components["schemas"]["ModeloPrepararDeclaracion"];
             };
         };
         responses: {
@@ -58505,7 +60675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaPrevisualizar"];
+                    "application/json": components["schemas"]["RespuestaPrevisualizarDeclaracion"];
                 };
             };
             /** @description Validation Error */
@@ -58528,7 +60698,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloPreparar"];
+                "application/json": components["schemas"]["ModeloPrepararDeclaracion"];
             };
         };
         responses: {
@@ -58561,7 +60731,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloObtener"];
+                "application/json": components["schemas"]["ModeloObtenerDeclaracion"];
             };
         };
         responses: {
@@ -58594,7 +60764,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloListar"];
+                "application/json": components["schemas"]["ModeloListarDeclaraciones"];
             };
         };
         responses: {
@@ -58604,7 +60774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__RespuestaListado"];
+                    "application/json": components["schemas"]["RespuestaListadoDeclaraciones"];
                 };
             };
             /** @description Validation Error */
@@ -58671,6 +60841,303 @@ export interface operations {
                 };
                 content: {
                     "text/plain": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guardar_lectura_apisif_v1_contabilidad_bandeja_guardar_lectura_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloGuardarLecturaBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaGuardarLecturaBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leer_erp_apisif_v1_contabilidad_bandeja_leer_erp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloLeerErpBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaLeerErpBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_apisif_v1_contabilidad_bandeja_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloListarBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaListarBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_apisif_v1_contabilidad_bandeja_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloUnoBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaObtenerBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolver_apisif_v1_contabilidad_bandeja_resolver_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloResolverBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaResolverBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contabilizar_apisif_v1_contabilidad_bandeja_contabilizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloContabilizarBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaContabilizarBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deshacer_apisif_v1_contabilidad_bandeja_deshacer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloDeshacerBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeshacerBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_lecturas_apisif_v1_contabilidad_bandeja_lecturas_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloPeticionConta"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaLecturasBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deshacer_lectura_apisif_v1_contabilidad_bandeja_lecturas_deshacer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloLecturaBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeshacerLecturaBandeja"];
                 };
             };
             /** @description Validation Error */
@@ -59185,7 +61652,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_cierre__RespuestaDeshacer"];
+                    "application/json": components["schemas"]["RespuestaDeshacerCierre"];
                 };
             };
             /** @description Validation Error */
@@ -59284,7 +61751,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_cierre__RespuestaDeshacer"];
+                    "application/json": components["schemas"]["RespuestaDeshacerCierre"];
                 };
             };
             /** @description Validation Error */
@@ -59571,7 +62038,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloPreparar"];
+                "application/json": components["schemas"]["ModeloPrepararImportacion"];
             };
         };
         responses: {
@@ -59581,7 +62048,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaPrevisualizar"];
+                    "application/json": components["schemas"]["RespuestaPrevisualizarImportacion"];
                 };
             };
             /** @description Validation Error */
@@ -59604,7 +62071,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar"];
+                "application/json": components["schemas"]["ModeloEjecutarImportacion"];
             };
         };
         responses: {
@@ -59614,7 +62081,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar"];
+                    "application/json": components["schemas"]["RespuestaEjecutarImportacion"];
                 };
             };
             /** @description Validation Error */
@@ -59637,7 +62104,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__ModeloEjecutar"];
+                "application/json": components["schemas"]["ModeloEjecutarImportacion"];
             };
         };
         responses: {
@@ -59647,7 +62114,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaEjecutar"];
+                    "application/json": components["schemas"]["RespuestaEjecutarImportacion"];
                 };
             };
             /** @description Validation Error */
@@ -59746,7 +62213,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_importador__RespuestaDeshacer"];
+                    "application/json": components["schemas"]["RespuestaDeshacerImportacion"];
                 };
             };
             /** @description Validation Error */
@@ -60043,9 +62510,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RespuestaCatalogoPlantillas"];
                 };
             };
             /** @description Validation Error */
@@ -60068,7 +62533,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloOpciones"];
+                "application/json": components["schemas"]["ModeloOpcionesPlantillaAsiento"];
             };
         };
         responses: {
@@ -60078,7 +62543,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaOpciones"];
+                    "application/json": components["schemas"]["RespuestaOpcionesPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60101,7 +62566,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloListar"];
+                "application/json": components["schemas"]["ModeloListarPlantillasAsiento"];
             };
         };
         responses: {
@@ -60111,7 +62576,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaListar"];
+                    "application/json": components["schemas"]["RespuestaListarPlantillasAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60134,7 +62599,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloObtener"];
+                "application/json": components["schemas"]["ModeloObtenerPlantillaAsiento"];
             };
         };
         responses: {
@@ -60144,7 +62609,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                    "application/json": components["schemas"]["RespuestaPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60167,7 +62632,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloCodigo"];
+                "application/json": components["schemas"]["ModeloPlantillaAsiento"];
             };
         };
         responses: {
@@ -60177,7 +62642,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaVersiones"];
+                    "application/json": components["schemas"]["RespuestaVersionesPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60200,7 +62665,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloCrear"];
+                "application/json": components["schemas"]["ModeloCrearPlantillaAsiento"];
             };
         };
         responses: {
@@ -60210,7 +62675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                    "application/json": components["schemas"]["RespuestaPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60233,7 +62698,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEditar"];
+                "application/json": components["schemas"]["ModeloEditarPlantillaAsiento"];
             };
         };
         responses: {
@@ -60243,7 +62708,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                    "application/json": components["schemas"]["RespuestaPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60266,7 +62731,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloCodigo"];
+                "application/json": components["schemas"]["ModeloPlantillaAsiento"];
             };
         };
         responses: {
@@ -60276,7 +62741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlantillaEnLista"];
+                    "application/json": components["schemas"]["PlantillaAsientoEnLista"];
                 };
             };
             /** @description Validation Error */
@@ -60299,7 +62764,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloCodigo"];
+                "application/json": components["schemas"]["ModeloPlantillaAsiento"];
             };
         };
         responses: {
@@ -60309,7 +62774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlantillaEnLista"];
+                    "application/json": components["schemas"]["PlantillaAsientoEnLista"];
                 };
             };
             /** @description Validation Error */
@@ -60332,7 +62797,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloDuplicar"];
+                "application/json": components["schemas"]["ModeloDuplicarPlantillaAsiento"];
             };
         };
         responses: {
@@ -60342,7 +62807,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaPlantilla"];
+                    "application/json": components["schemas"]["RespuestaPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60365,7 +62830,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloComprobar"];
+                "application/json": components["schemas"]["ModeloComprobarPlantillaAsiento"];
             };
         };
         responses: {
@@ -60375,7 +62840,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaComprobar"];
+                    "application/json": components["schemas"]["RespuestaComprobarPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60398,7 +62863,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloPrevisualizar"];
+                "application/json": components["schemas"]["ModeloPrevisualizarPlantillaAsiento"];
             };
         };
         responses: {
@@ -60408,7 +62873,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaPrevisualizar"];
+                    "application/json": components["schemas"]["RespuestaPrevisualizarPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60431,7 +62896,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__ModeloEjecutar"];
+                "application/json": components["schemas"]["ModeloEjecutarPlantillaAsiento"];
             };
         };
         responses: {
@@ -60441,7 +62906,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_plantillas__RespuestaEjecutar"];
+                    "application/json": components["schemas"]["RespuestaEjecutarPlantillaAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60464,7 +62929,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloEjecuciones"];
+                "application/json": components["schemas"]["ModeloEjecucionesPlantillaAsiento"];
             };
         };
         responses: {
@@ -60474,7 +62939,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaEjecuciones"];
+                    "application/json": components["schemas"]["RespuestaEjecucionesPlantillaAsiento"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportar_apisif_v1_contabilidad_plantillas_exportar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloExportarPlantillasAsiento"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaExportarPlantillasAsiento"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    importar_apisif_v1_contabilidad_plantillas_importar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloImportarPlantillasAsiento"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaImportarPlantillasAsiento"];
                 };
             };
             /** @description Validation Error */
@@ -60998,7 +63529,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaEmpresas"];
+                    "application/json": components["schemas"]["RespuestaEmpresasConta"];
                 };
             };
         };
@@ -61018,7 +63549,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RespuestaEmpresaActual"];
+                    "application/json": components["schemas"]["RespuestaEmpresaActualConta"];
                 };
             };
         };
@@ -61032,7 +63563,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloConmutar"];
+                "application/json": components["schemas"]["ModeloConmutarConta"];
             };
         };
         responses: {
@@ -61042,7 +63573,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaConmutar"];
+                    "application/json": components["schemas"]["RespuestaConmutarConta"];
                 };
             };
             /** @description Validation Error */
@@ -61071,7 +63602,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaMe"];
+                    "application/json": components["schemas"]["RespuestaMeConta"];
                 };
             };
         };
@@ -83827,7 +86358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaEmpresas"];
+                    "application/json": components["schemas"]["RespuestaEmpresas"];
                 };
             };
         };
@@ -83861,7 +86392,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__ModeloConmutar"];
+                "application/json": components["schemas"]["ModeloConmutar"];
             };
         };
         responses: {
@@ -83871,7 +86402,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaConmutar"];
+                    "application/json": components["schemas"]["RespuestaConmutar"];
                 };
             };
             /** @description Validation Error */
@@ -83900,7 +86431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["apps__apisif__v1__metodos__hosting___api_sesion__RespuestaMe"];
+                    "application/json": components["schemas"]["RespuestaMe"];
                 };
             };
         };
@@ -86656,6 +89187,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Listar-Output"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_tuneles_apisif_v1_maestros_conexiones_externas_tuneles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaTunelesConexionExterna"];
+                };
+            };
+        };
+    };
+    listar_apisif_v1_maestros_conexiones_externas_listar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloListarConexionesExternas"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaListarConexionesExternas"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_apisif_v1_maestros_conexiones_externas_obtener_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloIdConexionExterna"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConexionExterna"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_apisif_v1_maestros_conexiones_externas_crear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloCrearConexionExterna"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConexionExterna"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editar_apisif_v1_maestros_conexiones_externas_editar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloEditarConexionExterna"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConexionExterna"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_apisif_v1_maestros_conexiones_externas_eliminar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloIdConexionExterna"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaEliminarConexionExterna"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probar_apisif_v1_maestros_conexiones_externas_probar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloIdConexionExterna"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaProbarConexionExterna"];
                 };
             };
             /** @description Validation Error */

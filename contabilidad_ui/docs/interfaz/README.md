@@ -26,6 +26,7 @@ copian tal cual; cambiar uno es una decisión suya, no del que porta la interfaz
 - `configuracion.md` — cuentas por defecto y datos fijos de la empresa.
 - `inmovilizado.md` — los bienes que se amortizan y su cuadro de amortización.
 - `importador.md` — importar asientos de CSV y Excel.
+- `conexiones.md` — la conexión con Codiplika.
 - `fiscal.md` — el IVA del periodo, las retenciones y el cuadre con
   facturación. El modelo 303 todavía no está.
 

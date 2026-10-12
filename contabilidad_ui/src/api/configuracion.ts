@@ -14,7 +14,7 @@ export function obtenerConfiguracion(): Promise<Configuracion> {
 }
 
 export type CampoDeCuenta =
-  components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_configuracion__CampoDeCuenta']
+  components['schemas']['CampoDeCuentaConfiguracion']
 
 /** Cuentas por defecto: nombre de la columna, título, grupo y qué se rompe sin ella. */
 export type CuentasPorDefecto = components['schemas']['CuentasPorDefectoConfig']

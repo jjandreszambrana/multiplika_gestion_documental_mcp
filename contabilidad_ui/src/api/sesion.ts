@@ -3,9 +3,9 @@ import type { components } from './types'
 
 /** Llamadas de sesión y de elección de empresa. */
 
-export type Empresa = components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloEmpresa']
-export type RespuestaEmpresas = components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaEmpresas']
-export type RespuestaConmutar = components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaConmutar']
+export type Empresa = components['schemas']['ModeloEmpresaConta']
+export type RespuestaEmpresas = components['schemas']['RespuestaEmpresasConta']
+export type RespuestaConmutar = components['schemas']['RespuestaConmutarConta']
 
 /** Los cuatro niveles, de menor a mayor. Deciden qué se pinta. */
 export const NIVELES = ['consulta', 'apuntes', 'cierre', 'admin'] as const
@@ -16,7 +16,7 @@ export type Nivel = (typeof NIVELES)[number]
  * con la respuesta declarada: los campos se generan, no se escriben a mano.
  * Casi todos son opcionales de verdad, porque dependen del rol.
  */
-export type Usuario = components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_sesion__ModeloUsuarioSesion']
+export type Usuario = components['schemas']['ModeloUsuarioSesionConta']
 
 export function iniciarSesion(usuario: string, contrasena: string): Promise<unknown> {
   return pedir('/usuarios/login', { username: usuario, password: contrasena })
@@ -27,7 +27,7 @@ export async function cerrarSesion(): Promise<void> {
 }
 
 export async function usuarioActual(): Promise<Usuario> {
-  const { user } = await pedir<components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_sesion__RespuestaMe']>('/contabilidad/sesion/me')
+  const { user } = await pedir<components['schemas']['RespuestaMeConta']>('/contabilidad/sesion/me')
   return user
 }
 

@@ -7,6 +7,8 @@ export interface Seccion {
   nivelMinimo: Nivel
   /** Cuelga de este apartado del menú. Sin esto, va suelta. */
   grupo?: string
+  /** Solo para estos roles del SIF, sea cual sea su nivel. */
+  soloRoles?: readonly number[]
 }
 
 /**
@@ -80,5 +82,14 @@ export const SECCIONES: Seccion[] = [
   { id: 'importador', etiqueta: 'Importar datos', nivelMinimo: 'apuntes', grupo: 'Utilidades' },
   { id: 'ejercicios', etiqueta: 'Ejercicios', nivelMinimo: 'cierre', grupo: 'Utilidades' },
   { id: 'configuracion', etiqueta: 'Configuración', nivelMinimo: 'cierre', grupo: 'Utilidades' },
+  {
+    id: 'conexiones',
+    etiqueta: 'Conexión con Codiplika',
+    nivelMinimo: 'consulta',
+    grupo: 'Utilidades',
+    // Superadministrador, administrador y el usuario de la propia empresa: los
+    // representantes y los operarios reciben 403 del SIF.
+    soloRoles: [1, 2, 4],
+  },
   { id: 'accesos', etiqueta: 'Accesos', nivelMinimo: 'admin' },
 ]

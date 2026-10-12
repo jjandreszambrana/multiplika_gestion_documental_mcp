@@ -34,7 +34,10 @@ from ._repeticiones import ahora_madrid
 
 ROL_REPRESENTANTE, ROLES_DE_EMPRESA = 3, (4, 5)
 ORDEN_NIVELES = {"consulta": 0, "apuntes": 1, "cierre": 2, "admin": 3}
-PREFIJO_PERMITIDO = "/contabilidad/"
+# Las conexiones externas (Codiplika) van fuera de contabilidad en el SIF, pero
+# se configuran desde la pantalla de contabilidad; crearlas, probarlas o
+# quitarlas lo sigue decidiendo el SIF (solo su superadministrador).
+PREFIJOS_PERMITIDOS = ("/contabilidad/", "/maestros/conexiones_externas/")
 RUTAS_PROHIBIDAS = ("/contabilidad/sesion/conmutar",)
 NOMBRE_CREDENCIAL = "SIF {url} · {usuario} · usuario GD {id_usuario}"
 MENSAJE_CLAVE_MALA = "El SIF no acepta ese usuario o esa contraseña"
@@ -270,7 +273,7 @@ async def _empresa_y_cliente(config: dict, id_usuario: int | None, id_empresa: i
 
 def _ruta_permitida(ruta: str) -> str:
     ruta = "/" + ruta.lstrip("/")
-    if not ruta.startswith(PREFIJO_PERMITIDO) or ruta in RUTAS_PROHIBIDAS or ".." in ruta:
+    if not ruta.startswith(PREFIJOS_PERMITIDOS) or ruta in RUTAS_PROHIBIDAS or ".." in ruta:
         raise LookupError("Esa parte del SIF no se puede usar desde la GD")
     return ruta
 

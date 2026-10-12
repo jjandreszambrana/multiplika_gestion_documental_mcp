@@ -6,7 +6,7 @@ export type Maestro = components['schemas']['MaestroConCuentas']
 // nombre largo. Este es el de los maestros; el de la configuración vive en
 // `configuracion.ts`.
 export type CampoDeCuenta =
-  components['schemas']['apps__apisif__v1__metodos__contabilidad___api_conta_cuentas_maestros__CampoDeCuenta']
+  components['schemas']['CampoDeCuentaMaestro']
 export type Ficha = components['schemas']['FichaConCuentas']
 export type CuentaDeFicha = components['schemas']['CuentaDeFicha']
 export type RespuestaFamilias = components['schemas']['RespuestaFamiliasConCuentas']

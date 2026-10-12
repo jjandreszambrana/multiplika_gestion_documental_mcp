@@ -2,11 +2,18 @@ import { Alert, AppShell, Box, Button, Group, Loader, Stack, Text } from '@manti
 import { useCallback, useEffect, useState } from 'react'
 import { textoDeError } from '../api/errores'
 import { obtenerConfiguracion, type Configuracion } from '../api/configuracion'
-import { listarEjercicios, type Empresa, type Ejercicio, type Usuario } from '../api/sesion'
+import {
+  listarEjercicios,
+  usuarioActual,
+  type Empresa,
+  type Ejercicio,
+  type Usuario,
+} from '../api/sesion'
 import CampanaAvisos from './CampanaAvisos'
 import CabeceraEmpresa from './CabeceraEmpresa'
 import PantallaDiario from '../pages/diario/PantallaDiario'
 import PantallaConfiguracion from '../pages/configuracion/PantallaConfiguracion'
+import PantallaConexiones from '../pages/conexiones/PantallaConexiones'
 import PantallaEjercicios from '../pages/ejercicios/PantallaEjercicios'
 import PantallaEliminados from '../pages/eliminados/PantallaEliminados'
 import PantallaEnlace from '../pages/maestros/PantallaEnlace'
@@ -78,6 +85,15 @@ export default function Estructura({
   )
   const [errorEjercicios, setErrorEjercicios] = useState<string | null>(null)
   const [seccion, setSeccion] = useState(SECCION_DE_ENTRADA)
+  // Dentro de la GD no llega el usuario: se pregunta al SIF quién es la
+  // clave con la que se entra. Si falla, se esconde lo que depende del rol.
+  const [rolSif, setRolSif] = useState<number | null>(usuario?.id_rol ?? null)
+  useEffect(() => {
+    if (usuario) return
+    usuarioActual()
+      .then((u) => setRolSif(u.id_rol ?? null))
+      .catch(() => setRolSif(null))
+  }, [usuario])
 
   // Tras abrir, bloquear o desbloquear un ejercicio: la cabecera y la pantalla
   // leen la misma lista, así que se rehace una sola vez y aquí.
@@ -144,7 +160,9 @@ export default function Estructura({
     </Group>
   )
 
-  const menu = <MenuModulo nivel={nivel} activa={seccion} alElegir={setSeccion} />
+  const menu = (
+    <MenuModulo nivel={nivel} rol={rolSif} activa={seccion} alElegir={setSeccion} />
+  )
 
   const contenido = (
     <RedDeSeguridad llave={`${seccion}.${ejercicio ?? ""}`}>
@@ -216,6 +234,11 @@ export default function Estructura({
             configuracion={configuracion}
             ejercicio={ejercicio}
             alGuardada={setConfiguracion}
+          />
+        ) : seccion === 'conexiones' ? (
+          <PantallaConexiones
+            idObligado={empresa.id_obligado}
+            nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
           />
         ) : seccion === 'inmovilizado' ? (
           <PantallaInmovilizado
