@@ -192,3 +192,26 @@ export function textoDelRegistro303({ cabeceras }: Descarga): string | null {
       return null
   }
 }
+
+type DeclaracionApi = components['schemas']['DeclaracionEnLista']
+
+/** Una declaración guardada, como sale en la lista. */
+export interface DeclaracionEnLista extends Omit<DeclaracionApi, 'resultado'> {
+  resultado: Decimal
+}
+
+/**
+ * Las declaraciones del 303 guardadas del ejercicio, de la más reciente a la
+ * más antigua. Las registradas al bajar el Excel salen aquí como confirmadas.
+ */
+export async function declaracionesDel303(
+  ejercicio: number,
+  senal?: AbortSignal,
+): Promise<DeclaracionEnLista[]> {
+  const salida = await pedir<components['schemas']['RespuestaListadoDeclaraciones']>(
+    '/contabilidad/declaraciones/listar',
+    { ejercicio, modelo: '303' },
+    senal,
+  )
+  return (salida.declaraciones ?? []).map((fila) => ({ ...fila, resultado: aDecimal(fila.resultado) }))
+}

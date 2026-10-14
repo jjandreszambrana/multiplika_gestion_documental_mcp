@@ -20,6 +20,7 @@ import PantallaEnlace from '../pages/maestros/PantallaEnlace'
 import PantallaImportador from '../pages/importador/PantallaImportador'
 import PantallaCierre from '../pages/cierre/PantallaCierre'
 import PantallaBalance from '../pages/informes/PantallaBalance'
+import PantallaDeclaraciones from '../pages/fiscal/PantallaDeclaraciones'
 import PantallaFiscal from '../pages/fiscal/PantallaFiscal'
 import PantallaEstadosContables from '../pages/informes/PantallaEstadosContables'
 import PantallaMayor from '../pages/informes/PantallaMayor'
@@ -285,6 +286,8 @@ export default function Estructura({
             ejercicio={ejercicio}
             usuario={usuario?.usuario ?? 'anonimo'}
           />
+        ) : seccion === 'declaraciones' ? (
+          <PantallaDeclaraciones key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
         ) : seccion === 'cierre' ? (
           <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
         ) : seccion === 'sin_ficha' ? (

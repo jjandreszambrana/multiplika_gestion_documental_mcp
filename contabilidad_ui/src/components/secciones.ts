@@ -70,11 +70,16 @@ export const SECCIONES: Seccion[] = [
     nivelMinimo: 'consulta',
     grupo: 'Informes',
   },
-  // El grupo nace con una sola entrada: detrás viene el modelo 303, que espera
-  // a que el backend mande los rótulos de las casillas.
   {
     id: 'fiscal',
     etiqueta: 'IVA y retenciones',
+    nivelMinimo: 'consulta',
+    grupo: 'Fiscal',
+  },
+  // Aparte de IVA y retenciones: son documentos guardados, no consultas vivas.
+  {
+    id: 'declaraciones',
+    etiqueta: 'Declaraciones registradas',
     nivelMinimo: 'consulta',
     grupo: 'Fiscal',
   },
