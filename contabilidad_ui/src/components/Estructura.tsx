@@ -287,7 +287,11 @@ export default function Estructura({
             usuario={usuario?.usuario ?? 'anonimo'}
           />
         ) : seccion === 'declaraciones' ? (
-          <PantallaDeclaraciones key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
+          <PantallaDeclaraciones
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            nivel={nivel}
+          />
         ) : seccion === 'cierre' ? (
           <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
         ) : seccion === 'sin_ficha' ? (

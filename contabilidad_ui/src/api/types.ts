@@ -1711,6 +1711,25 @@ export interface paths {
          *
          *     Se devuelve el fichero en el cuerpo, con `Content-Disposition`, igual que las descargas
          *     de facturación.
+         *
+         *     **`modelo_303` registra lo que se manda a la gestoría.** Lleva todas las casillas del
+         *     modelo en su orden, también a cero, y una hoja «Avisos» si algo no se pudo colocar. Al
+         *     bajarlo:
+         *
+         *     - Si el periodo **no está registrado** y no viene `registrar`, responde **409** para que
+         *       la pantalla pregunte. Con `registrar: true` se registra (hace falta nivel `apuntes`);
+         *       con `false` se baja sin guardar nada.
+         *     - Si **ya está registrado**, se recalcula y, si algo ha cambiado, se actualiza. No se
+         *       toca si la liquidación está contabilizada, si ya se presentó ante la AEAT o si quien
+         *       lo baja no tiene nivel `apuntes`: entonces el Excel lleva lo registrado y un aviso
+         *       con lo que daría hoy.
+         *
+         *     Los datos de partida que no se manden se toman de los guardados en la declaración, y los
+         *     ajustes a mano se conservan: el Excel sale con lo ajustado y el motivo en la columna «Nota».
+         *
+         *     Lo que pasó va en la cabecera `X-Registro`: `sin_registrar`, `registrada`,
+         *     `actualizada`, `sin_cambios` o `bloqueada`. `X-Id-Declaracion` trae el registro, y
+         *     `X-Resultado-Anterior` el resultado que tenía si se actualizó.
          */
         post: operations["excel_apisif_v1_contabilidad_informes_excel_post"];
         delete?: never;
@@ -2666,7 +2685,8 @@ export interface paths {
          *     Lo que no se sabe clasificar con certeza **no se coloca**: queda en `avisos` con su
          *     motivo. Una declaracion con avisos hay que mirarla antes de darla por buena.
          *
-         *     Si ya habia un borrador del mismo periodo se rehace entero. Si lo que hay esta
+         *     Si ya habia un borrador del mismo periodo se rehace en el mismo registro, conservando
+         *     su historial, sus ajustes a mano y los datos del fichero. Si lo que hay esta
          *     confirmado o presentado, responde 400: eso no se rehace, se rectifica.
          */
         post: operations["preparar_apisif_v1_contabilidad_declaraciones_preparar_post"];
@@ -2750,11 +2770,159 @@ export interface paths {
          *     desarrolladora, que sale del registro del SIF. No cambia la declaracion: generarlo no
          *     es presentarlo.
          *
+         *     La forma de pago, la cuenta y las marcas que no se manden se toman de las guardadas en la
+         *     declaracion (`/declaraciones/modificar`).
+         *
          *     Responde 400 si la declaracion tiene avisos (salvo `aceptar_avisos`), si falta el
          *     IBAN para domiciliar o devolver, o si la empresa esta exonerada del 390 en el ultimo
          *     periodo. La huella SHA-256 del fichero va en la cabecera `X-Huella`.
          */
         post: operations["fichero_apisif_v1_contabilidad_declaraciones_fichero_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/modificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar los datos de partida y recalcular
+         * @description Guarda los datos de partida que vengan y recalcula con las facturas de hoy.
+         *
+         *     Solo cuenta lo que se manda; lo demas se queda como esta. Los ajustes a mano se
+         *     conservan. El fichero de la AEAT tomara despues por defecto la forma de pago, la
+         *     cuenta y las marcas guardadas.
+         */
+        post: operations["modificar_apisif_v1_contabilidad_declaraciones_modificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/ajustar_casilla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar a mano el importe de una casilla
+         * @description Pone a mano el importe de una casilla de detalle, con motivo obligatorio.
+         *
+         *     Se guardan lo calculado y lo ajustado, con el motivo, quien y cuando. Los totales y el
+         *     resultado se recalculan con el ajuste. Al recalcular despues (bajar el Excel,
+         *     `modificar`) el ajuste se mantiene, y si lo calculado de esa casilla ha cambiado sale un
+         *     aviso. Un total, el resultado o un tipo responden 400.
+         */
+        post: operations["ajustar_casilla_apisif_v1_contabilidad_declaraciones_ajustar_casilla_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/quitar_ajuste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deshacer el ajuste a mano de una casilla
+         * @description La casilla vuelve a valer lo calculado y se recalculan totales y resultado.
+         */
+        post: operations["quitar_ajuste_apisif_v1_contabilidad_declaraciones_quitar_ajuste_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/cambiar_estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar, devolver a borrador o marcar como presentada
+         * @description Borrador <-> confirmada; confirmada -> presentada (con `fecha_presentacion` y
+         *     `justificante`); presentada -> confirmada para deshacer un error. Con la liquidacion
+         *     contabilizada no se cambia el estado. Sustituida no se pone a mano. Pedir el estado
+         *     que ya tiene no hace nada.
+         */
+        post: operations["cambiar_estado_apisif_v1_contabilidad_declaraciones_cambiar_estado_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/contabilizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asiento de la liquidacion, en borrador
+         * @description El asiento de la liquidacion del IVA. Nace en borrador.
+         *
+         *     Salda las cuentas de IVA repercutido y soportado del periodo con los importes de la
+         *     declaracion (ajustes incluidos) contra la cuenta de Hacienda que toque. Si lo
+         *     contabilizado no coincide con lo declarado, sale en `avisos` y la diferencia va en una
+         *     linea aparte: no se bloquea.
+         *
+         *     Con `ensayo: true` devuelve el asiento sin grabarlo (tambien en borrador). Grabarlo pide
+         *     la declaracion confirmada o presentada, y que `grabable` sea true: hoy el proyecto no
+         *     tiene configuradas las cuentas de Hacienda, y el asiento que las necesita sale en el
+         *     ensayo con la cuenta vacia y el motivo en `faltan`.
+         */
+        post: operations["contabilizar_apisif_v1_contabilidad_declaraciones_contabilizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/declaraciones/descontabilizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tirar el asiento de la liquidacion si sigue en borrador
+         * @description Tira el borrador del asiento y deja la declaracion sin contabilizar.
+         *
+         *     Si el asiento ya esta confirmado en el libro, 400: un asiento confirmado no se borra
+         *     nunca, se corrige con otro. Tampoco con el ejercicio cerrado.
+         */
+        post: operations["descontabilizar_apisif_v1_contabilidad_declaraciones_descontabilizar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2925,6 +3093,28 @@ export interface paths {
         put?: never;
         /** Quitar de la bandeja lo que trajo una lectura */
         post: operations["deshacer_lectura_apisif_v1_contabilidad_bandeja_lecturas_deshacer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apisif/v1/contabilidad/bandeja/deshacer_exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deshacer lo que trajo una lectura y devolverlo a pendiente en el otro programa
+         * @description Por defecto es un **ensayo**. Lo que tenga el asiento confirmado se queda: el libro no se
+         *     borra. Lo demás sale de la bandeja (y su borrador, si lo tenía) y en el otro programa vuelve a
+         *     pendiente de exportar, solo si allí sigue marcado con esta misma exportación.
+         */
+        post: operations["deshacer_exportacion_apisif_v1_contabilidad_bandeja_deshacer_exportacion_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17712,6 +17902,31 @@ export interface components {
             email?: components["schemas"]["FiltroCampo"] | null;
             id_estado?: components["schemas"]["FiltroCampo"] | null;
         };
+        /** AjusteCasilla */
+        AjusteCasilla: {
+            /**
+             * Motivo
+             * @description Por que se cambio a mano.
+             */
+            motivo: string;
+            /**
+             * Usuario
+             * @description Quien la ajusto.
+             * @default
+             */
+            usuario: string;
+            /**
+             * Id Usuario
+             * @description ID de quien la ajusto.
+             * @default 0
+             */
+            id_usuario: number;
+            /**
+             * Fecha
+             * @description Cuando.
+             */
+            fecha?: string | null;
+        };
         /** AnticipoAplicacion */
         AnticipoAplicacion: {
             /** Id Recibo */
@@ -17944,7 +18159,7 @@ export interface components {
             id_tipo_iva?: number | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, declaracion, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              */
             ref_tipo?: string | null;
             /**
@@ -18075,7 +18290,7 @@ export interface components {
             id_tipo_iva?: number | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, declaracion, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              */
             ref_tipo?: string | null;
             /**
@@ -19317,14 +19532,39 @@ export interface components {
             casilla: string;
             /**
              * Importe
-             * @description Lo declarado en esa casilla.
+             * @description Lo que vale la casilla: lo calculado o, si se ajusto, lo ajustado. En las de Tipo %, el tipo fijo del diseno.
              */
             importe: number;
+            /**
+             * Importe Calculado
+             * @description Lo que daba el calculo. En una casilla ajustada, lo que daba cuando se ajusto.
+             */
+            importe_calculado: number;
             /**
              * Texto
              * @description Para las casillas que no son importes.
              */
             texto?: string | null;
+            /**
+             * Apartado
+             * @description devengado, deducible, informacion_adicional o resultado.
+             * @default
+             */
+            apartado: string;
+            /**
+             * Descripcion
+             * @description Que es la casilla, con las palabras del diseno oficial.
+             * @default
+             */
+            descripcion: string;
+            /**
+             * Ajustable
+             * @description Si se puede ajustar a mano: las de detalle. Los totales, el resultado y los tipos no.
+             * @default false
+             */
+            ajustable: boolean;
+            /** @description El ajuste a mano, o null si no tiene. */
+            ajuste?: components["schemas"]["AjusteCasilla"] | null;
         };
         /** CasillaPrevista */
         CasillaPrevista: {
@@ -19948,7 +20188,7 @@ export interface components {
              * @description Si es True/1, no altera TipoComunicacion ni id_tx_sii.
              * @default false
              */
-            no_alterar_tx: number | boolean | null;
+            no_alterar_tx: boolean | number | null;
         };
         /** CrearDesdeRecibos */
         CrearDesdeRecibos: {
@@ -20265,7 +20505,7 @@ export interface components {
              * @description Si es True/1, no altera TipoComunicacion ni id_tx_sii.
              * @default false
              */
-            no_alterar_tx: number | boolean | null;
+            no_alterar_tx: boolean | number | null;
             /**
              * Detalle
              * @description Líneas de detalle (opcional).
@@ -20889,6 +21129,50 @@ export interface components {
              */
             top_receptores: number;
         };
+        /**
+         * DatosIncidenciaBandeja
+         * @description Lo que identifica el documento en el otro programa. Solo viene lo que hay.
+         */
+        DatosIncidenciaBandeja: {
+            /**
+             * Libro
+             * @description emitida, recibida, cobro o pago.
+             */
+            libro?: string | null;
+            /**
+             * Fecha
+             * @description aaaa-mm-dd.
+             */
+            fecha?: string | null;
+            /**
+             * Numero
+             * @description Número de la factura tal como sale allí; en un cobro o pago, su concepto.
+             */
+            numero?: string | null;
+            /**
+             * Tercero
+             * @description Cliente o proveedor.
+             */
+            tercero?: string | null;
+            /** Nif */
+            nif?: string | null;
+            /** Base */
+            base?: number | null;
+            /** Cuota */
+            cuota?: number | null;
+            /**
+             * Total
+             * @description Total de la factura; en un cobro o pago, su importe.
+             */
+            total?: number | null;
+            /**
+             * Factura
+             * @description En un cobro o pago, la factura que paga.
+             */
+            factura?: string | null;
+            /** Forma Pago */
+            forma_pago?: string | null;
+        };
         /** DeclaracionEnLista */
         DeclaracionEnLista: {
             /**
@@ -20951,6 +21235,18 @@ export interface components {
              * @description Asiento de la liquidacion. 0 = ninguno.
              */
             asiento: number;
+            /**
+             * Ejercicio Asiento
+             * @description Ejercicio de ese asiento.
+             * @default 0
+             */
+            ejercicio_asiento: number;
+            /**
+             * Contabilizada
+             * @description Si la liquidacion tiene asiento.
+             * @default false
+             */
+            contabilizada: boolean;
         };
         /** Descargar */
         Descargar: {
@@ -21429,6 +21725,19 @@ export interface components {
              * @description Recargo que se llevo.
              */
             recargo: number;
+        };
+        /** DocumentoQueSeQuedaBandeja */
+        DocumentoQueSeQuedaBandeja: {
+            /** Tipo */
+            tipo: string;
+            /** Id */
+            id: number;
+            /** Id Origen */
+            id_origen: string;
+            /** Estado */
+            estado: string;
+            /** Motivo */
+            motivo: string;
         };
         /** Duplicar */
         Duplicar: {
@@ -23476,6 +23785,8 @@ export interface components {
             id_origen: string;
             /** Faltas */
             faltas: string[];
+            /** @description Lo que identifica el documento, para encontrarlo y corregirlo allí. */
+            datos?: components["schemas"]["DatosIncidenciaBandeja"] | null;
         };
         /** IniciarPausa */
         IniciarPausa: {
@@ -23656,6 +23967,37 @@ export interface components {
             /** Repetir Por */
             repetir_por?: string | null;
         };
+        /** LineaHistorial */
+        LineaHistorial: {
+            /**
+             * Accion
+             * @description registrada, actualizada, modificada, ajuste, quitar_ajuste, estado, contabilizada o descontabilizada.
+             */
+            accion: string;
+            /**
+             * Detalle
+             * @description Que cambio.
+             * @default
+             */
+            detalle: string;
+            /**
+             * Id Usuario
+             * @description Quien.
+             * @default 0
+             */
+            id_usuario: number;
+            /**
+             * Usuario
+             * @description Nombre de quien.
+             * @default
+             */
+            usuario: string;
+            /**
+             * Fecha
+             * @description Cuando.
+             */
+            fecha?: string | null;
+        };
         /** LineaHistoricoBorrador */
         LineaHistoricoBorrador: {
             /**
@@ -23698,6 +24040,24 @@ export interface components {
              * @default 0
              */
             pase: number;
+        };
+        /** LineaLiquidacion */
+        LineaLiquidacion: {
+            /**
+             * Cuenta
+             * @description Cuenta. Vacia si el proyecto no tiene configurada la que hace falta (ver `faltan`).
+             */
+            cuenta: string;
+            /** Debe */
+            debe: number;
+            /** Haber */
+            haber: number;
+            /**
+             * Concepto
+             * @description Vacio = el del asiento.
+             * @default
+             */
+            concepto: string;
         };
         /** LineaSumasYSaldos */
         LineaSumasYSaldos: {
@@ -24517,6 +24877,31 @@ export interface components {
             observaciones: string | null;
             /** Hashed Password */
             hashed_password: string | null;
+        };
+        /** ModeloAjustarCasilla */
+        ModeloAjustarCasilla: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Casilla
+             * @description Casilla de detalle: 28, 29, 43... No vale un total ni el resultado.
+             */
+            casilla: string;
+            /**
+             * Importe
+             * @description El importe que tiene que valer la casilla.
+             */
+            importe: number;
+            /**
+             * Motivo
+             * @description Por que se cambia. Obligatorio.
+             */
+            motivo: string;
         };
         /** ModeloAlmacenActualizar */
         ModeloAlmacenActualizar: {
@@ -25641,26 +26026,6 @@ export interface components {
              */
             id: number;
         };
-        /** ModeloCambiarEstado */
-        ModeloCambiarEstado: {
-            /**
-             * Id
-             * @description ID del mandato.
-             */
-            id: number;
-            /**
-             * Id Obligado
-             * @description ID del obligado.
-             * @default 0
-             */
-            id_obligado: number | null;
-            /**
-             * Estado
-             * @description 0 = anular, 2 = activar (desde pendiente de firma).
-             * @enum {integer}
-             */
-            estado: 0 | 2;
-        };
         /** ModeloCanjear */
         ModeloCanjear: {
             /**
@@ -26304,6 +26669,33 @@ export interface components {
              */
             id_obligado: number;
         };
+        /** ModeloContabilizar */
+        ModeloContabilizar: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Fecha
+             * @description Fecha del asiento. Por defecto, el ultimo dia del periodo.
+             */
+            fecha?: string | null;
+            /**
+             * Diario
+             * @description Codigo del diario. Vacio = el de por defecto.
+             * @default
+             */
+            diario: string;
+            /**
+             * Ensayo
+             * @description true = devuelve el asiento sin grabarlo, para ensenarlo antes de confirmar.
+             * @default false
+             */
+            ensayo: boolean;
+        };
         /** ModeloContabilizarBandeja */
         ModeloContabilizarBandeja: {
             /**
@@ -26460,7 +26852,7 @@ export interface components {
             diario: string | null;
             /**
              * Ref Tipo
-             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
+             * @description Documento de origen. Uno de: amortizacion, anulacion_cobro, anulacion_factura, cobro, correccion_inmovilizado, declaracion, factura_emitida, factura_emitida_sii, factura_importada, factura_recibida_sii, movimiento_importado, remesa, o vacio si es manual.
              * @default
              */
             ref_tipo: string | null;
@@ -26854,6 +27246,22 @@ export interface components {
             tipo: "facturas" | "movimientos";
             /** Ids */
             ids: number[];
+        };
+        /** ModeloDeshacerExportacionBandeja */
+        ModeloDeshacerExportacionBandeja: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Lectura */
+            id_lectura: number;
+            /**
+             * Ensayo
+             * @description True (por defecto) = solo dice qué se desharía; no toca nada.
+             * @default true
+             */
+            ensayo: boolean | null;
         };
         /** ModeloDestino */
         ModeloDestino: {
@@ -27532,69 +27940,63 @@ export interface components {
              */
             fecha?: string | null;
         };
-        /** ModeloFichero */
+        /**
+         * ModeloFichero
+         * @description Lo que no se mande (forma de pago, IBAN, BIC, marcas) se toma de lo guardado en la declaracion.
+         */
         ModeloFichero: {
             /**
              * Id Obligado
              * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
              */
             id_obligado?: number | null;
-            /** Id Declaracion */
-            id_declaracion: number;
             /**
              * Forma De Pago
              * @description A ingresar: I (ingreso, por defecto), U (domiciliacion) o G (cuenta corriente). A devolver: D (transferencia, por defecto) o V (cuenta corriente). En las demas se ignora.
-             * @default
              */
-            forma_de_pago: string;
+            forma_de_pago?: string | null;
             /**
              * Iban
              * @description Cuenta para domiciliar el ingreso (U) o cobrar la devolucion (D). Espanola.
-             * @default
              */
-            iban: string;
+            iban?: string | null;
             /**
              * Bic
              * @description Codigo SWIFT-BIC de la cuenta. Opcional en una cuenta espanola.
-             * @default
              */
-            bic: string;
+            bic?: string | null;
             /**
              * Devolucion Mensual
              * @description Inscrita en el registro de devolucion mensual (art. 30 RIVA).
-             * @default false
              */
-            devolucion_mensual: boolean;
+            devolucion_mensual?: boolean | null;
             /**
              * Criterio Caja
              * @description Acogida al regimen especial del criterio de caja.
-             * @default false
              */
-            criterio_caja: boolean;
+            criterio_caja?: boolean | null;
             /**
              * Destinatario Criterio Caja
              * @description Destinataria de operaciones con criterio de caja.
-             * @default false
              */
-            destinatario_criterio_caja: boolean;
+            destinatario_criterio_caja?: boolean | null;
             /**
              * Sii Voluntario
              * @description Acogida VOLUNTARIAMENTE al SII. Las obligadas por ley van a false.
-             * @default false
              */
-            sii_voluntario: boolean;
+            sii_voluntario?: boolean | null;
             /**
              * Exonerado 390
              * @description Exonerada del 390. En el ultimo periodo eso pide la pagina 4, que aun no se genera.
-             * @default false
              */
-            exonerado_390: boolean;
+            exonerado_390?: boolean | null;
             /**
              * Gasolinas
              * @description Con derecho a deducir pagos a cuenta de gasolinas (modelo 319). Solo cuenta en periodos mensuales a partir del 02.
-             * @default false
              */
-            gasolinas: boolean;
+            gasolinas?: boolean | null;
+            /** Id Declaracion */
+            id_declaracion: number;
             /**
              * Aceptar Avisos
              * @description Generarlo aunque la declaracion tenga avisos de facturas sin colocar.
@@ -28462,11 +28864,36 @@ export interface components {
             id_obligado?: number | null;
             /**
              * Informe
-             * @description Qué informe se baja: `mayor`, `libro_diario`, `sumas_y_saldos` o `balance`, que trae el balance y la cuenta de resultados en dos hojas.
+             * @description Qué informe se baja: `mayor`, `libro_diario`, `sumas_y_saldos`, `balance`, que trae el balance y la cuenta de resultados en dos hojas, o `modelo_303`.
              */
             informe: string;
             /** Ejercicio */
             ejercicio: number;
+            /**
+             * Periodo
+             * @description Obligatorio en `modelo_303`: 01 a 12, o 1T a 4T.
+             */
+            periodo?: string | null;
+            /**
+             * Registrar
+             * @description Solo en `modelo_303`, cuando el periodo no está registrado: true lo registra al bajarlo, false lo baja sin guardar nada. Si no se dice y no está registrado, responde 409 para preguntar.
+             */
+            registrar?: boolean | null;
+            /**
+             * Cuotas A Compensar
+             * @description Solo en `modelo_303`. Como en /declaraciones/previsualizar.
+             */
+            cuotas_a_compensar?: number | null;
+            /**
+             * Solicitar Devolucion
+             * @description Solo en `modelo_303`. Como en /declaraciones/previsualizar. Si no se manda, el guardado en la declaración (o false).
+             */
+            solicitar_devolucion?: boolean | null;
+            /**
+             * Devolucion Mensual
+             * @description Solo en `modelo_303`. Como en /declaraciones/previsualizar. Si no se manda, el guardado en la declaración (o false).
+             */
+            devolucion_mensual?: boolean | null;
             /**
              * Cuenta
              * @description Obligatoria en el mayor.
@@ -28632,6 +29059,11 @@ export interface components {
              * @default true
              */
             ensayo: boolean | null;
+            /**
+             * Marcar
+             * @description Si se marca en el otro programa lo que se trae (solo con ensayo false). Sin el campo, lo que diga la conexión.
+             */
+            marcar?: boolean | null;
         };
         /** ModeloLibroIva */
         ModeloLibroIva: {
@@ -30155,6 +30587,74 @@ export interface components {
              * @description ID del mandato.
              */
             id: number;
+        };
+        /**
+         * ModeloModificarDeclaracion
+         * @description Solo cuenta lo que se manda. `cuotas_a_compensar: null` vuelve a tomarlas de la declaracion anterior.
+         */
+        ModeloModificarDeclaracion: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /**
+             * Forma De Pago
+             * @description A ingresar: I (ingreso, por defecto), U (domiciliacion) o G (cuenta corriente). A devolver: D (transferencia, por defecto) o V (cuenta corriente). En las demas se ignora.
+             */
+            forma_de_pago?: string | null;
+            /**
+             * Iban
+             * @description Cuenta para domiciliar el ingreso (U) o cobrar la devolucion (D). Espanola.
+             */
+            iban?: string | null;
+            /**
+             * Bic
+             * @description Codigo SWIFT-BIC de la cuenta. Opcional en una cuenta espanola.
+             */
+            bic?: string | null;
+            /**
+             * Devolucion Mensual
+             * @description Inscrita en el registro de devolucion mensual (art. 30 RIVA).
+             */
+            devolucion_mensual?: boolean | null;
+            /**
+             * Criterio Caja
+             * @description Acogida al regimen especial del criterio de caja.
+             */
+            criterio_caja?: boolean | null;
+            /**
+             * Destinatario Criterio Caja
+             * @description Destinataria de operaciones con criterio de caja.
+             */
+            destinatario_criterio_caja?: boolean | null;
+            /**
+             * Sii Voluntario
+             * @description Acogida VOLUNTARIAMENTE al SII. Las obligadas por ley van a false.
+             */
+            sii_voluntario?: boolean | null;
+            /**
+             * Exonerado 390
+             * @description Exonerada del 390. En el ultimo periodo eso pide la pagina 4, que aun no se genera.
+             */
+            exonerado_390?: boolean | null;
+            /**
+             * Gasolinas
+             * @description Con derecho a deducir pagos a cuenta de gasolinas (modelo 319). Solo cuenta en periodos mensuales a partir del 02.
+             */
+            gasolinas?: boolean | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Cuotas A Compensar
+             * @description Cuotas a compensar de periodos anteriores (casilla 110). null = de la declaracion anterior.
+             */
+            cuotas_a_compensar?: number | null;
+            /**
+             * Solicitar Devolucion
+             * @description Si sale a devolver, pedir la devolucion en vez de compensar. Solo en el ultimo periodo, salvo devolucion mensual.
+             */
+            solicitar_devolucion?: boolean | null;
         };
         /** ModeloModulos */
         ModeloModulos: {
@@ -32244,6 +32744,18 @@ export interface components {
              */
             simular: boolean | null;
         };
+        /** ModeloQuitarAjuste */
+        ModeloQuitarAjuste: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /** Casilla */
+            casilla: string;
+        };
         /** ModeloQuitarCuentas */
         ModeloQuitarCuentas: {
             /** Id Obligado */
@@ -34237,7 +34749,7 @@ export interface components {
             id_administrador: number | null;
             /**
              * Id Estado
-             * @description Estado del usuario: 0=Inactivo, 1=Activo, 2=Suspendido, 3=Cancelado
+             * @description Estado del usuario: 0=Inactivo, 1=Activo, 2=Suspendido, 3=Cancelado. Al crear, si no se manda, nace Activo. Solo un usuario activo puede entrar
              * @default 0
              */
             id_estado: number | null;
@@ -36066,7 +36578,7 @@ export interface components {
             marcar?: boolean | null;
             /**
              * Cta Prov Desde Id
-             * @description Codiplika: la cuenta del proveedor se forma con su id y no con su código (como esté en esa instalación).
+             * @description Ya no se usa ([5.23]): la cuenta del proveedor es la que exporta Codiplika. Se acepta para no romper a quien la mande.
              */
             cta_prov_desde_id?: boolean | null;
         };
@@ -37574,6 +38086,91 @@ export interface components {
              */
             nivel: string;
         };
+        /** RespuestaContabilizar */
+        RespuestaContabilizar: {
+            /**
+             * Ensayo
+             * @description true = no se ha grabado nada.
+             */
+            ensayo: boolean;
+            /**
+             * Grabable
+             * @description Si el asiento se puede grabar tal cual. Si no, `faltan` dice por que.
+             */
+            grabable: boolean;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Ejercicio
+             * @description Ejercicio contable del asiento.
+             */
+            ejercicio: number;
+            /**
+             * Asiento
+             * @description Numero del asiento en borrador. 0 en un ensayo.
+             * @default 0
+             */
+            asiento: number;
+            /**
+             * Id Borrador
+             * @description Borrador que lo contiene. 0 en un ensayo.
+             * @default 0
+             */
+            id_borrador: number;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /**
+             * Diario
+             * @default
+             */
+            diario: string;
+            /**
+             * Concepto
+             * @default
+             */
+            concepto: string;
+            /** Lineas */
+            lineas?: components["schemas"]["LineaLiquidacion"][];
+            /** Total Debe */
+            total_debe: number;
+            /** Total Haber */
+            total_haber: number;
+            /** Cuadra */
+            cuadra: boolean;
+            /**
+             * Repercutido Declarado
+             * @description Casilla 27.
+             */
+            repercutido_declarado: number;
+            /**
+             * Repercutido Contabilizado
+             * @description Saldo del IVA repercutido en el libro, en el periodo.
+             */
+            repercutido_contabilizado: number;
+            /**
+             * Soportado Declarado
+             * @description Casilla 45.
+             */
+            soportado_declarado: number;
+            /**
+             * Soportado Contabilizado
+             * @description Saldo del IVA soportado en el libro, en el periodo.
+             */
+            soportado_contabilizado: number;
+            /**
+             * Avisos
+             * @description Diferencias entre lo declarado y lo contabilizado. No impiden grabar.
+             */
+            avisos?: string[];
+            /**
+             * Faltan
+             * @description Lo que impide grabarlo: cuentas sin configurar o un descuadre.
+             */
+            faltan?: string[];
+        };
         /** RespuestaContabilizarBandeja */
         RespuestaContabilizarBandeja: {
             /**
@@ -37602,6 +38199,11 @@ export interface components {
              * @description Cuentas que se han ajustado al ancho de la contabilidad.
              */
             avisos?: string[];
+            /**
+             * Cuentas Creadas
+             * @description Cuentas que no existían en el plan contable y se han creado al contabilizar (con el nombre del cliente, proveedor o de la cuenta).
+             */
+            cuentas_creadas?: string[];
         };
         /** RespuestaContabilizarCobros */
         RespuestaContabilizarCobros: {
@@ -37988,15 +38590,102 @@ export interface components {
              */
             asiento: number;
             /**
+             * Ejercicio Asiento
+             * @description Ejercicio de ese asiento.
+             * @default 0
+             */
+            ejercicio_asiento: number;
+            /**
+             * Contabilizada
+             * @description Si la liquidacion tiene asiento (en borrador o confirmado).
+             * @default false
+             */
+            contabilizada: boolean;
+            /**
+             * Asiento Confirmado
+             * @description true = el asiento ya esta en el libro y no se puede descontabilizar; false = sigue en borrador; null = sin asiento.
+             */
+            asiento_confirmado?: boolean | null;
+            /**
+             * Cuotas A Compensar
+             * @description Dato de partida: casilla 110 dicha a mano. null = de la declaracion anterior.
+             */
+            cuotas_a_compensar?: number | null;
+            /**
+             * Solicitar Devolucion
+             * @description Dato de partida: pedir la devolucion si sale a devolver.
+             * @default false
+             */
+            solicitar_devolucion: boolean;
+            /**
+             * Devolucion Mensual
+             * @description Marca de empresa: registro de devolucion mensual.
+             * @default false
+             */
+            devolucion_mensual: boolean;
+            /**
+             * Forma De Pago
+             * @description Para el fichero: I, U, G, D o V. Vacio = la de por defecto.
+             * @default
+             */
+            forma_de_pago: string;
+            /**
+             * Iban
+             * @description Para el fichero: cuenta de domiciliacion o devolucion.
+             * @default
+             */
+            iban: string;
+            /**
+             * Bic
+             * @description Para el fichero: SWIFT-BIC.
+             * @default
+             */
+            bic: string;
+            /**
+             * Criterio Caja
+             * @description Marca de empresa.
+             * @default false
+             */
+            criterio_caja: boolean;
+            /**
+             * Destinatario Criterio Caja
+             * @description Marca de empresa.
+             * @default false
+             */
+            destinatario_criterio_caja: boolean;
+            /**
+             * Sii Voluntario
+             * @description Marca de empresa.
+             * @default false
+             */
+            sii_voluntario: boolean;
+            /**
+             * Exonerado 390
+             * @description Marca de empresa.
+             * @default false
+             */
+            exonerado_390: boolean;
+            /**
+             * Gasolinas
+             * @description Marca de empresa.
+             * @default false
+             */
+            gasolinas: boolean;
+            /**
              * Casillas
-             * @description Contenido de la declaracion.
+             * @description Todas las casillas del modelo, tambien a cero, en el orden del diseno.
              */
             casillas?: components["schemas"]["CasillaDeclarada"][];
             /**
              * Avisos
-             * @description Lo que no se supo clasificar, con su motivo.
+             * @description Lo que no se supo clasificar, con su motivo, y los ajustes cuyo calculo ha cambiado.
              */
             avisos?: components["schemas"]["AvisoDeclaracion"][];
+            /**
+             * Historial
+             * @description Lo que se hizo con la declaracion, de la primera a la ultima.
+             */
+            historial?: components["schemas"]["LineaHistorial"][];
         };
         /** RespuestaDesdeFactura */
         RespuestaDesdeFactura: {
@@ -38063,6 +38752,35 @@ export interface components {
              * @description Borradores tirados.
              */
             deshechos: number;
+        };
+        /** RespuestaDeshacerExportacionBandeja */
+        RespuestaDeshacerExportacionBandeja: {
+            /** Id Lectura */
+            id_lectura: number;
+            /**
+             * Exportacion
+             * @description Número de la exportación en el otro programa.
+             */
+            exportacion: string;
+            /** Ensayo */
+            ensayo: boolean;
+            /**
+             * Se Deshacen
+             * @description Documentos que salen de la bandeja (y de la contabilidad, si estaban en borrador) y vuelven a pendiente en el otro programa.
+             */
+            se_deshacen: number;
+            /**
+             * Se Quedan
+             * @description Documentos con el asiento confirmado: se quedan, y siguen marcados en el otro programa.
+             */
+            se_quedan: number;
+            /**
+             * Devueltos En Origen
+             * @description Registros que han vuelto a pendiente en el otro programa. 0 en ensayo.
+             */
+            devueltos_en_origen: number;
+            /** Documentos Que Se Quedan */
+            documentos_que_se_quedan?: components["schemas"]["DocumentoQueSeQuedaBandeja"][];
         };
         /** RespuestaDeshacerImportacion */
         RespuestaDeshacerImportacion: {
@@ -39028,7 +39746,7 @@ export interface components {
             avisos?: string[];
             /**
              * Marca Autorizada
-             * @description Si la conexión de esta empresa permite marcar lo leído en el otro programa.
+             * @description Lo que propone la conexión: si sale marcado de entrada marcar lo leído en el otro programa. Al traer de verdad manda el `marcar` de la llamada.
              */
             marca_autorizada: boolean;
             /**
@@ -44416,6 +45134,32 @@ export interface components {
             /** Id Obligado */
             id_obligado?: number | null;
         };
+        /** ModeloCambiarEstado */
+        apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloCambiarEstado: {
+            /**
+             * Id Obligado
+             * @description Empresa sobre la que se trabaja. Si no se manda, se usa la de la sesion.
+             */
+            id_obligado?: number | null;
+            /** Id Declaracion */
+            id_declaracion: number;
+            /**
+             * Estado
+             * @description 0 borrador, 1 confirmada, 2 presentada. El 3 (sustituida) no se pone a mano.
+             */
+            estado: number;
+            /**
+             * Fecha Presentacion
+             * @description Obligatoria para pasar a presentada.
+             */
+            fecha_presentacion?: string | null;
+            /**
+             * Justificante
+             * @description Numero de justificante de la AEAT. Obligatorio para pasar a presentada.
+             * @default
+             */
+            justificante: string;
+        };
         /** Actualizar */
         apps__apisif__v1__metodos__debug___api_errores__ModelosDebugErroresResoluciones__Actualizar: {
             /** Id */
@@ -45377,7 +46121,7 @@ export interface components {
              * @description Si es True/1, no altera TipoComunicacion ni id_tx_sii.
              * @default false
              */
-            no_alterar_tx: number | boolean | null;
+            no_alterar_tx: boolean | number | null;
         };
         /** Obtener */
         apps__apisif__v1__metodos__facturas___api_facturas_emitidas_sii__ModelosFESii__Obtener: {
@@ -46555,7 +47299,7 @@ export interface components {
              * @description Si es True/1, no altera TipoComunicacion ni id_tx_sii.
              * @default false
              */
-            no_alterar_tx: number | boolean | null;
+            no_alterar_tx: boolean | number | null;
         };
         /** ObtenerDetalle */
         apps__apisif__v1__metodos__facturas_recibidas___api_facturas_recibidas_sii__ModelosFRSii__ObtenerDetalle: {
@@ -51690,6 +52434,11 @@ export interface components {
              * @description Importe ejecutado
              */
             importe_ejecutado?: number | null;
+            /**
+             * Id Articulo
+             * @description Artículo del maestro del que sale el concepto. null = quitar el enlace; si no se manda, no cambia. No vale en capítulos: en ellos se guarda vacío.
+             */
+            id_articulo?: number | null;
         };
         /** Crear */
         apps__apisif__v1__metodos__proyectos___api_presupuesto_obra__ModelosPartidas__Crear: {
@@ -51769,6 +52518,11 @@ export interface components {
              * @description Precio unitario
              */
             precio?: number | null;
+            /**
+             * Id Articulo
+             * @description Artículo del maestro del que sale el concepto. Vacío = no sale del maestro. No vale en capítulos: en ellos se guarda vacío.
+             */
+            id_articulo?: number | null;
         };
         /** Eliminar */
         apps__apisif__v1__metodos__proyectos___api_presupuesto_obra__ModelosPartidas__Eliminar: {
@@ -54085,6 +54839,26 @@ export interface components {
              * @default 0
              */
             id_obligado: number | null;
+        };
+        /** ModeloCambiarEstado */
+        apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloCambiarEstado: {
+            /**
+             * Id
+             * @description ID del mandato.
+             */
+            id: number;
+            /**
+             * Id Obligado
+             * @description ID del obligado.
+             * @default 0
+             */
+            id_obligado: number | null;
+            /**
+             * Estado
+             * @description 0 = anular, 2 = activar (desde pendiente de firma).
+             * @enum {integer}
+             */
+            estado: 0 | 2;
         };
         /** ModeloCrear */
         apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloCrear: {
@@ -60854,6 +61628,204 @@ export interface operations {
             };
         };
     };
+    modificar_apisif_v1_contabilidad_declaraciones_modificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloModificarDeclaracion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeclaracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ajustar_casilla_apisif_v1_contabilidad_declaraciones_ajustar_casilla_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloAjustarCasilla"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeclaracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quitar_ajuste_apisif_v1_contabilidad_declaraciones_quitar_ajuste_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloQuitarAjuste"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeclaracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cambiar_estado_apisif_v1_contabilidad_declaraciones_cambiar_estado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__contabilidad___api_conta_declaraciones__ModeloCambiarEstado"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeclaracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contabilizar_apisif_v1_contabilidad_declaraciones_contabilizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloContabilizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaContabilizar"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    descontabilizar_apisif_v1_contabilidad_declaraciones_descontabilizar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloObtenerDeclaracion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeclaracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     guardar_lectura_apisif_v1_contabilidad_bandeja_guardar_lectura_post: {
         parameters: {
             query?: never;
@@ -61138,6 +62110,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RespuestaDeshacerLecturaBandeja"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deshacer_exportacion_apisif_v1_contabilidad_bandeja_deshacer_exportacion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModeloDeshacerExportacionBandeja"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespuestaDeshacerExportacionBandeja"];
                 };
             };
             /** @description Validation Error */
@@ -68057,7 +69062,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ModeloCambiarEstado"];
+                "application/json": components["schemas"]["apps__apisif__v1__metodos__ventas___api_mandatos_sepa__ModelosMandatos__ModeloCambiarEstado"];
             };
         };
         responses: {

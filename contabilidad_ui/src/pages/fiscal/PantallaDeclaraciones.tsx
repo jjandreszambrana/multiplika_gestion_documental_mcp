@@ -4,34 +4,25 @@ import { esAbortada } from '../../api/cliente'
 import { textoDeError } from '../../api/errores'
 import { declaracionesDel303, type DeclaracionEnLista } from '../../api/fiscal'
 import { formatearFecha, formatearImporte } from '../../lib/format'
-import { PERIODOS } from './periodos'
+import { estadoDe, RESULTADOS } from './declaracion'
+import FichaDeclaracion from './FichaDeclaracion'
+import { nombreDePeriodo } from './periodos'
 
-const ESTADOS: Record<number, { texto: string; color: string }> = {
-  0: { texto: 'Borrador', color: 'gray' },
-  1: { texto: 'Registrada', color: 'blue' },
-  2: { texto: 'Presentada', color: 'green' },
-  3: { texto: 'Sustituida', color: 'orange' },
-}
-
-const RESULTADOS: Record<string, string> = {
-  ingresar: 'A ingresar',
-  compensar: 'A compensar',
-  devolver: 'A devolver',
-  resultado_cero: 'Sin resultado',
-  sin_actividad: 'Sin actividad',
-}
-
-function nombreDelPeriodo(periodo: string): string {
-  return PERIODOS.find((opcion) => opcion.value === periodo)?.label ?? periodo
+interface Props {
+  ejercicio: number | null
+  nivel: string
 }
 
 /**
  * Las declaraciones del 303 guardadas del ejercicio: las que quedaron
- * registradas al bajar el Excel y las preparadas o presentadas.
+ * registradas al bajar el Excel y las preparadas o presentadas. Pulsando una
+ * se abre su ficha en el mismo sitio; al volver, la lista ya está al día.
  */
-export default function PantallaDeclaraciones({ ejercicio }: { ejercicio: number | null }) {
+export default function PantallaDeclaraciones({ ejercicio, nivel }: Props) {
   const [filas, setFilas] = useState<DeclaracionEnLista[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [abierta, setAbierta] = useState<number | null>(null)
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     if (ejercicio === null) return
@@ -43,7 +34,18 @@ export default function PantallaDeclaraciones({ ejercicio }: { ejercicio: number
         if (!esAbortada(fallo)) setError(textoDeError(fallo))
       })
     return () => corte.abort()
-  }, [ejercicio])
+  }, [ejercicio, recarga])
+
+  if (abierta !== null) {
+    return (
+      <FichaDeclaracion
+        idDeclaracion={abierta}
+        nivel={nivel}
+        alVolver={() => setAbierta(null)}
+        alCambiada={() => setRecarga((v) => v + 1)}
+      />
+    )
+  }
 
   return (
     <Stack gap="md">
@@ -71,15 +73,16 @@ export default function PantallaDeclaraciones({ ejercicio }: { ejercicio: number
               <Table.Th>Calculada</Table.Th>
               <Table.Th>Presentada</Table.Th>
               <Table.Th>Justificante</Table.Th>
+              <Table.Th>Contabilizada</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {filas.map((fila) => {
-              const estado = ESTADOS[fila.estado] ?? { texto: String(fila.estado), color: 'gray' }
+              const estado = estadoDe(fila.estado)
               return (
-                <Table.Tr key={fila.id}>
+                <Table.Tr key={fila.id} onClick={() => setAbierta(fila.id)} style={{ cursor: 'pointer' }}>
                   <Table.Td>
-                    {nombreDelPeriodo(fila.periodo)}
+                    {nombreDePeriodo(fila.periodo)}
                     {fila.secuencia > 1 && (
                       <Text span size="xs" c="dimmed">
                         {' '}
@@ -99,6 +102,7 @@ export default function PantallaDeclaraciones({ ejercicio }: { ejercicio: number
                   <Table.Td>{formatearFecha(fila.fecha_calculo)}</Table.Td>
                   <Table.Td>{formatearFecha(fila.fecha_presentacion)}</Table.Td>
                   <Table.Td>{fila.justificante ?? ''}</Table.Td>
+                  <Table.Td>{fila.contabilizada ? 'Sí' : ''}</Table.Td>
                 </Table.Tr>
               )
             })}
