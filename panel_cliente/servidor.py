@@ -505,7 +505,11 @@ async def empresas_contabilidad_sif(
         raise _error_contable(e) from e
 
 
-CABECERAS_PROXY = ("content-type", "content-disposition")
+# Las de la descarga del 303 dicen qué se hizo con el registro; X-Huella, la del fichero de la AEAT.
+CABECERAS_PROXY = (
+    "content-type", "content-disposition",
+    "x-registro", "x-id-declaracion", "x-resultado-anterior", "x-huella",
+)
 
 
 @app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/proxy/{id_empresa}/{ruta:path}")
