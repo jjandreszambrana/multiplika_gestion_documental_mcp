@@ -1,9 +1,12 @@
-import { Alert, Button, Group, Loader, Select, Stack, Tabs, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, Loader, Modal, Select, Stack, Tabs, Text, Title } from '@mantine/core'
 import { useCallback, useEffect, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
+import { ErrorApi } from '../../api/errores'
 import { textoDeError } from '../../api/errores'
 import {
   cuadreDeIva,
+  modelo303EnExcel,
+  textoDelRegistro303,
   resumenDeIva,
   retencionesDelPeriodo,
   type CuadreIva,
@@ -12,6 +15,7 @@ import {
   type Retenciones,
   type ResumenIva,
 } from '../../api/fiscal'
+import { guardarFichero, nombreDeFichero } from '../../lib/descarga'
 import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
 import { PERIODO_POR_DEFECTO, PERIODOS } from './periodos'
 import VistaCuadre from './VistaCuadre'
@@ -52,6 +56,10 @@ export default function PantallaFiscal({ ejercicio, usuario }: Props) {
   const [errorRetenciones, setErrorRetenciones] = useState<string | null>(null)
   const [errorCuadre, setErrorCuadre] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+  const [bajando, setBajando] = useState(false)
+  const [errorExcel, setErrorExcel] = useState<string | null>(null)
+  const [avisoExcel, setAvisoExcel] = useState<string | null>(null)
+  const [preguntarRegistro, setPreguntarRegistro] = useState(false)
 
   const cargar = useCallback(
     async (senal: AbortSignal) => {
@@ -97,6 +105,28 @@ export default function PantallaFiscal({ ejercicio, usuario }: Props) {
     setConsulta({ ejercicio, periodo })
   }
 
+  async function bajarExcel(registrar?: boolean) {
+    if (consulta === null) return
+    setPreguntarRegistro(false)
+    setErrorExcel(null)
+    setAvisoExcel(null)
+    setBajando(true)
+    try {
+      const fichero = await modelo303EnExcel(consulta, registrar)
+      guardarFichero(
+        fichero,
+        nombreDeFichero(`modelo_303_${consulta.ejercicio}_${consulta.periodo}`, 'xlsx'),
+      )
+      setAvisoExcel(textoDelRegistro303(fichero))
+    } catch (fallo) {
+      // 409: el periodo no está registrado y hay que preguntar antes de bajarlo.
+      if (fallo instanceof ErrorApi && fallo.estado === 409) setPreguntarRegistro(true)
+      else setErrorExcel(textoDeError(fallo))
+    } finally {
+      setBajando(false)
+    }
+  }
+
   return (
     <Stack gap="md">
       <Title order={3}>IVA y retenciones</Title>
@@ -113,8 +143,44 @@ export default function PantallaFiscal({ ejercicio, usuario }: Props) {
         <Button onClick={ver} disabled={ejercicio === null}>
           Ver
         </Button>
+        {consulta !== null && (
+          <Button variant="default" onClick={() => void bajarExcel()} loading={bajando}>
+            Descargar Excel del 303
+          </Button>
+        )}
         {cargando && <Loader size="xs" mb={12} />}
       </Group>
+
+      <Modal
+        opened={preguntarRegistro}
+        onClose={() => setPreguntarRegistro(false)}
+        title="¿Registrar la declaración de este periodo?"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Si la registras, queda guardado lo que mandas a la gestoría. Si cambia algo más
+            adelante, se actualizará sola al volver a bajarla.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => void bajarExcel(false)}>
+              No, solo bajarla
+            </Button>
+            <Button onClick={() => void bajarExcel(true)}>Sí, registrar</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {avisoExcel !== null && (
+        <Alert color="blue" withCloseButton onClose={() => setAvisoExcel(null)}>
+          {avisoExcel}
+        </Alert>
+      )}
+
+      {errorExcel !== null && (
+        <Alert color="red" role="alert" title="No se pudo bajar el Excel del 303">
+          {errorExcel}
+        </Alert>
+      )}
 
       {consulta === null && (
         <Text size="sm" c="dimmed">

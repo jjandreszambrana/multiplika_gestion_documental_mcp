@@ -1,6 +1,6 @@
 import type Decimal from 'decimal.js'
 import { aDecimal } from '../lib/dinero'
-import { pedir } from './cliente'
+import { descargar, pedir, type Descarga } from './cliente'
 import type { components } from './types'
 
 /**
@@ -152,5 +152,43 @@ export async function cuadreDeIva(filtro: FiltroFiscal, senal?: AbortSignal): Pr
     cuadra: salida.cuadra,
     tolerancia: aDecimal(salida.tolerancia),
     limites: salida.limites,
+  }
+}
+
+/**
+ * El 303 del periodo en Excel, casilla a casilla como el impreso de la AEAT.
+ *
+ * **Bajarlo registra la declaración**: es lo que va a la gestoría. Si el periodo
+ * no está registrado y no se dice `registrar`, la API responde 409 y hay que
+ * preguntar al usuario. Lo que pasó viene en la cabecera `X-Registro`.
+ */
+export function modelo303EnExcel(filtro: FiltroFiscal, registrar?: boolean): Promise<Descarga> {
+  return descargar('/contabilidad/informes/excel', {
+    informe: 'modelo_303',
+    ejercicio: filtro.ejercicio,
+    periodo: filtro.periodo,
+    ...(registrar === undefined ? {} : { registrar }),
+  })
+}
+
+/** Qué se le dice al usuario según lo que hizo la API con el registro. Null si nada. */
+export function textoDelRegistro303({ cabeceras }: Descarga): string | null {
+  switch (cabeceras.get('X-Registro')) {
+    case 'registrada':
+      return 'La declaración de este periodo ha quedado registrada.'
+    case 'actualizada': {
+      const anterior = cabeceras.get('X-Resultado-Anterior')
+      return (
+        'Algo había cambiado desde que se registró, así que se ha actualizado el registro' +
+        (anterior ? ` (antes el resultado era ${anterior}).` : '.')
+      )
+    }
+    case 'bloqueada':
+      return (
+        'Esta declaración ya no se puede cambiar: se ha bajado lo registrado. ' +
+        'Mira en el Excel el aviso con lo que daría hoy.'
+      )
+    default:
+      return null
   }
 }

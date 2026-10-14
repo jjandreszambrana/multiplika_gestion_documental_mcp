@@ -114,6 +114,8 @@ export function pedir<T>(ruta: string, cuerpo: object = {}, senal?: AbortSignal)
 export interface Descarga {
   contenido: Blob
   nombre: string
+  /** Las cabeceras de la respuesta: hay descargas que dicen qué pasó, como el 303. */
+  cabeceras: Headers
 }
 
 /** El nombre que viaja en `Content-Disposition`. Vacío si no viene. */
@@ -152,6 +154,7 @@ export async function descargar(
   return {
     contenido: await respuesta.blob(),
     nombre: nombreDeLaCabecera(respuesta.headers.get('Content-Disposition')),
+    cabeceras: respuesta.headers,
   }
 }
 
