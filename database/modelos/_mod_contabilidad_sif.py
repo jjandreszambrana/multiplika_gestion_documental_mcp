@@ -98,7 +98,9 @@ async def _lo_que_ve(cliente: ClienteSIF) -> tuple[dict, list[dict]]:
 
 
 def _datos_de(yo: dict) -> tuple[str, str | None]:
-    return _tipo(int(yo.get("id_rol") or 0)), (yo.get("NombreRazon") or "")[:255] or None
+    # El nombre de la persona antes que el de su ficha (un admin del SIF va
+    # unido a la ficha de administrador de la asesoría, con otro nombre)
+    return _tipo(int(yo.get("id_rol") or 0)), (yo.get("nombre_real") or yo.get("NombreRazon") or "")[:255] or None
 
 
 # ---------- Los accesos de un usuario ----------
