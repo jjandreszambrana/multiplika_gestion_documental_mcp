@@ -670,7 +670,16 @@ conversación o desde el panel; en la ficha del documento ves sus registros.
 Para guardar **el archivo del que salen los datos** (la foto del parte, el \
 PDF del análisis), súbelo al panel con "Subir documentos" (o que llegue por \
 correo) y dile a tu IA que es para ese registro: lo coge de la cola sin que \
-el archivo tenga que pasar por la conversación, que saldría mucho más caro.""",
+el archivo tenga que pasar por la conversación, que saldría mucho más caro.
+
+**Imprimir y Excel**: cada modelo puede tener su **estilo de informe** \
+(pestaña "Modelos", al editarlo; cambiarlo no crea versión nueva). Al \
+imprimir sus anotaciones —botón "Imprimir" de la lista, el icono de la \
+impresora de una anotación suelta, o pidiéndoselo a tu IA— el PDF sale con \
+ese estilo (su logo arriba). El botón "Excel" descarga lo mismo en una hoja \
+de cálculo. Los dos respetan los filtros que tengas puestos y el orden de la \
+lista: pulsa el nombre de una columna para ordenar por ella (otra vez, al \
+revés).""",
     },
     {
         "id": "reglas",

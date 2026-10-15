@@ -19,6 +19,7 @@ dependencia."""
 import asyncio
 import base64
 import html
+import json
 import os
 import sys
 
@@ -134,3 +135,114 @@ async def pdf_de_documento(config: dict, documento: dict, version: dict, incluir
         f"<style>{CSS_DOCUMENTO}{css_pie}</style></head>"
         f"<body>{pie_html}{imagenes_html}{cuerpo_html}</body></html>"
     )
+
+
+def _leyenda(campo: str, definicion: dict) -> str:
+    return (definicion or {}).get("title") or campo
+
+
+def _valor_html(valor, definicion: dict) -> str:
+    """Un valor de un registro, legible en papel: Sí/No, listas separadas por
+    comas y las listas de objetos (p.ej. las líneas de un parte) como una
+    tabla pequeña con las leyendas de sus campos."""
+    if valor is None or valor == "" or valor == []:
+        return "—"
+    if isinstance(valor, bool):
+        return "Sí" if valor else "No"
+    if isinstance(valor, list) and all(isinstance(v, dict) for v in valor):
+        propiedades = ((definicion or {}).get("items") or {}).get("properties") or {}
+        columnas = list(propiedades) or list(dict.fromkeys(k for v in valor for k in v))
+        cabecera = "".join(f"<th>{html.escape(_leyenda(c, propiedades.get(c)))}</th>" for c in columnas)
+        filas = "".join(
+            "<tr>" + "".join(f"<td>{_valor_html(v.get(c), propiedades.get(c))}</td>" for c in columnas) + "</tr>"
+            for v in valor
+        )
+        return f'<table class="anidada"><tr>{cabecera}</tr>{filas}</table>'
+    if isinstance(valor, list):
+        return html.escape(", ".join(str(v) for v in valor))
+    if isinstance(valor, dict):
+        return html.escape(", ".join(f"{k}: {v}" for k, v in valor.items()))
+    return html.escape(str(valor))
+
+
+def _fecha_registro(registro: dict) -> str:
+    fecha = registro["fecha"]
+    texto = fecha.strftime("%d/%m/%Y") if hasattr(fecha, "strftime") else str(fecha)
+    return f"{texto} {str(registro['hora'])[:5]}" if registro.get("hora") else texto
+
+
+def _conformidad(registro: dict) -> str:
+    return "—" if registro["conforme"] is None else ("Conforme" if registro["conforme"] else "No conforme")
+
+
+async def pdf_de_registros(config: dict, modelo: dict, registros: list[dict], subtitulo: str = "") -> bytes:
+    """PDF de registros de datos con el estilo de informe de su modelo
+    (gd_modelos_registro.id_estilo: sus imágenes arriba, igual que un
+    documento) — compartido entre el panel y imprimir_registros_gd. Un solo
+    registro sale como ficha (campo: valor); varios, como tabla, en apaisado
+    si tiene muchas columnas. Las columnas salen del esquema de `modelo`, la
+    versión vigente: un campo que solo existía en una versión vieja sale
+    vacío en los registros que no lo tienen."""
+    imagenes_html = await imagenes_estilo_html(config, modelo["id_estilo"]) if modelo.get("id_estilo") else ""
+    propiedades = (json.loads(modelo["esquema"]) if isinstance(modelo["esquema"], str) else modelo["esquema"]).get(
+        "properties"
+    ) or {}
+    titulo = html.escape(modelo["titulo"])
+    css = CSS_DOCUMENTO + """
+        .subtitulo { color: #555; margin: -0.3em 0 1em; }
+        table.anidada { margin: 0; font-size: 9.5pt; }
+        table.ficha th { width: 35%; }
+    """
+
+    if len(registros) == 1:
+        r = registros[0]
+        filas = [("Fecha", html.escape(_fecha_registro(r)))]
+        filas += [(html.escape(_leyenda(c, d)), _valor_html(r["valores"].get(c), d)) for c, d in propiedades.items()]
+        filas += [
+            ("Conformidad", _conformidad(r)),
+            ("Observaciones", html.escape(r["observaciones"] or "—")),
+            ("Anotado por", html.escape(r["creado_por"])),
+        ]
+        cuerpo = '<table class="ficha">' + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in filas) + "</table>"
+    else:
+        if len(propiedades) > 4:
+            css += "@page { size: A4 landscape; }"
+        cabecera = ["Fecha"] + [_leyenda(c, d) for c, d in propiedades.items()] + ["Conformidad", "Observaciones", "Anotado por"]
+        filas_html = "".join(
+            "<tr>"
+            + f"<td>{html.escape(_fecha_registro(r))}</td>"
+            + "".join(f"<td>{_valor_html(r['valores'].get(c), d)}</td>" for c, d in propiedades.items())
+            + f"<td>{_conformidad(r)}</td><td>{html.escape(r['observaciones'] or '')}</td>"
+            + f"<td>{html.escape(r['creado_por'])}</td></tr>"
+            for r in registros
+        )
+        cuerpo = (
+            "<table><tr>" + "".join(f"<th>{html.escape(c)}</th>" for c in cabecera) + "</tr>"
+            + (filas_html or f'<tr><td colspan="{len(cabecera)}">No hay registros con estos filtros.</td></tr>')
+            + "</table>"
+        )
+
+    sub_html = f'<p class="subtitulo">{html.escape(subtitulo)}</p>' if subtitulo else ""
+    return await renderizar_pdf(
+        f"<html><head><meta charset='utf-8'><title>{titulo}</title><style>{css}</style></head>"
+        f"<body>{imagenes_html}<h1>{titulo}</h1>{sub_html}{cuerpo}</body></html>"
+    )
+
+
+def subtitulo_de_filtros(desde: str | None, hasta: str | None, conforme: bool | None, cuantos: int) -> str:
+    """Lo que se ha pedido imprimir, en una línea bajo el título: "Del
+    01/09/2026 al 30/09/2026 · solo no conformes · 23 registros"."""
+    def dma(fecha: str) -> str:
+        return "/".join(reversed(fecha.split("-")))
+
+    partes = []
+    if desde and hasta:
+        partes.append(f"Del {dma(desde)} al {dma(hasta)}")
+    elif desde:
+        partes.append(f"Desde el {dma(desde)}")
+    elif hasta:
+        partes.append(f"Hasta el {dma(hasta)}")
+    if conforme is not None:
+        partes.append("solo conformes" if conforme else "solo no conformes")
+    partes.append(f"{cuantos} registro{'' if cuantos == 1 else 's'}")
+    return " · ".join(partes)

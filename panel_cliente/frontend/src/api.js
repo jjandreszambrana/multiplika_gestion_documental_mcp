@@ -114,6 +114,39 @@ export function leerToken(token) {
   return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")))
 }
 
+function parametrosRegistros({ idModelo, desde, hasta, conforme, orden, descendente } = {}, formato) {
+  const parametros = new URLSearchParams()
+  if (idModelo) parametros.set("id_modelo", idModelo)
+  if (desde) parametros.set("desde", desde)
+  if (hasta) parametros.set("hasta", hasta)
+  if (conforme !== undefined && conforme !== null) parametros.set("conforme", conforme)
+  if (orden) parametros.set("orden", orden)
+  if (descendente !== undefined) parametros.set("descendente", descendente)
+  if (formato) parametros.set("formato", formato)
+  return parametros.toString()
+}
+
+// Descarga con la cabecera Authorization (no vale un <a href>), con el
+// nombre de fichero que manda el servidor en Content-Disposition.
+async function descargaConNombre(ruta) {
+  const headers = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  const res = await fetch(`${BASE_CLIENTE}${ruta}`, { headers })
+  if (!res.ok) {
+    let detalle = res.statusText
+    try {
+      detalle = (await res.json()).detail || detalle
+    } catch {
+      // el cuerpo de error no era JSON
+    }
+    throw new Error(detalle)
+  }
+  const disposicion = res.headers.get("Content-Disposition") || ""
+  const coincidencia = disposicion.match(/filename\*=UTF-8''(.+)$/)
+  const nombreFichero = coincidencia ? decodeURIComponent(coincidencia[1]) : "archivo"
+  return { blob: await res.blob(), nombreFichero }
+}
+
 export const api = {
   login: (email, password, idTenant) =>
     peticion(BASE_ADMIN, "POST", "/auth/login", { email, password, id_tenant: idTenant ?? null }),
@@ -569,15 +602,12 @@ export const api = {
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/versiones`, datos),
   cambiarActivoModeloRegistro: (idProyecto, idModelo, activo) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/activo`, { activo }),
-  listarRegistros: (idProyecto, { idModelo, desde, hasta, conforme } = {}) => {
-    const parametros = new URLSearchParams()
-    if (idModelo) parametros.set("id_modelo", idModelo)
-    if (desde) parametros.set("desde", desde)
-    if (hasta) parametros.set("hasta", hasta)
-    if (conforme !== undefined && conforme !== null) parametros.set("conforme", conforme)
-    const query = parametros.toString()
+  listarRegistros: (idProyecto, filtros = {}) => {
+    const query = parametrosRegistros(filtros)
     return peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/registros${query ? `?${query}` : ""}`)
   },
+  asignarEstiloModeloRegistro: (idProyecto, idModelo, idEstilo) =>
+    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/modelos/${idModelo}/estilo`, { id_estilo: idEstilo }),
   crearRegistro: (idProyecto, datos) => peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/registros`, datos),
   corregirRegistro: (idProyecto, idRegistro, datos) =>
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/registros/${idRegistro}`, datos),
@@ -587,26 +617,14 @@ export const api = {
     return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/registros/${idRegistro}/archivo-original`, formData)
   },
   // Igual que descargarArchivoOriginalBlob, pero del registro.
-  descargarArchivoOriginalRegistroBlob: async (idProyecto, idRegistro) => {
-    const headers = {}
-    if (token) headers["Authorization"] = `Bearer ${token}`
-    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/registros/${idRegistro}/archivo-original`, {
-      headers,
-    })
-    if (!res.ok) {
-      let detalle = res.statusText
-      try {
-        detalle = (await res.json()).detail || detalle
-      } catch {
-        // el cuerpo de error no era JSON
-      }
-      throw new Error(detalle)
-    }
-    const disposicion = res.headers.get("Content-Disposition") || ""
-    const coincidencia = disposicion.match(/filename\*=UTF-8''(.+)$/)
-    const nombreFichero = coincidencia ? decodeURIComponent(coincidencia[1]) : "archivo"
-    return { blob: await res.blob(), nombreFichero }
-  },
+  descargarArchivoOriginalRegistroBlob: (idProyecto, idRegistro) =>
+    descargaConNombre(`/proyectos/${idProyecto}/registros/${idRegistro}/archivo-original`),
+  // PDF (con el estilo de informe del modelo) o Excel de los registros, con
+  // los mismos filtros y orden que la tabla.
+  exportarRegistrosBlob: (idProyecto, formato, filtros) =>
+    descargaConNombre(`/proyectos/${idProyecto}/registros/exportar?${parametrosRegistros(filtros, formato)}`),
+  imprimirRegistroBlob: (idProyecto, idRegistro) =>
+    descargaConNombre(`/proyectos/${idProyecto}/registros/${idRegistro}/pdf`),
   eliminarRegistro: (idProyecto, idRegistro) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/registros/${idRegistro}`),
   vincularDocumentoRegistro: (idProyecto, idRegistro, idDocumento) =>

@@ -17,9 +17,13 @@ from apps.mcp_server.core import mcp_app
 from apps.mcp_server.core.dependencias import resolver_proyecto_actual
 from database.config_db import get_db_config
 from fastmcp.exceptions import ToolError
+from fastmcp.utilities.types import File
 
 from ._anotaciones import SOLO_LECTURA
 from ..database.modelos._mod_documentos import DocumentosCRUD
+from ..database.modelos._mod_estilos import EstilosCRUD
+from ..database.modelos._mod_pdf import pdf_de_registros, subtitulo_de_filtros
+from ..database.modelos._mod_registros_exportar import ORDENES_FIJOS, excel_de_registros, ordenar_registros
 from ..database.modelos._mod_registros import (
     LIMITE_REGISTROS,
     ModelosRegistroCRUD,
@@ -243,6 +247,73 @@ async def retirar_modelo_registro_gd(id_modelo: int, activo: bool = False) -> di
     if not modelo:
         raise ToolError(f"No existe ningún modelo de registro con id {id_modelo}")
     return _con_plantilla(modelo)
+
+
+@mcp_app.tool()
+async def asignar_estilo_modelo_registro_gd(id_modelo: int, nombre_tipo_estilo: str | None = None) -> dict:
+    """Vincula un modelo de registro a un estilo de informe (uno de
+    listar_estilos_informe_gd): cuando se impriman sus registros
+    (imprimir_registros_gd o el panel), saldrán con las imágenes de ese
+    estilo (logo...). Vale para todas las versiones del modelo y no crea
+    versión nueva aunque tenga registros. Sin `nombre_tipo_estilo`, lo quita."""
+    config = await _config_actual()
+    id_estilo = None
+    if nombre_tipo_estilo:
+        estilo = await EstilosCRUD(config).obtener_por_tipo(nombre_tipo_estilo)
+        if not estilo:
+            raise ToolError(f'No existe ningún estilo de informe llamado "{nombre_tipo_estilo}"')
+        id_estilo = estilo["id"]
+    modelo = await ModelosRegistroCRUD(config).asignar_estilo(id_modelo, id_estilo)
+    if not modelo:
+        raise ToolError(f"No existe ningún modelo de registro con id {id_modelo}")
+    return _con_plantilla(modelo)
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA)
+async def imprimir_registros_gd(
+    modelo: str | None = None, id_registro: int | None = None, formato: str = "pdf",
+    desde: str | None = None, hasta: str | None = None, conforme: bool | None = None,
+    orden: str | None = None, descendente: bool = True,
+) -> list:
+    """Saca en PDF (o en Excel con `formato="xlsx"`) los registros de un
+    modelo, o uno solo con `id_registro`. Úsala SIEMPRE que pidan imprimir,
+    sacar en PDF o descargar en Excel registros de datos, en vez de
+    escribirlos tú en generar_informe_pdf_gd: se monta aquí sin gastar
+    tokens y el PDF sale con el estilo de informe vinculado al modelo
+    (asignar_estilo_modelo_registro_gd).
+
+    Filtros como listar_registros_gd (`desde`/`hasta` AAAA-MM-DD,
+    `conforme`). `orden`: "fecha" (por defecto), "conforme", "creado_por" o
+    el nombre de un campo del esquema; `descendente=False` para de menor a
+    mayor. Un solo registro sale como ficha; varios, como tabla."""
+    config = await _config_actual()
+    registros = RegistrosCRUD(config)
+    if id_registro is not None:
+        fila = await registros.obtener(id_registro)
+        if not fila:
+            raise ToolError(f"No existe ningún registro con id {id_registro}")
+        vigente = await ModelosRegistroCRUD(config).obtener(fila["id_modelo"])
+        filas = [sin_archivo(fila)]
+        subtitulo = ""
+    else:
+        vigente = await _modelo_o_error(config, modelo, None)
+        if orden and orden not in ORDENES_FIJOS and orden not in (json.loads(vigente["esquema"]).get("properties") or {}):
+            raise ToolError(f'No se puede ordenar por "{orden}": usa {", ".join(ORDENES_FIJOS)} o un campo del modelo')
+        filas = ordenar_registros(
+            await registros.buscar(await _ids_de_la_familia(config, vigente), desde, hasta, None, conforme, None, 5000),
+            orden, descendente,
+        )
+        subtitulo = subtitulo_de_filtros(desde, hasta, conforme, len(filas))
+
+    if formato == "xlsx":
+        nombre = f"{vigente['titulo']}.xlsx"
+        return [f'Excel "{nombre}" con {len(filas)} registros.', File(data=excel_de_registros(vigente, filas), format="vnd.openxmlformats-officedocument.spreadsheetml.sheet", name=nombre)]
+    try:
+        pdf_bytes = await pdf_de_registros(config, vigente, filas, subtitulo)
+    except RuntimeError as e:
+        raise ToolError(str(e)) from e
+    nombre = f"{vigente['titulo']}.pdf"
+    return [f'PDF "{nombre}" con {len(filas)} registros.', File(data=pdf_bytes, format="pdf", name=nombre)]
 
 
 # ---------- registros ----------

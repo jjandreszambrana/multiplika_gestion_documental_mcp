@@ -248,9 +248,24 @@ class ModelosRegistroCRUD(AsyncCrudBase):
             "version": (ultima["v"] or anterior["version"]) + 1,
             "id_modelo_raiz": anterior["id_modelo_raiz"] or anterior["id"],
             "motivo_version": motivo.strip(),
+            "id_estilo": anterior["id_estilo"],
         })
         await self.update(id_modelo, {"activo": False})
         return await self.obtener(id_nuevo)
+
+    async def asignar_estilo(self, id_modelo: int, id_estilo: int | None) -> dict | None:
+        """Estilo de informe con el que se imprimen sus registros (None lo
+        quita). Va a toda la familia: un listado mezcla registros de varias
+        versiones y se imprime con un solo estilo."""
+        modelo = await self.obtener(id_modelo)
+        if not modelo:
+            return None
+        db = AsyncDatabase(**self.config)
+        await db.query(
+            f'UPDATE "{TABLA_MODELOS_REGISTRO.nombre}" SET id_estilo = %s WHERE nombre = %s',
+            (id_estilo, modelo["nombre"]),
+        )
+        return await self.obtener(id_modelo)
 
     async def cambiar_activo(self, id_modelo: int, activo: bool) -> dict | None:
         if not await self.obtener(id_modelo):

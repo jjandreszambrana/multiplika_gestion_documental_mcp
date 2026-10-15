@@ -133,6 +133,7 @@ ACCIONES_PANEL = {
     "crear_modelo_registro": ("creó el modelo de registro", "modelo_registro", None),
     "corregir_modelo_registro": ("corrigió el modelo de registro", "modelo_registro", "id_modelo"),
     "nueva_version_modelo_registro": ("sacó una versión nueva del modelo de registro", "modelo_registro", "id_modelo"),
+    "asignar_estilo_modelo_registro": ("cambió el estilo de informe del modelo de registro", "modelo_registro", "id_modelo"),
     "cambiar_activo_modelo_registro": ("cambió si está activo el modelo de registro", "modelo_registro", "id_modelo"),
     "crear_registro": ("apuntó un registro de datos", "registro", None),
     "corregir_registro": ("corrigió el registro de datos", "registro", "id_registro"),

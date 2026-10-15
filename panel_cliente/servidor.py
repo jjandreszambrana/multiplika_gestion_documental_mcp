@@ -67,7 +67,8 @@ from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencial
 from ..database.modelos._tipos_archivo import comprobar_tipo_archivo
 from ..database.modelos._mod_credenciales_campos import CredencialesCamposCRUD
 from ..database.modelos._mod_documentos import DocumentosCRUD
-from ..database.modelos._mod_pdf import pdf_de_documento
+from ..database.modelos._mod_pdf import pdf_de_documento, pdf_de_registros, subtitulo_de_filtros
+from ..database.modelos._mod_registros_exportar import excel_de_registros, ordenar_registros
 from ..database.modelos._mod_documentos_pendientes import DocumentosPendientesCRUD
 from ..database.modelos._mod_embeddings import generar_embeddings, obtener_api_key
 from ..database.dependencias._dep_aprendizajes import ESTADO_CANDIDATO, ESTADO_PENDIENTE_REVISION, ESTADO_RECHAZADO
@@ -3279,6 +3280,26 @@ async def nueva_version_modelo_registro(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
 
 
+class EstiloModeloRegistro(BaseModel):
+    id_estilo: int | None = None
+
+
+@app.put("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}/estilo")
+async def asignar_estilo_modelo_registro(
+    id_proyecto: int, id_modelo: int, datos: EstiloModeloRegistro,
+    proyecto: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Estilo de informe con el que se imprimen sus registros — para toda la
+    familia, y sin versionar aunque tenga registros (no cambia qué se valida)."""
+    config = get_db_config(proyecto["id"])
+    if datos.id_estilo is not None and not await EstilosCRUD(config).obtener(datos.id_estilo):
+        raise HTTPException(404, "Estilo no encontrado")
+    modelo = await ModelosRegistroCRUD(config).asignar_estilo(id_modelo, datos.id_estilo)
+    if not modelo:
+        raise HTTPException(404, "Modelo de registro no encontrado")
+    return _modelo_con_plantilla(modelo)
+
+
 @app.put("/v1/proyectos/{id_proyecto}/registros/modelos/{id_modelo}/activo")
 async def cambiar_activo_modelo_registro(
     id_proyecto: int, id_modelo: int, datos: CambioActivoModelo,
@@ -3294,20 +3315,85 @@ async def cambiar_activo_modelo_registro(
 @app.get("/v1/proyectos/{id_proyecto}/registros")
 async def listar_registros(
     id_proyecto: int, id_modelo: int | None = None, desde: str | None = None, hasta: str | None = None,
-    conforme: bool | None = None, limite: int = 200,
+    conforme: bool | None = None, limite: int = 200, orden: str | None = None, descendente: bool = True,
     proyecto: dict = Depends(proyecto_gestion_documental_actual),
 ) -> list[dict]:
     """`id_modelo` es cualquiera de las versiones: se listan los registros de
     TODAS las versiones de ese modelo, que es lo que se espera al mirar el
-    histórico."""
+    histórico. `orden`: "fecha", "conforme", "creado_por" o un campo del
+    esquema — el mismo que usan el PDF y el Excel (ver ordenar_registros)."""
     config = get_db_config(proyecto["id"])
     ids = None
     if id_modelo is not None:
         modelo = await _modelo_o_404(config, id_modelo)
         versiones = await ModelosRegistroCRUD(config).listar_versiones(modelo["nombre"])
         ids = [v["id"] for v in versiones] or [modelo["id"]]
-    return await RegistrosCRUD(config).buscar(
+    filas = await RegistrosCRUD(config).buscar(
         ids, desde, hasta, None, conforme, None, min(limite, LIMITE_REGISTROS)
+    )
+    return ordenar_registros(filas, orden, descendente)
+
+
+#: Una exportación lleva todo lo filtrado, no la primera página de la tabla.
+LIMITE_EXPORTAR = 5000
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros/exportar")
+async def exportar_registros(
+    id_proyecto: int, id_modelo: int, formato: str = "pdf", desde: str | None = None, hasta: str | None = None,
+    conforme: bool | None = None, orden: str | None = None, descendente: bool = True,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual),
+) -> Response:
+    """Los registros de un modelo con los mismos filtros y orden que la
+    tabla, en PDF (con el estilo de informe del modelo) o en Excel
+    (`formato=xlsx`). Las columnas son las de la versión vigente."""
+    config = get_db_config(proyecto["id"])
+    modelo = await _modelo_o_404(config, id_modelo)
+    versiones = await ModelosRegistroCRUD(config).listar_versiones(modelo["nombre"])
+    vigente = next((v for v in reversed(versiones) if v["activo"]), versiones[-1] if versiones else modelo)
+    filas = ordenar_registros(
+        await RegistrosCRUD(config).buscar(
+            [v["id"] for v in versiones] or [modelo["id"]], desde, hasta, None, conforme, None, LIMITE_EXPORTAR
+        ),
+        orden, descendente,
+    )
+    if formato == "xlsx":
+        contenido = excel_de_registros(vigente, filas)
+        tipo, extension = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
+    else:
+        try:
+            contenido = await pdf_de_registros(
+                config, vigente, filas, subtitulo_de_filtros(desde, hasta, conforme, len(filas))
+            )
+        except RuntimeError as e:
+            raise HTTPException(500, str(e)) from e
+        tipo, extension = "application/pdf", "pdf"
+    nombre_archivo = quote(f"{vigente['titulo']}.{extension}")
+    return Response(
+        content=contenido, media_type=tipo,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre_archivo}"},
+    )
+
+
+@app.get("/v1/proyectos/{id_proyecto}/registros/{id_registro}/pdf")
+async def imprimir_registro(
+    id_proyecto: int, id_registro: int, proyecto: dict = Depends(proyecto_gestion_documental_actual)
+) -> Response:
+    """Un registro suelto, como ficha, con el estilo de informe de su modelo.
+    Sale con la versión del modelo con la que se anotó: sus campos son esos."""
+    config = get_db_config(proyecto["id"])
+    fila = await RegistrosCRUD(config).obtener(id_registro)
+    if not fila:
+        raise HTTPException(404, "Registro no encontrado")
+    modelo = await _modelo_o_404(config, fila["id_modelo"])
+    try:
+        pdf_bytes = await pdf_de_registros(config, modelo, [sin_archivo(fila)])
+    except RuntimeError as e:
+        raise HTTPException(500, str(e)) from e
+    nombre_archivo = quote(f"{modelo['titulo']} {fila['fecha']}.pdf")
+    return Response(
+        content=pdf_bytes, media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre_archivo}"},
     )
 
 

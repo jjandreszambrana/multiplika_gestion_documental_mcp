@@ -98,6 +98,7 @@ ACCIONES_MCP = {
     "crear_modelo_registro_gd": ("creó el modelo de registro", "modelo_registro", None, "titulo"),
     "corregir_modelo_registro_gd": ("corrigió el modelo de registro", "modelo_registro", "id_modelo", None),
     "nueva_version_modelo_registro_gd": ("sacó una versión nueva del modelo de registro", "modelo_registro", "id_modelo", None),
+    "asignar_estilo_modelo_registro_gd": ("cambió el estilo de informe del modelo de registro", "modelo_registro", "id_modelo", None),
     "retirar_modelo_registro_gd": ("cambió si está activo el modelo de registro", "modelo_registro", "id_modelo", None),
     "crear_registro_gd": ("apuntó un registro de datos", "registro", None, None),
     "corregir_registro_gd": ("corrigió el registro de datos", "registro", "id_registro", None),

@@ -66,6 +66,13 @@ CAMPOS_MODELOS_REGISTRO = [
     Columna(nombre="periodicidad", tipo="VARCHAR", longitud=20, enum_opciones=PERIODICIDADES,
             comentario="Cada cuánto se espera un registro de este modelo — opcional, NULL si no "
                        "aplica. Hoy es informativo; sirve para avisar de los que falten"),
+    Columna(nombre="id_estilo", tipo="INT",
+            comentario="Estilo de informe (→ gd_estilos.id) con el que se imprimen sus registros: "
+                       "sus imágenes (logo...) salen arriba del PDF. Opcional. Es de la FAMILIA: "
+                       "se pone a la vez en todas las versiones y pasa sola a la siguiente, y "
+                       "cambiarlo no cuenta como tocar el modelo (no cambia qué se valida). Sin "
+                       "clave ajena, mismo motivo que gd_registros.id_entidad: si el estilo se "
+                       "borra, queda un id huérfano que se comprueba al imprimir"),
     Columna(nombre="activo", tipo="BOOLEAN", not_null=True, default=True,
             comentario="Permite retirar una versión sin borrarla ni perder sus registros. Al crear "
                        "la versión siguiente, la anterior se desactiva sola: deja de aceptar "

@@ -3,7 +3,10 @@ import {
   ActionIcon, Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Modal, MultiSelect, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
-import { IconArrowLeft, IconHistory, IconNotebook, IconPaperclip, IconPencil, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
+import {
+  IconArrowLeft, IconChevronDown, IconChevronUp, IconFileSpreadsheet, IconHistory, IconNotebook, IconPaperclip, IconPencil,
+  IconPlus, IconPrinter, IconRefresh, IconTrash,
+} from "@tabler/icons-react"
 import { api } from "../api"
 import { useEstadoPersistente } from "../estadoPersistente"
 import { formatearFecha } from "../formato"
@@ -380,12 +383,43 @@ function ModalRegistro({ opened, modelo, registro, documentos, onClose, onGuarda
   )
 }
 
+// Guarda en el navegador un fichero que llega como { blob, nombreFichero }.
+function guardarFichero({ blob, nombreFichero }) {
+  const url = URL.createObjectURL(blob)
+  const enlace = document.createElement("a")
+  enlace.href = url
+  enlace.download = nombreFichero
+  enlace.click()
+  URL.revokeObjectURL(url)
+}
+
+// Cabecera de columna que ordena al pulsarla: la primera vez de mayor a
+// menor, la segunda al revés. El mismo orden sale en el PDF y en el Excel.
+function CabeceraOrden({ campo, orden, descendente, onOrden, children, ...props }) {
+  const activa = orden === campo
+  const Flecha = descendente ? IconChevronDown : IconChevronUp
+  return (
+    <Table.Th
+      {...props} style={{ cursor: "pointer", userSelect: "none" }}
+      onClick={() => onOrden(campo, activa ? !descendente : true)}
+    >
+      <Group gap="4" wrap="nowrap">
+        {children}
+        {activa && <Flecha size={13} />}
+      </Group>
+    </Table.Th>
+  )
+}
+
 function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota }) {
   const puedeEscribir = proyecto.es_admin || proyecto.puede_editar
   const [idModelo, setIdModelo] = useEstadoPersistente(`filtros:${proyecto.id}:registros:idModelo`, null)
   const [desde, setDesde] = useEstadoPersistente(`filtros:${proyecto.id}:registros:desde`, "")
   const [hasta, setHasta] = useEstadoPersistente(`filtros:${proyecto.id}:registros:hasta`, "")
   const [conforme, setConforme] = useEstadoPersistente(`filtros:${proyecto.id}:registros:conforme`, TODOS)
+  const [orden, setOrden] = useEstadoPersistente(`filtros:${proyecto.id}:registros:orden`, "fecha")
+  const [descendente, setDescendente] = useEstadoPersistente(`filtros:${proyecto.id}:registros:descendente`, true)
+  const [exportando, setExportando] = useState(null)
   const [registros, setRegistros] = useState(null)
   const [error, setError] = useState(null)
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -418,16 +452,20 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelos])
 
+  const filtros = {
+    idModelo,
+    desde: desde || undefined,
+    hasta: hasta || undefined,
+    conforme: conforme === TODOS ? undefined : conforme === "si",
+    orden,
+    descendente,
+  }
+
   function cargar() {
     if (!idModelo) return Promise.resolve()
     setError(null)
     return api
-      .listarRegistros(proyecto.id, {
-        idModelo,
-        desde: desde || undefined,
-        hasta: hasta || undefined,
-        conforme: conforme === TODOS ? undefined : conforme === "si",
-      })
+      .listarRegistros(proyecto.id, filtros)
       .then(setRegistros)
       .catch((err) => setError(err.message))
   }
@@ -435,7 +473,32 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
   useEffect(() => {
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idModelo, desde, hasta, conforme, refresco])
+  }, [idModelo, desde, hasta, conforme, orden, descendente, refresco])
+
+  function ordenar(campo, haciaAbajo) {
+    setOrden(campo)
+    setDescendente(haciaAbajo)
+  }
+
+  async function exportar(formato) {
+    setError(null)
+    setExportando(formato)
+    try {
+      guardarFichero(await api.exportarRegistrosBlob(proyecto.id, formato, filtros))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setExportando(null)
+    }
+  }
+
+  async function imprimirUno(registro) {
+    try {
+      guardarFichero(await api.imprimirRegistroBlob(proyecto.id, registro.id))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   async function guardar(datos, archivo, idsDocumentos) {
     const fila = registroEditando
@@ -458,13 +521,7 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
 
   async function descargarOriginal(registro) {
     try {
-      const { blob, nombreFichero } = await api.descargarArchivoOriginalRegistroBlob(proyecto.id, registro.id)
-      const url = URL.createObjectURL(blob)
-      const enlace = document.createElement("a")
-      enlace.href = url
-      enlace.download = nombreFichero
-      enlace.click()
-      URL.revokeObjectURL(url)
+      guardarFichero(await api.descargarArchivoOriginalRegistroBlob(proyecto.id, registro.id))
     } catch (err) {
       setError(err.message)
     }
@@ -510,6 +567,20 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
           value={conforme}
           onChange={setConforme}
         />
+        <Tooltip label={modelo?.id_estilo ? "PDF con el estilo de informe del modelo" : "PDF (el modelo no tiene estilo de informe)"}>
+          <Button
+            variant="default" leftSection={<IconPrinter size={15} />}
+            loading={exportando === "pdf"} disabled={!registros?.length} onClick={() => exportar("pdf")}
+          >
+            Imprimir
+          </Button>
+        </Tooltip>
+        <Button
+          variant="default" leftSection={<IconFileSpreadsheet size={15} />}
+          loading={exportando === "xlsx"} disabled={!registros?.length} onClick={() => exportar("xlsx")}
+        >
+          Excel
+        </Button>
         {puedeEscribir && modelo?.activo && (
           <Button
             leftSection={<IconPlus size={15} stroke={2.2} />}
@@ -541,13 +612,21 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
           <Table striped highlightOnHover stickyHeader verticalSpacing="sm" horizontalSpacing="md">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th w={150}>Fecha</Table.Th>
+                <CabeceraOrden w={150} campo="fecha" orden={orden} descendente={descendente} onOrden={ordenar}>
+                  Fecha
+                </CabeceraOrden>
                 {camposDeTabla(modelo).map(([nombre, definicion]) => (
-                  <Table.Th key={nombre}>{leyenda(nombre, definicion)}</Table.Th>
+                  <CabeceraOrden key={nombre} campo={nombre} orden={orden} descendente={descendente} onOrden={ordenar}>
+                    {leyenda(nombre, definicion)}
+                  </CabeceraOrden>
                 ))}
-                <Table.Th w={130}>Conformidad</Table.Th>
+                <CabeceraOrden w={130} campo="conforme" orden={orden} descendente={descendente} onOrden={ordenar}>
+                  Conformidad
+                </CabeceraOrden>
                 <Table.Th>Documentos</Table.Th>
-                <Table.Th w={160}>Anotado por</Table.Th>
+                <CabeceraOrden w={160} campo="creado_por" orden={orden} descendente={descendente} onOrden={ordenar}>
+                  Anotado por
+                </CabeceraOrden>
                 {puedeEscribir && <Table.Th w={80} style={COLUMNA_ACCIONES} />}
               </Table.Tr>
             </Table.Thead>
@@ -571,6 +650,14 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
                           onClick={() => setIdRegistroNotas(r.id)}
                         >
                           <IconNotebook size={13} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Imprimir este registro">
+                        <ActionIcon
+                          variant="subtle" color="gray" size="xs" aria-label="Imprimir registro"
+                          onClick={() => imprimirUno(r)}
+                        >
+                          <IconPrinter size={13} />
                         </ActionIcon>
                       </Tooltip>
                       {r.archivo_original_nombre && (
@@ -675,8 +762,8 @@ function PestanaRegistros({ proyecto, modelos, refresco, onVerNota, onNuevaNota 
   )
 }
 
-function ModalModelo({ opened, modelo, onClose, onGuardar }) {
-  const [datos, setDatos] = useState({ nombre: "", titulo: "", descripcion: "", periodicidad: null })
+function ModalModelo({ opened, modelo, estilos, onClose, onGuardar }) {
+  const [datos, setDatos] = useState({ nombre: "", titulo: "", descripcion: "", periodicidad: null, id_estilo: null })
   const [esquema, setEsquema] = useState(ESQUEMA_DE_MUESTRA)
   const [motivo, setMotivo] = useState("")
   const [error, setError] = useState(null)
@@ -701,6 +788,7 @@ function ModalModelo({ opened, modelo, onClose, onGuardar }) {
       titulo: modelo?.titulo || "",
       descripcion: modelo?.descripcion || "",
       periodicidad: modelo?.periodicidad || null,
+      id_estilo: modelo?.id_estilo ? String(modelo.id_estilo) : null,
     })
     setEsquema(modelo ? JSON.stringify(modelo.esquema, null, 2) : ESQUEMA_DE_MUESTRA)
     setMotivo("")
@@ -761,6 +849,13 @@ function ModalModelo({ opened, modelo, onClose, onGuardar }) {
             onChange={(v) => setDatos({ ...datos, periodicidad: v })}
           />
         </Group>
+        <Select
+          label="Estilo de informe" clearable placeholder="Sin estilo"
+          description="Con el que se imprimen sus registros (logo...). Cambiarlo no crea versión nueva."
+          data={estilos.map((e) => ({ value: String(e.id), label: e.nombre_tipo }))}
+          value={datos.id_estilo}
+          onChange={(v) => setDatos({ ...datos, id_estilo: v })}
+        />
         <TextInput
           label="Título" required placeholder="Control diario de temperaturas"
           value={datos.titulo}
@@ -813,14 +908,24 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [modeloEditando, setModeloEditando] = useState(null)
   const [versiones, setVersiones] = useState(null)
+  const [estilos, setEstilos] = useState([])
 
-  async function guardar(datos, versionando) {
+  useEffect(() => {
+    api.listarEstilos(proyecto.id).then(setEstilos).catch(() => setEstilos([]))
+  }, [proyecto.id])
+
+  async function guardar({ id_estilo, ...datos }, versionando) {
+    let guardado
     if (!modeloEditando) {
-      await api.crearModeloRegistro(proyecto.id, datos)
+      guardado = await api.crearModeloRegistro(proyecto.id, datos)
     } else if (versionando) {
-      await api.nuevaVersionModeloRegistro(proyecto.id, modeloEditando.id, datos)
+      guardado = await api.nuevaVersionModeloRegistro(proyecto.id, modeloEditando.id, datos)
     } else {
-      await api.corregirModeloRegistro(proyecto.id, modeloEditando.id, datos)
+      guardado = await api.corregirModeloRegistro(proyecto.id, modeloEditando.id, datos)
+    }
+    const idEstilo = id_estilo ? Number(id_estilo) : null
+    if (idEstilo !== (guardado.id_estilo ?? null)) {
+      await api.asignarEstiloModeloRegistro(proyecto.id, guardado.id, idEstilo)
     }
     await onCambio()
   }
@@ -904,6 +1009,13 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
                         {m.periodicidad}
                       </Badge>
                     )}
+                    {m.id_estilo && (
+                      <Tooltip label="Estilo de informe con el que se imprime">
+                        <Badge variant="light" color="gray" tt="none" leftSection={<IconPrinter size={11} />}>
+                          {estilos.find((e) => e.id === m.id_estilo)?.nombre_tipo || "estilo borrado"}
+                        </Badge>
+                      </Tooltip>
+                    )}
                   </Group>
                 </Table.Td>
                 {puedeEscribir && (
@@ -951,6 +1063,7 @@ function PestanaModelos({ proyecto, modelos, onCambio }) {
       <ModalModelo
         opened={modalAbierto}
         modelo={modeloEditando}
+        estilos={estilos}
         onClose={() => setModalAbierto(false)}
         onGuardar={guardar}
       />
