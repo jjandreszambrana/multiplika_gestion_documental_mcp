@@ -72,18 +72,22 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
   const [borrando, setBorrando] = useState<LineaDiarioB | null>(null)
 
   // Lo que se teclea espera a que se deje de escribir para no pedir en cada letra.
-  const [filtroTecleado] = useDebouncedValue({ anio, asiento, cuenta }, 400)
+  // Uno a uno y nunca un objeto: un objeto nuevo en cada pintada contaría como
+  // cambio y volvería a pedir sin parar.
+  const [anioTecleado] = useDebouncedValue(anio, 400)
+  const [asientoTecleado] = useDebouncedValue(asiento, 400)
+  const [cuentaTecleada] = useDebouncedValue(cuenta.trim(), 400)
 
   const filtro = useMemo(
     () => ({
-      ejercicio: filtroTecleado.anio === '' ? null : Number(filtroTecleado.anio),
-      asiento: filtroTecleado.asiento === '' ? null : Number(filtroTecleado.asiento),
-      cuenta: filtroTecleado.cuenta.trim(),
+      ejercicio: anioTecleado === '' ? null : Number(anioTecleado),
+      asiento: asientoTecleado === '' ? null : Number(asientoTecleado),
+      cuenta: cuentaTecleada,
       fecha_desde: desde,
       fecha_hasta: hasta,
       contabilizado: ver === 'todas' ? null : Number(ver),
     }),
-    [filtroTecleado, desde, hasta, ver],
+    [anioTecleado, asientoTecleado, cuentaTecleada, desde, hasta, ver],
   )
 
   // Un filtro nuevo vuelve a la primera página.
@@ -192,6 +196,7 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
     data: lineas,
     getRowId: (fila) => String(fila.pase),
     manualPagination: true,
+    autoResetPageIndex: false,
     rowCount: total,
     onPaginationChange: setPagina,
     mantinePaginationProps: { showRowsPerPage: false },

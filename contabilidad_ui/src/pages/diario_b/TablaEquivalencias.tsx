@@ -133,6 +133,7 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
     data: filas,
     getRowId: (fila) => String(fila.id),
     manualPagination: true,
+    autoResetPageIndex: false,
     rowCount: total,
     onPaginationChange: setPagina,
     mantinePaginationProps: { showRowsPerPage: false },
