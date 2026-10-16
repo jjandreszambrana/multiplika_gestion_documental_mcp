@@ -30,6 +30,8 @@ import PantallaPlan from '../pages/plan/PantallaPlan'
 import PantallaPlantillas from '../pages/plantillas/PantallaPlantillas'
 import PantallaTraspasos from '../pages/traspasos/PantallaTraspasos'
 import PantallaBandeja from '../pages/bandeja/PantallaBandeja'
+import PantallaDiarioB from '../pages/diario_b/PantallaDiarioB'
+import { hayDiarioB } from '../api/diarioB'
 import { EMITIDAS, RECIBIDAS } from '../api/contabilizar'
 import { compiladoEl } from '../lib/compilacion'
 import MenuModulo from './MenuModulo'
@@ -107,6 +109,12 @@ export default function Estructura({
       .catch(() => setRolSif(null))
   }, [usuario])
 
+  // El diario B solo existe en algunos SIF: hasta saberlo, no se enseña.
+  const [ocultas, setOcultas] = useState<ReadonlySet<string>>(() => new Set(['diario_b']))
+  useEffect(() => {
+    void hayDiarioB().then((hay) => setOcultas(hay ? new Set() : new Set(['diario_b'])))
+  }, [])
+
   // Tras abrir, bloquear o desbloquear un ejercicio: la cabecera y la pantalla
   // leen la misma lista, así que se rehace una sola vez y aquí.
   const recargarEjercicios = useCallback(() => {
@@ -173,7 +181,13 @@ export default function Estructura({
   )
 
   const menu = (
-    <MenuModulo nivel={nivel} rol={rolSif} activa={seccion} alElegir={elegirSeccion} />
+    <MenuModulo
+      nivel={nivel}
+      rol={rolSif}
+      activa={seccion}
+      ocultas={ocultas}
+      alElegir={elegirSeccion}
+    />
   )
 
   const contenido = (
@@ -310,6 +324,13 @@ export default function Estructura({
             nivel={nivel}
             ancho={configuracion.anchocuentas}
             alVerBorradores={irABorradores}
+          />
+        ) : seccion === 'diario_b' ? (
+          <PantallaDiarioB
+            key={ejercicio ?? 'sin-ejercicio'}
+            ejercicio={ejercicio}
+            nivel={nivel}
+            ancho={configuracion.anchocuentas}
           />
         ) : seccion === 'bandeja' ? (
           <PantallaBandeja

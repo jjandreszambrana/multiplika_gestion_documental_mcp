@@ -34,6 +34,13 @@ export const SECCIONES: Seccion[] = [
     nivelMinimo: 'consulta',
     grupo: 'Diario',
   },
+  // Solo en los SIF que lo tienen (hoy, Icomase): en el resto se esconde.
+  {
+    id: 'diario_b',
+    etiqueta: 'Diario B y equivalencias',
+    nivelMinimo: 'consulta',
+    grupo: 'Diario',
+  },
   {
     id: 'traspaso_emitidas',
     etiqueta: 'Facturas emitidas',

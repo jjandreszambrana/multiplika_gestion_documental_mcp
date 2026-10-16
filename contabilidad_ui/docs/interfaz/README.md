@@ -16,6 +16,7 @@ copian tal cual; cambiar uno es una decisión suya, no del que porta la interfaz
   Es lo primero que hay que portar: lo demás se apoya en ello.
 - `diario.md` — el libro diario, el filtro, el editor de asientos y el traspaso.
 - `eliminados.md` — los asientos que salieron del libro.
+- `diario_b.md` — mantenimiento directo del diario B y de las equivalencias de cuentas.
 - `plan.md` — el plan contable y el enlace con facturación.
 - `mayor.md` — los movimientos de una cuenta, con su saldo.
 - `balances.md` — sumas y saldos y los estados contables (balance y pérdidas y

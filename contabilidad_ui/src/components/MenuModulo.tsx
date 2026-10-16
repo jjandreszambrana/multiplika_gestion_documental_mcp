@@ -7,6 +7,8 @@ interface Props {
   /** Rol del SIF; nulo si no se sabe. */
   rol: number | null
   activa: string
+  /** Secciones que este SIF no tiene. */
+  ocultas: ReadonlySet<string>
   alElegir: (id: string) => void
 }
 
@@ -15,9 +17,12 @@ interface Props {
  * entrada; el apartado aparece donde va la primera de las suyas, para no
  * reordenar el menú.
  */
-export default function MenuModulo({ nivel, rol, activa, alElegir }: Props) {
+export default function MenuModulo({ nivel, rol, activa, ocultas, alElegir }: Props) {
   const visibles = SECCIONES.filter(
-    (s) => alcanza(nivel, s.nivelMinimo) && (!s.soloRoles || (rol !== null && s.soloRoles.includes(rol))),
+    (s) =>
+      !ocultas.has(s.id) &&
+      alcanza(nivel, s.nivelMinimo) &&
+      (!s.soloRoles || (rol !== null && s.soloRoles.includes(rol))),
   )
   const yaPuestos = new Set<string>()
 
