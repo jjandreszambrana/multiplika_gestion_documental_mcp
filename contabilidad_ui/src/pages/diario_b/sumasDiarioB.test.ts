@@ -129,12 +129,21 @@ describe('sumarDiarioB', () => {
     expect(f2(sin.cuentas[0].acumHaber)).toBe('40.00')
   })
 
+  it('por subcuenta, una cuenta corta se completa con ceros (1130 → 11300000)', () => {
+    const r = sumarDiarioB(
+      [linea('1130', '0', '100', '2026-01-01', 'APERTURA'), linea('11300000', '0', '5'), linea('11300001', '2', '0')],
+      opciones(),
+    )
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['11300000', '11300001'])
+    expect(f2(r.cuentas[0].acumHaber)).toBe('105.00')
+  })
+
   it('con equivalencias, la cuenta de origen se suma en la de destino', () => {
     const r = sumarDiarioB(
-      [linea('430000001', '50', '0'), linea('430000099', '25.50', '0'), linea('4300000011', '1', '0')],
+      [linea('430000001', '50', '0'), linea('430000099', '25.50', '0'), linea('430000011', '1', '0')],
       opciones({ equivalencias: [EQUIVALENCIA] }),
     )
-    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['4300000011', '430000099'])
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430000011', '430000099'])
     expect(f2(r.cuentas[1].debe)).toBe('75.50')
     expect(r.cuentas[1].titulo).toBe('Cliente nuevo')
     expect(r.cuentas[0].titulo).toBe('')

@@ -274,6 +274,9 @@ async def diario_b_sumas_y_saldos_gd(
     if aplicar_equivalencias:
         for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
             destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
+    # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
+    # cifras, p. ej. 1130) se completan con ceros: 1130 → 11300000.
+    largo = max((len(l["cuenta"].strip()) for l in lineas), default=0)
     cuentas: dict[str, list] = {}  # cuenta → [título, debe inicial, haber inicial, debe periodo, haber periodo]
     sumadas = 0
     for linea in lineas:
@@ -284,7 +287,9 @@ async def diario_b_sumas_y_saldos_gd(
         if not fecha and (desde or hasta) and marca != DIARIO_APERTURA:
             continue  # sin fecha no se sabe si va antes o después: como en la pantalla
         sumadas += 1
-        cuenta, titulo = destino.get(linea["cuenta"], (linea["cuenta"], None))
+        original = linea["cuenta"].strip()
+        cuenta, titulo = destino.get(original) or destino.get(original.ljust(largo, "0")) or (original, None)
+        cuenta = cuenta.ljust(largo, "0")
         if nivel:
             cuenta, titulo = cuenta[:nivel], None
         fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0), Decimal(0), Decimal(0)])

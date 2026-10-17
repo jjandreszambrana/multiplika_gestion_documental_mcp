@@ -56,13 +56,17 @@ function marcaDe(linea: LineaDiarioB): string {
  *
  * Con `equivalencias`, la línea cuya cuenta sea exactamente una cuenta de
  * origen se suma en su destino. Con `nivel` 1, 2 o 3 se junta después por los
- * primeros dígitos, y el título es el del plan para ese código. Las cuentas sin
+ * primeros dígitos, y el título es el del plan para ese código. Por subcuenta,
+ * una cuenta más corta que las demás (la apertura, la regularización y el
+ * cierre vienen en cuentas de 4 cifras, p. ej. 1130) se completa con ceros
+ * hasta subcuenta (11300000), para que solo salgan subcuentas. Las cuentas sin
  * importes no salen; los totales son los de todas las líneas que entran.
  */
 export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiarioB): SumasDiarioB {
   const { equivalencias, tituloDelPlan, nivel, desde, hasta, sinRegularizacion } = opciones
   const destinoDe = new Map((equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
   const conFechas = desde !== '' || hasta !== ''
+  const largoSubcuenta = Math.max(0, ...lineas.map((l) => l.cuenta.trim().length))
   const porCuenta = new Map<
     string,
     { titulo: string; iniDebe: Decimal; iniHaber: Decimal; debe: Decimal; haber: Decimal }
@@ -80,8 +84,10 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     else if (hasta !== '' && fecha > hasta) continue
     else inicial = false
 
-    const equivalencia = destinoDe.get(linea.cuenta)
-    const destino = equivalencia?.cuenta_destino ?? linea.cuenta
+    const original = linea.cuenta.trim()
+    const completa = original.padEnd(largoSubcuenta, '0')
+    const equivalencia = destinoDe.get(original) ?? destinoDe.get(completa)
+    const destino = (equivalencia?.cuenta_destino ?? original).padEnd(largoSubcuenta, '0')
     const cuenta = nivel === 0 ? destino : destino.slice(0, nivel)
     let suma = porCuenta.get(cuenta)
     if (!suma) {
