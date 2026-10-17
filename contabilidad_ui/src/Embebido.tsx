@@ -31,6 +31,8 @@ export interface PropsEmbebido {
   /** Si no se pasa, se pregunta a `/contabilidad/sesion/empresas`. */
   nivel?: string
   ejercicio?: number
+  /** Sitio del panel donde poner el ejercicio (junto a la empresa); sin él no se ve. */
+  hueco?: HTMLElement | null
 }
 
 /**
@@ -51,6 +53,7 @@ export default function Embebido({
   nif = null,
   nivel,
   ejercicio,
+  hueco = null,
 }: PropsEmbebido) {
   // En el render y no en un efecto: los efectos de las pantallas corren antes
   // que los de este componente y sus primeras llamadas saldrían sin configurar.
@@ -130,6 +133,7 @@ export default function Embebido({
         alSalir={null}
         alActivarEsta={nivelSif === 'admin' ? () => setActivando(true) : null}
         ejercicioInicial={ejercicio}
+        hueco={hueco}
       />
     </DatesProvider>
   )

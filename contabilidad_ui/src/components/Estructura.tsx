@@ -1,5 +1,6 @@
 import { Alert, AppShell, Box, Button, Group, Loader, Stack, Text } from '@mantine/core'
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { textoDeError } from '../api/errores'
 import { obtenerConfiguracion, type Configuracion } from '../api/configuracion'
 import {
@@ -58,6 +59,8 @@ interface Props {
   embebido?: boolean
   /** Ejercicio con el que entrar; si no está en la lista, se cae al de siempre. */
   ejercicioInicial?: number
+  /** Embebido: el panel pone la empresa y aquí se deja el ejercicio, en su fila. */
+  hueco?: HTMLElement | null
 }
 
 const ALTO_CABECERA = 64
@@ -74,6 +77,7 @@ export default function Estructura({
   alActivarEsta,
   embebido = false,
   ejercicioInicial,
+  hueco = null,
 }: Props) {
   const [configuracion, setConfiguracion] = useState<Configuracion | null>(null)
   const [ejercicios, setEjercicios] = useState<Ejercicio[] | null>(null)
@@ -351,16 +355,7 @@ export default function Estructura({
       <ProveedorCuadre>
         <ProveedorPlan ejercicio={ejercicio}>
           <Box>
-            <Group
-              justify="space-between"
-              wrap="nowrap"
-              pb="xs"
-              mb="md"
-              style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
-            >
-              {cabeceraEmpresa}
-              {selectorYAvisos}
-            </Group>
+            {hueco && createPortal(selectorYAvisos, hueco)}
             <Group align="flex-start" wrap="nowrap" gap="md">
               <Box
                 w={ANCHO_MENU}

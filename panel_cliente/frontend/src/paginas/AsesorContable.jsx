@@ -182,6 +182,8 @@ function Contabilidad({ proyecto, cabecera }) {
   // Las pestañas se montan la primera vez que se abren y luego se quedan
   // (ocultas): al volver, la contabilidad sigue donde se dejó.
   const [abiertas, setAbiertas] = useState(() => new Set(["biblioteca"]))
+  // Hueco a la derecha de la empresa donde la contabilidad pone su ejercicio
+  const [hueco, setHueco] = useState(null)
   const abrir = (valor) => {
     setPestana(valor)
     setAbiertas((previas) => new Set(previas).add(valor))
@@ -219,14 +221,15 @@ function Contabilidad({ proyecto, cabecera }) {
     <Tabs value={pestana} onChange={abrir}>
       {/* El título y las pestañas se quedan arriba al bajar por la página. */}
       <Box style={STICKY} mb="md">
-        {cabecera}
-        <Tabs.List>
+        {cabecera(
+        <Tabs.List style={{ flex: 1 }}>
           {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
           <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
           {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
           {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
           <Tabs.Tab value="accesos">Mis accesos al SIF</Tabs.Tab>
         </Tabs.List>
+        )}
       </Box>
 
       {deEmpresa && (
@@ -237,17 +240,22 @@ function Contabilidad({ proyecto, cabecera }) {
               <Button size="xs" onClick={() => abrir("accesos")}>Revisar mis accesos</Button>
             </Group>
           </Alert>
-        ) : empresas?.length > 1 ? (
-          <Select
-            id="conta-empresa-activa" aria-label="Empresa" mb="md" maw={480} searchable value={idEmpresa} onChange={setIdEmpresa}
-            data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
-          />
-        ) : null
+        ) : (
+          <Group justify="space-between" wrap="nowrap" mb="md">
+            {empresas?.length > 1 ? (
+              <Select
+                id="conta-empresa-activa" aria-label="Empresa" w={480} maw="100%" searchable value={idEmpresa} onChange={setIdEmpresa}
+                data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
+              />
+            ) : <span />}
+            {pestana === "contabilidad" && <div ref={setHueco} />}
+          </Group>
+        )
       )}
 
       <Tabs.Panel value="biblioteca"><Biblioteca proyecto={proyecto} /></Tabs.Panel>
       <Tabs.Panel value="contabilidad">
-        {abiertas.has("contabilidad") && empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+        {abiertas.has("contabilidad") && empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} hueco={hueco} />}
       </Tabs.Panel>
       <Tabs.Panel value="propuestas">
         {abiertas.has("propuestas") && empresa && <PropuestasContables key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
@@ -268,9 +276,10 @@ const STICKY = {
 }
 
 export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onAlternarChat }) {
-  const cabecera = (
-      <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="nowrap">
-        <Group gap="xs">
+  // `pestanas`: la contabilidad pone las suyas en la misma fila que el título
+  const cabecera = (pestanas = null) => (
+      <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="nowrap" gap="lg">
+        <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
           {pantallaCompleta && (
             <Tooltip label="Menú de la gestión documental">
               <ActionIcon variant="default" size="lg" aria-label="Abrir o cerrar el menú de la gestión documental" onClick={onAlternarMenu}>
@@ -280,6 +289,7 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
           )}
           <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
         </Group>
+        {pestanas}
         {onAlternarChat && (
           <Tooltip label="Chat con la IA">
             <ActionIcon variant="light" size="lg" aria-label="Abrir o cerrar el chat con la IA" onClick={onAlternarChat}>
@@ -295,7 +305,7 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
         <Contabilidad proyecto={proyecto} cabecera={cabecera} />
       ) : (
         <>
-        {cabecera}
+        {cabecera()}
         <Text c="dimmed">
           Con el apartado activado, la IA de esta gestión documental trabaja como asesor contable y fiscal: consulta una
           biblioteca propia (plan contable, IVA, sociedades, cierre, análisis financiero...) antes de responder y, si cada
