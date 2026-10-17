@@ -148,6 +148,15 @@ plantillas); las que piden datos al montarse (diario B, historial de
 plantillas) no se montan hasta que se abren. Lo común está en
 `components/pestanas.ts`.
 
+**Un apartado oculto no lleva `display: none`**: se le deja alto 0, sin
+desbordar y con `visibility: hidden`, para que dentro todo conserve su tamaño de
+verdad. Con `display: none` el diario, que solo pinta las filas a la vista,
+medía las filas a 0 al ocultarse y entraba en un bucle (React #185, «Maximum
+update depth exceeded»), y al volver salía «Algo ha fallado en esta pantalla».
+Las pestañas de Mantine sí ocultan con `display: none`: ninguna lleva una
+rejilla que pinte solo las filas a la vista, y si alguna llega a llevarla hay
+que ocultarla igual que los apartados.
+
 Al cambiar de ejercicio se rehace la pantalla que se está viendo y se olvidan
 las demás, que se rehacen al volver a ellas. Ir desde un traspaso al diario con
 los borradores a la vista vuelve a montar el diario, que es lo que abre esa

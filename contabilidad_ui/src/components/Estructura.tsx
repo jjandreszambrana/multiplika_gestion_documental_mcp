@@ -69,6 +69,16 @@ const PREFERENCIA_EJERCICIO = 'sesion.ejercicio'
 const PREFERENCIA_SECCION = 'sesion.seccion'
 const ANCHO_MENU = 220
 
+/**
+ * Cómo se oculta un apartado que se queda montado. **No vale `display: none`**:
+ * con él todo mide 0 y el diario, que solo pinta las filas a la vista, entra en
+ * un bucle midiendo filas de alto 0 (React #185, «Maximum update depth
+ * exceeded») en cuanto le llegan apuntes estando oculto. Así sigue teniendo su
+ * tamaño de verdad, pero no ocupa sitio, no se ve y no se puede pulsar ni
+ * llegar a él con el tabulador.
+ */
+const OCULTA = { height: 0, overflow: 'hidden', visibility: 'hidden' } as const
+
 /** Marco del módulo: cabecera con la empresa y el ejercicio, y menú lateral. */
 export default function Estructura({
   empresa,
@@ -407,7 +417,11 @@ export default function Estructura({
         configuracion &&
         SECCIONES.filter((s) => montadas.has(s.id)).map((s) => (
           // Oculta, no desmontada: así conserva filtros, página y resultado.
-          <Box key={s.id} style={s.id === seccion ? undefined : { display: 'none' }}>
+          <Box
+            key={s.id}
+            style={s.id === seccion ? undefined : OCULTA}
+            aria-hidden={s.id === seccion ? undefined : true}
+          >
             <RedDeSeguridad llave={`${s.id}.${ejercicio ?? ''}`}>
               {pantalla(s.id, configuracion, ejercicios)}
             </RedDeSeguridad>
