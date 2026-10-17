@@ -183,7 +183,7 @@ export default function DialogoLineaB({ linea, ejercicio, ancho, alCerrar, alGua
               label="Diario"
               value={diario}
               onChange={(e) => setDiario(e.currentTarget.value)}
-              maxLength={10}
+              maxLength={30}
             />
           </SimpleGrid>
 

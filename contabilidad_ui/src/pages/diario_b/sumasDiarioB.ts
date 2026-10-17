@@ -43,7 +43,11 @@ function marcaDe(linea: LineaDiarioB): string {
   return (linea.diario ?? '').replace(/\s/g, '').toUpperCase()
 }
 
-const MARCAS = ['APERTURA', 'REGULARIZA', 'CIERRE']
+const MARCAS: [string, string][] = [['APERTURA', 'APERTURA'], ['REGULARI', 'REGULARIZA'], ['CIERRE', 'CIERRE']]
+
+function normalizarMarca(texto: string): string {
+  return MARCAS.find(([inicio]) => texto.startsWith(inicio))?.[1] ?? ''
+}
 
 /**
  * Qué asiento es la apertura, la regularización y el cierre, por lo que hacen
@@ -63,7 +67,8 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
   for (const l of lineas) porAsiento.set(l.asiento, [...(porAsiento.get(l.asiento) ?? []), l])
   const marcas = new Map<number, string>()
   for (const [asiento, ls] of porAsiento) {
-    const marca = ls.map(marcaDe).find((m) => MARCAS.includes(m))
+    // Por cómo empieza: REGULARI, REGULARIZA y REGULARIZACION valen igual.
+    const marca = ls.map(marcaDe).map(normalizarMarca).find((m) => m !== '')
     if (marca) marcas.set(asiento, marca)
   }
   if (porAsiento.size === 0) return marcas

@@ -246,11 +246,18 @@ async def _todas(id_empresa: int, ruta: str, cuerpo: dict, clave: str) -> list[d
             return filas
 
 
-# Marcas del campo `diario` de las líneas del diario B (máx. 10 letras en el SIF)
+# Marcas del campo `diario` de las líneas del diario B (el SIF admite 30 letras desde 2026-10-17)
 DIARIO_APERTURA, DIARIOS_FIN_DE_EJERCICIO = "APERTURA", {"REGULARIZA", "CIERRE"}
 
 
-MARCAS_DIARIO_B = ("APERTURA", "REGULARIZA", "CIERRE")
+# Por cómo empieza la marca: REGULARI, REGULARIZA y REGULARIZACION valen igual.
+MARCAS_DIARIO_B = {"APERTURA": "APERTURA", "REGULARI": "REGULARIZA", "CIERRE": "CIERRE"}
+
+
+def marca_diario_b(diario: str | None) -> str:
+    """APERTURA, REGULARIZA o CIERRE si el campo `diario` lo dice; si no, ""."""
+    texto = "".join((diario or "").split()).upper()
+    return next((marca for inicio, marca in MARCAS_DIARIO_B.items() if texto.startswith(inicio)), "")
 
 
 def clasificar_asientos(lineas: list[dict], largo: int) -> dict[int, str]:
@@ -263,8 +270,8 @@ def clasificar_asientos(lineas: list[dict], largo: int) -> dict[int, str]:
     marcas: dict[int, str] = {}
     for asiento, ls in por_asiento.items():
         for linea in ls:
-            marca = (linea.get("diario") or "").strip().upper()
-            if marca in MARCAS_DIARIO_B:
+            marca = marca_diario_b(linea.get("diario"))
+            if marca:
                 marcas[asiento] = marca
                 break
     if not por_asiento:
