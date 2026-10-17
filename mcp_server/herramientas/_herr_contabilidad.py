@@ -209,6 +209,32 @@ async def buscar_cuenta_contable_gd(id_empresa: int, texto: str, ejercicio: int 
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def diario_b_gd(
+    id_empresa: int, ejercicio: int | None = None, asiento: int | None = None, cuenta: str | None = None,
+    desde: str | None = None, hasta: str | None = None, contabilizado: Literal[0, 1] | None = None,
+    offset: int = 0,
+) -> dict:
+    """Líneas del diario B de la empresa en el SIF (solo lo tienen algunos
+    SIF; si no existe, dilo y no insistas). Filtra por ejercicio, asiento,
+    cuenta (que empiece por lo escrito) y fechas AAAA-MM-DD; `contabilizado`
+    1 = del libro, 0 = borradores. Pagina de 50 en 50 con `offset` y trae
+    `total`. Solo lectura."""
+    return await _sif(id_empresa, "/contabilidad/diario_b/listar", {
+        "ejercicio": ejercicio, "asiento": asiento, "cuenta": cuenta, "fecha_desde": desde,
+        "fecha_hasta": hasta, "contabilizado": contabilizado, "offset": offset, "limit": LIMITE_APUNTES_IA,
+    })
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def equivalencias_cuentas_gd(id_empresa: int, texto: str | None = None, offset: int = 0) -> dict:
+    """Equivalencias de cuentas de la empresa en el SIF (cuenta de origen →
+    cuenta de destino, con sus títulos y observaciones), las que acompañan al
+    diario B. `texto` busca por cuenta o título. Pagina de 50 en 50 con
+    `offset` y trae `total`. Solo lectura; si el SIF no las tiene, dilo."""
+    return await _sif(id_empresa, "/contabilidad/diario_equivalencias/listar", {"texto": texto, "offset": offset, "limit": LIMITE_APUNTES_IA})
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def analisis_financiero_gd(id_empresa: int, ejercicio: int, hasta: str | None = None) -> dict:
     """Ratios de liquidez, solvencia, rentabilidad y plazos de cobro y pago
     de una empresa, calculados por el programa con su balance y su cuenta de
