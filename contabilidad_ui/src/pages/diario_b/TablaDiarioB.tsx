@@ -23,6 +23,7 @@ import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearFecha, formatearImporte } from '../../lib/format'
 import DialogoConfirmar from '../traspasos/DialogoConfirmar'
 import DialogoLineaB from './DialogoLineaB'
+import { IconosDeFila, propsDeFilaMarcable } from './filaMarcada'
 
 interface Props {
   ejercicio: number | null
@@ -70,6 +71,8 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
   // Nula: diálogo cerrado; 'nueva': alta; una línea: edición.
   const [editando, setEditando] = useState<LineaDiarioB | 'nueva' | null>(null)
   const [borrando, setBorrando] = useState<LineaDiarioB | null>(null)
+  // La fila marcada, por su número. Si deja de estar en la página, no hay ninguna.
+  const [marcada, setMarcada] = useState<number | null>(null)
 
   // Lo que se teclea espera a que se deje de escribir para no pedir en cada letra.
   // Uno a uno y nunca un objeto: un objeto nuevo en cada pintada contaría como
@@ -166,22 +169,13 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
             {
               id: 'acciones',
               header: '',
-              size: 150,
+              size: 70,
               grow: false,
               Cell: ({ row }: { row: { original: LineaDiarioB } }) => (
-                <Group gap={4} wrap="nowrap">
-                  <Button size="compact-xs" variant="subtle" onClick={() => setEditando(row.original)}>
-                    Cambiar…
-                  </Button>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    color="red"
-                    onClick={() => setBorrando(row.original)}
-                  >
-                    Borrar…
-                  </Button>
-                </Group>
+                <IconosDeFila
+                  alCambiar={() => setEditando(row.original)}
+                  alBorrar={() => setBorrando(row.original)}
+                />
               ),
             } satisfies MRT_ColumnDef<LineaDiarioB>,
           ]
@@ -189,6 +183,8 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
     ],
     [puedeTocar],
   )
+
+  const seleccionada = lineas.find((f) => f.pase === marcada) ?? null
 
   const tabla = useMantineReactTable({
     ...opcionesDeTabla<LineaDiarioB>(),
@@ -200,6 +196,11 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
     rowCount: total,
     onPaginationChange: setPagina,
     mantinePaginationProps: { showRowsPerPage: false },
+    // Una sola a la vez: pulsar la marcada la desmarca.
+    mantineTableBodyRowProps: ({ row }) =>
+      propsDeFilaMarcable(row.original.pase === marcada, () =>
+        setMarcada((m) => (m === row.original.pase ? null : row.original.pase)),
+      ),
     localization: { noRecordsToDisplay: 'No hay líneas con estos filtros.' },
     state: { isLoading: cargando && lineas.length === 0, pagination: pagina },
   })
@@ -250,9 +251,19 @@ export default function TablaDiarioB({ ejercicio, nivel, ancho }: Props) {
           <SegmentedControl size="xs" value={ver} onChange={setVer} data={VER} />
         </Stack>
         {puedeTocar && (
-          <Button ml="auto" onClick={() => setEditando('nueva')}>
-            Nueva línea…
-          </Button>
+          <Group gap="xs" ml="auto">
+            {seleccionada && (
+              <>
+                <Button variant="default" onClick={() => setEditando(seleccionada)}>
+                  Cambiar…
+                </Button>
+                <Button variant="light" color="red" onClick={() => setBorrando(seleccionada)}>
+                  Borrar…
+                </Button>
+              </>
+            )}
+            <Button onClick={() => setEditando('nueva')}>Nueva línea…</Button>
+          </Group>
         )}
       </Group>
 

@@ -38,6 +38,15 @@ el cambio de plan contable** de `/equivalencias`.
 - Formulario con los cinco campos; las dos cuentas, obligatorias.
 - Ver, `consulta`. Crear, cambiar y borrar, `cierre`.
 
+En las dos rejillas: cada fila lleva un lápiz («Cambiar…», abre el formulario)
+y una papelera («Borrar…», pide confirmación), y se puede marcar una fila
+pulsándola: queda en azul, como en el diario; solo una a la vez, y pulsarla otra
+vez la desmarca. Con una fila marcada salen arriba, junto a «Nueva…», «Cambiar…»
+y «Borrar…» para esa fila. Los iconos y los botones siguen el nivel de cada
+tabla (sin él no salen). La marca se pierde si la fila deja de estar en la
+página (otro filtro, otra página o al borrarla). Lo común está en
+`filaMarcada.tsx`.
+
 ## Sumas y saldos
 
 Con el formato del Excel del cliente. El SIF no tiene este informe para el

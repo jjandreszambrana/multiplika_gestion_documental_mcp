@@ -21,6 +21,7 @@ import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
 import { formatearEntero } from '../../lib/format'
 import DialogoConfirmar from '../traspasos/DialogoConfirmar'
 import DialogoEquivalencia from './DialogoEquivalencia'
+import { IconosDeFila, propsDeFilaMarcable } from './filaMarcada'
 
 interface Props {
   nivel: string
@@ -48,6 +49,8 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
   const [recarga, setRecarga] = useState(0)
   const [editando, setEditando] = useState<EquivalenciaCuenta | 'nueva' | null>(null)
   const [borrando, setBorrando] = useState<EquivalenciaCuenta | null>(null)
+  // La fila marcada, por su número. Si deja de estar en la página, no hay ninguna.
+  const [marcada, setMarcada] = useState<number | null>(null)
 
   useEffect(() => setPagina((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 })), [buscado])
 
@@ -103,22 +106,13 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
             {
               id: 'acciones',
               header: '',
-              size: 150,
+              size: 70,
               grow: false,
               Cell: ({ row }: { row: { original: EquivalenciaCuenta } }) => (
-                <Group gap={4} wrap="nowrap">
-                  <Button size="compact-xs" variant="subtle" onClick={() => setEditando(row.original)}>
-                    Cambiar…
-                  </Button>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    color="red"
-                    onClick={() => setBorrando(row.original)}
-                  >
-                    Borrar…
-                  </Button>
-                </Group>
+                <IconosDeFila
+                  alCambiar={() => setEditando(row.original)}
+                  alBorrar={() => setBorrando(row.original)}
+                />
               ),
             } satisfies MRT_ColumnDef<EquivalenciaCuenta>,
           ]
@@ -126,6 +120,8 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
     ],
     [puedeTocar],
   )
+
+  const seleccionada = filas.find((f) => f.id === marcada) ?? null
 
   const tabla = useMantineReactTable({
     ...opcionesDeTabla<EquivalenciaCuenta>(),
@@ -137,6 +133,11 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
     rowCount: total,
     onPaginationChange: setPagina,
     mantinePaginationProps: { showRowsPerPage: false },
+    // Una sola a la vez: pulsar la marcada la desmarca.
+    mantineTableBodyRowProps: ({ row }) =>
+      propsDeFilaMarcable(row.original.id === marcada, () =>
+        setMarcada((m) => (m === row.original.id ? null : row.original.id)),
+      ),
     localization: { noRecordsToDisplay: 'No hay equivalencias.' },
     state: { isLoading: cargando && filas.length === 0, pagination: pagina },
   })
@@ -151,9 +152,19 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
           w={300}
         />
         {puedeTocar && (
-          <Button ml="auto" onClick={() => setEditando('nueva')}>
-            Nueva equivalencia…
-          </Button>
+          <Group gap="xs" ml="auto">
+            {seleccionada && (
+              <>
+                <Button variant="default" onClick={() => setEditando(seleccionada)}>
+                  Cambiar…
+                </Button>
+                <Button variant="light" color="red" onClick={() => setBorrando(seleccionada)}>
+                  Borrar…
+                </Button>
+              </>
+            )}
+            <Button onClick={() => setEditando('nueva')}>Nueva equivalencia…</Button>
+          </Group>
         )}
       </Group>
 
