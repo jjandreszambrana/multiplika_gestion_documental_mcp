@@ -83,3 +83,53 @@ describe('sumarDiarioB', () => {
     expect(r.cuentas[0].acreedor.toFixed(2)).toBe('0.00')
   })
 })
+
+describe('sumarDiarioB por niveles', () => {
+  const PLAN_NIVELES: Record<string, string> = {
+    '4': 'Acreedores y deudores',
+    '43': 'Clientes',
+    '430': 'Clientes',
+    '570': 'Caja, euros',
+  }
+  const tituloNivel = (c: string) => PLAN_NIVELES[c]
+  const LINEAS = [
+    linea('430000001', '50', '0'),
+    linea('430000099', '25.50', '0'),
+    linea('431000001', '10', '0'),
+    linea('570000000', '0', '85.50'),
+  ]
+
+  it('por cuenta de mayor junta por los tres primeros dígitos', () => {
+    const r = sumarDiarioB(LINEAS, null, tituloNivel, 3)
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430', '431', '570'])
+    expect(r.cuentas[0].debe.toFixed(2)).toBe('75.50')
+    expect(r.cuentas[0].titulo).toBe('Clientes')
+    expect(r.cuentas[1].titulo).toBe('')
+  })
+
+  it('por subgrupo y por grupo', () => {
+    const subgrupo = sumarDiarioB(LINEAS, null, tituloNivel, 2)
+    expect(subgrupo.cuentas.map((c) => c.cuenta)).toEqual(['43', '57'])
+    expect(subgrupo.cuentas[0].deudor.toFixed(2)).toBe('85.50')
+    const grupo = sumarDiarioB(LINEAS, null, tituloNivel, 1)
+    expect(grupo.cuentas.map((c) => c.cuenta)).toEqual(['4', '5'])
+    expect(grupo.cuentas[0].titulo).toBe('Acreedores y deudores')
+  })
+
+  it('las equivalencias se aplican antes de juntar, con el título del plan', () => {
+    const traslado: EquivalenciaCuenta = { ...EQUIVALENCIA, cuenta_destino: '572000001' }
+    const r = sumarDiarioB(LINEAS, [traslado], tituloNivel, 3)
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430', '431', '570', '572'])
+    expect(r.cuentas[0].debe.toFixed(2)).toBe('25.50')
+    expect(r.cuentas[3].debe.toFixed(2)).toBe('50.00')
+    expect(r.cuentas[3].titulo).toBe('')
+  })
+
+  it('los totales de debe y haber son los mismos en todos los niveles', () => {
+    for (const nivel of [0, 1, 2, 3] as const) {
+      const r = sumarDiarioB(LINEAS, [EQUIVALENCIA], tituloNivel, nivel)
+      expect(r.total.debe.toFixed(2)).toBe('85.50')
+      expect(r.total.haber.toFixed(2)).toBe('85.50')
+    }
+  })
+})

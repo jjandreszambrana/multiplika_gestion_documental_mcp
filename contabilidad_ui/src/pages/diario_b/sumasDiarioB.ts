@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js'
 import type { EquivalenciaCuenta, LineaDiarioB } from '../../api/diarioB'
+import type { NivelDeBalance } from '../../api/informes'
 
 export interface SumaDeCuenta {
   cuenta: string
@@ -25,6 +26,10 @@ const CERO = new Decimal(0)
  * origen se suma en su cuenta de destino. `tituloDelPlan` da el título cuando
  * la equivalencia no lo trae; si no se conoce, queda vacío.
  *
+ * Con `nivel` 1, 2 o 3 se junta por los primeros dígitos de la cuenta (grupo,
+ * subgrupo, cuenta de mayor), después de aplicar las equivalencias; el título
+ * es entonces el del plan para ese código. Con 0, cuenta a cuenta.
+ *
  * Las cuentas sin debe ni haber no salen. Los totales son los de todas las
  * líneas, así que cuadran con el diario.
  */
@@ -32,16 +37,19 @@ export function sumarDiarioB(
   lineas: LineaDiarioB[],
   equivalencias: EquivalenciaCuenta[] | null,
   tituloDelPlan: (cuenta: string) => string | null | undefined,
+  nivel: NivelDeBalance = 0,
 ): SumasDiarioB {
   const destinoDe = new Map((equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
   const porCuenta = new Map<string, { titulo: string; debe: Decimal; haber: Decimal }>()
 
   for (const linea of lineas) {
     const equivalencia = destinoDe.get(linea.cuenta)
-    const cuenta = equivalencia?.cuenta_destino ?? linea.cuenta
+    const destino = equivalencia?.cuenta_destino ?? linea.cuenta
+    const cuenta = nivel === 0 ? destino : destino.slice(0, nivel)
     let suma = porCuenta.get(cuenta)
     if (!suma) {
-      const titulo = equivalencia?.titulo_destino || tituloDelPlan(cuenta) || ''
+      const titulo =
+        (nivel === 0 && equivalencia?.titulo_destino) || tituloDelPlan(cuenta) || ''
       suma = { titulo, debe: CERO, haber: CERO }
       porCuenta.set(cuenta, suma)
     }

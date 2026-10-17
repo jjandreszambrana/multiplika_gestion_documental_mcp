@@ -1,10 +1,21 @@
-import { Alert, Button, Checkbox, Group, Loader, SegmentedControl, Stack, Text } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Group,
+  Loader,
+  SegmentedControl,
+  Select,
+  Stack,
+  Text,
+} from '@mantine/core'
 import type Decimal from 'decimal.js'
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
 import { diarioBEntero, equivalenciasEnteras } from '../../api/diarioB'
 import { textoDeError } from '../../api/errores'
+import type { NivelDeBalance } from '../../api/informes'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
 import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
@@ -23,7 +34,16 @@ interface Consulta {
   hasta: string
   ver: string
   conEquivalencias: boolean
+  nivel: NivelDeBalance
 }
+
+/** Los mismos que en sumas y saldos. Aquí entra por subcuenta, que es el detalle. */
+const NIVELES = [
+  { value: '1', label: 'Grupo' },
+  { value: '2', label: 'Subgrupo' },
+  { value: '3', label: 'Cuenta de mayor' },
+  { value: '0', label: 'Subcuenta' },
+]
 
 const VER = [
   { value: 'todas', label: 'Todas' },
@@ -75,6 +95,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
   const [hasta, setHasta] = useState<Date | null>(null)
   const [ver, setVer] = useState('todas')
   const [conEquivalencias, setConEquivalencias] = useState(false)
+  const [nivel, setNivel] = useState<NivelDeBalance>(0)
   const [consulta, setConsulta] = useState<Consulta | null>(null)
   const [sumas, setSumas] = useState<SumasDiarioB | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -101,7 +122,12 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
     ])
       .then(([lineas, equivalencias]) => {
         setSumas(
-          sumarDiarioB(lineas, equivalencias, (cuenta) => plan.porCodigo.get(cuenta)?.descripcion),
+          sumarDiarioB(
+            lineas,
+            equivalencias,
+            (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
+            consulta.nivel,
+          ),
         )
         setCargando(false)
       })
@@ -124,6 +150,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
       hasta: fechaParaApi(hasta),
       ver,
       conEquivalencias,
+      nivel,
     })
   }
 
@@ -173,6 +200,14 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
   return (
     <Stack gap="md">
       <Group align="flex-end" gap="md" wrap="wrap">
+        <Select
+          label="Agrupar por"
+          data={NIVELES}
+          value={String(nivel)}
+          onChange={(valor) => setNivel(Number(valor ?? 0) as NivelDeBalance)}
+          allowDeselect={false}
+          w={180}
+        />
         <CasillaFecha
           label="Desde"
           value={desde}

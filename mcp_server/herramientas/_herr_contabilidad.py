@@ -249,12 +249,15 @@ async def _todas(id_empresa: int, ruta: str, cuerpo: dict, clave: str) -> list[d
 async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
     contabilizado: Literal[0, 1] | None = None, aplicar_equivalencias: bool = False,
+    nivel: Literal[0, 1, 2, 3] = 0,
 ) -> dict:
     """Sumas y saldos del diario B por cuenta, calculadas por el programa
     sumando sus líneas (el SIF no lo da hecho). Fechas AAAA-MM-DD;
     `contabilizado` 1 = del libro, 0 = borradores, sin él todas. Con
     `aplicar_equivalencias`, lo de cada cuenta de origen se suma en su
-    cuenta de destino. Llega como tabla (`columnas` y `filas`) con
+    cuenta de destino. `nivel` 0 subcuenta a subcuenta, 3 cuentas, 2
+    subgrupos, 1 grupos (junta por los primeros dígitos, después de las
+    equivalencias; los títulos solo salen en subcuentas). Llega como tabla (`columnas` y `filas`) con
     `totales`; cita las cifras tal cual."""
     lineas = await _todas(id_empresa, "/contabilidad/diario_b/listar", {
         "ejercicio": ejercicio, "fecha_desde": desde, "fecha_hasta": hasta, "contabilizado": contabilizado,
@@ -266,6 +269,8 @@ async def diario_b_sumas_y_saldos_gd(
     cuentas: dict[str, list] = {}
     for linea in lineas:
         cuenta, titulo = destino.get(linea["cuenta"], (linea["cuenta"], None))
+        if nivel:
+            cuenta, titulo = cuenta[:nivel], None
         fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0)])
         fila[1] += Decimal(str(linea["debe"] or 0))
         fila[2] += Decimal(str(linea["haber"] or 0))
@@ -277,7 +282,7 @@ async def diario_b_sumas_y_saldos_gd(
     total_debe = sum((c[1] for c in cuentas.values()), Decimal(0))
     total_haber = sum((c[2] for c in cuentas.values()), Decimal(0))
     return {
-        "lineas_sumadas": len(lineas), "equivalencias_aplicadas": aplicar_equivalencias,
+        "lineas_sumadas": len(lineas), "equivalencias_aplicadas": aplicar_equivalencias, "nivel": nivel,
         "columnas": ["cuenta", "titulo", "debe", "haber", "saldo_deudor", "saldo_acreedor"], "filas": filas,
         "totales": {"debe": float(total_debe), "haber": float(total_haber), "diferencia": float(total_debe - total_haber)},
     }
