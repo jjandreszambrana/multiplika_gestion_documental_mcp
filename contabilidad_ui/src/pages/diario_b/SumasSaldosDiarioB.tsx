@@ -21,7 +21,12 @@ import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
 import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
 import { fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearImporte } from '../../lib/format'
-import { sumarDiarioB, type SumaDeCuenta, type SumasDiarioB } from './sumasDiarioB'
+import {
+  sumarDiarioB,
+  type ImportesDiarioB,
+  type SumaDeCuenta,
+  type SumasDiarioB,
+} from './sumasDiarioB'
 
 interface Props {
   ejercicio: number | null
@@ -35,6 +40,7 @@ interface Consulta {
   ver: string
   conEquivalencias: boolean
   nivel: NivelDeBalance
+  sinRegularizacion: boolean
 }
 
 /** Los mismos que en sumas y saldos. Aquí entra por subcuenta, que es el detalle. */
@@ -63,12 +69,10 @@ const A_LA_DERECHA = {
   mantineTableFooterCellProps: { ff: 'monospace', style: { justifyContent: 'flex-end' } },
 } as const
 
-type Importes = SumasDiarioB['total']
-
 function columnaDeImporte(
-  id: keyof Importes,
+  id: keyof ImportesDiarioB,
   cabecera: string,
-  total: Importes | null,
+  total: ImportesDiarioB | null,
 ): MRT_ColumnDef<SumaDeCuenta> {
   return {
     id,
@@ -76,13 +80,19 @@ function columnaDeImporte(
     size: 130,
     grow: false,
     ...A_LA_DERECHA,
-    Cell: ({ row }) => importeOVacio(row.original[id]),
-    Footer: () => (total ? formatearImporte(total[id]) : ''),
+    Cell: ({ row }) => <ImporteOVacio valor={row.original[id]} />,
+    Footer: () => (total ? <ImporteOVacio valor={total[id]} conCero /> : ''),
   }
 }
 
-function importeOVacio(valor: Decimal): string {
-  return valor.isZero() ? '' : formatearImporte(valor)
+/** En blanco si es cero; en rojo si es negativo, que solo pasa en el saldo inicial. */
+function ImporteOVacio({ valor, conCero = false }: { valor: Decimal; conCero?: boolean }) {
+  if (valor.isZero() && !conCero) return null
+  return (
+    <Text fz="sm" ff="monospace" c={valor.isNegative() && !valor.isZero() ? 'red' : undefined}>
+      {formatearImporte(valor)}
+    </Text>
+  )
 }
 
 /**
@@ -96,6 +106,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
   const [ver, setVer] = useState('todas')
   const [conEquivalencias, setConEquivalencias] = useState(false)
   const [nivel, setNivel] = useState<NivelDeBalance>(0)
+  const [sinRegularizacion, setSinRegularizacion] = useState(false)
   const [consulta, setConsulta] = useState<Consulta | null>(null)
   const [sumas, setSumas] = useState<SumasDiarioB | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -112,8 +123,10 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
           ejercicio: consulta.ejercicio,
           asiento: null,
           cuenta: '',
-          fecha_desde: consulta.desde,
-          fecha_hasta: consulta.hasta,
+          // El ejercicio entero: lo anterior a «desde» hace falta para el saldo
+          // inicial, y las fechas se separan al sumar.
+          fecha_desde: '',
+          fecha_hasta: '',
           contabilizado: consulta.ver === 'todas' ? null : Number(consulta.ver),
         },
         corte.signal,
@@ -122,12 +135,14 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
     ])
       .then(([lineas, equivalencias]) => {
         setSumas(
-          sumarDiarioB(
-            lineas,
+          sumarDiarioB(lineas, {
             equivalencias,
-            (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
-            consulta.nivel,
-          ),
+            tituloDelPlan: (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
+            nivel: consulta.nivel,
+            desde: consulta.desde,
+            hasta: consulta.hasta,
+            sinRegularizacion: consulta.sinRegularizacion,
+          }),
         )
         setCargando(false)
       })
@@ -151,34 +166,60 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
       ver,
       conEquivalencias,
       nivel,
+      sinRegularizacion,
     })
   }
 
   const total = sumas?.total ?? null
+  // Las dos primeras van en un grupo sin cabecera: así la fila de cabeceras de
+  // grupo no deja en el pie una segunda fila vacía.
   const columnas = useMemo<MRT_ColumnDef<SumaDeCuenta>[]>(
     () => [
       {
-        accessorKey: 'cuenta',
-        header: 'Cuenta',
-        size: 130,
-        grow: false,
-        Cell: ({ row }) => (
-          <Text fz="sm" ff="monospace" fw={500}>
-            {row.original.cuenta}
-          </Text>
-        ),
-        Footer: () => 'Totales',
+        id: 'cuenta_y_descripcion',
+        header: '',
+        columns: [
+          {
+            accessorKey: 'cuenta',
+            header: 'Cuenta',
+            size: 130,
+            grow: false,
+            Cell: ({ row }) => (
+              <Text fz="sm" ff="monospace" fw={500}>
+                {row.original.cuenta}
+              </Text>
+            ),
+            Footer: () => 'Totales',
+          },
+          {
+            accessorKey: 'titulo',
+            header: 'Descripción',
+            grow: true,
+            mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
+          },
+        ],
       },
       {
-        accessorKey: 'titulo',
-        header: 'Título',
-        grow: true,
-        mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
+        id: 'periodo',
+        header: 'Periodo',
+        mantineTableHeadCellProps: { style: { justifyContent: 'center' } },
+        columns: [
+          columnaDeImporte('inicial', 'Saldo inicial', total),
+          columnaDeImporte('debe', 'Debe', total),
+          columnaDeImporte('haber', 'Haber', total),
+        ],
       },
-      columnaDeImporte('debe', 'Suma debe', total),
-      columnaDeImporte('haber', 'Suma haber', total),
-      columnaDeImporte('deudor', 'Saldo deudor', total),
-      columnaDeImporte('acreedor', 'Saldo acreedor', total),
+      {
+        id: 'acumulados',
+        header: 'Acumulados',
+        mantineTableHeadCellProps: { style: { justifyContent: 'center' } },
+        columns: [
+          columnaDeImporte('acumDebe', 'Debe', total),
+          columnaDeImporte('acumHaber', 'Haber', total),
+          columnaDeImporte('deudor', 'Saldo deudor', total),
+          columnaDeImporte('acreedor', 'Saldo acreedor', total),
+        ],
+      },
     ],
     [total],
   )
@@ -232,6 +273,12 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
           label="Aplicar equivalencias de cuentas"
           checked={conEquivalencias}
           onChange={(e) => setConEquivalencias(e.currentTarget.checked)}
+          pb={8}
+        />
+        <Checkbox
+          label="Sin regularización ni cierre"
+          checked={sinRegularizacion}
+          onChange={(e) => setSinRegularizacion(e.currentTarget.checked)}
           pb={8}
         />
         <Button onClick={verSumas} disabled={ejercicio === null} loading={cargando}>

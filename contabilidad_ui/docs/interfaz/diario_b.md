@@ -40,6 +40,33 @@ el cambio de plan contable** de `/equivalencias`.
 
 ## Sumas y saldos
 
-Del ejercicio de la cabecera, con Desde/Hasta opcionales, Ver (Todas / Del libro / Borradores) y «Aplicar equivalencias de cuentas» (desmarcada: si se marca, la línea cuya cuenta es exactamente una cuenta de origen se suma en su destino, con el título de destino). El SIF no tiene este informe para el diario B: al pulsar Ver se traen todas las líneas (tandas de mil) y se suman en el navegador con decimal.js (`sumasDiarioB.ts`, con test). Columnas Cuenta, Título (de la equivalencia o del plan en memoria; vacío si no se conoce), Suma debe, Suma haber, Saldo deudor, Saldo acreedor, y fila de totales fija abajo. No salen cuentas sin debe ni haber. «Agrupar por», con las mismas opciones que sumas y saldos (Grupo / Subgrupo / Cuenta de mayor / Subcuenta) pero entrando por Subcuenta: fuera de subcuenta se junta por los 1, 2 o 3 primeros dígitos, después de aplicar las equivalencias, y el título es el del plan para ese código (vacío si no está). Los totales son los mismos en cualquier nivel. Sin Excel: el de sumas y saldos lo genera el SIF y no sirve para el diario B.
+Con el formato del Excel del cliente. El SIF no tiene este informe para el
+diario B: al pulsar Ver se trae el ejercicio entero de la cabecera (tandas de
+mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
+
+- Filtros: Agrupar por (Grupo / Subgrupo / Cuenta de mayor / Subcuenta, entra
+  por Subcuenta), Desde, Hasta, Ver (Todas / Del libro / Borradores), «Aplicar
+  equivalencias de cuentas» y «Sin regularización ni cierre», las dos
+  desmarcadas.
+- Columnas: Cuenta, Descripción; **Periodo**: Saldo inicial, Debe, Haber;
+  **Acumulados**: Debe, Haber, Saldo deudor, Saldo acreedor. Fila de totales
+  fija abajo en todas.
+- El campo `diario` de la línea marca APERTURA, REGULARIZA y CIERRE (se compara
+  sin mayúsculas ni espacios).
+- Saldo inicial: debe − haber de las líneas APERTURA y de las anteriores a
+  Desde. Con signo, en rojo si es negativo.
+- Periodo: las líneas entre Desde y Hasta (sin fechas, el ejercicio), sin las
+  APERTURA. Las posteriores a Hasta no entran. Con alguna fecha puesta, una
+  línea sin fecha no se puede situar y no entra.
+- Acumulados: lo del saldo inicial más el periodo, debe y haber por separado;
+  de ahí los saldos deudor y acreedor.
+- «Sin regularización ni cierre» quita de todo el cálculo las REGULARIZA y
+  CIERRE.
+- Equivalencias: la línea cuya cuenta es exactamente una cuenta de origen se
+  suma en su destino, antes de agrupar. Descripción: la de destino de la
+  equivalencia o la del plan en memoria para ese código; vacía si no se conoce.
+- No salen cuentas sin importes. Debe, haber y saldo inicial totales son los
+  mismos en cualquier nivel.
+- Sin Excel: el de sumas y saldos lo genera el SIF y no sirve para el diario B.
 
 En las tres, el `detail` de un 400 se enseña tal cual.

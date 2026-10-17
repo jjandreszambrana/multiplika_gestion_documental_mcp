@@ -245,46 +245,66 @@ async def _todas(id_empresa: int, ruta: str, cuerpo: dict, clave: str) -> list[d
             return filas
 
 
+# Marcas del campo `diario` de las líneas del diario B (máx. 10 letras en el SIF)
+DIARIO_APERTURA, DIARIOS_FIN_DE_EJERCICIO = "APERTURA", {"REGULARIZA", "CIERRE"}
+
+
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
     contabilizado: Literal[0, 1] | None = None, aplicar_equivalencias: bool = False,
-    nivel: Literal[0, 1, 2, 3] = 0,
+    nivel: Literal[0, 1, 2, 3] = 0, sin_regularizacion_ni_cierre: bool = False,
 ) -> dict:
     """Sumas y saldos del diario B por cuenta, calculadas por el programa
-    sumando sus líneas (el SIF no lo da hecho). Fechas AAAA-MM-DD;
-    `contabilizado` 1 = del libro, 0 = borradores, sin él todas. Con
-    `aplicar_equivalencias`, lo de cada cuenta de origen se suma en su
-    cuenta de destino. `nivel` 0 subcuenta a subcuenta, 3 cuentas, 2
-    subgrupos, 1 grupos (junta por los primeros dígitos, después de las
-    equivalencias; los títulos solo salen en subcuentas). Llega como tabla (`columnas` y `filas`) con
-    `totales`; cita las cifras tal cual."""
+    sumando sus líneas (el SIF no lo da hecho). Por cuenta: saldo inicial
+    (con signo, debe − haber: el asiento de apertura más lo anterior a
+    `desde`), debe y haber del periodo (`desde`..`hasta`, sin la apertura),
+    debe y haber acumulados (inicial + periodo) y saldo deudor/acreedor.
+    Fechas AAAA-MM-DD; `contabilizado` 1 = del libro, 0 = borradores.
+    `sin_regularizacion_ni_cierre` descarta las líneas con diario
+    REGULARIZA o CIERRE. Con `aplicar_equivalencias`, lo de cada cuenta de
+    origen se suma en su cuenta de destino. `nivel` 0 subcuenta a
+    subcuenta, 3 cuentas, 2 subgrupos, 1 grupos (después de las
+    equivalencias; los títulos solo salen en subcuentas). Llega como tabla
+    (`columnas` y `filas`) con `totales`; cita las cifras tal cual."""
     lineas = await _todas(id_empresa, "/contabilidad/diario_b/listar", {
-        "ejercicio": ejercicio, "fecha_desde": desde, "fecha_hasta": hasta, "contabilizado": contabilizado,
+        "ejercicio": ejercicio, "fecha_hasta": hasta, "contabilizado": contabilizado,
     }, "lineas")
     destino: dict[str, tuple[str, str | None]] = {}
     if aplicar_equivalencias:
         for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
             destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
-    cuentas: dict[str, list] = {}
+    cuentas: dict[str, list] = {}  # cuenta → [título, debe inicial, haber inicial, debe periodo, haber periodo]
+    sumadas = 0
     for linea in lineas:
+        marca = (linea.get("diario") or "").strip().upper()
+        if sin_regularizacion_ni_cierre and marca in DIARIOS_FIN_DE_EJERCICIO:
+            continue
+        fecha = str(linea.get("fecha") or "")[:10]
+        if not fecha and (desde or hasta) and marca != DIARIO_APERTURA:
+            continue  # sin fecha no se sabe si va antes o después: como en la pantalla
+        sumadas += 1
         cuenta, titulo = destino.get(linea["cuenta"], (linea["cuenta"], None))
         if nivel:
             cuenta, titulo = cuenta[:nivel], None
-        fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0)])
-        fila[1] += Decimal(str(linea["debe"] or 0))
-        fila[2] += Decimal(str(linea["haber"] or 0))
-    filas = []
-    for cuenta, (titulo, debe, haber) in sorted(cuentas.items()):
-        if debe or haber:
-            saldo = debe - haber
-            filas.append([cuenta, titulo, float(debe), float(haber), float(max(saldo, 0)), float(max(-saldo, 0))])
-    total_debe = sum((c[1] for c in cuentas.values()), Decimal(0))
-    total_haber = sum((c[2] for c in cuentas.values()), Decimal(0))
+        fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0), Decimal(0), Decimal(0)])
+        inicial = marca == DIARIO_APERTURA or bool(desde and fecha < desde)
+        fila[1 if inicial else 3] += Decimal(str(linea["debe"] or 0))
+        fila[2 if inicial else 4] += Decimal(str(linea["haber"] or 0))
+    filas, totales = [], [Decimal(0)] * 7
+    for cuenta, (titulo, di, hi, dp, hp) in sorted(cuentas.items()):
+        if not (di or hi or dp or hp):
+            continue
+        da, ha = di + dp, hi + hp
+        valores = [di - hi, dp, hp, da, ha, max(da - ha, 0), max(ha - da, 0)]
+        totales = [t + v for t, v in zip(totales, valores)]
+        filas.append([cuenta, titulo, *map(float, valores)])
+    columnas = ["saldo_inicial", "debe_periodo", "haber_periodo", "debe_acumulado", "haber_acumulado", "saldo_deudor", "saldo_acreedor"]
     return {
-        "lineas_sumadas": len(lineas), "equivalencias_aplicadas": aplicar_equivalencias, "nivel": nivel,
-        "columnas": ["cuenta", "titulo", "debe", "haber", "saldo_deudor", "saldo_acreedor"], "filas": filas,
-        "totales": {"debe": float(total_debe), "haber": float(total_haber), "diferencia": float(total_debe - total_haber)},
+        "lineas_sumadas": sumadas, "equivalencias_aplicadas": aplicar_equivalencias, "nivel": nivel,
+        "sin_regularizacion_ni_cierre": sin_regularizacion_ni_cierre,
+        "columnas": ["cuenta", "titulo", *columnas], "filas": filas,
+        "totales": dict(zip(columnas, map(float, totales))),
     }
 
 
