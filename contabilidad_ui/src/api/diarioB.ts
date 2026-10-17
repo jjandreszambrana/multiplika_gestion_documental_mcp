@@ -86,6 +86,31 @@ export async function listarDiarioB(
   return { total, lineas: lineas.map(normalizar) }
 }
 
+/** Tope de líneas por llamada que admite el SIF en los dos listados. */
+const TOPE_POR_LLAMADA = 1000
+
+/**
+ * Todas las líneas que cumplen el filtro, pidiendo en tandas de mil hasta
+ * juntar el `total` que da el propio SIF. El corte por tanda vacía evita dar
+ * vueltas si devolviera menos de lo que dice.
+ */
+export async function diarioBEntero(
+  filtro: Omit<FiltroDiarioB, 'offset' | 'limit'>,
+  senal?: AbortSignal,
+): Promise<LineaDiarioB[]> {
+  const primera = await listarDiarioB({ ...filtro, offset: 0, limit: TOPE_POR_LLAMADA }, senal)
+  const lineas = [...primera.lineas]
+  while (lineas.length < primera.total) {
+    const siguiente = await listarDiarioB(
+      { ...filtro, offset: lineas.length, limit: TOPE_POR_LLAMADA },
+      senal,
+    )
+    if (siguiente.lineas.length === 0) break
+    lineas.push(...siguiente.lineas)
+  }
+  return lineas
+}
+
 /**
  * Si este SIF tiene el diario B. Solo Icomase lo tiene: en el resto la ruta no
  * existe (404) y el menú no lo enseña. Cualquier otro fallo lo deja a la
@@ -141,6 +166,18 @@ export function listarEquivalenciasCuenta(
     { ...(texto !== '' && { texto }), offset, limit },
     senal,
   )
+}
+
+/** Todas las equivalencias de la empresa, en tandas de mil. */
+export async function equivalenciasEnteras(senal?: AbortSignal): Promise<EquivalenciaCuenta[]> {
+  const primera = await listarEquivalenciasCuenta('', 0, TOPE_POR_LLAMADA, senal)
+  const todas = [...primera.equivalencias]
+  while (todas.length < primera.total) {
+    const siguiente = await listarEquivalenciasCuenta('', todas.length, TOPE_POR_LLAMADA, senal)
+    if (siguiente.equivalencias.length === 0) break
+    todas.push(...siguiente.equivalencias)
+  }
+  return todas
 }
 
 export function crearEquivalenciaCuenta(datos: DatosEquivalencia): Promise<EquivalenciaCuenta> {

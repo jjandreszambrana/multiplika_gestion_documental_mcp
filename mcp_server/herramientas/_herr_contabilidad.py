@@ -12,6 +12,7 @@ Solo existen para la IA en las GD con el apartado activado
 llama tiene algún acceso suyo al SIF: `ModuloContableMiddleware` oculta y rechaza
 las demás, para que sus definiciones no ocupen contexto donde no sirven."""
 
+from decimal import Decimal
 from typing import Literal
 
 from apps.mcp_server.core import mcp_app
@@ -232,6 +233,54 @@ async def equivalencias_cuentas_gd(id_empresa: int, texto: str | None = None, of
     diario B. `texto` busca por cuenta o título. Pagina de 50 en 50 con
     `offset` y trae `total`. Solo lectura; si el SIF no las tiene, dilo."""
     return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {"texto": texto, "offset": offset, "limit": LIMITE_APUNTES_IA})
+
+
+async def _todas(id_empresa: int, ruta: str, cuerpo: dict, clave: str) -> list[dict]:
+    """Todas las filas de un listado del SIF, de 1.000 en 1.000 (su máximo)."""
+    filas: list[dict] = []
+    while True:
+        pagina = await _sif(id_empresa, ruta, {**cuerpo, "offset": len(filas), "limit": 1000})
+        filas += pagina[clave]
+        if not pagina[clave] or len(filas) >= pagina["total"]:
+            return filas
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def diario_b_sumas_y_saldos_gd(
+    id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
+    contabilizado: Literal[0, 1] | None = None, aplicar_equivalencias: bool = False,
+) -> dict:
+    """Sumas y saldos del diario B por cuenta, calculadas por el programa
+    sumando sus líneas (el SIF no lo da hecho). Fechas AAAA-MM-DD;
+    `contabilizado` 1 = del libro, 0 = borradores, sin él todas. Con
+    `aplicar_equivalencias`, lo de cada cuenta de origen se suma en su
+    cuenta de destino. Llega como tabla (`columnas` y `filas`) con
+    `totales`; cita las cifras tal cual."""
+    lineas = await _todas(id_empresa, "/contabilidad/diario_b/listar", {
+        "ejercicio": ejercicio, "fecha_desde": desde, "fecha_hasta": hasta, "contabilizado": contabilizado,
+    }, "lineas")
+    destino: dict[str, tuple[str, str | None]] = {}
+    if aplicar_equivalencias:
+        for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
+            destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
+    cuentas: dict[str, list] = {}
+    for linea in lineas:
+        cuenta, titulo = destino.get(linea["cuenta"], (linea["cuenta"], None))
+        fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0)])
+        fila[1] += Decimal(str(linea["debe"] or 0))
+        fila[2] += Decimal(str(linea["haber"] or 0))
+    filas = []
+    for cuenta, (titulo, debe, haber) in sorted(cuentas.items()):
+        if debe or haber:
+            saldo = debe - haber
+            filas.append([cuenta, titulo, float(debe), float(haber), float(max(saldo, 0)), float(max(-saldo, 0))])
+    total_debe = sum((c[1] for c in cuentas.values()), Decimal(0))
+    total_haber = sum((c[2] for c in cuentas.values()), Decimal(0))
+    return {
+        "lineas_sumadas": len(lineas), "equivalencias_aplicadas": aplicar_equivalencias,
+        "columnas": ["cuenta", "titulo", "debe", "haber", "saldo_deudor", "saldo_acreedor"], "filas": filas,
+        "totales": {"debe": float(total_debe), "haber": float(total_haber), "diferencia": float(total_debe - total_haber)},
+    }
 
 
 # Las equivalencias son ajustes de cuentas, no asientos: la IA las escribe

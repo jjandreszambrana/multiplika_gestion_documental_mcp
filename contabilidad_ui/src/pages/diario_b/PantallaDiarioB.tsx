@@ -1,4 +1,5 @@
 import { Stack, Tabs, Title } from '@mantine/core'
+import SumasSaldosDiarioB from './SumasSaldosDiarioB'
 import TablaDiarioB from './TablaDiarioB'
 import TablaEquivalencias from './TablaEquivalencias'
 
@@ -25,12 +26,18 @@ export default function PantallaDiarioB({ ejercicio, nivel, ancho }: Props) {
           <Tabs.Tab value="equivalencias" fw={600} fz="sm" px="lg">
             Equivalencias de cuentas
           </Tabs.Tab>
+          <Tabs.Tab value="sumas_saldos" fw={600} fz="sm" px="lg">
+            Sumas y saldos
+          </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="diario_b" pt="md">
           <TablaDiarioB ejercicio={ejercicio} nivel={nivel} ancho={ancho} />
         </Tabs.Panel>
         <Tabs.Panel value="equivalencias" pt="md">
           <TablaEquivalencias nivel={nivel} ancho={ancho} />
+        </Tabs.Panel>
+        <Tabs.Panel value="sumas_saldos" pt="md">
+          <SumasSaldosDiarioB ejercicio={ejercicio} />
         </Tabs.Panel>
       </Tabs>
     </Stack>

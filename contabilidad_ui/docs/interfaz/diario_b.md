@@ -5,8 +5,8 @@ En el menú, bajo `Diario → Diario B y equivalencias`. Pedido por el SIF en
 a `/diario_b/listar` y, si la ruta no existe (404), la entrada no sale. Hoy solo
 lo tiene sif.icomase.com.
 
-Una pantalla con dos pestañas, cada una mantenimiento directo de una tabla de la
-empresa. Las rutas, cuerpos y respuestas, en el apartado 17 septies de la guía
+Una pantalla con tres pestañas: las dos primeras, mantenimiento directo de una
+tabla de la empresa; la tercera, sumas y saldos del diario B. Las rutas, cuerpos y respuestas, en el apartado 17 septies de la guía
 de la API. Los tipos están escritos a mano en `src/api/diarioB.ts` porque
 `types.ts` sale del OpenAPI de facturae, que aún no los tiene.
 
@@ -38,4 +38,8 @@ el cambio de plan contable** de `/equivalencias`.
 - Formulario con los cinco campos; las dos cuentas, obligatorias.
 - Ver, `consulta`. Crear, cambiar y borrar, `cierre`.
 
-En las dos, el `detail` de un 400 se enseña tal cual.
+## Sumas y saldos
+
+Del ejercicio de la cabecera, con Desde/Hasta opcionales, Ver (Todas / Del libro / Borradores) y «Aplicar equivalencias de cuentas» (desmarcada: si se marca, la línea cuya cuenta es exactamente una cuenta de origen se suma en su destino, con el título de destino). El SIF no tiene este informe para el diario B: al pulsar Ver se traen todas las líneas (tandas de mil) y se suman en el navegador con decimal.js (`sumasDiarioB.ts`, con test). Columnas Cuenta, Título (de la equivalencia o del plan en memoria; vacío si no se conoce), Suma debe, Suma haber, Saldo deudor, Saldo acreedor, y fila de totales fija abajo. No salen cuentas sin debe ni haber. Sin Excel: el de sumas y saldos lo genera el SIF y no sirve para el diario B.
+
+En las tres, el `detail` de un 400 se enseña tal cual.
