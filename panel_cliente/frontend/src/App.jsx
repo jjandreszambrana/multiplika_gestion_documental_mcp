@@ -28,6 +28,27 @@ function anchoChatGuardado() {
   }
 }
 
+// Último apartado visitado, por proyecto: al volver a entrar se abre ahí
+// en vez de en Inicio. Solo el apartado, no la ficha que hubiera abierta.
+const CLAVE_VISTAS = "gd_panel_ultima_vista"
+
+function vistaGuardada(idProyecto) {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_VISTAS) || "{}")[idProyecto] || "inicio"
+  } catch {
+    return "inicio"
+  }
+}
+
+function guardarVista(idProyecto, vista) {
+  try {
+    const vistas = JSON.parse(localStorage.getItem(CLAVE_VISTAS) || "{}")
+    localStorage.setItem(CLAVE_VISTAS, JSON.stringify({ ...vistas, [idProyecto]: vista }))
+  } catch {
+    // sin almacenamiento: se entra en Inicio como siempre
+  }
+}
+
 // Deja siempre sitio para el menú y un mínimo de contenido a la izquierda.
 function limitarAnchoChat(ancho) {
   return Math.round(Math.max(ANCHO_CHAT_MINIMO, Math.min(ancho, window.innerWidth - 252 - 360)))
@@ -142,6 +163,9 @@ export default function App() {
       .then((p) => {
         localStorage.setItem(CLAVE_PROYECTO, p.id)
         setProyecto(p)
+        // El asesor contable solo si el módulo sigue activo en ese proyecto
+        const ultima = vistaGuardada(p.id)
+        navegar(ultima === "asesor-contable" && !p.modulo_contable ? "inicio" : ultima)
       })
       .catch((err) => setError(err.message))
   }
@@ -276,6 +300,10 @@ export default function App() {
     if (nuevaVista === "asesor-contable") setContaMontada(true)
     setVista(nuevaVista)
   }
+
+  useEffect(() => {
+    if (proyecto) guardarVista(proyecto.id, vista)
+  }, [proyecto, vista])
 
   function verProgramacion(idProgramacion) {
     navegar("programaciones")
