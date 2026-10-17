@@ -12,9 +12,8 @@ const ROLES_API_KEY = [
   { value: "5", label: "GD enlazada (otra gestión documental que consulta esta)" },
 ]
 
-// De quién es la key: de todos (lo normal) o de una persona, que entonces
-// ve con ella también lo suyo — p.ej. sus notas privadas del bloc de notas.
-const DE_TODOS = ""
+// De quién es la key: siempre de una persona (salvo la de GD enlazada), que
+// ve con ella también lo suyo — sus accesos al SIF, sus notas privadas.
 const ID_ROL_GD_ENLAZADA = "5"
 
 // El nombre es lo ÚNICO por lo que se puede reconocer una key una vez
@@ -84,7 +83,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
   const [nombreNueva, setNombreNueva] = useState("")
   const [idRolNueva, setIdRolNueva] = useState(ID_ROL_OPERADOR)
   const [personas, setPersonas] = useState([])
-  const [idUsuarioNueva, setIdUsuarioNueva] = useState(DE_TODOS)
+  const [idUsuarioNueva, setIdUsuarioNueva] = useState(null)
   const [emitiendo, setEmitiendo] = useState(false)
   const [keyRecienEmitida, setKeyRecienEmitida] = useState(null)
 
@@ -114,7 +113,7 @@ export default function ApiKeys({ proyecto, onVolver }) {
       const nueva = await api.emitirApiKey(proyecto.id, nombreNueva.trim(), Number(idRolNueva), idUsuario)
       setKeyRecienEmitida(nueva.api_key)
       setNombreNueva("")
-      setIdUsuarioNueva(DE_TODOS)
+      setIdUsuarioNueva(null)
       await recargar()
     } catch (err) {
       setError(err.message)
@@ -190,7 +189,9 @@ export default function ApiKeys({ proyecto, onVolver }) {
         {idRolNueva !== ID_ROL_GD_ENLAZADA && (
           <Select
             aria-label="De quién es la key"
-            data={[{ value: DE_TODOS, label: "De todos" }, ...personas.map((p) => ({ value: String(p.id), label: p.nombre }))]}
+            data={personas.map((p) => ({ value: String(p.id), label: p.nombre }))}
+            placeholder="De quién es"
+            required
             value={idUsuarioNueva}
             onChange={setIdUsuarioNueva}
             allowDeselect={false}
