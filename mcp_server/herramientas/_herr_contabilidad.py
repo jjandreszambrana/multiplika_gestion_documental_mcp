@@ -231,7 +231,48 @@ async def equivalencias_cuentas_gd(id_empresa: int, texto: str | None = None, of
     cuenta de destino, con sus títulos y observaciones), las que acompañan al
     diario B. `texto` busca por cuenta o título. Pagina de 50 en 50 con
     `offset` y trae `total`. Solo lectura; si el SIF no las tiene, dilo."""
-    return await _sif(id_empresa, "/contabilidad/diario_equivalencias/listar", {"texto": texto, "offset": offset, "limit": LIMITE_APUNTES_IA})
+    return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {"texto": texto, "offset": offset, "limit": LIMITE_APUNTES_IA})
+
+
+# Las equivalencias son ajustes de cuentas, no asientos: la IA las escribe
+# directamente en el SIF, sin pasar por Propuestas (decisión del usuario, 2026-10-17).
+RUTA_EQUIVALENCIAS = "/contabilidad/diario_equivalencias"
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def crear_equivalencia_cuenta_gd(
+    id_empresa: int, cuenta_origen: str, cuenta_destino: str,
+    titulo_origen: str | None = None, titulo_destino: str | None = None, observaciones: str | None = None,
+) -> dict:
+    """Crea en el SIF una equivalencia de cuentas de la empresa (cuenta de
+    origen → cuenta de destino). Se guarda al momento, sin propuesta.
+    Mira antes con `equivalencias_cuentas_gd` que no exista ya, y con
+    `buscar_cuenta_contable_gd` que la cuenta de destino existe."""
+    return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/crear", {
+        "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
+        "titulo_destino": titulo_destino, "observaciones": observaciones,
+    })
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def corregir_equivalencia_cuenta_gd(
+    id_empresa: int, id: int, cuenta_origen: str | None = None, cuenta_destino: str | None = None,
+    titulo_origen: str | None = None, titulo_destino: str | None = None, observaciones: str | None = None,
+) -> dict:
+    """Cambia una equivalencia de cuentas ya guardada (`id` de
+    `equivalencias_cuentas_gd`). Pasa solo los campos que cambian."""
+    return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/editar", {
+        "id": id, "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
+        "titulo_destino": titulo_destino, "observaciones": observaciones,
+    })
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def eliminar_equivalencia_cuenta_gd(id_empresa: int, id: int) -> dict:
+    """Borra una equivalencia de cuentas (`id` de `equivalencias_cuentas_gd`).
+    No se puede deshacer: confírmalo antes con el usuario."""
+    await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/eliminar", {"id": id})
+    return {"eliminada": id}
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
