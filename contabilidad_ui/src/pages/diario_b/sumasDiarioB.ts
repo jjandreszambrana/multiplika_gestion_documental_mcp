@@ -34,6 +34,12 @@ export interface OpcionesSumasDiarioB {
   hasta: string
   /** Descarta las líneas de regularización y de cierre. */
   sinRegularizacion: boolean
+  /**
+   * Con una lista, solo entran las líneas cuya cuenta no es la de origen de
+   * ninguna de ellas. Nulo: sin este filtro. Va aparte de `equivalencias`
+   * porque se puede filtrar sin aplicarlas.
+   */
+  soloSinEquivalencia?: EquivalenciaCuenta[] | null
 }
 
 const CERO = new Decimal(0)
@@ -131,10 +137,16 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
  * cierre vienen en cuentas de 4 cifras, p. ej. 1130) se completa con ceros
  * hasta subcuenta (11300000), para que solo salgan subcuentas. Las cuentas sin
  * importes no salen; los totales son los de todas las líneas que entran.
+ *
+ * Con `soloSinEquivalencia` entran solo las líneas de cuentas sin equivalencia.
+ * La clasificación de asientos se hace igual con todas las líneas.
  */
 export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiarioB): SumasDiarioB {
   const { equivalencias, tituloDelPlan, nivel, desde, hasta, sinRegularizacion } = opciones
   const destinoDe = new Map((equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
+  const conEquivalencia = opciones.soloSinEquivalencia
+    ? new Set(opciones.soloSinEquivalencia.map((e) => e.cuenta_origen))
+    : null
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => l.cuenta.trim().length))
   const clase = clasificarAsientos(lineas, largoSubcuenta)
@@ -157,6 +169,8 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
 
     const original = linea.cuenta.trim()
     const completa = original.padEnd(largoSubcuenta, '0')
+    // Se compara igual que al aplicar equivalencias: tal cual o con ceros.
+    if (conEquivalencia && (conEquivalencia.has(original) || conEquivalencia.has(completa))) continue
     const equivalencia = destinoDe.get(original) ?? destinoDe.get(completa)
     const destino = (equivalencia?.cuenta_destino ?? original).padEnd(largoSubcuenta, '0')
     const cuenta = nivel === 0 ? destino : destino.slice(0, nivel)

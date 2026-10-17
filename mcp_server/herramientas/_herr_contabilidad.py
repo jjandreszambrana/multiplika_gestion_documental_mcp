@@ -314,6 +314,7 @@ async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
     contabilizado: Literal[0, 1] | None = None, aplicar_equivalencias: bool = False,
     nivel: Literal[0, 1, 2, 3] = 0, sin_regularizacion_ni_cierre: bool = False,
+    solo_sin_equivalencia: bool = False,
 ) -> dict:
     """Sumas y saldos del diario B por cuenta, calculadas por el programa
     sumando sus líneas (el SIF no lo da hecho). Por cuenta: saldo inicial
@@ -323,7 +324,9 @@ async def diario_b_sumas_y_saldos_gd(
     Fechas AAAA-MM-DD; `contabilizado` 1 = del libro, 0 = borradores.
     La apertura, la regularización y el cierre los reconoce el programa por
     lo que hacen (o por la marca APERTURA/REGULARIZA/CIERRE en `diario`, que
-    manda); `sin_regularizacion_ni_cierre` descarta esos dos. Con `aplicar_equivalencias`, lo de cada cuenta de
+    manda); `sin_regularizacion_ni_cierre` descarta esos dos.
+    `solo_sin_equivalencia` deja solo las cuentas que no son cuenta de
+    origen de ninguna equivalencia (las que faltan por emparejar). Con `aplicar_equivalencias`, lo de cada cuenta de
     origen se suma en su cuenta de destino. `nivel` 0 subcuenta a
     subcuenta, 3 cuentas, 2 subgrupos, 1 grupos (después de las
     equivalencias; los títulos solo salen en subcuentas). Llega como tabla
@@ -332,7 +335,7 @@ async def diario_b_sumas_y_saldos_gd(
         "ejercicio": ejercicio, "fecha_hasta": hasta, "contabilizado": contabilizado,
     }, "lineas")
     destino: dict[str, tuple[str, str | None]] = {}
-    if aplicar_equivalencias:
+    if aplicar_equivalencias or solo_sin_equivalencia:
         for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
             destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
     # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
@@ -348,9 +351,12 @@ async def diario_b_sumas_y_saldos_gd(
         fecha = str(linea.get("fecha") or "")[:10]
         if not fecha and (desde or hasta) and marca != DIARIO_APERTURA:
             continue  # sin fecha no se sabe si va antes o después: como en la pantalla
-        sumadas += 1
         original = linea["cuenta"].strip()
-        cuenta, titulo = destino.get(original) or destino.get(original.ljust(largo, "0")) or (original, None)
+        equivalencia = destino.get(original) or destino.get(original.ljust(largo, "0"))
+        if solo_sin_equivalencia and equivalencia:
+            continue
+        sumadas += 1
+        cuenta, titulo = (equivalencia if aplicar_equivalencias else None) or (original, None)
         cuenta = cuenta.ljust(largo, "0")
         if nivel:
             cuenta, titulo = cuenta[:nivel], None
@@ -369,7 +375,7 @@ async def diario_b_sumas_y_saldos_gd(
     columnas = ["saldo_inicial", "debe_periodo", "haber_periodo", "debe_acumulado", "haber_acumulado", "saldo_deudor", "saldo_acreedor"]
     return {
         "lineas_sumadas": sumadas, "equivalencias_aplicadas": aplicar_equivalencias, "nivel": nivel,
-        "sin_regularizacion_ni_cierre": sin_regularizacion_ni_cierre,
+        "sin_regularizacion_ni_cierre": sin_regularizacion_ni_cierre, "solo_sin_equivalencia": solo_sin_equivalencia,
         "columnas": ["cuenta", "titulo", *columnas], "filas": filas,
         "totales": dict(zip(columnas, map(float, totales))),
     }

@@ -57,8 +57,8 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
 
 - Filtros: Agrupar por (Grupo / Subgrupo / Cuenta de mayor / Subcuenta, entra
   por Subcuenta), Desde, Hasta, Ver (Todas / Del libro / Borradores), «Aplicar
-  equivalencias de cuentas» y «Sin regularización ni cierre», las dos
-  desmarcadas.
+  equivalencias de cuentas», «Solo cuentas sin equivalencia» y «Sin
+  regularización ni cierre», las tres desmarcadas.
 - Columnas: Cuenta, Descripción; **Periodo**: Saldo inicial, Debe, Haber;
   **Acumulados**: Debe, Haber, Saldo deudor, Saldo acreedor. Fila de totales
   fija abajo en todas.
@@ -82,6 +82,12 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
 - Equivalencias: la línea cuya cuenta es exactamente una cuenta de origen se
   suma en su destino, antes de agrupar. Descripción: la de destino de la
   equivalencia o la del plan en memoria para ese código; vacía si no se conoce.
+- «Solo cuentas sin equivalencia» deja en el cálculo solo las líneas cuya cuenta
+  no es la de origen de ninguna equivalencia (comparada como al aplicarlas: tal
+  cual o completada con ceros). Para saberlo se traen las equivalencias aunque
+  no se apliquen. Vale con cualquier agrupación y con el resto de opciones; el
+  saldo inicial y los totales salen solo de las líneas que entran. Marcada junto
+  con «Aplicar equivalencias» da lo mismo que sin aplicarlas, y no se impide.
 - No salen cuentas sin importes. Debe, haber y saldo inicial totales son los
   mismos en cualquier nivel.
 - Sin Excel: el de sumas y saldos lo genera el SIF y no sirve para el diario B.

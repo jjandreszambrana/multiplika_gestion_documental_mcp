@@ -243,3 +243,53 @@ describe('clasificarAsientos', () => {
     expect(clasificarAsientos(conMarca, 8).has(4)).toBe(false)
   })
 })
+
+describe('sumarDiarioB solo con cuentas sin equivalencia', () => {
+  const CORTA: EquivalenciaCuenta = {
+    ...EQUIVALENCIA,
+    id: 2,
+    cuenta_origen: '431000000',
+    cuenta_destino: '431000099',
+  }
+  const LINEAS = () => [
+    linea('430000001', '50', '0', '2026-02-01'),
+    linea('430000099', '25.50', '0', '2026-03-10'),
+    linea('4310', '10', '0', '2026-03-10'),
+    linea('431000001', '4', '0', '2026-03-10'),
+    linea('570000000', '0', '89.50', '2026-03-10'),
+  ]
+
+  it('deja fuera las cuentas de origen, tal cual o completadas con ceros', () => {
+    const r = sumarDiarioB(LINEAS(), opciones({ soloSinEquivalencia: [EQUIVALENCIA, CORTA] }))
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430000099', '431000001', '570000000'])
+    expect(f2(r.total.debe)).toBe('29.50')
+    expect(f2(r.total.haber)).toBe('89.50')
+  })
+
+  it('con «desde», el saldo inicial sale solo de las líneas que entran', () => {
+    const r = sumarDiarioB(
+      LINEAS(),
+      opciones({ soloSinEquivalencia: [EQUIVALENCIA], desde: '2026-03-01' }),
+    )
+    expect(f2(r.total.inicial)).toBe('0.00')
+    const sin = sumarDiarioB(LINEAS(), opciones({ desde: '2026-03-01' }))
+    expect(f2(sin.total.inicial)).toBe('50.00')
+  })
+
+  it('agrupando, junta solo lo que entra', () => {
+    const r = sumarDiarioB(LINEAS(), opciones({ soloSinEquivalencia: [EQUIVALENCIA], nivel: 3 }))
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430', '431', '570'])
+    expect(f2(r.cuentas[0].debe)).toBe('25.50')
+  })
+
+  it('aplicando además las equivalencias da lo mismo que sin aplicarlas', () => {
+    const solo = sumarDiarioB(LINEAS(), opciones({ soloSinEquivalencia: [EQUIVALENCIA] }))
+    const ambas = sumarDiarioB(
+      LINEAS(),
+      opciones({ soloSinEquivalencia: [EQUIVALENCIA], equivalencias: [EQUIVALENCIA] }),
+    )
+    expect(ambas.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)])).toEqual(
+      solo.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)]),
+    )
+  })
+})

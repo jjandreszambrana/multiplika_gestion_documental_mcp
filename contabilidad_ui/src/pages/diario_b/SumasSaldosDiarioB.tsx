@@ -41,6 +41,7 @@ interface Consulta {
   conEquivalencias: boolean
   nivel: NivelDeBalance
   sinRegularizacion: boolean
+  soloSinEquivalencia: boolean
 }
 
 /** Los mismos que en sumas y saldos. Aquí entra por subcuenta, que es el detalle. */
@@ -107,6 +108,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
   const [conEquivalencias, setConEquivalencias] = useState(false)
   const [nivel, setNivel] = useState<NivelDeBalance>(0)
   const [sinRegularizacion, setSinRegularizacion] = useState(false)
+  const [soloSinEquivalencia, setSoloSinEquivalencia] = useState(false)
   const [consulta, setConsulta] = useState<Consulta | null>(null)
   const [sumas, setSumas] = useState<SumasDiarioB | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -131,12 +133,16 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
         },
         corte.signal,
       ),
-      consulta.conEquivalencias ? equivalenciasEnteras(corte.signal) : Promise.resolve(null),
+      // Para filtrar por las que no tienen equivalencia también hacen falta.
+      consulta.conEquivalencias || consulta.soloSinEquivalencia
+        ? equivalenciasEnteras(corte.signal)
+        : Promise.resolve(null),
     ])
       .then(([lineas, equivalencias]) => {
         setSumas(
           sumarDiarioB(lineas, {
-            equivalencias,
+            equivalencias: consulta.conEquivalencias ? equivalencias : null,
+            soloSinEquivalencia: consulta.soloSinEquivalencia ? equivalencias : null,
             tituloDelPlan: (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
             nivel: consulta.nivel,
             desde: consulta.desde,
@@ -167,6 +173,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
       conEquivalencias,
       nivel,
       sinRegularizacion,
+      soloSinEquivalencia,
     })
   }
 
@@ -273,6 +280,12 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
           label="Aplicar equivalencias de cuentas"
           checked={conEquivalencias}
           onChange={(e) => setConEquivalencias(e.currentTarget.checked)}
+          pb={8}
+        />
+        <Checkbox
+          label="Solo cuentas sin equivalencia"
+          checked={soloSinEquivalencia}
+          onChange={(e) => setSoloSinEquivalencia(e.currentTarget.checked)}
           pb={8}
         />
         <Checkbox
