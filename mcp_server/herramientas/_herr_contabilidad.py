@@ -12,6 +12,7 @@ Solo existen para la IA en las GD con el apartado activado
 llama tiene algún acceso suyo al SIF: `ModuloContableMiddleware` oculta y rechaza
 las demás, para que sus definiciones no ocupen contexto donde no sirven."""
 
+from collections import defaultdict
 from decimal import Decimal
 from typing import Literal
 
@@ -249,6 +250,58 @@ async def _todas(id_empresa: int, ruta: str, cuerpo: dict, clave: str) -> list[d
 DIARIO_APERTURA, DIARIOS_FIN_DE_EJERCICIO = "APERTURA", {"REGULARIZA", "CIERRE"}
 
 
+MARCAS_DIARIO_B = ("APERTURA", "REGULARIZA", "CIERRE")
+
+
+def clasificar_asientos(lineas: list[dict], largo: int) -> dict[int, str]:
+    """Qué asiento es la apertura, la regularización y el cierre, por lo que
+    hacen (no hay otra marca fiable): sirve para cualquier empresa. Si una
+    línea trae una de estas marcas en `diario`, manda la marca."""
+    por_asiento: dict[int, list[dict]] = defaultdict(list)
+    for linea in lineas:
+        por_asiento[linea["asiento"]].append(linea)
+    marcas: dict[int, str] = {}
+    for asiento, ls in por_asiento.items():
+        for linea in ls:
+            marca = (linea.get("diario") or "").strip().upper()
+            if marca in MARCAS_DIARIO_B:
+                marcas[asiento] = marca
+                break
+    if not por_asiento:
+        return marcas
+    numeros = sorted(por_asiento)
+    cuenta = lambda l: l["cuenta"].strip().ljust(largo, "0")
+    fecha = lambda l: str(l.get("fecha") or "")[:10]
+    # Apertura: el primer asiento, del primer día, solo con cuentas de balance.
+    if "APERTURA" not in marcas.values():
+        primero = por_asiento[numeros[0]]
+        primer_dia = min((fecha(l) for l in lineas if fecha(l)), default="")
+        if (all(fecha(l) == primer_dia for l in primero) and all(cuenta(l)[:1] in "12345" for l in primero)
+                and any(cuenta(l)[:1] == "1" for l in primero)):
+            marcas.setdefault(numeros[0], "APERTURA")
+    # Regularización: solo gastos e ingresos (6 y 7) contra la 129.
+    if "REGULARIZA" not in marcas.values():
+        for asiento in numeros:
+            ls = por_asiento[asiento]
+            if (asiento not in marcas and all(cuenta(l)[:1] in "67" or cuenta(l).startswith("129") for l in ls)
+                    and any(cuenta(l).startswith("129") for l in ls) and any(cuenta(l)[:1] in "67" for l in ls)):
+                marcas[asiento] = "REGULARIZA"
+    # Cierre: el último asiento, del último día, si deja a cero casi todas
+    # (90 %) las cuentas que toca: un cierre mal cuadrado con su apertura
+    # deja alguna colgando y sigue siendo el cierre.
+    ultimo_dia = max((fecha(l) for l in lineas if fecha(l)), default="")
+    if ("CIERRE" not in marcas.values() and numeros[-1] not in marcas
+            and all(fecha(l) == ultimo_dia for l in por_asiento[numeros[-1]])):
+        saldo: dict[str, Decimal] = defaultdict(Decimal)
+        for linea in lineas:
+            saldo[cuenta(linea)] += Decimal(str(linea["debe"] or 0)) - Decimal(str(linea["haber"] or 0))
+        tocadas = {cuenta(l) for l in por_asiento[numeros[-1]]}
+        a_cero = sum(1 for c in tocadas if abs(saldo[c]) < Decimal("0.005"))
+        if len(tocadas) > 2 and a_cero >= len(tocadas) * Decimal("0.9"):
+            marcas[numeros[-1]] = "CIERRE"
+    return marcas
+
+
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
@@ -261,8 +314,9 @@ async def diario_b_sumas_y_saldos_gd(
     `desde`), debe y haber del periodo (`desde`..`hasta`, sin la apertura),
     debe y haber acumulados (inicial + periodo) y saldo deudor/acreedor.
     Fechas AAAA-MM-DD; `contabilizado` 1 = del libro, 0 = borradores.
-    `sin_regularizacion_ni_cierre` descarta las líneas con diario
-    REGULARIZA o CIERRE. Con `aplicar_equivalencias`, lo de cada cuenta de
+    La apertura, la regularización y el cierre los reconoce el programa por
+    lo que hacen (o por la marca APERTURA/REGULARIZA/CIERRE en `diario`, que
+    manda); `sin_regularizacion_ni_cierre` descarta esos dos. Con `aplicar_equivalencias`, lo de cada cuenta de
     origen se suma en su cuenta de destino. `nivel` 0 subcuenta a
     subcuenta, 3 cuentas, 2 subgrupos, 1 grupos (después de las
     equivalencias; los títulos solo salen en subcuentas). Llega como tabla
@@ -277,10 +331,11 @@ async def diario_b_sumas_y_saldos_gd(
     # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
     # cifras, p. ej. 1130) se completan con ceros: 1130 → 11300000.
     largo = max((len(l["cuenta"].strip()) for l in lineas), default=0)
+    clase = clasificar_asientos(lineas, largo)
     cuentas: dict[str, list] = {}  # cuenta → [título, debe inicial, haber inicial, debe periodo, haber periodo]
     sumadas = 0
     for linea in lineas:
-        marca = (linea.get("diario") or "").strip().upper()
+        marca = clase.get(linea["asiento"], "")
         if sin_regularizacion_ni_cierre and marca in DIARIOS_FIN_DE_EJERCICIO:
             continue
         fecha = str(linea.get("fecha") or "")[:10]

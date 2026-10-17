@@ -51,9 +51,15 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
 - Columnas: Cuenta, Descripción; **Periodo**: Saldo inicial, Debe, Haber;
   **Acumulados**: Debe, Haber, Saldo deudor, Saldo acreedor. Fila de totales
   fija abajo en todas.
-- El campo `diario` de la línea marca APERTURA, REGULARIZA y CIERRE (se compara
-  sin mayúsculas ni espacios).
-- Saldo inicial: debe − haber de las líneas APERTURA y de las anteriores a
+- La apertura, la regularización y el cierre los reconoce el programa por lo que
+  hace cada asiento, para cualquier empresa: apertura = primer asiento, del
+  primer día, solo con cuentas de balance; regularización = solo grupos 6 y 7
+  contra la 129; cierre = último asiento, del último día, que deja a cero el
+  90 % o más de las cuentas que toca. Si una línea trae APERTURA, REGULARIZA o
+  CIERRE en `diario`, manda la marca.
+- Por subcuenta, una cuenta más corta (la apertura y el cierre suelen venir en
+  4 cifras, p. ej. 1130) se completa con ceros hasta subcuenta (11300000).
+- Saldo inicial: debe − haber de la apertura y de las líneas anteriores a
   Desde. Con signo, en rojo si es negativo.
 - Periodo: las líneas entre Desde y Hasta (sin fechas, el ejercicio), sin las
   APERTURA. Las posteriores a Hasta no entran. Con alguna fecha puesta, una

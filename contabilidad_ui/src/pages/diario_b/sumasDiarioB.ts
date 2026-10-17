@@ -43,12 +43,77 @@ function marcaDe(linea: LineaDiarioB): string {
   return (linea.diario ?? '').replace(/\s/g, '').toUpperCase()
 }
 
+const MARCAS = ['APERTURA', 'REGULARIZA', 'CIERRE']
+
+/**
+ * Qué asiento es la apertura, la regularización y el cierre, por lo que hacen
+ * (en el diario B no hay otra marca fiable): sirve para cualquier empresa. Si
+ * una línea trae APERTURA, REGULARIZA o CIERRE en `diario`, manda la marca.
+ * Igual que `clasificar_asientos` de las herramientas MCP de la GD.
+ *
+ * - Apertura: el primer asiento, del primer día, solo con cuentas de balance
+ *   (grupos 1 a 5) y alguna del grupo 1.
+ * - Regularización: solo gastos e ingresos (6 y 7) contra la 129.
+ * - Cierre: el último asiento, del último día, si deja a cero el 90 % o más de
+ *   las cuentas que toca (un cierre mal cuadrado con su apertura deja alguna
+ *   colgando y sigue siendo el cierre).
+ */
+export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<number, string> {
+  const porAsiento = new Map<number, LineaDiarioB[]>()
+  for (const l of lineas) porAsiento.set(l.asiento, [...(porAsiento.get(l.asiento) ?? []), l])
+  const marcas = new Map<number, string>()
+  for (const [asiento, ls] of porAsiento) {
+    const marca = ls.map(marcaDe).find((m) => MARCAS.includes(m))
+    if (marca) marcas.set(asiento, marca)
+  }
+  if (porAsiento.size === 0) return marcas
+  const numeros = [...porAsiento.keys()].sort((a, b) => a - b)
+  const cuenta = (l: LineaDiarioB) => l.cuenta.trim().padEnd(largo, '0')
+  const fecha = (l: LineaDiarioB) => (l.fecha ?? '').slice(0, 10)
+  const fechas = lineas.map(fecha).filter((f) => f !== '').sort()
+  const hay = (m: string) => [...marcas.values()].includes(m)
+
+  const primero = porAsiento.get(numeros[0])!
+  if (
+    !hay('APERTURA') &&
+    primero.every((l) => fecha(l) === fechas[0] && '12345'.includes(cuenta(l)[0])) &&
+    primero.some((l) => cuenta(l)[0] === '1')
+  ) {
+    marcas.set(numeros[0], 'APERTURA')
+  }
+
+  if (!hay('REGULARIZA')) {
+    for (const asiento of numeros) {
+      const ls = porAsiento.get(asiento)!
+      if (
+        !marcas.has(asiento) &&
+        ls.every((l) => '67'.includes(cuenta(l)[0]) || cuenta(l).startsWith('129')) &&
+        ls.some((l) => cuenta(l).startsWith('129')) &&
+        ls.some((l) => '67'.includes(cuenta(l)[0]))
+      ) {
+        marcas.set(asiento, 'REGULARIZA')
+      }
+    }
+  }
+
+  const ultimo = numeros[numeros.length - 1]
+  const ultimas = porAsiento.get(ultimo)!
+  if (!hay('CIERRE') && !marcas.has(ultimo) && ultimas.every((l) => fecha(l) === fechas[fechas.length - 1])) {
+    const saldo = new Map<string, Decimal>()
+    for (const l of lineas) saldo.set(cuenta(l), (saldo.get(cuenta(l)) ?? CERO).plus(l.debe).minus(l.haber))
+    const tocadas = new Set(ultimas.map(cuenta))
+    const aCero = [...tocadas].filter((c) => saldo.get(c)!.abs().lt('0.005')).length
+    if (tocadas.size > 2 && aCero >= tocadas.size * 0.9) marcas.set(ultimo, 'CIERRE')
+  }
+  return marcas
+}
+
 /**
  * Sumas y saldos del diario B, con el formato del Excel del cliente. El SIF no
  * tiene este informe para el diario B, así que se suman aquí las líneas del
  * ejercicio entero, que hacen falta para el saldo inicial.
  *
- * - Saldo inicial: las líneas APERTURA y las de fecha anterior a `desde`.
+ * - Saldo inicial: la apertura (ver `clasificarAsientos`) y lo anterior a `desde`.
  * - Periodo: entre `desde` y `hasta`, sin las APERTURA. Con alguna fecha puesta,
  *   una línea sin fecha no se puede situar y no entra.
  * - Acumulados: inicial más periodo, debe y haber por separado; de ahí salen
@@ -67,13 +132,14 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   const destinoDe = new Map((equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => l.cuenta.trim().length))
+  const clase = clasificarAsientos(lineas, largoSubcuenta)
   const porCuenta = new Map<
     string,
     { titulo: string; iniDebe: Decimal; iniHaber: Decimal; debe: Decimal; haber: Decimal }
   >()
 
   for (const linea of lineas) {
-    const marca = marcaDe(linea)
+    const marca = clase.get(linea.asiento) ?? ''
     if (sinRegularizacion && (marca === 'REGULARIZA' || marca === 'CIERRE')) continue
 
     const fecha = (linea.fecha ?? '').slice(0, 10)

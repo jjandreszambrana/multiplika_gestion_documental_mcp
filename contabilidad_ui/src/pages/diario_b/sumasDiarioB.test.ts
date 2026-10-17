@@ -1,7 +1,11 @@
 import Decimal from 'decimal.js'
 import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta, LineaDiarioB } from '../../api/diarioB'
-import { sumarDiarioB, type OpcionesSumasDiarioB } from './sumasDiarioB'
+import { clasificarAsientos, sumarDiarioB, type OpcionesSumasDiarioB } from './sumasDiarioB'
+
+// Cada línea va en su propio asiento: así las marcas de `diario` solo afectan a
+// la suya, y ninguna se toma por apertura o cierre sin querer.
+let siguienteAsiento = 100
 
 function linea(
   cuenta: string,
@@ -11,9 +15,9 @@ function linea(
   diario: string | null = null,
 ): LineaDiarioB {
   return {
-    pase: 1,
+    pase: siguienteAsiento,
     ejercicio: 2026,
-    asiento: 1,
+    asiento: siguienteAsiento++,
     fecha,
     cuenta,
     debe: new Decimal(debe),
@@ -205,5 +209,37 @@ describe('sumarDiarioB por niveles', () => {
       expect(f2(r.total.acumDebe)).toBe('85.50')
       expect(f2(r.total.acumHaber)).toBe('85.50')
     }
+  })
+})
+
+describe('clasificarAsientos', () => {
+  const en = (asiento: number, l: LineaDiarioB): LineaDiarioB => ({ ...l, asiento })
+  const ejercicio = [
+    en(1, linea('1000', '0', '100', '2026-01-01')),
+    en(1, linea('5720', '100', '0', '2026-01-01')),
+    en(2, linea('60000000', '30', '0', '2026-05-01')),
+    en(2, linea('70000000', '0', '50', '2026-05-01')),
+    en(2, linea('57200000', '20', '0', '2026-05-01')),
+    en(3, linea('7000', '50', '0', '2026-12-31')),
+    en(3, linea('6000', '0', '30', '2026-12-31')),
+    en(3, linea('1290', '0', '20', '2026-12-31')),
+    en(4, linea('1000', '100', '0', '2026-12-31')),
+    en(4, linea('1290', '20', '0', '2026-12-31')),
+    en(4, linea('5720', '0', '120', '2026-12-31')),
+  ]
+
+  it('reconoce apertura, regularización y cierre sin marcas', () => {
+    expect(Object.fromEntries(clasificarAsientos(ejercicio, 8))).toEqual({ 1: 'APERTURA', 3: 'REGULARIZA', 4: 'CIERRE' })
+  })
+
+  it('a mitad de año no toma el último asiento por cierre', () => {
+    const hastaMayo = ejercicio.filter((l) => (l.fecha ?? '') <= '2026-05-31')
+    expect(Object.fromEntries(clasificarAsientos(hastaMayo, 8))).toEqual({ 1: 'APERTURA' })
+  })
+
+  it('una marca en «diario» manda', () => {
+    const conMarca = ejercicio.map((l) => (l.asiento === 2 ? { ...l, diario: 'cierre' } : l))
+    expect(clasificarAsientos(conMarca, 8).get(2)).toBe('CIERRE')
+    expect(clasificarAsientos(conMarca, 8).has(4)).toBe(false)
   })
 })
