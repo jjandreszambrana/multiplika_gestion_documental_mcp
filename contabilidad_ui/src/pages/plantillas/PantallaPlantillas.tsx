@@ -11,6 +11,7 @@ import { formatearFecha } from '../../lib/format'
 import DialogoDuplicar from './DialogoDuplicar'
 import EditorPlantilla from './editor/EditorPlantilla'
 import HistorialUso from './HistorialUso'
+import { usePestanas } from '../../components/pestanas'
 
 interface Props {
   nivel: string
@@ -44,6 +45,8 @@ type Editando = number | 'nueva' | null
  */
 export default function PantallaPlantillas({ nivel, ancho, ejercicio, nombreEmpresa, conIA }: Props) {
   const puedeDisenar = alcanza(nivel, 'cierre')
+  // El historial pide sus datos al montarse: no se monta hasta que se abre.
+  const pestanas = usePestanas('plantillas')
   const [conRetiradas, setConRetiradas] = useState(false)
   const [plantillas, setPlantillas] = useState<ResumenPlantilla[]>([])
   const [cargando, setCargando] = useState(true)
@@ -178,7 +181,7 @@ export default function PantallaPlantillas({ nivel, ancho, ejercicio, nombreEmpr
         </Group>
       </Group>
 
-      <Tabs defaultValue="plantillas" keepMounted={false}>
+      <Tabs value={pestanas.pestana} onChange={pestanas.cambiar} keepMounted>
         <Tabs.List>
           <Tabs.Tab value="plantillas">Plantillas</Tabs.Tab>
           <Tabs.Tab value="historial">Historial de uso</Tabs.Tab>
@@ -214,7 +217,7 @@ export default function PantallaPlantillas({ nivel, ancho, ejercicio, nombreEmpr
         </Tabs.Panel>
 
         <Tabs.Panel value="historial" pt="md">
-          <HistorialUso plantillas={plantillas} />
+          {pestanas.vista('historial') && <HistorialUso plantillas={plantillas} />}
         </Tabs.Panel>
       </Tabs>
 

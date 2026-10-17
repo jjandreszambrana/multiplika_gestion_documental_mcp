@@ -1,9 +1,10 @@
 import { Alert, AppShell, Box, Button, Group, Loader, Stack, Text } from '@mantine/core'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { textoDeError } from '../api/errores'
 import { obtenerConfiguracion, type Configuracion } from '../api/configuracion'
 import {
+  alcanza,
   listarEjercicios,
   usuarioActual,
   type Empresa,
@@ -65,6 +66,7 @@ interface Props {
 
 const ALTO_CABECERA = 64
 const PREFERENCIA_EJERCICIO = 'sesion.ejercicio'
+const PREFERENCIA_SECCION = 'sesion.seccion'
 const ANCHO_MENU = 220
 
 /** Marco del módulo: cabecera con la empresa y el ejercicio, y menú lateral. */
@@ -92,32 +94,83 @@ export default function Estructura({
     () => ejercicioInicial ?? leerPreferencia<number>(quienGuarda, PREFERENCIA_EJERCICIO),
   )
   const [errorEjercicios, setErrorEjercicios] = useState<string | null>(null)
-  const [seccion, setSeccion] = useState(SECCION_DE_ENTRADA)
+  // Se entra en el último apartado que se usó en esta empresa. Si ya no está
+  // disponible, se cae al de siempre en cuanto se sabe (ver más abajo).
+  const [seccion, setSeccion] = useState(
+    () => leerPreferencia<string>(quienGuarda, PREFERENCIA_SECCION) ?? SECCION_DE_ENTRADA,
+  )
   // Al llegar desde un traspaso, el diario se abre con sus borradores a la vista.
+  // El diario se queda montado, así que para eso se vuelve a montar: `vueltaDiario`
+  // va en su `key`.
   const [aBorradores, setABorradores] = useState(false)
+  const [vueltaDiario, setVueltaDiario] = useState(0)
   const elegirSeccion = useCallback((id: string) => {
     setABorradores(false)
     setSeccion(id)
   }, [])
   const irABorradores = useCallback(() => {
     setABorradores(true)
+    setVueltaDiario((n) => n + 1)
     setSeccion('asientos')
   }, [])
   // Dentro de la GD no llega el usuario: se pregunta al SIF quién es la
   // clave con la que se entra. Si falla, se esconde lo que depende del rol.
   const [rolSif, setRolSif] = useState<number | null>(usuario?.id_rol ?? null)
+  const [rolSabido, setRolSabido] = useState(usuario !== null)
   useEffect(() => {
     if (usuario) return
     usuarioActual()
       .then((u) => setRolSif(u.id_rol ?? null))
       .catch(() => setRolSif(null))
+      .finally(() => setRolSabido(true))
   }, [usuario])
 
   // El diario B solo existe en algunos SIF: hasta saberlo, no se enseña.
   const [ocultas, setOcultas] = useState<ReadonlySet<string>>(() => new Set(['diario_b']))
+  const [diarioBSabido, setDiarioBSabido] = useState(false)
   useEffect(() => {
-    void hayDiarioB().then((hay) => setOcultas(hay ? new Set() : new Set(['diario_b'])))
+    void hayDiarioB().then((hay) => {
+      setOcultas(hay ? new Set() : new Set(['diario_b']))
+      setDiarioBSabido(true)
+    })
   }, [])
+
+  // Si el apartado recordado no está en este SIF o no llega el nivel o el rol,
+  // se entra en el de siempre. Mientras no se sabe, la pantalla espera.
+  const definida = SECCIONES.find((s) => s.id === seccion)
+  const pendiente =
+    (seccion === 'diario_b' && !diarioBSabido) || (definida?.soloRoles !== undefined && !rolSabido)
+  const disponible =
+    definida !== undefined &&
+    !ocultas.has(seccion) &&
+    alcanza(nivel, definida.nivelMinimo) &&
+    (!definida.soloRoles || (rolSif !== null && definida.soloRoles.includes(rolSif)))
+  useEffect(() => {
+    if (!pendiente && !disponible) setSeccion(SECCION_DE_ENTRADA)
+  }, [pendiente, disponible])
+  useEffect(() => {
+    if (!pendiente && disponible) guardarPreferencia(quienGuarda, PREFERENCIA_SECCION, seccion)
+  }, [quienGuarda, seccion, pendiente, disponible])
+
+  // Cada apartado se monta la primera vez que se abre y luego se queda montado
+  // y oculto: al volver sigue como se dejó. Al cambiar de ejercicio se olvidan
+  // todos menos el que se está viendo, que se rehace como siempre por su `key`;
+  // los demás se rehacen al volver a abrirlos.
+  const [abiertas, setAbiertas] = useState<{ ejercicio: number | null; ids: ReadonlySet<string> }>(
+    () => ({ ejercicio: null, ids: new Set() }),
+  )
+  useEffect(() => {
+    if (pendiente || !disponible) return
+    setAbiertas((antes) =>
+      antes.ejercicio !== ejercicio
+        ? { ejercicio, ids: new Set([seccion]) }
+        : antes.ids.has(seccion)
+          ? antes
+          : { ejercicio, ids: new Set(antes.ids).add(seccion) },
+    )
+  }, [ejercicio, seccion, pendiente, disponible])
+  const montadas = new Set(abiertas.ejercicio === ejercicio ? abiertas.ids : [])
+  if (!pendiente && disponible) montadas.add(seccion)
 
   // Tras abrir, bloquear o desbloquear un ejercicio: la cabecera y la pantalla
   // leen la misma lista, así que se rehace una sola vez y aquí.
@@ -159,7 +212,7 @@ export default function Estructura({
     if (ejercicio !== null) guardarPreferencia(quienGuarda, PREFERENCIA_EJERCICIO, ejercicio)
   }, [quienGuarda, ejercicio])
 
-  const etiqueta = SECCIONES.find((s) => s.id === seccion)?.etiqueta ?? ''
+  const etiquetaDe = (id: string) => SECCIONES.find((s) => s.id === id)?.etiqueta ?? ''
 
   const cabeceraEmpresa = (
     <CabeceraEmpresa
@@ -194,8 +247,143 @@ export default function Estructura({
     />
   )
 
+  function pantalla(id: string, configuracion: Configuracion, ejercicios: Ejercicio[]): ReactNode {
+    return id === 'asientos' ? (
+      <PantallaDiario
+        key={`${ejercicio ?? 'sin-ejercicio'}.${vueltaDiario}`}
+        ejercicio={ejercicio}
+        cierre={ejercicios.find((e) => e.ejercicio === ejercicio)?.cierre ?? null}
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        usuario={usuario?.usuario ?? 'anonimo'}
+        conBorradoresAbiertos={aBorradores}
+      />
+    ) : id === 'plan' ? (
+      <PantallaPlan
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+      />
+    ) : id === 'plantillas' ? (
+      <PantallaPlantillas
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        ejercicio={ejercicio}
+        nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
+        conIA={embebido}
+      />
+    ) : id === 'eliminados' ? (
+      <PantallaEliminados
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        usuario={usuario?.usuario ?? 'anonimo'}
+      />
+    ) : id === 'enlace' ? (
+      <PantallaEnlace
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        origenTerceros={configuracion.origen_terceros}
+      />
+    ) : id === 'ejercicios' ? (
+      <PantallaEjercicios
+        ejercicios={ejercicios}
+        nivel={nivel}
+        error={errorEjercicios}
+        alRecargar={recargarEjercicios}
+      />
+    ) : id === 'configuracion' ? (
+      <PantallaConfiguracion
+        configuracion={configuracion}
+        ejercicio={ejercicio}
+        alGuardada={setConfiguracion}
+      />
+    ) : id === 'conexiones' ? (
+      <PantallaConexiones
+        idObligado={empresa.id_obligado}
+        nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
+      />
+    ) : id === 'inmovilizado' ? (
+      <PantallaInmovilizado
+        ejercicio={ejercicio}
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+      />
+    ) : id === 'mayor' ? (
+      <PantallaMayor
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        ancho={configuracion.anchocuentas}
+        nivel={nivel}
+        usuario={usuario?.usuario ?? 'anonimo'}
+      />
+    ) : id === 'balance' ? (
+      <PantallaBalance
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        ancho={configuracion.anchocuentas}
+        usuario={usuario?.usuario ?? 'anonimo'}
+      />
+    ) : id === 'estados_contables' ? (
+      <PantallaEstadosContables
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        usuario={usuario?.usuario ?? 'anonimo'}
+      />
+    ) : id === 'fiscal' ? (
+      <PantallaFiscal
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        usuario={usuario?.usuario ?? 'anonimo'}
+      />
+    ) : id === 'declaraciones' ? (
+      <PantallaDeclaraciones
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        nivel={nivel}
+      />
+    ) : id === 'cierre' ? (
+      <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
+    ) : id === 'sin_ficha' ? (
+      <PantallaSinFicha
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        ejercicio={ejercicio}
+      />
+    ) : id === 'importador' ? (
+      <PantallaImportador ejercicio={ejercicio} nivel={nivel} />
+    ) : id === 'traspaso_emitidas' || id === 'traspaso_recibidas' ? (
+      <PantallaTraspasos
+        key={`${id}.${ejercicio ?? 'sin-ejercicio'}`}
+        ejercicio={ejercicio}
+        tipo={id === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        alVerBorradores={irABorradores}
+      />
+    ) : id === 'diario_b' ? (
+      <PantallaDiarioB
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        nivel={nivel}
+        ancho={configuracion.anchocuentas}
+        quienGuarda={quienGuarda}
+      />
+    ) : id === 'bandeja' ? (
+      <PantallaBandeja
+        key={ejercicio ?? 'sin-ejercicio'}
+        ejercicio={ejercicio}
+        nivel={nivel}
+        nombreEmpresa={empresa.NombreRazon ?? ''}
+        alVerBorradores={irABorradores}
+      />
+    ) : (
+      <Text c="dimmed">{etiquetaDe(id)}: pantalla pendiente.</Text>
+    )
+  }
+
   const contenido = (
-    <RedDeSeguridad llave={`${seccion}.${ejercicio ?? ""}`}>
+    <>
       {error && (
         <Alert color="red" title="No se pudo cargar la contabilidad de esta empresa" mb="md">
           <Stack gap="sm" align="flex-start">
@@ -214,140 +402,18 @@ export default function Estructura({
           Esta empresa no tiene ningún ejercicio abierto todavía.
         </Alert>
       )}
+      {pendiente && <Loader size="sm" />}
       {ejercicios &&
         configuracion &&
-        (seccion === 'asientos' ? (
-          <PantallaDiario
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            cierre={ejercicios.find((e) => e.ejercicio === ejercicio)?.cierre ?? null}
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-            usuario={usuario?.usuario ?? 'anonimo'}
-            conBorradoresAbiertos={aBorradores}
-          />
-        ) : seccion === 'plan' ? (
-          <PantallaPlan
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-          />
-        ) : seccion === 'plantillas' ? (
-          <PantallaPlantillas
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-            ejercicio={ejercicio}
-            nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
-            conIA={embebido}
-          />
-        ) : seccion === 'eliminados' ? (
-          <PantallaEliminados
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            usuario={usuario?.usuario ?? 'anonimo'}
-          />
-        ) : seccion === 'enlace' ? (
-          <PantallaEnlace
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-            origenTerceros={configuracion.origen_terceros}
-          />
-        ) : seccion === 'ejercicios' ? (
-          <PantallaEjercicios
-            ejercicios={ejercicios}
-            nivel={nivel}
-            error={errorEjercicios}
-            alRecargar={recargarEjercicios}
-          />
-        ) : seccion === 'configuracion' ? (
-          <PantallaConfiguracion
-            configuracion={configuracion}
-            ejercicio={ejercicio}
-            alGuardada={setConfiguracion}
-          />
-        ) : seccion === 'conexiones' ? (
-          <PantallaConexiones
-            idObligado={empresa.id_obligado}
-            nombreEmpresa={empresa.NombreRazon ?? 'esta empresa'}
-          />
-        ) : seccion === 'inmovilizado' ? (
-          <PantallaInmovilizado
-            ejercicio={ejercicio}
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-          />
-        ) : seccion === 'mayor' ? (
-          <PantallaMayor
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            ancho={configuracion.anchocuentas}
-            nivel={nivel}
-            usuario={usuario?.usuario ?? 'anonimo'}
-          />
-        ) : seccion === 'balance' ? (
-          <PantallaBalance
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            ancho={configuracion.anchocuentas}
-            usuario={usuario?.usuario ?? 'anonimo'}
-          />
-        ) : seccion === 'estados_contables' ? (
-          <PantallaEstadosContables
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            usuario={usuario?.usuario ?? 'anonimo'}
-          />
-        ) : seccion === 'fiscal' ? (
-          <PantallaFiscal
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            usuario={usuario?.usuario ?? 'anonimo'}
-          />
-        ) : seccion === 'declaraciones' ? (
-          <PantallaDeclaraciones
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            nivel={nivel}
-          />
-        ) : seccion === 'cierre' ? (
-          <PantallaCierre key={ejercicio ?? 'sin-ejercicio'} ejercicio={ejercicio} />
-        ) : seccion === 'sin_ficha' ? (
-          <PantallaSinFicha
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-            ejercicio={ejercicio}
-          />
-        ) : seccion === 'importador' ? (
-          <PantallaImportador ejercicio={ejercicio} nivel={nivel} />
-        ) : seccion === 'traspaso_emitidas' || seccion === 'traspaso_recibidas' ? (
-          <PantallaTraspasos
-            key={`${seccion}.${ejercicio ?? 'sin-ejercicio'}`}
-            ejercicio={ejercicio}
-            tipo={seccion === 'traspaso_emitidas' ? EMITIDAS : RECIBIDAS}
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-            alVerBorradores={irABorradores}
-          />
-        ) : seccion === 'diario_b' ? (
-          <PantallaDiarioB
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            nivel={nivel}
-            ancho={configuracion.anchocuentas}
-          />
-        ) : seccion === 'bandeja' ? (
-          <PantallaBandeja
-            key={ejercicio ?? 'sin-ejercicio'}
-            ejercicio={ejercicio}
-            nivel={nivel}
-            nombreEmpresa={empresa.NombreRazon ?? ''}
-            alVerBorradores={irABorradores}
-          />
-        ) : (
-          <Text c="dimmed">{etiqueta}: pantalla pendiente.</Text>
+        SECCIONES.filter((s) => montadas.has(s.id)).map((s) => (
+          // Oculta, no desmontada: así conserva filtros, página y resultado.
+          <Box key={s.id} style={s.id === seccion ? undefined : { display: 'none' }}>
+            <RedDeSeguridad llave={`${s.id}.${ejercicio ?? ''}`}>
+              {pantalla(s.id, configuracion, ejercicios)}
+            </RedDeSeguridad>
+          </Box>
         ))}
-    </RedDeSeguridad>
+    </>
   )
 
   if (embebido) {

@@ -6,7 +6,9 @@ a `/diario_b/listar` y, si la ruta no existe (404), la entrada no sale. Hoy solo
 lo tiene sif.icomase.com.
 
 Una pantalla con tres pestañas: las dos primeras, mantenimiento directo de una
-tabla de la empresa; la tercera, sumas y saldos del diario B. Las rutas, cuerpos y respuestas, en el apartado 17 septies de la guía
+tabla de la empresa; la tercera, sumas y saldos del diario B. Se entra en la última
+pestaña usada en la empresa, y cada pestaña se monta al abrirla y se queda como
+se dejó (ver «Las pantallas se quedan como se dejaron» en `transversal.md`). Las rutas, cuerpos y respuestas, en el apartado 17 septies de la guía
 de la API. Los tipos están escritos a mano en `src/api/diarioB.ts` porque
 `types.ts` sale del OpenAPI de facturae, que aún no los tiene.
 

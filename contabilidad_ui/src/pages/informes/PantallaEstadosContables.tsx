@@ -162,7 +162,7 @@ export default function PantallaEstadosContables({ ejercicio, usuario }: Props) 
         // Pestañas de verdad, no dos palabras subrayadas: el balance y la
         // cuenta de resultados son dos documentos distintos, y hay que ver de
         // un vistazo en cuál se está.
-        <Tabs defaultValue="balance" keepMounted={false} variant="outline" radius="sm">
+        <Tabs defaultValue="balance" keepMounted variant="outline" radius="sm">
           <Tabs.List>
             <Tabs.Tab value="balance" fw={600} fz="sm" px="lg">
               Balance de situación

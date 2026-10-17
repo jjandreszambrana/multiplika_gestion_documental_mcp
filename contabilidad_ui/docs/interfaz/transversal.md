@@ -132,8 +132,27 @@ comparten ordenador no se pisen. Si el navegador no deja guardar, se sigue
 trabajando sin guardar: la próxima vez sale la disposición de fábrica.
 
 Se guarda: qué columnas tiene encendidas en cada rejilla y en qué orden, el
-ejercicio en el que se estaba trabajando **por empresa**, y el último filtro del
-diario **por ejercicio**.
+ejercicio en el que se estaba trabajando **por empresa**, el último apartado del
+menú y la última pestaña del diario B **por empresa**, y el último filtro del
+diario **por ejercicio**. Si el apartado recordado ya no está disponible (el SIF
+no tiene diario B, o no llega el nivel o el rol), se entra en el de siempre.
+Los resultados calculados no se guardan: tras recargar se vuelve a pulsar Ver.
+
+## Las pantallas se quedan como se dejaron
+
+Cada apartado del menú se monta la primera vez que se abre y luego se queda
+montado y oculto: al volver sigue con sus filtros, su página, la fila marcada y
+lo ya calculado, sin volver a pedirlo. Igual las pestañas dentro de una
+pantalla (diario B, estados contables, fiscal, plantillas y el editor de
+plantillas); las que piden datos al montarse (diario B, historial de
+plantillas) no se montan hasta que se abren. Lo común está en
+`components/pestanas.ts`.
+
+Al cambiar de ejercicio se rehace la pantalla que se está viendo y se olvidan
+las demás, que se rehacen al volver a ellas. Ir desde un traspaso al diario con
+los borradores a la vista vuelve a montar el diario, que es lo que abre esa
+lista. Ninguna pantalla pide datos con temporizador, así que una oculta no
+gasta nada.
 
 Nunca se guarda nada de la sesión ni del token. Y la empresa activa tampoco: va
 en el token.

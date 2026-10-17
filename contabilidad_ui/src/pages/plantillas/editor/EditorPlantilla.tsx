@@ -225,7 +225,7 @@ export default function EditorPlantilla({ idPlantilla, soloLectura, ancho, ejerc
             )}
 
             <Fieldset disabled={soloLectura} variant="unstyled">
-              <Tabs value={pestana} onChange={setPestana} keepMounted={false}>
+              <Tabs value={pestana} onChange={setPestana} keepMounted>
                 <Tabs.List>
                   <Tabs.Tab value="cabecera">
                     Cabecera

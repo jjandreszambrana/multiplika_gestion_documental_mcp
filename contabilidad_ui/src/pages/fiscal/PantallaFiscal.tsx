@@ -189,7 +189,7 @@ export default function PantallaFiscal({ ejercicio, usuario }: Props) {
       )}
 
       {consulta !== null && (
-        <Tabs defaultValue="iva" keepMounted={false} variant="outline" radius="sm">
+        <Tabs defaultValue="iva" keepMounted variant="outline" radius="sm">
           <Tabs.List>
             <Tabs.Tab value="iva" fw={600} fz="sm" px="lg">
               IVA del periodo
