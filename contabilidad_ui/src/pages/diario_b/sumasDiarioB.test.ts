@@ -426,3 +426,15 @@ describe('asignar equivalencia desde sumas y saldos', () => {
     expect(busquedaInicial({ ...ivan, titulo: '' }, [])).toBe('10000001')
   })
 })
+
+describe('sumarDiarioB: desde y hasta cuenta', () => {
+  it('deja solo las cuentas entre las dos, y vale con poner el principio', () => {
+    const lineas = [linea('40000001', '1', '0'), linea('43000005', '2', '0'), linea('43099999', '3', '0'), linea('57200000', '4', '0')]
+    const cuentas = (cuentaDesde: string, cuentaHasta: string) =>
+      sumarDiarioB(lineas, opciones({ cuentaDesde, cuentaHasta })).cuentas.map((c) => c.cuenta)
+    expect(cuentas('430', '430')).toEqual(['43000005', '43099999'])
+    expect(cuentas('43000006', '')).toEqual(['43099999', '57200000'])
+    expect(cuentas('', '43')).toEqual(['40000001', '43000005', '43099999'])
+    expect(cuentas('', '')).toHaveLength(4)
+  })
+})

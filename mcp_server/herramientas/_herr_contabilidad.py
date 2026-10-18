@@ -314,7 +314,7 @@ async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
     contabilizado: Literal[0, 1] | None = None,
     nivel: Literal[0, 1, 2, 3] = 0, sin_regularizacion_ni_cierre: bool = False,
-    solo_sin_equivalencia: bool = False,
+    solo_sin_equivalencia: bool = False, cuenta_desde: str | None = None, cuenta_hasta: str | None = None,
 ) -> dict:
     """Sumas y saldos del diario B por cuenta, calculadas por el programa
     sumando sus líneas (el SIF no lo da hecho). Por cuenta: saldo inicial
@@ -329,7 +329,9 @@ async def diario_b_sumas_y_saldos_gd(
     origen de ninguna equivalencia (las que faltan por emparejar). Cada
     fila es la cuenta del diario B (origen); por subcuenta trae además su
     cuenta equivalente y el título de esta, si tiene equivalencia. `nivel`
-    0 subcuenta a subcuenta, 3 cuentas, 2 subgrupos, 1 grupos. Llega como tabla
+    0 subcuenta a subcuenta, 3 cuentas, 2 subgrupos, 1 grupos.
+    `cuenta_desde`/`cuenta_hasta` acotan las cuentas de origen, ambas
+    incluidas; vale el principio ("430" a "430" = toda la 430). Llega como tabla
     (`columnas` y `filas`) con `totales`; cita las cifras tal cual."""
     lineas = await _todas(id_empresa, "/contabilidad/diario_b/listar", {
         "ejercicio": ejercicio, "fecha_hasta": hasta, "contabilizado": contabilizado,
@@ -345,6 +347,8 @@ async def diario_b_sumas_y_saldos_gd(
     # cifras, p. ej. 1130) se completan con ceros: 1130 → 11300000.
     largo = max((len(l["cuenta"].strip()) for l in lineas), default=0)
     clase = clasificar_asientos(lineas, largo)
+    limite_desde = (cuenta_desde or "").strip().ljust(largo, "0") if (cuenta_desde or "").strip() else ""
+    limite_hasta = (cuenta_hasta or "").strip().ljust(largo, "9") if (cuenta_hasta or "").strip() else ""
     cuentas: dict[str, list] = {}  # cuenta → [título, equivalente, título equiv., debe ini., haber ini., debe per., haber per.]
     sumadas = 0
     for linea in lineas:
@@ -357,6 +361,9 @@ async def diario_b_sumas_y_saldos_gd(
         original = linea["cuenta"].strip()
         equivalencia = destino.get(original) or destino.get(original.ljust(largo, "0"))
         if solo_sin_equivalencia and equivalencia:
+            continue
+        completa = original.ljust(largo, "0")
+        if (limite_desde and completa < limite_desde) or (limite_hasta and completa > limite_hasta):
             continue
         sumadas += 1
         cuenta = original.ljust(largo, "0")

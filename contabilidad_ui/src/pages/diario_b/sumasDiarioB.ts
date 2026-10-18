@@ -82,6 +82,12 @@ export interface OpcionesSumasDiarioB {
   /** Descarta las líneas de regularización y de cierre. */
   sinRegularizacion: boolean
   /**
+   * Cuentas de origen entre estas dos, ambas incluidas; vacías, sin límite.
+   * «430» desde = 43000000 y hasta = 43099999: vale con poner el principio.
+   */
+  cuentaDesde?: string
+  cuentaHasta?: string
+  /**
    * Con una lista, solo entran las líneas cuya cuenta no es la de origen de
    * ninguna de ellas. Nulo: sin este filtro.
    */
@@ -242,6 +248,8 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   )
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => (l.cuenta ?? '').trim().length))
+  const desdeCuenta = (opciones.cuentaDesde ?? '').trim() === '' ? '' : (opciones.cuentaDesde ?? '').trim().padEnd(largoSubcuenta, '0')
+  const hastaCuenta = (opciones.cuentaHasta ?? '').trim() === '' ? '' : (opciones.cuentaHasta ?? '').trim().padEnd(largoSubcuenta, '9')
   const clase = clasificarAsientos(lineas, largoSubcuenta)
   const porCuenta = new Map<
     string,
@@ -270,6 +278,8 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     const completa = original.padEnd(largoSubcuenta, '0')
     // Se compara igual que al aplicar equivalencias: tal cual o con ceros.
     if (conEquivalencia && (conEquivalencia.has(original) || conEquivalencia.has(completa))) continue
+    if (desdeCuenta !== '' && completa < desdeCuenta) continue
+    if (hastaCuenta !== '' && completa > hastaCuenta) continue
     const cuenta = nivel === 0 ? completa : completa.slice(0, nivel)
     let suma = porCuenta.get(cuenta)
     if (!suma) {

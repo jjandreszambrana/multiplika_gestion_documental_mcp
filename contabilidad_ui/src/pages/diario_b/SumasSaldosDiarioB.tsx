@@ -7,6 +7,7 @@ import {
   Select,
   Stack,
   Text,
+  TextInput,
 } from '@mantine/core'
 import type Decimal from 'decimal.js'
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table'
@@ -53,6 +54,8 @@ interface Consulta extends OpcionesSumas {
   ejercicio: number
   desde: string
   hasta: string
+  cuentaDesde: string
+  cuentaHasta: string
   ver: string
   nivel: NivelDeBalance
 }
@@ -132,6 +135,8 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
   const plan = usePlanEnMemoria()
   const [desde, setDesde] = useState<Date | null>(null)
   const [hasta, setHasta] = useState<Date | null>(null)
+  const [cuentaDesde, setCuentaDesde] = useState('')
+  const [cuentaHasta, setCuentaHasta] = useState('')
   const [ver, setVer] = useState('todas')
   const [nivel, setNivel] = useState<NivelDeBalance>(0)
   const [opciones, setOpciones] = useState<OpcionesSumas>(() =>
@@ -200,6 +205,8 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
             nivel: consulta.nivel,
             desde: consulta.desde,
             hasta: consulta.hasta,
+            cuentaDesde: consulta.cuentaDesde,
+            cuentaHasta: consulta.cuentaHasta,
             sinRegularizacion: consulta.sinRegularizacion,
           }),
         )
@@ -222,6 +229,8 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
       ejercicio,
       desde: fechaParaApi(desde),
       hasta: fechaParaApi(hasta),
+      cuentaDesde: cuentaDesde.trim(),
+      cuentaHasta: cuentaHasta.trim(),
       ver,
       nivel,
       ...opciones,
@@ -374,6 +383,20 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
           onChange={(valor) => setHasta(valor as Date | null)}
           clearable
           w={150}
+        />
+        <TextInput
+          label="Cuenta desde"
+          value={cuentaDesde}
+          onChange={(e) => setCuentaDesde(e.currentTarget.value.replace(/\D/g, ''))}
+          inputMode="numeric"
+          w={120}
+        />
+        <TextInput
+          label="Cuenta hasta"
+          value={cuentaHasta}
+          onChange={(e) => setCuentaHasta(e.currentTarget.value.replace(/\D/g, ''))}
+          inputMode="numeric"
+          w={120}
         />
         <Stack gap={2}>
           <Text fz="sm" fw={500}>
