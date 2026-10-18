@@ -32,7 +32,7 @@ export function datosAEnviar(
 ): DatosEquivalencia {
   const { flag, ...textos } = valores
   const limpios = Object.fromEntries(
-    Object.entries(textos).map(([campo, valor]) => [campo, valor.trim()]),
+    Object.entries(textos).map(([campo, valor]) => [campo, (valor ?? '').trim()]),
   ) as Omit<ValoresEquivalencia, 'flag'>
   if (!equivalencia) return { ...limpios, flag }
   const datos: DatosEquivalencia = Object.fromEntries(
@@ -57,7 +57,7 @@ export function destinosUsados(
 ): DestinoUsado[] {
   return equivalencias
     .filter((e) => e.id !== sinLaDe)
-    .map((e) => ({ destino: e.cuenta_destino.trim(), origen: e.cuenta_origen.trim() }))
+    .map((e) => ({ destino: (e.cuenta_destino ?? '').trim(), origen: (e.cuenta_origen ?? '').trim() }))
 }
 
 const ES_SUBCUENTA = /^\d{6,}$/
@@ -68,7 +68,7 @@ const ES_SUBCUENTA = /^\d{6,}$/
  * compara tal cual y por `claveSubcuenta`: 10000001 y 100000001 son la misma.
  */
 export function yaAsignadaA(codigo: string, usados: DestinoUsado[]): string | null {
-  const buscado = codigo.trim()
+  const buscado = (codigo ?? '').trim()
   if (buscado === '') return null
   const clave = ES_SUBCUENTA.test(buscado) ? claveSubcuenta(buscado) : null
   const usado = usados.find(

@@ -44,13 +44,13 @@ export function claveSubcuenta(codigo: string): string {
  * ninguna, su descripción; sin descripción, la propia cuenta.
  */
 export function busquedaInicial(fila: SumaDeCuenta, codigosDelPlan: Iterable<string>): string {
-  if (/^\d{6,}$/.test(fila.original)) {
+  if (/^\d{6,}$/.test(fila.original ?? '')) {
     const clave = claveSubcuenta(fila.original)
     for (const codigo of codigosDelPlan) {
       if (/^\d{6,}$/.test(codigo) && claveSubcuenta(codigo) === clave) return codigo
     }
   }
-  return fila.titulo.trim() || fila.original
+  return (fila.titulo ?? '').trim() || fila.original || fila.cuenta || ''
 }
 
 export interface SumasDiarioB {
@@ -128,7 +128,7 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
   }
   if (porAsiento.size === 0) return marcas
   const numeros = [...porAsiento.keys()].sort((a, b) => a - b)
-  const cuenta = (l: LineaDiarioB) => l.cuenta.trim().padEnd(largo, '0')
+  const cuenta = (l: LineaDiarioB) => (l.cuenta ?? '').trim().padEnd(largo, '0')
   const fecha = (l: LineaDiarioB) => (l.fecha ?? '').slice(0, 10)
   const fechas = lineas.map(fecha).filter((f) => f !== '').sort()
   const hay = (m: string) => [...marcas.values()].includes(m)
@@ -201,7 +201,7 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     ? new Set(sinEquivalencia.equivalencias.map((e) => e.cuenta_origen))
     : null
   const conFechas = desde !== '' || hasta !== ''
-  const largoSubcuenta = Math.max(0, ...lineas.map((l) => l.cuenta.trim().length))
+  const largoSubcuenta = Math.max(0, ...lineas.map((l) => (l.cuenta ?? '').trim().length))
   const clase = clasificarAsientos(lineas, largoSubcuenta)
   const porCuenta = new Map<
     string,
@@ -228,7 +228,7 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     else if (hasta !== '' && fecha > hasta) continue
     else inicial = false
 
-    const original = linea.cuenta.trim()
+    const original = (linea.cuenta ?? '').trim()
     const completa = original.padEnd(largoSubcuenta, '0')
     // Se compara igual que al aplicar equivalencias: tal cual o con ceros.
     if (conEquivalencia && (conEquivalencia.has(original) || conEquivalencia.has(completa))) continue

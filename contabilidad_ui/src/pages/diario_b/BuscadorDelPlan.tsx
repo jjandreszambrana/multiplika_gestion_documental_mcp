@@ -36,7 +36,7 @@ export default function BuscadorDelPlan({
   alElegir,
   usados = [],
 }: Props) {
-  const [texto, setTexto] = useState(busqueda)
+  const [texto, setTexto] = useState(busqueda ?? '')
   const [buscado] = useDebouncedValue(texto.trim(), 400)
   const [cuentas, setCuentas] = useState<CuentaPlan[]>([])
   const [cargando, setCargando] = useState(false)

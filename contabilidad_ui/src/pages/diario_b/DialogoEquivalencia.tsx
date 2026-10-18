@@ -81,7 +81,7 @@ export default function DialogoEquivalencia({
     // si se ha cambiado: una repetida de antes no impide tocar lo demás.
     const destino = valores.cuenta_destino.trim()
     const origenDeOtra =
-      equivalencia && destino === equivalencia.cuenta_destino.trim()
+      equivalencia && destino === (equivalencia.cuenta_destino ?? '').trim()
         ? null
         : yaAsignadaA(destino, usados)
     if (origenDeOtra !== null) {
