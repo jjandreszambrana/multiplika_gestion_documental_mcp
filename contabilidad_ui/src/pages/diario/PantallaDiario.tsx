@@ -10,7 +10,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconFileSpreadsheet } from '@tabler/icons-react'
+import { IconFileSpreadsheet, IconRefresh } from '@tabler/icons-react'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import {
   MantineReactTable,
@@ -301,6 +301,22 @@ export default function PantallaDiario({
             onClick={() => void bajarExcel()}
           >
             <IconFileSpreadsheet size={20} color="var(--mantine-color-green-7)" />
+          </ActionIcon>
+        </Tooltip>
+        {/* La pantalla se queda montada al ir a otro apartado: lo que se ve
+            puede haberse quedado atrás. Vuelve a pedir con el mismo filtro los
+            apuntes, las sumas y los asientos sin confirmar; las filas de antes
+            siguen puestas hasta que llegan las nuevas, así que la tabla no se
+            mueve, y lo marcado que siga existiendo se queda marcado. */}
+        <Tooltip label="Recargar los apuntes" withArrow>
+          <ActionIcon
+            variant="default"
+            size="lg"
+            aria-label="Recargar los apuntes"
+            loading={cargando}
+            onClick={() => setRecarga((n) => n + 1)}
+          >
+            <IconRefresh size={20} />
           </ActionIcon>
         </Tooltip>
         <SegmentedControl

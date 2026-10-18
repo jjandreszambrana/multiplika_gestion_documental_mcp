@@ -109,6 +109,15 @@ le van los mismos que a la consulta que llena la tabla, y la cabecera dice cuál
 se aplicaron. `incluir` viaja con sus tres valores, así que «solo borradores»
 también se puede bajar.
 
+Al lado, un botón con el icono de recargar («Recargar los apuntes»), para todos
+los niveles. Como el diario se queda montado al ir a otro apartado (ver
+`transversal.md`), lo que se ve puede haberse quedado atrás. Vuelve a pedir, con
+el mismo filtro, los apuntes, las sumas del pie y la cuenta de «Sin confirmar»;
+mientras tanto el botón gira. La tabla no se mueve (ver el párrafo siguiente) y
+lo marcado que siga existiendo se queda marcado. La lista de asientos sin
+confirmar no hace falta: es una ventana que se vuelve a pedir cada vez que se
+abre.
+
 Al recargar, las filas que se están viendo **se quedan puestas** hasta que llega
 todo lo nuevo, y entonces cambian de una vez. Vaciarlas antes de pedir hacía que
 la tabla se repintara entera y saltara la pantalla cada vez que se guardaba un
