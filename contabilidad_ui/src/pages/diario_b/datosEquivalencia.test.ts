@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta } from '../../api/diarioB'
-import { datosAEnviar, valoresDe } from './datosEquivalencia'
+import { datosAEnviar, destinosUsados, valoresDe, yaAsignadaA } from './datosEquivalencia'
 
 const GUARDADA: EquivalenciaCuenta = {
   id: 7,
@@ -39,5 +39,33 @@ describe('datosAEnviar', () => {
     expect(
       datosAEnviar(GUARDADA, { ...valoresDe(GUARDADA), titulo_destino: 'Capital', flag: 0 }),
     ).toEqual({ titulo_destino: 'Capital' })
+  })
+})
+
+describe('destinos ya asignados', () => {
+  const OTRA: EquivalenciaCuenta = {
+    ...GUARDADA,
+    id: 8,
+    cuenta_origen: '17000003',
+    cuenta_destino: '170000003',
+  }
+  const usados = destinosUsados([GUARDADA, OTRA], null)
+
+  it('dice de qué cuenta de origen ya es destino', () => {
+    expect(yaAsignadaA('170000003', usados)).toBe('17000003')
+    expect(yaAsignadaA('570000000', usados)).toBeNull()
+    expect(yaAsignadaA('  ', usados)).toBeNull()
+  })
+
+  it('casa la misma subcuenta escrita con otra longitud', () => {
+    expect(yaAsignadaA('17000003', usados)).toBe('17000003')
+    expect(yaAsignadaA('10000001', usados)).toBe('10000001')
+    expect(yaAsignadaA('100000010', usados)).toBeNull()
+  })
+
+  it('no cuenta la equivalencia que se está editando', () => {
+    const sinLaMia = destinosUsados([GUARDADA, OTRA], GUARDADA.id)
+    expect(yaAsignadaA('100000001', sinLaMia)).toBeNull()
+    expect(yaAsignadaA('170000003', sinLaMia)).toBe('17000003')
   })
 })

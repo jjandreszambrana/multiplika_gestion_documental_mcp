@@ -1,4 +1,5 @@
 import type { DatosEquivalencia, EquivalenciaCuenta } from '../../api/diarioB'
+import { claveSubcuenta } from './sumasDiarioB'
 
 /** Lo que se teclea en el formulario de una equivalencia. */
 export interface ValoresEquivalencia {
@@ -41,4 +42,39 @@ export function datosAEnviar(
   )
   if (flag !== equivalencia.flag) datos.flag = flag
   return datos
+}
+
+/** Una cuenta de destino que ya tiene una equivalencia, y de qué cuenta viene. */
+export interface DestinoUsado {
+  destino: string
+  origen: string
+}
+
+/** Los destinos ya usados, sin la equivalencia que se está editando. */
+export function destinosUsados(
+  equivalencias: EquivalenciaCuenta[],
+  sinLaDe: number | null,
+): DestinoUsado[] {
+  return equivalencias
+    .filter((e) => e.id !== sinLaDe)
+    .map((e) => ({ destino: e.cuenta_destino.trim(), origen: e.cuenta_origen.trim() }))
+}
+
+const ES_SUBCUENTA = /^\d{6,}$/
+
+/**
+ * La cuenta de origen de la equivalencia que ya lleva a `codigo`, o nula si
+ * está libre. Una cuenta de destino solo puede serlo de una equivalencia. Se
+ * compara tal cual y por `claveSubcuenta`: 10000001 y 100000001 son la misma.
+ */
+export function yaAsignadaA(codigo: string, usados: DestinoUsado[]): string | null {
+  const buscado = codigo.trim()
+  if (buscado === '') return null
+  const clave = ES_SUBCUENTA.test(buscado) ? claveSubcuenta(buscado) : null
+  const usado = usados.find(
+    (u) =>
+      u.destino === buscado ||
+      (clave !== null && ES_SUBCUENTA.test(u.destino) && claveSubcuenta(u.destino) === clave),
+  )
+  return usado?.origen ?? null
 }

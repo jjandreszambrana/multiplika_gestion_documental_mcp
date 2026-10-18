@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { listarPlan, type CuentaPlan } from '../../api/plan'
 import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
+import { yaAsignadaA, type DestinoUsado } from './datosEquivalencia'
 import { propsDeFilaMarcable } from './filaMarcada'
 
 interface Props {
@@ -13,6 +14,11 @@ interface Props {
   busqueda: string
   elegida: CuentaPlan | null
   alElegir: (cuenta: CuentaPlan | null) => void
+  /**
+   * Cuentas que ya son destino de otra equivalencia: salen apagadas y no se
+   * pueden elegir, porque una cuenta de destino solo puede serlo de una.
+   */
+  usados?: DestinoUsado[]
 }
 
 /** Tope de resultados: más de esto no se lee, se afina la búsqueda. */
@@ -23,7 +29,13 @@ const MAXIMO = 50
  * pantalla del plan (`/plan/listar` con `texto`). Solo subcuentas: es lo único
  * a lo que se puede llevar un apunte. Se marca una fila pulsándola.
  */
-export default function BuscadorDelPlan({ ejercicio, busqueda, elegida, alElegir }: Props) {
+export default function BuscadorDelPlan({
+  ejercicio,
+  busqueda,
+  elegida,
+  alElegir,
+  usados = [],
+}: Props) {
   const [texto, setTexto] = useState(busqueda)
   const [buscado] = useDebouncedValue(texto.trim(), 400)
   const [cuentas, setCuentas] = useState<CuentaPlan[]>([])
@@ -79,9 +91,22 @@ export default function BuscadorDelPlan({ ejercicio, busqueda, elegida, alElegir
         header: 'Título',
         grow: true,
         mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
+        Cell: ({ row }) => {
+          const origen = yaAsignadaA(row.original.codigo, usados)
+          return (
+            <Text fz="sm">
+              {row.original.descripcion ?? ''}
+              {origen !== null && (
+                <Text span fz="xs" c="dimmed" ml="xs">
+                  {`Ya asignada a ${origen}`}
+                </Text>
+              )}
+            </Text>
+          )
+        },
       },
     ],
-    [],
+    [usados],
   )
 
   const tabla = useMantineReactTable({
@@ -93,9 +118,11 @@ export default function BuscadorDelPlan({ ejercicio, busqueda, elegida, alElegir
     enableBottomToolbar: false,
     mantineTableContainerProps: { style: { maxHeight: '45vh' } },
     mantineTableBodyRowProps: ({ row }) =>
-      propsDeFilaMarcable(row.original.codigo === elegida?.codigo, () =>
-        alElegir(elegida?.codigo === row.original.codigo ? null : row.original),
-      ),
+      yaAsignadaA(row.original.codigo, usados) !== null
+        ? { style: { opacity: 0.5, cursor: 'not-allowed' }, 'aria-disabled': true }
+        : propsDeFilaMarcable(row.original.codigo === elegida?.codigo, () =>
+            alElegir(elegida?.codigo === row.original.codigo ? null : row.original),
+          ),
     localization: { noRecordsToDisplay: 'No hay subcuentas con esa búsqueda.' },
     state: { isLoading: cargando && cuentas.length === 0 },
   })

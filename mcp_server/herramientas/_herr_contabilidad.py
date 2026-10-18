@@ -381,6 +381,24 @@ async def diario_b_sumas_y_saldos_gd(
     }
 
 
+def _misma_subcuenta(a: str, b: str) -> bool:
+    """La misma subcuenta aunque tenga otra longitud: los ceros van en medio,
+    entre la cuenta de mayor (4 cifras) y el número (10000001 = 100000001)."""
+    a, b = a.strip(), b.strip()
+    if a == b:
+        return True
+    if not (a.isdigit() and b.isdigit() and len(a) >= 6 and len(b) >= 6):
+        return False
+    return a[:4] == b[:4] and int(a[4:]) == int(b[4:])
+
+
+async def _rechazar_destino_usado(id_empresa: int, cuenta_destino: str, id_actual: int | None = None) -> None:
+    """Un destino solo puede estar en una equivalencia (regla del usuario, 2026-10-18)."""
+    for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
+        if e["id"] != id_actual and _misma_subcuenta(e["cuenta_destino"], cuenta_destino):
+            raise ToolError(f"La cuenta {cuenta_destino} ya es el destino de la equivalencia de la {e['cuenta_origen']}")
+
+
 # Las equivalencias son ajustes de cuentas, no asientos: la IA las escribe
 # directamente en el SIF, sin pasar por Propuestas (decisión del usuario, 2026-10-17).
 RUTA_EQUIVALENCIAS = "/contabilidad/diario_equivalencias"
@@ -398,6 +416,7 @@ async def crear_equivalencia_cuenta_gd(
     has comprobado en el plan del SIF.
     Mira antes con `equivalencias_cuentas_gd` que no exista ya, y con
     `buscar_cuenta_contable_gd` que la cuenta de destino existe."""
+    await _rechazar_destino_usado(id_empresa, cuenta_destino)
     return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/crear", {
         "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
         "titulo_destino": titulo_destino, "observaciones": observaciones, "flag": flag,
@@ -414,6 +433,8 @@ async def corregir_equivalencia_cuenta_gd(
     `equivalencias_cuentas_gd`). Pasa solo los campos que cambian.
     `flag` es una marca de sí o no (0/1) del usuario; no le supongas un
     significado."""
+    if cuenta_destino:
+        await _rechazar_destino_usado(id_empresa, cuenta_destino, id)
     return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/editar", {
         "id": id, "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
         "titulo_destino": titulo_destino, "observaciones": observaciones, "flag": flag,

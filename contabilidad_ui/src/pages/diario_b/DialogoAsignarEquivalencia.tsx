@@ -4,6 +4,7 @@ import { crearEquivalenciaCuenta } from '../../api/diarioB'
 import { textoDeError } from '../../api/errores'
 import type { CuentaPlan } from '../../api/plan'
 import BuscadorDelPlan from './BuscadorDelPlan'
+import { useDestinosUsados } from './useDestinosUsados'
 
 interface Props {
   ejercicio: number | null
@@ -29,6 +30,7 @@ export default function DialogoAsignarEquivalencia({
   const [elegida, setElegida] = useState<CuentaPlan | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { usados, error: errorUsados } = useDestinosUsados(null)
 
   async function crear() {
     if (!elegida) return
@@ -65,7 +67,13 @@ export default function DialogoAsignarEquivalencia({
           busqueda={busqueda}
           elegida={elegida}
           alElegir={setElegida}
+          usados={usados}
         />
+        {errorUsados && (
+          <Alert color="yellow" role="alert">
+            {`No se ha podido comprobar qué cuentas de destino ya están asignadas: ${errorUsados}`}
+          </Alert>
+        )}
         {error && (
           <Alert color="red" role="alert">
             {error}

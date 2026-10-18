@@ -47,6 +47,16 @@ el cambio de plan contable** de `/equivalencias`.
   «Asignar…» en sumas y saldos (`BuscadorDelPlan.tsx`). Al elegir con «Elegir»
   se rellenan la cuenta y el título de destino y se marca Flag, que luego se
   puede desmarcar a mano. Al editar, Flag se manda solo si cambia, como el resto.
+- **Una cuenta de destino solo puede serlo de una equivalencia.** En el
+  buscador (aquí y en «Asignar…» de sumas y saldos) las subcuentas que ya son
+  destino de otra salen apagadas, no se pueden elegir y dicen «Ya asignada a
+  17000003» (la cuenta de origen de la que ya tiene). Se compara tal cual y por
+  `claveSubcuenta` (10000001 = 100000001). La equivalencia que se edita no
+  cuenta. Si se teclea a mano un destino ya usado, al guardar la casilla dice
+  «Ya asignada a …» y no se guarda; solo se mira si el destino ha cambiado, para
+  que una repetida de antes no impida tocar lo demás. Las equivalencias se
+  traen todas al abrir el diálogo; si eso falla, un aviso lo dice y decide el
+  SIF al guardar. La comprobación está en `datosEquivalencia.ts`, con test.
 - Ver, `consulta`. Crear, cambiar y borrar, `cierre`.
 
 En las dos rejillas: cada fila lleva un lápiz («Cambiar…», abre el formulario)
