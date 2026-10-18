@@ -148,6 +148,17 @@ plantillas); las que piden datos al montarse (diario B, historial de
 plantillas) no se montan hasta que se abren. Lo común está en
 `components/pestanas.ts`.
 
+**La rejilla del diario no acepta filas de alto 0** (`components/medirFila.ts`,
+18-10-2026). El diario es la única rejilla que solo pinta las filas a la vista,
+y para eso las mide. Oculta con `display: none` todas miden 0; si en ese mismo
+repintado se vuelven a medir (la GD oculta la contabilidad entera con `hidden`
+al ir a otra sección, y la pestaña «Contabilidad» del asesor con las pestañas de
+Mantine, y las dos cosas repintan a la vez), las de más abajo suben, se pintan,
+miden 0 otra vez… y React corta con el #185. Ahora un alto de 0 se ignora y la
+fila conserva el que tenía, así que da igual cómo la oculten desde fuera; al
+volver se ve donde estaba. Reproducido en Chrome ocultando un padre con `hidden`
+desde React, con el diario bajado a mitad.
+
 **Un apartado oculto no lleva `display: none`**: se le deja alto 0, sin
 desbordar y con `visibility: hidden`, para que dentro todo conserve su tamaño de
 verdad. Con `display: none` el diario, que solo pinta las filas a la vista,

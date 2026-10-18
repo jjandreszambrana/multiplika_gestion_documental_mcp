@@ -26,6 +26,7 @@ import { guardarFichero, nombreDeFichero } from '../../lib/descarga'
 import { listarBorradores } from '../../api/borradores'
 import { esAbortada } from '../../api/cliente'
 import { textoDeError } from '../../api/errores'
+import { medirFila } from '../../components/medirFila'
 import { opcionesDeTabla } from '../../components/tabla'
 import { formatearEntero } from '../../lib/format'
 import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
@@ -373,6 +374,9 @@ export default function PantallaDiario({
     enablePagination: false,
     enableBottomToolbar: false,
     enableRowVirtualization: true,
+    // Oculta (otro apartado, otra pestaña de la GD) sus filas miden 0: no se
+    // cree, o entra en bucle (React #185). Ver `medirFila`.
+    rowVirtualizerOptions: { measureElement: medirFila },
     enableRowSelection: true,
     enableSelectAll: true,
     // Las casillas, pequeñas: la fila va apretada y un control más alto que
