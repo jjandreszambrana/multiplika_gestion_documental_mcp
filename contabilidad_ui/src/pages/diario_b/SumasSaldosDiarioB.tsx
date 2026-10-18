@@ -275,8 +275,9 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
             grow: true,
             mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
           },
-          ...(porSubcuenta
-            ? [
+          // Siempre definidas y escondidas cuando no tocan: si se añadieran
+          // después, la tabla las pondría al final, detrás de los importes.
+          ...[
                 {
                   id: 'equivalente',
                   header: 'Cuenta equivalente',
@@ -304,8 +305,7 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
                   grow: false,
                   mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
                 } satisfies MRT_ColumnDef<SumaDeCuenta>,
-              ]
-            : []),
+              ],
         ],
       },
       {
@@ -343,7 +343,10 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
     enableStickyFooter: true,
     // Solo la primera vez: en una recarga las cuentas de antes se quedan puestas
     // hasta que llegan las nuevas, y así la tabla no parpadea.
-    state: { isLoading: cargando && sumas === null },
+    state: {
+      isLoading: cargando && sumas === null,
+      columnVisibility: { equivalente: porSubcuenta, tituloEquivalente: porSubcuenta },
+    },
     localization: { noRecordsToDisplay: 'No hay movimientos con ese filtro.' },
   })
 
