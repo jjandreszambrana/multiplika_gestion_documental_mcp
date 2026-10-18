@@ -102,6 +102,18 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
   incluidas): la subcuenta tal cual, completada con ceros por la derecha y, si
   no está, su cuenta de mayor de 4 y luego de 3 cifras. Si tampoco, queda en
   blanco: no hay otro sitio de donde sacarla.
+- Con «Aplicar equivalencias de cuentas» y agrupando por Subcuenta, quien tiene
+  nivel `cierre` ve una columna «Equivalencia» con «Asignar…» en las filas que
+  no se han sumado por ninguna equivalencia. Abre «Asignar equivalencia»: la
+  cuenta del diario B y un buscador «Buscar por cuenta o título» sobre el plan
+  del SIF (`/plan/listar` con `texto`, solo subcuentas, como el buscador de la
+  pantalla del plan). Entra ya buscando la subcuenta del plan que casa con la
+  suya aunque tenga otra longitud (`claveSubcuenta`: 10000001 = 100000001) y,
+  si no hay, su descripción. Se marca una fila y «Crear equivalencia» la da de
+  alta: origen, la cuenta tal como viene en las líneas (si en la fila se
+  juntaron varias formas, la que más líneas tiene) con su descripción; destino,
+  la elegida con su título. Después se rehace el balance y la fila pasa a su
+  destino. Un error del SIF (una equivalencia que ya existe) se enseña tal cual.
 - «No mostrar las cuentas sin saldo» quita las filas con saldo deudor y
   acreedor a cero. Los totales siguen siendo los de todas las líneas que entran,
   y una nota bajo la tabla dice cuántas cuentas se han ocultado.

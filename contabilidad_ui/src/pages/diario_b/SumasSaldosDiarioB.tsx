@@ -15,6 +15,7 @@ import { esAbortada } from '../../api/cliente'
 import { diarioBEntero, equivalenciasEnteras } from '../../api/diarioB'
 import { planEntero } from '../../api/plan'
 import { textoDeError } from '../../api/errores'
+import { alcanza } from '../../api/sesion'
 import type { NivelDeBalance } from '../../api/informes'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
@@ -22,11 +23,14 @@ import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
 import { fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearImporte } from '../../lib/format'
 import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
+import DialogoAsignarEquivalencia from './DialogoAsignarEquivalencia'
 import DialogoOpcionesSumas, {
   normalizarOpciones,
   type OpcionesSumas,
 } from './DialogoOpcionesSumas'
 import {
+  busquedaInicial,
+  claveSubcuenta,
   quitarSinSaldo,
   sumarDiarioB,
   type ImportesDiarioB,
@@ -36,6 +40,8 @@ import {
 
 interface Props {
   ejercicio: number | null
+  /** Asignar equivalencias desde aquí pide nivel `cierre`, como en su pestaña. */
+  nivel: string
   /** Usuario y empresa, para recordar las opciones. */
   quienGuarda: string
 }
@@ -107,16 +113,11 @@ function ImporteOVacio({ valor, conCero = false }: { valor: Decimal; conCero?: b
  * Sumas y saldos del diario B, cuenta a cuenta. El SIF no lo da hecho, así que
  * se traen todas las líneas del filtro y se suman aquí (ver `sumarDiarioB`).
  */
-/**
- * La misma subcuenta escrita con distinta longitud: los ceros van en medio,
- * entre la cuenta de mayor (4 cifras) y el número. 10000001 y 100000001 dan
- * los dos «1000|1»; 11300000 y 113000000, «1130|0».
- */
-function claveSubcuenta(codigo: string): string {
-  return `${codigo.slice(0, 4)}|${Number(codigo.slice(4) || '0')}`
-}
 
-export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
+export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, quienGuarda }: Props) {
+  const puedeAsignar = alcanza(nivelDeAcceso, 'cierre')
+  // La fila a la que se está asignando equivalencia; nula, diálogo cerrado.
+  const [asignando, setAsignando] = useState<SumaDeCuenta | null>(null)
   const plan = usePlanEnMemoria()
   const [desde, setDesde] = useState<Date | null>(null)
   const [hasta, setHasta] = useState<Date | null>(null)
@@ -229,6 +230,8 @@ export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
   const ocultas = (sumas?.cuentas.length ?? 0) - filas.length
 
   const total = sumas?.total ?? null
+  const conAsignar =
+    puedeAsignar && consulta !== null && consulta.conEquivalencias && consulta.nivel === 0
   // Las dos primeras van en un grupo sin cabecera: así la fila de cabeceras de
   // grupo no deja en el pie una segunda fila vacía.
   const columnas = useMemo<MRT_ColumnDef<SumaDeCuenta>[]>(
@@ -278,8 +281,36 @@ export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
           columnaDeImporte('acreedor', 'Saldo acreedor', total),
         ],
       },
+      // Solo aplicando equivalencias y por subcuenta: es donde se ve qué
+      // cuentas del diario B se han quedado sin la suya.
+      ...(conAsignar
+        ? [
+            {
+              id: 'asignar',
+              header: '',
+              columns: [
+                {
+                  id: 'asignar_boton',
+                  header: 'Equivalencia',
+                  size: 110,
+                  grow: false,
+                  Cell: ({ row }: { row: { original: SumaDeCuenta } }) =>
+                    row.original.porEquivalencia ? null : (
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        onClick={() => setAsignando(row.original)}
+                      >
+                        Asignar…
+                      </Button>
+                    ),
+                },
+              ],
+            } satisfies MRT_ColumnDef<SumaDeCuenta>,
+          ]
+        : []),
     ],
-    [total],
+    [total, conAsignar],
   )
 
   const tabla = useMantineReactTable({
@@ -363,6 +394,20 @@ export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
           )}
           {cargando && <Loader size="xs" />}
         </Group>
+      )}
+
+      {asignando !== null && (
+        <DialogoAsignarEquivalencia
+          ejercicio={ejercicio}
+          origen={{ cuenta: asignando.original, titulo: asignando.titulo }}
+          busqueda={busquedaInicial(asignando, plan.porCodigo.keys())}
+          alCerrar={() => setAsignando(null)}
+          alCrear={() => {
+            setAsignando(null)
+            // Se rehace el balance: la fila pasa a sumarse en su destino.
+            setConsulta((actual) => (actual === null ? null : { ...actual }))
+          }}
+        />
       )}
 
       <DialogoOpcionesSumas

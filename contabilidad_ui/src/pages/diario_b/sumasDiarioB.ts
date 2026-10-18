@@ -15,9 +15,43 @@ export interface SumaDeCuenta {
   acumHaber: Decimal
   deudor: Decimal
   acreedor: Decimal
+  /**
+   * La cuenta tal como viene en las líneas del diario B, sin completar con
+   * ceros. Si en la fila se juntaron varias formas, la que más líneas tiene.
+   */
+  original: string
+  /** Si alguna de sus líneas se ha sumado aquí por una equivalencia. */
+  porEquivalencia: boolean
 }
 
-export type ImportesDiarioB = Omit<SumaDeCuenta, 'cuenta' | 'titulo'>
+export type ImportesDiarioB = Omit<
+  SumaDeCuenta,
+  'cuenta' | 'titulo' | 'original' | 'porEquivalencia'
+>
+
+/**
+ * La misma subcuenta escrita con distinta longitud: los ceros van en medio,
+ * entre la cuenta de mayor (4 cifras) y el número. 10000001 y 100000001 dan
+ * los dos «1000|1»; 11300000 y 113000000, «1130|0».
+ */
+export function claveSubcuenta(codigo: string): string {
+  return `${codigo.slice(0, 4)}|${Number(codigo.slice(4) || '0')}`
+}
+
+/**
+ * Lo que se busca de entrada al asignar una equivalencia a una fila: la
+ * subcuenta del plan que case con la suya (ver `claveSubcuenta`) y, si no hay
+ * ninguna, su descripción; sin descripción, la propia cuenta.
+ */
+export function busquedaInicial(fila: SumaDeCuenta, codigosDelPlan: Iterable<string>): string {
+  if (/^\d{6,}$/.test(fila.original)) {
+    const clave = claveSubcuenta(fila.original)
+    for (const codigo of codigosDelPlan) {
+      if (/^\d{6,}$/.test(codigo) && claveSubcuenta(codigo) === clave) return codigo
+    }
+  }
+  return fila.titulo.trim() || fila.original
+}
 
 export interface SumasDiarioB {
   cuentas: SumaDeCuenta[]
@@ -171,7 +205,15 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   const clase = clasificarAsientos(lineas, largoSubcuenta)
   const porCuenta = new Map<
     string,
-    { titulo: string; iniDebe: Decimal; iniHaber: Decimal; debe: Decimal; haber: Decimal }
+    {
+      titulo: string
+      iniDebe: Decimal
+      iniHaber: Decimal
+      debe: Decimal
+      haber: Decimal
+      originales: Map<string, number>
+      porEquivalencia: boolean
+    }
   >()
 
   for (const linea of lineas) {
@@ -213,9 +255,19 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
           buscar(completa.slice(0, 3)) ||
           ''
       }
-      suma = { titulo, iniDebe: CERO, iniHaber: CERO, debe: CERO, haber: CERO }
+      suma = {
+        titulo,
+        iniDebe: CERO,
+        iniHaber: CERO,
+        debe: CERO,
+        haber: CERO,
+        originales: new Map(),
+        porEquivalencia: false,
+      }
       porCuenta.set(cuenta, suma)
     }
+    suma.originales.set(original, (suma.originales.get(original) ?? 0) + 1)
+    if (equivalencia) suma.porEquivalencia = true
     if (inicial) {
       suma.iniDebe = suma.iniDebe.plus(linea.debe)
       suma.iniHaber = suma.iniHaber.plus(linea.haber)
@@ -241,6 +293,9 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
         acumHaber,
         deudor: saldo.isPositive() && !saldo.isZero() ? saldo : CERO,
         acreedor: saldo.isNegative() && !saldo.isZero() ? saldo.negated() : CERO,
+        // La que más líneas tiene; a igualdad, la primera que apareció.
+        original: [...s.originales.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0],
+        porEquivalencia: s.porEquivalencia,
       }
     })
     .filter((c) => !c.acumDebe.isZero() || !c.acumHaber.isZero())

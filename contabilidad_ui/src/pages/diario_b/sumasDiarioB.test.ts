@@ -2,6 +2,8 @@ import Decimal from 'decimal.js'
 import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta, LineaDiarioB } from '../../api/diarioB'
 import {
+  busquedaInicial,
+  claveSubcuenta,
   clasificarAsientos,
   quitarSinSaldo,
   sumarDiarioB,
@@ -366,5 +368,42 @@ describe('quitarSinSaldo', () => {
     expect(r.cuentas.length - filas.length).toBe(1)
     expect(f2(r.total.acumDebe)).toBe('15.00')
     expect(f2(r.total.acumHaber)).toBe('15.00')
+  })
+})
+
+describe('asignar equivalencia desde sumas y saldos', () => {
+  it('la fila guarda la cuenta tal como viene y si se ha sumado por equivalencia', () => {
+    const r = sumarDiarioB(
+      [
+        linea('1130', '1', '0'),
+        linea('113000000', '1', '0'),
+        linea('1130', '1', '0'),
+        linea('430000001', '5', '0'),
+        linea('570000000', '0', '8'),
+      ],
+      opciones({ equivalencias: [EQUIVALENCIA] }),
+    )
+    const fila = (cuenta: string) => r.cuentas.find((c) => c.cuenta === cuenta)!
+    // 1130 y 113000000 se juntan; la original es la que más líneas tiene.
+    expect(fila('113000000').original).toBe('1130')
+    expect(fila('113000000').porEquivalencia).toBe(false)
+    expect(fila('430000099').porEquivalencia).toBe(true)
+    expect(fila('570000000').original).toBe('570000000')
+  })
+
+  it('claveSubcuenta casa la misma subcuenta con distinta longitud', () => {
+    expect(claveSubcuenta('10000001')).toBe(claveSubcuenta('100000001'))
+    expect(claveSubcuenta('11300000')).toBe(claveSubcuenta('113000000'))
+    expect(claveSubcuenta('10000001')).not.toBe(claveSubcuenta('100000010'))
+  })
+
+  it('busca de entrada la subcuenta del plan que casa; si no, la descripción o la cuenta', () => {
+    const [ivan] = sumarDiarioB(
+      [linea('10000001', '0', '5')],
+      opciones({ tituloDelPlan: () => 'IVAN GONZALEZ' }),
+    ).cuentas
+    expect(busquedaInicial(ivan, ['100000001', '570000000'])).toBe('100000001')
+    expect(busquedaInicial(ivan, ['570000000'])).toBe('IVAN GONZALEZ')
+    expect(busquedaInicial({ ...ivan, titulo: '' }, [])).toBe('10000001')
   })
 })
