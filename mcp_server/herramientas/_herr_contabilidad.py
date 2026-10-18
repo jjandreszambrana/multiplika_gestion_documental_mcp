@@ -390,14 +390,17 @@ RUTA_EQUIVALENCIAS = "/contabilidad/diario_equivalencias"
 async def crear_equivalencia_cuenta_gd(
     id_empresa: int, cuenta_origen: str, cuenta_destino: str,
     titulo_origen: str | None = None, titulo_destino: str | None = None, observaciones: str | None = None,
+    flag: Literal[0, 1] | None = None,
 ) -> dict:
     """Crea en el SIF una equivalencia de cuentas de la empresa (cuenta de
     origen → cuenta de destino). Se guarda al momento, sin propuesta.
+    `flag` (0/1) es una marca del usuario; pon 1 si la cuenta de destino la
+    has comprobado en el plan del SIF.
     Mira antes con `equivalencias_cuentas_gd` que no exista ya, y con
     `buscar_cuenta_contable_gd` que la cuenta de destino existe."""
     return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/crear", {
         "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
-        "titulo_destino": titulo_destino, "observaciones": observaciones,
+        "titulo_destino": titulo_destino, "observaciones": observaciones, "flag": flag,
     })
 
 
@@ -405,12 +408,15 @@ async def crear_equivalencia_cuenta_gd(
 async def corregir_equivalencia_cuenta_gd(
     id_empresa: int, id: int, cuenta_origen: str | None = None, cuenta_destino: str | None = None,
     titulo_origen: str | None = None, titulo_destino: str | None = None, observaciones: str | None = None,
+    flag: Literal[0, 1] | None = None,
 ) -> dict:
     """Cambia una equivalencia de cuentas ya guardada (`id` de
-    `equivalencias_cuentas_gd`). Pasa solo los campos que cambian."""
+    `equivalencias_cuentas_gd`). Pasa solo los campos que cambian.
+    `flag` es una marca de sí o no (0/1) del usuario; no le supongas un
+    significado."""
     return await _sif(id_empresa, f"{RUTA_EQUIVALENCIAS}/editar", {
         "id": id, "cuenta_origen": cuenta_origen, "cuenta_destino": cuenta_destino, "titulo_origen": titulo_origen,
-        "titulo_destino": titulo_destino, "observaciones": observaciones,
+        "titulo_destino": titulo_destino, "observaciones": observaciones, "flag": flag,
     })
 
 

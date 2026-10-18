@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
+import { IconCheck } from '@tabler/icons-react'
 import {
   MantineReactTable,
   useMantineReactTable,
@@ -24,6 +25,8 @@ import DialogoEquivalencia from './DialogoEquivalencia'
 import { IconosDeFila, propsDeFilaMarcable } from './filaMarcada'
 
 interface Props {
+  /** Para buscar la cuenta de destino en el plan de ese ejercicio. */
+  ejercicio: number | null
   nivel: string
   ancho: number
 }
@@ -37,7 +40,7 @@ const CODIGO = (cuenta: string) => (
 )
 
 /** Las equivalencias de cuentas de la empresa, con un buscador. */
-export default function TablaEquivalencias({ nivel, ancho }: Props) {
+export default function TablaEquivalencias({ ejercicio, nivel, ancho }: Props) {
   const puedeTocar = alcanza(nivel, 'cierre')
   const [texto, setTexto] = useState('')
   const [buscado] = useDebouncedValue(texto.trim(), 400)
@@ -95,6 +98,16 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
         Cell: ({ row }) => CODIGO(row.original.cuenta_destino),
       },
       { accessorKey: 'titulo_destino', header: 'Título de destino', size: 220, grow: false },
+      {
+        accessorKey: 'flag',
+        header: 'Flag',
+        size: 70,
+        grow: false,
+        Cell: ({ row }) =>
+          row.original.flag === 1 ? (
+            <IconCheck size={16} color="var(--mantine-color-green-7)" aria-label="Sí" />
+          ) : null,
+      },
       {
         accessorKey: 'observaciones',
         header: 'Observaciones',
@@ -182,6 +195,7 @@ export default function TablaEquivalencias({ nivel, ancho }: Props) {
         <DialogoEquivalencia
           equivalencia={editando === 'nueva' ? null : editando}
           ancho={ancho}
+          ejercicio={ejercicio}
           alCerrar={() => setEditando(null)}
           alGuardar={async (datos) => {
             if (editando === 'nueva') await crearEquivalenciaCuenta(datos)

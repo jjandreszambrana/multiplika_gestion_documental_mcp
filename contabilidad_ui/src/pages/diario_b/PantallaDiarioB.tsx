@@ -55,10 +55,14 @@ export default function PantallaDiarioB({ ejercicio, nivel, ancho, quienGuarda }
           {vista('diario_b') && <TablaDiarioB ejercicio={ejercicio} nivel={nivel} ancho={ancho} />}
         </Tabs.Panel>
         <Tabs.Panel value="equivalencias" pt="md">
-          {vista('equivalencias') && <TablaEquivalencias nivel={nivel} ancho={ancho} />}
+          {vista('equivalencias') && (
+            <TablaEquivalencias ejercicio={ejercicio} nivel={nivel} ancho={ancho} />
+          )}
         </Tabs.Panel>
         <Tabs.Panel value="sumas_saldos" pt="md">
-          {vista('sumas_saldos') && <SumasSaldosDiarioB ejercicio={ejercicio} nivel={nivel} quienGuarda={quienGuarda} />}
+          {vista('sumas_saldos') && (
+            <SumasSaldosDiarioB ejercicio={ejercicio} nivel={nivel} quienGuarda={quienGuarda} />
+          )}
         </Tabs.Panel>
       </Tabs>
     </Stack>

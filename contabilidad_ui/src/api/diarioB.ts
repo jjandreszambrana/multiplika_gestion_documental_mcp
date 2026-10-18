@@ -149,23 +149,33 @@ export interface EquivalenciaCuenta {
   cuenta_destino: string
   titulo_destino: string | null
   observaciones: string | null
+  /** Marca de sí (1) o no (0) que pidió el usuario, sin significado fijado ([5.33]). */
+  flag: number
+}
+
+/** Como llega: los SIF que aún no tienen la marca no la mandan. */
+type EquivalenciaApi = Omit<EquivalenciaCuenta, 'flag'> & { flag?: number | null }
+
+/** Sin marca, cuenta como 0. */
+export function normalizarEquivalencia(e: EquivalenciaApi): EquivalenciaCuenta {
+  return { ...e, flag: e.flag === 1 ? 1 : 0 }
 }
 
 export type DatosEquivalencia = Partial<Omit<EquivalenciaCuenta, 'id'>>
 
 const RUTA_EQ = '/contabilidad/diario_equivalencias'
 
-export function listarEquivalenciasCuenta(
+export async function listarEquivalenciasCuenta(
   texto: string,
   offset: number,
   limit: number,
   senal?: AbortSignal,
 ): Promise<{ total: number; equivalencias: EquivalenciaCuenta[] }> {
-  return pedir(
-    `${RUTA_EQ}/listar`,
-    { ...(texto !== '' && { texto }), offset, limit },
-    senal,
-  )
+  const { total, equivalencias } = await pedir<{
+    total: number
+    equivalencias: EquivalenciaApi[]
+  }>(`${RUTA_EQ}/listar`, { ...(texto !== '' && { texto }), offset, limit }, senal)
+  return { total, equivalencias: equivalencias.map(normalizarEquivalencia) }
 }
 
 /** Todas las equivalencias de la empresa, en tandas de mil. */
@@ -180,15 +190,19 @@ export async function equivalenciasEnteras(senal?: AbortSignal): Promise<Equival
   return todas
 }
 
-export function crearEquivalenciaCuenta(datos: DatosEquivalencia): Promise<EquivalenciaCuenta> {
-  return pedir(`${RUTA_EQ}/crear`, datos)
+export async function crearEquivalenciaCuenta(
+  datos: DatosEquivalencia,
+): Promise<EquivalenciaCuenta> {
+  return normalizarEquivalencia(await pedir<EquivalenciaApi>(`${RUTA_EQ}/crear`, datos))
 }
 
-export function editarEquivalenciaCuenta(
+export async function editarEquivalenciaCuenta(
   id: number,
   cambios: DatosEquivalencia,
 ): Promise<EquivalenciaCuenta> {
-  return pedir(`${RUTA_EQ}/editar`, { id, ...cambios })
+  return normalizarEquivalencia(
+    await pedir<EquivalenciaApi>(`${RUTA_EQ}/editar`, { id, ...cambios }),
+  )
 }
 
 export async function eliminarEquivalenciaCuenta(id: number): Promise<void> {

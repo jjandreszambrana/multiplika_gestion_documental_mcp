@@ -1,48 +1,74 @@
-import { Alert, Button, Group, Modal, SimpleGrid, Stack, TextInput, Textarea } from '@mantine/core'
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  Checkbox,
+  Group,
+  Modal,
+  SimpleGrid,
+  Stack,
+  TextInput,
+  Textarea,
+  Tooltip,
+} from '@mantine/core'
+import { IconSearch } from '@tabler/icons-react'
 import { useState, type FormEvent } from 'react'
 import type { DatosEquivalencia, EquivalenciaCuenta } from '../../api/diarioB'
 import { textoDeError } from '../../api/errores'
+import type { CuentaPlan } from '../../api/plan'
 import { expandirCuenta } from '../../lib/cuenta'
+import BuscadorDelPlan from './BuscadorDelPlan'
+import { datosAEnviar, valoresDe, type ValoresEquivalencia } from './datosEquivalencia'
 
 interface Props {
   /** Nula para dar de alta una nueva. */
   equivalencia: EquivalenciaCuenta | null
   ancho: number
+  /** Para buscar la cuenta de destino en el plan de ese ejercicio. */
+  ejercicio: number | null
   alCerrar: () => void
   /** Al editar, recibe solo lo que ha cambiado. */
   alGuardar: (datos: DatosEquivalencia) => Promise<void>
 }
 
+type Campo = Exclude<keyof ValoresEquivalencia, 'flag'>
+
 /** Alta y edición de una equivalencia: cuenta de origen → cuenta de destino. */
-export default function DialogoEquivalencia({ equivalencia, ancho, alCerrar, alGuardar }: Props) {
-  const [valores, setValores] = useState({
-    cuenta_origen: equivalencia?.cuenta_origen ?? '',
-    titulo_origen: equivalencia?.titulo_origen ?? '',
-    cuenta_destino: equivalencia?.cuenta_destino ?? '',
-    titulo_destino: equivalencia?.titulo_destino ?? '',
-    observaciones: equivalencia?.observaciones ?? '',
-  })
+export default function DialogoEquivalencia({
+  equivalencia,
+  ancho,
+  ejercicio,
+  alCerrar,
+  alGuardar,
+}: Props) {
+  const [valores, setValores] = useState<ValoresEquivalencia>(() => valoresDe(equivalencia))
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [buscando, setBuscando] = useState(false)
+  const [elegida, setElegida] = useState<CuentaPlan | null>(null)
 
-  type Campo = keyof typeof valores
   const poner = (campo: Campo, valor: string) => setValores((v) => ({ ...v, [campo]: valor }))
-  const expandir = (campo: Campo) => setValores((v) => ({ ...v, [campo]: expandirCuenta(v[campo], ancho) }))
+  const expandir = (campo: Campo) =>
+    setValores((v) => ({ ...v, [campo]: expandirCuenta(v[campo], ancho) }))
+
+  // Elegida en el plan: se rellenan la cuenta y el título de destino, y se marca Flag.
+  function usarElegida() {
+    if (!elegida) return
+    setValores((v) => ({
+      ...v,
+      cuenta_destino: elegida.codigo,
+      titulo_destino: elegida.descripcion ?? '',
+      flag: 1,
+    }))
+    setBuscando(false)
+  }
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     setError(null)
     setGuardando(true)
-    const limpios = Object.fromEntries(
-      Object.entries(valores).map(([campo, valor]) => [campo, valor.trim()]),
-    ) as Record<Campo, string>
-    const datos = equivalencia
-      ? (Object.fromEntries(
-          Object.entries(limpios).filter(([campo, valor]) => (equivalencia[campo as Campo] ?? '') !== valor),
-        ) as DatosEquivalencia)
-      : limpios
     try {
-      await alGuardar(datos)
+      await alGuardar(datosAEnviar(equivalencia, valores))
     } catch (fallo) {
       setError(textoDeError(fallo))
       setGuardando(false)
@@ -87,6 +113,21 @@ export default function DialogoEquivalencia({ equivalencia, ancho, alCerrar, alG
               onBlur={() => expandir('cuenta_destino')}
               ff="monospace"
               required
+              rightSection={
+                <Tooltip label="Buscar en el plan…" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    aria-label="Buscar en el plan…"
+                    onClick={() => {
+                      setElegida(null)
+                      setBuscando(true)
+                    }}
+                  >
+                    <IconSearch size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              }
             />
             <TextInput
               label="Título de destino"
@@ -94,6 +135,15 @@ export default function DialogoEquivalencia({ equivalencia, ancho, alCerrar, alG
               onChange={(e) => poner('titulo_destino', e.currentTarget.value)}
             />
           </SimpleGrid>
+
+          <Checkbox
+            label="Flag"
+            checked={valores.flag === 1}
+            onChange={(e) => {
+              const marcada = e.currentTarget.checked
+              setValores((v) => ({ ...v, flag: marcada ? 1 : 0 }))
+            }}
+          />
 
           <Textarea
             label="Observaciones"
@@ -113,6 +163,36 @@ export default function DialogoEquivalencia({ equivalencia, ancho, alCerrar, alG
           </Group>
         </Stack>
       </form>
+
+      <Modal
+        opened={buscando}
+        onClose={() => setBuscando(false)}
+        title="Buscar la cuenta de destino"
+        size="lg"
+      >
+        <Stack gap="sm">
+          {buscando && (
+            <BuscadorDelPlan
+              ejercicio={ejercicio}
+              busqueda={
+                valores.cuenta_destino.trim() ||
+                valores.titulo_origen.trim() ||
+                valores.cuenta_origen.trim()
+              }
+              elegida={elegida}
+              alElegir={setElegida}
+            />
+          )}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setBuscando(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={usarElegida} disabled={!elegida}>
+              Elegir
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Modal>
   )
 }

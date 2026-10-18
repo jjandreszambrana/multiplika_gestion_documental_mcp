@@ -37,7 +37,16 @@ Cuenta de origen → cuenta de destino, con sus títulos y observaciones. **No e
 el cambio de plan contable** de `/equivalencias`.
 
 - Buscador «Buscar por cuenta o título». Paginado igual.
-- Formulario con los cinco campos; las dos cuentas, obligatorias.
+- Columna «Flag» entre «Título de destino» y «Observaciones»: una marca verde si
+  vale 1 y nada si vale 0. Es una marca de sí o no que pidió el usuario sin decir
+  para qué ([5.33]), así que no lleva ningún texto que le dé significado. Solo
+  existe en el SIF de Icomase; si el SIF no la manda, cuenta como 0.
+- Formulario con los cinco campos y la casilla «Flag»; las dos cuentas,
+  obligatorias. Junto a la cuenta de destino, una lupa («Buscar en el plan…»)
+  abre «Buscar la cuenta de destino», el mismo buscador del plan del SIF que
+  «Asignar…» en sumas y saldos (`BuscadorDelPlan.tsx`). Al elegir con «Elegir»
+  se rellenan la cuenta y el título de destino y se marca Flag, que luego se
+  puede desmarcar a mano. Al editar, Flag se manda solo si cambia, como el resto.
 - Ver, `consulta`. Crear, cambiar y borrar, `cierre`.
 
 En las dos rejillas: cada fila lleva un lápiz («Cambiar…», abre el formulario)
@@ -112,7 +121,7 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
   si no hay, su descripción. Se marca una fila y «Crear equivalencia» la da de
   alta: origen, la cuenta tal como viene en las líneas (si en la fila se
   juntaron varias formas, la que más líneas tiene) con su descripción; destino,
-  la elegida con su título. Después se rehace el balance y la fila pasa a su
+  la elegida con su título, y Flag marcada. Después se rehace el balance y la fila pasa a su
   destino. Un error del SIF (una equivalencia que ya existe) se enseña tal cual.
 - «No mostrar las cuentas sin saldo» quita las filas con saldo deudor y
   acreedor a cero. Los totales siguen siendo los de todas las líneas que entran,

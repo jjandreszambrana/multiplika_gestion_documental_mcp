@@ -43,6 +43,7 @@ const EQUIVALENCIA: EquivalenciaCuenta = {
   cuenta_destino: '430000099',
   titulo_destino: 'Cliente nuevo',
   observaciones: null,
+  flag: 0,
 }
 
 const PLAN: Record<string, string> = {
