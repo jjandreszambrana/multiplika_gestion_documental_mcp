@@ -7,6 +7,7 @@ import {
   Modal,
   SimpleGrid,
   Stack,
+  Text,
   TextInput,
   Textarea,
   Tooltip,
@@ -171,6 +172,15 @@ export default function DialogoEquivalencia({
         size="lg"
       >
         <Stack gap="sm">
+          {(valores.cuenta_origen.trim() !== '' || valores.titulo_origen.trim() !== '') && (
+            <Text size="sm">
+              Cuenta de origen:{' '}
+              <Text span ff="monospace" fw={600}>
+                {valores.cuenta_origen.trim()}
+              </Text>
+              {valores.titulo_origen.trim() !== '' && ` ${valores.titulo_origen.trim()}`}
+            </Text>
+          )}
           {buscando && (
             <BuscadorDelPlan
               ejercicio={ejercicio}
