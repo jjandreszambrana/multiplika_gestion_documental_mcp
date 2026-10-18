@@ -156,3 +156,27 @@ export type RevisionDeAuxiliares = components['schemas']['RespuestaRevisarAuxili
 export function revisarAuxiliares(): Promise<RevisionDeAuxiliares> {
   return pedir<RevisionDeAuxiliares>('/contabilidad/plan/revisar_auxiliares')
 }
+
+/**
+ * El plan entero del ejercicio, apartadas incluidas, en tandas de
+ * `MAXIMO_POR_PAGINA`. Para buscar el título de cuentas que no salen en el plan
+ * en memoria (que deja fuera las ocultas y las retiradas).
+ */
+export async function planEntero(ejercicio: number | null): Promise<CuentaPlan[]> {
+  const todas: CuentaPlan[] = []
+  // Tope de vueltas, para que un `total` raro no deje el navegador dando vueltas.
+  for (let vuelta = 0; vuelta < 50; vuelta += 1) {
+    const respuesta = await listarPlan({
+      ejercicio,
+      texto: '',
+      soloAuxiliares: false,
+      incluirApartadas: true,
+      offset: todas.length,
+      limit: MAXIMO_POR_PAGINA,
+    })
+    const cuentas = respuesta.cuentas ?? []
+    todas.push(...cuentas)
+    if (cuentas.length === 0 || todas.length >= respuesta.total) break
+  }
+  return todas
+}

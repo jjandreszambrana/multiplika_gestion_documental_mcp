@@ -40,6 +40,21 @@ export interface OpcionesSumasDiarioB {
    * porque se puede filtrar sin aplicarlas.
    */
   soloSinEquivalencia?: EquivalenciaCuenta[] | null
+  /**
+   * Por subcuenta, para las cuentas que no son origen de ninguna de
+   * `equivalencias`: si el plan en memoria no da título, se busca con `buscar`
+   * (el plan del SIF entero) por la subcuenta tal cual, completada con ceros y,
+   * si no está, por su cuenta de mayor (4 y luego 3 cifras). Nulo: no se busca.
+   */
+  descripcionSinEquivalencia?: {
+    equivalencias: EquivalenciaCuenta[]
+    buscar: (codigo: string) => string | null | undefined
+  } | null
+}
+
+/** Las filas sin saldo deudor ni acreedor fuera; los totales no se tocan. */
+export function quitarSinSaldo(cuentas: SumaDeCuenta[]): SumaDeCuenta[] {
+  return cuentas.filter((c) => !c.deudor.isZero() || !c.acreedor.isZero())
 }
 
 const CERO = new Decimal(0)
@@ -147,6 +162,10 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   const conEquivalencia = opciones.soloSinEquivalencia
     ? new Set(opciones.soloSinEquivalencia.map((e) => e.cuenta_origen))
     : null
+  const sinEquivalencia = opciones.descripcionSinEquivalencia ?? null
+  const origenes = sinEquivalencia
+    ? new Set(sinEquivalencia.equivalencias.map((e) => e.cuenta_origen))
+    : null
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => l.cuenta.trim().length))
   const clase = clasificarAsientos(lineas, largoSubcuenta)
@@ -176,8 +195,24 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     const cuenta = nivel === 0 ? destino : destino.slice(0, nivel)
     let suma = porCuenta.get(cuenta)
     if (!suma) {
-      const titulo =
+      let titulo =
         (nivel === 0 && equivalencia?.titulo_destino) || tituloDelPlan(cuenta) || ''
+      if (
+        titulo === '' &&
+        nivel === 0 &&
+        sinEquivalencia &&
+        origenes &&
+        !origenes.has(original) &&
+        !origenes.has(completa)
+      ) {
+        const { buscar } = sinEquivalencia
+        titulo =
+          buscar(original) ||
+          buscar(completa) ||
+          buscar(completa.slice(0, 4)) ||
+          buscar(completa.slice(0, 3)) ||
+          ''
+      }
       suma = { titulo, iniDebe: CERO, iniHaber: CERO, debe: CERO, haber: CERO }
       porCuenta.set(cuenta, suma)
     }

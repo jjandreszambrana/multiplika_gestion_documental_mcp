@@ -56,9 +56,14 @@ diario B: al pulsar Ver se trae el ejercicio entero de la cabecera (tandas de
 mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
 
 - Filtros: Agrupar por (Grupo / Subgrupo / Cuenta de mayor / Subcuenta, entra
-  por Subcuenta), Desde, Hasta, Ver (Todas / Del libro / Borradores), «Aplicar
-  equivalencias de cuentas», «Solo cuentas sin equivalencia» y «Sin
-  regularización ni cierre», las tres desmarcadas.
+  por Subcuenta), Desde, Hasta, Ver (Todas / Del libro / Borradores) y el botón
+  «Opciones…», junto a Ver.
+- «Opciones…» abre una ventana con cinco casillas, desmarcadas de fábrica:
+  «Aplicar equivalencias de cuentas», «Solo cuentas sin equivalencia», «Sin
+  regularización ni cierre», «Mostrar la descripción de las cuentas sin
+  equivalencia» y «No mostrar las cuentas sin saldo». Se aplica al cerrarla, de
+  cualquier manera (como el filtro del diario); si ya hay algo calculado, se
+  rehace. Se recuerdan por usuario y empresa.
 - Columnas: Cuenta, Descripción; **Periodo**: Saldo inicial, Debe, Haber;
   **Acumulados**: Debe, Haber, Saldo deudor, Saldo acreedor. Fila de totales
   fija abajo en todas.
@@ -88,6 +93,18 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
   no se apliquen. Vale con cualquier agrupación y con el resto de opciones; el
   saldo inicial y los totales salen solo de las líneas que entran. Marcada junto
   con «Aplicar equivalencias» da lo mismo que sin aplicarlas, y no se impide.
+- Descripción: la de destino de la equivalencia, o la del plan en memoria para
+  ese código (que deja fuera las cuentas ocultas y retiradas). Por eso una
+  subcuenta del diario B que no está en el plan del SIF (las que vienen de
+  Keme) sale en blanco. Con «Mostrar la descripción de las cuentas sin
+  equivalencia», por subcuenta y para las cuentas que no son origen de ninguna
+  equivalencia, si sigue en blanco se busca en el plan entero del SIF (apartadas
+  incluidas): la subcuenta tal cual, completada con ceros por la derecha y, si
+  no está, su cuenta de mayor de 4 y luego de 3 cifras. Si tampoco, queda en
+  blanco: no hay otro sitio de donde sacarla.
+- «No mostrar las cuentas sin saldo» quita las filas con saldo deudor y
+  acreedor a cero. Los totales siguen siendo los de todas las líneas que entran,
+  y una nota bajo la tabla dice cuántas cuentas se han ocultado.
 - No salen cuentas sin importes. Debe, haber y saldo inicial totales son los
   mismos en cualquier nivel.
 - Sin Excel: el de sumas y saldos lo genera el SIF y no sirve para el diario B.

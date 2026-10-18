@@ -1,7 +1,6 @@
 import {
   Alert,
   Button,
-  Checkbox,
   Group,
   Loader,
   SegmentedControl,
@@ -14,6 +13,7 @@ import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'man
 import { useEffect, useMemo, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
 import { diarioBEntero, equivalenciasEnteras } from '../../api/diarioB'
+import { planEntero } from '../../api/plan'
 import { textoDeError } from '../../api/errores'
 import type { NivelDeBalance } from '../../api/informes'
 import { CasillaFecha } from '../../components/CasillaFecha'
@@ -21,7 +21,13 @@ import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
 import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
 import { fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearImporte } from '../../lib/format'
+import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
+import DialogoOpcionesSumas, {
+  normalizarOpciones,
+  type OpcionesSumas,
+} from './DialogoOpcionesSumas'
 import {
+  quitarSinSaldo,
   sumarDiarioB,
   type ImportesDiarioB,
   type SumaDeCuenta,
@@ -30,18 +36,19 @@ import {
 
 interface Props {
   ejercicio: number | null
+  /** Usuario y empresa, para recordar las opciones. */
+  quienGuarda: string
 }
 
+const PREFERENCIA_OPCIONES = 'diario_b.sumas.opciones'
+
 /** Lo que se está viendo, que no cambia mientras se retoca el filtro. */
-interface Consulta {
+interface Consulta extends OpcionesSumas {
   ejercicio: number
   desde: string
   hasta: string
   ver: string
-  conEquivalencias: boolean
   nivel: NivelDeBalance
-  sinRegularizacion: boolean
-  soloSinEquivalencia: boolean
 }
 
 /** Los mismos que en sumas y saldos. Aquí entra por subcuenta, que es el detalle. */
@@ -100,15 +107,16 @@ function ImporteOVacio({ valor, conCero = false }: { valor: Decimal; conCero?: b
  * Sumas y saldos del diario B, cuenta a cuenta. El SIF no lo da hecho, así que
  * se traen todas las líneas del filtro y se suman aquí (ver `sumarDiarioB`).
  */
-export default function SumasSaldosDiarioB({ ejercicio }: Props) {
+export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
   const plan = usePlanEnMemoria()
   const [desde, setDesde] = useState<Date | null>(null)
   const [hasta, setHasta] = useState<Date | null>(null)
   const [ver, setVer] = useState('todas')
-  const [conEquivalencias, setConEquivalencias] = useState(false)
   const [nivel, setNivel] = useState<NivelDeBalance>(0)
-  const [sinRegularizacion, setSinRegularizacion] = useState(false)
-  const [soloSinEquivalencia, setSoloSinEquivalencia] = useState(false)
+  const [opciones, setOpciones] = useState<OpcionesSumas>(() =>
+    normalizarOpciones(leerPreferencia<unknown>(quienGuarda, PREFERENCIA_OPCIONES)),
+  )
+  const [viendoOpciones, setViendoOpciones] = useState(false)
   const [consulta, setConsulta] = useState<Consulta | null>(null)
   const [sumas, setSumas] = useState<SumasDiarioB | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -133,16 +141,28 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
         },
         corte.signal,
       ),
-      // Para filtrar por las que no tienen equivalencia también hacen falta.
-      consulta.conEquivalencias || consulta.soloSinEquivalencia
+      // Para saber qué cuentas no tienen equivalencia también hacen falta.
+      consulta.conEquivalencias ||
+      consulta.soloSinEquivalencia ||
+      consulta.descripcionSinEquivalencia
         ? equivalenciasEnteras(corte.signal)
         : Promise.resolve(null),
+      // El plan en memoria deja fuera las cuentas ocultas y retiradas: para
+      // buscar descripciones se trae entero.
+      consulta.descripcionSinEquivalencia
+        ? planEntero(consulta.ejercicio)
+        : Promise.resolve(null),
     ])
-      .then(([lineas, equivalencias]) => {
+      .then(([lineas, equivalencias, planCompleto]) => {
+        const titulos = new Map((planCompleto ?? []).map((c) => [c.codigo, c.descripcion ?? '']))
         setSumas(
           sumarDiarioB(lineas, {
             equivalencias: consulta.conEquivalencias ? equivalencias : null,
             soloSinEquivalencia: consulta.soloSinEquivalencia ? equivalencias : null,
+            descripcionSinEquivalencia:
+              consulta.descripcionSinEquivalencia && equivalencias
+                ? { equivalencias, buscar: (codigo) => titulos.get(codigo) }
+                : null,
             tituloDelPlan: (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
             nivel: consulta.nivel,
             desde: consulta.desde,
@@ -170,12 +190,27 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
       desde: fechaParaApi(desde),
       hasta: fechaParaApi(hasta),
       ver,
-      conEquivalencias,
       nivel,
-      sinRegularizacion,
-      soloSinEquivalencia,
+      ...opciones,
     })
   }
+
+  function aplicarOpciones(nuevas: OpcionesSumas) {
+    setViendoOpciones(false)
+    setOpciones(nuevas)
+    guardarPreferencia(quienGuarda, PREFERENCIA_OPCIONES, nuevas)
+    // Si ya hay algo calculado, se rehace con las opciones nuevas.
+    setConsulta((actual) => (actual === null ? null : { ...actual, ...nuevas }))
+  }
+
+  // Ocultar las cuentas sin saldo solo quita filas: los totales siguen siendo
+  // los de todas las líneas que entran, para que debe y haber cuadren.
+  const filas = useMemo(
+    () =>
+      sumas && consulta?.ocultarSinSaldo ? quitarSinSaldo(sumas.cuentas) : (sumas?.cuentas ?? []),
+    [sumas, consulta?.ocultarSinSaldo],
+  )
+  const ocultas = (sumas?.cuentas.length ?? 0) - filas.length
 
   const total = sumas?.total ?? null
   // Las dos primeras van en un grupo sin cabecera: así la fila de cabeceras de
@@ -234,7 +269,7 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
   const tabla = useMantineReactTable({
     ...opcionesDeTabla<SumaDeCuenta>(),
     columns: columnas,
-    data: sumas?.cuentas ?? [],
+    data: filas,
     getRowId: (fila) => fila.cuenta,
     enablePagination: false,
     enableBottomToolbar: false,
@@ -276,24 +311,9 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
           </Text>
           <SegmentedControl size="xs" value={ver} onChange={setVer} data={VER} />
         </Stack>
-        <Checkbox
-          label="Aplicar equivalencias de cuentas"
-          checked={conEquivalencias}
-          onChange={(e) => setConEquivalencias(e.currentTarget.checked)}
-          pb={8}
-        />
-        <Checkbox
-          label="Solo cuentas sin equivalencia"
-          checked={soloSinEquivalencia}
-          onChange={(e) => setSoloSinEquivalencia(e.currentTarget.checked)}
-          pb={8}
-        />
-        <Checkbox
-          label="Sin regularización ni cierre"
-          checked={sinRegularizacion}
-          onChange={(e) => setSinRegularizacion(e.currentTarget.checked)}
-          pb={8}
-        />
+        <Button variant="default" onClick={() => setViendoOpciones(true)}>
+          Opciones…
+        </Button>
         <Button onClick={verSumas} disabled={ejercicio === null} loading={cargando}>
           Ver
         </Button>
@@ -318,11 +338,22 @@ export default function SumasSaldosDiarioB({ ejercicio }: Props) {
       {sumas !== null && !error && (
         <Group gap="xl" wrap="wrap">
           <Text size="sm" c="dimmed">
-            {`${formatearEntero(sumas.cuentas.length)} cuentas`}
+            {`${formatearEntero(filas.length)} cuentas`}
           </Text>
+          {ocultas > 0 && (
+            <Text size="xs" c="dimmed">
+              {`${formatearEntero(ocultas)} cuentas sin saldo ocultas. Los totales las incluyen.`}
+            </Text>
+          )}
           {cargando && <Loader size="xs" />}
         </Group>
       )}
+
+      <DialogoOpcionesSumas
+        abierto={viendoOpciones}
+        opciones={opciones}
+        alAplicar={aplicarOpciones}
+      />
     </Stack>
   )
 }

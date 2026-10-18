@@ -1,7 +1,12 @@
 import Decimal from 'decimal.js'
 import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta, LineaDiarioB } from '../../api/diarioB'
-import { clasificarAsientos, sumarDiarioB, type OpcionesSumasDiarioB } from './sumasDiarioB'
+import {
+  clasificarAsientos,
+  quitarSinSaldo,
+  sumarDiarioB,
+  type OpcionesSumasDiarioB,
+} from './sumasDiarioB'
 
 // Cada línea va en su propio asiento: así las marcas de `diario` solo afectan a
 // la suya, y ninguna se toma por apertura o cierre sin querer.
@@ -291,5 +296,75 @@ describe('sumarDiarioB solo con cuentas sin equivalencia', () => {
     expect(ambas.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)])).toEqual(
       solo.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)]),
     )
+  })
+})
+
+describe('sumarDiarioB: descripción de las cuentas sin equivalencia', () => {
+  const PLAN_SIF: Record<string, string> = {
+    '10000001': 'IVAN GONZALEZ',
+    '430000010': 'Cliente completado',
+    '5720': 'Bancos e instituciones de crédito',
+    '471': 'Organismos de la Seguridad Social, deudores',
+  }
+  const buscar = (c: string) => PLAN_SIF[c]
+  const sinTitulo = () => undefined
+  const LINEAS = () => [
+    linea('10000001', '0', '5'),
+    linea('43000001', '0', '3'),
+    linea('572000009', '8', '0'),
+    linea('471000003', '1', '0'),
+    linea('430000001', '0', '1'),
+    linea('600000000', '2', '0'),
+  ]
+
+  it('sin la opción, las que no están en el plan en memoria salen en blanco', () => {
+    const r = sumarDiarioB(LINEAS(), opciones({ tituloDelPlan: sinTitulo }))
+    expect(r.cuentas.every((c) => c.titulo === '')).toBe(true)
+  })
+
+  it('busca la subcuenta tal cual, completada con ceros y si no, la de mayor de 4 y 3 cifras', () => {
+    const r = sumarDiarioB(
+      LINEAS(),
+      opciones({
+        tituloDelPlan: sinTitulo,
+        descripcionSinEquivalencia: { equivalencias: [EQUIVALENCIA], buscar },
+      }),
+    )
+    const titulo = (cuenta: string) => r.cuentas.find((c) => c.cuenta === cuenta)?.titulo
+    // Tal cual viene en el diario B, aunque sea más corta que las demás.
+    expect(titulo('100000010')).toBe('IVAN GONZALEZ')
+    // Completada con ceros por la derecha, como se suma.
+    expect(titulo('430000010')).toBe('Cliente completado')
+    expect(titulo('572000009')).toBe('Bancos e instituciones de crédito')
+    expect(titulo('471000003')).toBe('Organismos de la Seguridad Social, deudores')
+    // Si no hay de dónde sacarla, se queda en blanco.
+    expect(titulo('600000000')).toBe('')
+    // La que tiene equivalencia no se busca.
+    expect(titulo('430000001')).toBe('')
+  })
+
+  it('el plan en memoria manda sobre la búsqueda', () => {
+    const r = sumarDiarioB(
+      [linea('572000009', '5', '0')],
+      opciones({
+        tituloDelPlan: (c) => (c === '572000009' ? 'Banco Uno' : undefined),
+        descripcionSinEquivalencia: { equivalencias: [], buscar },
+      }),
+    )
+    expect(r.cuentas[0].titulo).toBe('Banco Uno')
+  })
+})
+
+describe('quitarSinSaldo', () => {
+  it('quita las filas sin saldo deudor ni acreedor y no toca los totales', () => {
+    const r = sumarDiarioB(
+      [linea('572000000', '10', '10'), linea('570000000', '5', '0'), linea('400000001', '0', '5')],
+      opciones(),
+    )
+    const filas = quitarSinSaldo(r.cuentas)
+    expect(filas.map((c) => c.cuenta)).toEqual(['400000001', '570000000'])
+    expect(r.cuentas.length - filas.length).toBe(1)
+    expect(f2(r.total.acumDebe)).toBe('15.00')
+    expect(f2(r.total.acumHaber)).toBe('15.00')
   })
 })

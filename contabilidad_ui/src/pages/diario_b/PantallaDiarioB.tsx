@@ -58,7 +58,7 @@ export default function PantallaDiarioB({ ejercicio, nivel, ancho, quienGuarda }
           {vista('equivalencias') && <TablaEquivalencias nivel={nivel} ancho={ancho} />}
         </Tabs.Panel>
         <Tabs.Panel value="sumas_saldos" pt="md">
-          {vista('sumas_saldos') && <SumasSaldosDiarioB ejercicio={ejercicio} />}
+          {vista('sumas_saldos') && <SumasSaldosDiarioB ejercicio={ejercicio} quienGuarda={quienGuarda} />}
         </Tabs.Panel>
       </Tabs>
     </Stack>
