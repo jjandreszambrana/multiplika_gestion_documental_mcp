@@ -83,13 +83,15 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
 - Filtros: Agrupar por (Grupo / Subgrupo / Cuenta de mayor / Subcuenta, entra
   por Subcuenta), Desde, Hasta, Ver (Todas / Del libro / Borradores) y el botón
   «Opciones…», junto a Ver.
-- «Opciones…» abre una ventana con cinco casillas, desmarcadas de fábrica:
+- «Opciones…» abre una ventana con cuatro casillas, desmarcadas de fábrica:
   «Aplicar equivalencias de cuentas», «Solo cuentas sin equivalencia», «Sin
-  regularización ni cierre», «Mostrar la descripción de las cuentas sin
-  equivalencia» y «No mostrar las cuentas sin saldo». Se aplica al cerrarla, de
+  regularización ni cierre» y «No mostrar las cuentas sin saldo» (la de
+  «Mostrar la descripción…» se quitó el 18-10-2026: la descripción sale
+  siempre; si quedó guardada, se ignora). Se aplica al cerrarla, de
   cualquier manera (como el filtro del diario); si ya hay algo calculado, se
   rehace. Se recuerdan por usuario y empresa.
-- Columnas: Cuenta, Descripción; **Periodo**: Saldo inicial, Debe, Haber;
+- Columnas: Cuenta, Descripción (aplicando equivalencias y por Subcuenta, entre
+  las dos va «Origen / Destino»); **Periodo**: Saldo inicial, Debe, Haber;
   **Acumulados**: Debe, Haber, Saldo deudor, Saldo acreedor. Fila de totales
   fija abajo en todas.
 - La apertura, la regularización y el cierre los reconoce el programa por lo que
@@ -118,15 +120,22 @@ mil) y se suma en el navegador con decimal.js (`sumasDiarioB.ts`, con test).
   no se apliquen. Vale con cualquier agrupación y con el resto de opciones; el
   saldo inicial y los totales salen solo de las líneas que entran. Marcada junto
   con «Aplicar equivalencias» da lo mismo que sin aplicarlas, y no se impide.
-- Descripción: la de destino de la equivalencia, o la del plan en memoria para
-  ese código (que deja fuera las cuentas ocultas y retiradas). Por eso una
-  subcuenta del diario B que no está en el plan del SIF (las que vienen de
-  Keme) sale en blanco. Con «Mostrar la descripción de las cuentas sin
-  equivalencia», por subcuenta y para las cuentas que no son origen de ninguna
-  equivalencia, si sigue en blanco se busca en el plan entero del SIF (apartadas
-  incluidas): la subcuenta tal cual, completada con ceros por la derecha y, si
-  no está, su cuenta de mayor de 4 y luego de 3 cifras. Si tampoco, queda en
-  blanco: no hay otro sitio de donde sacarla.
+- Descripción, siempre. Al pulsar Ver se traen también el plan entero del SIF
+  (apartadas incluidas) y todas las equivalencias. Por subcuenta, de lo primero
+  que haya: (1) aplicando equivalencias, el título de destino; (2) sin
+  aplicarlas, el título de origen de su equivalencia hermanada; (3) el plan, por
+  el código tal cual o casándolo con `claveSubcuenta` (10000001 = 100000001); si
+  la fila es de Destino, con la cuenta de destino; (4) el de su cuenta de mayor
+  de 4 y luego de 3 cifras; (5) vacío. Agrupando por grupo, subgrupo o cuenta de
+  mayor, la del plan para ese código. Si no se pueden traer el plan o las
+  equivalencias (cuando ninguna opción las necesita), el balance sale igual y
+  un aviso amarillo dice «Puede faltar alguna descripción: …».
+- «Origen / Destino»: con «Aplicar equivalencias de cuentas» y por Subcuenta,
+  una marca discreta en cada fila: «Destino» si sale de una equivalencia
+  hermanada (se suma en su destino), «Origen» si es la cuenta del diario B tal
+  cual. Si en una fila se juntan las dos, Destino, y su descripción es la del
+  destino. Una deshermanada no cuenta como equivalencia. Sin aplicar
+  equivalencias o con otra agrupación, la columna no sale.
 - Con «Aplicar equivalencias de cuentas» y agrupando por Subcuenta, quien tiene
   nivel `cierre` ve una columna «Equivalencia» con «Asignar…» en las filas que
   no se han sumado por ninguna equivalencia. Abre «Asignar equivalencia»: la

@@ -6,7 +6,6 @@ export interface OpcionesSumas {
   conEquivalencias: boolean
   soloSinEquivalencia: boolean
   sinRegularizacion: boolean
-  descripcionSinEquivalencia: boolean
   ocultarSinSaldo: boolean
 }
 
@@ -14,7 +13,6 @@ export const OPCIONES_DE_FABRICA: OpcionesSumas = {
   conEquivalencias: false,
   soloSinEquivalencia: false,
   sinRegularizacion: false,
-  descripcionSinEquivalencia: false,
   ocultarSinSaldo: false,
 }
 
@@ -38,7 +36,6 @@ const CASILLAS: [keyof OpcionesSumas, string][] = [
   ['conEquivalencias', 'Aplicar equivalencias de cuentas'],
   ['soloSinEquivalencia', 'Solo cuentas sin equivalencia'],
   ['sinRegularizacion', 'Sin regularización ni cierre'],
-  ['descripcionSinEquivalencia', 'Mostrar la descripción de las cuentas sin equivalencia'],
   ['ocultarSinSaldo', 'No mostrar las cuentas sin saldo'],
 ]
 

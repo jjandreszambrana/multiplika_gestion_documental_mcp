@@ -1,5 +1,6 @@
 import {
   Alert,
+  Badge,
   Button,
   Group,
   Loader,
@@ -30,6 +31,7 @@ import DialogoOpcionesSumas, {
 } from './DialogoOpcionesSumas'
 import {
   busquedaInicial,
+  ladoDe,
   claveSubcuenta,
   quitarSinSaldo,
   sumarDiarioB,
@@ -110,6 +112,17 @@ function ImporteOVacio({ valor, conCero = false }: { valor: Decimal; conCero?: b
 }
 
 /**
+ * La promesa sin que su fallo tumbe el resto: devuelve el error en vez de
+ * lanzarlo. Lo que se corta al cambiar de consulta sí se sigue lanzando.
+ */
+function sinRomper<T>(promesa: Promise<T>): Promise<T | Error> {
+  return promesa.catch((fallo: unknown) => {
+    if (esAbortada(fallo)) throw fallo
+    return fallo instanceof Error ? fallo : new Error(textoDeError(fallo))
+  })
+}
+
+/**
  * Sumas y saldos del diario B, cuenta a cuenta. El SIF no lo da hecho, así que
  * se traen todas las líneas del filtro y se suman aquí (ver `sumarDiarioB`).
  */
@@ -131,6 +144,8 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
   const [sumas, setSumas] = useState<SumasDiarioB | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Si no se pudieron traer el plan o las equivalencias para las descripciones. */
+  const [avisoDescripciones, setAvisoDescripciones] = useState<string | null>(null)
 
   useEffect(() => {
     if (consulta === null) return
@@ -151,36 +166,40 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
         },
         corte.signal,
       ),
-      // Para saber qué cuentas no tienen equivalencia también hacen falta.
-      consulta.conEquivalencias ||
-      consulta.soloSinEquivalencia ||
-      consulta.descripcionSinEquivalencia
+      // Siempre: de ellas sale también el título de origen de las cuentas que
+      // tienen equivalencia aunque no se apliquen. Solo es imprescindible si
+      // una opción las usa; si no, que fallen deja el balance sin esos títulos.
+      consulta.conEquivalencias || consulta.soloSinEquivalencia
         ? equivalenciasEnteras(corte.signal)
-        : Promise.resolve(null),
-      // El plan en memoria deja fuera las cuentas ocultas y retiradas: para
-      // buscar descripciones se trae entero.
-      consulta.descripcionSinEquivalencia
-        ? planEntero(consulta.ejercicio)
-        : Promise.resolve(null),
+        : sinRomper(equivalenciasEnteras(corte.signal)),
+      // El plan entero del SIF, para las descripciones. El de memoria deja fuera
+      // las cuentas ocultas y retiradas. Si falla, el balance sale igual.
+      sinRomper(planEntero(consulta.ejercicio)),
     ])
       .then(([lineas, equivalencias, planCompleto]) => {
-        const titulos = new Map((planCompleto ?? []).map((c) => [c.codigo, c.descripcion ?? '']))
+        const fallos = [equivalencias, planCompleto].filter((x) => x instanceof Error)
+        setAvisoDescripciones(fallos.length > 0 ? textoDeError(fallos[0]) : null)
+        const cuentasPlan = Array.isArray(planCompleto) ? planCompleto : []
+        const lista = Array.isArray(equivalencias) ? equivalencias : null
+        const titulos = new Map(cuentasPlan.map((c) => [c.codigo, c.descripcion ?? '']))
         // El diario B puede traer las subcuentas con otra longitud que el plan
         // (10000001 frente a 100000001): se casan por cuenta de mayor + número.
         const porNumero = new Map(
-          (planCompleto ?? []).filter((c) => /^\d{6,}$/.test(c.codigo)).map((c) => [claveSubcuenta(c.codigo), c.descripcion ?? '']),
+          cuentasPlan
+            .filter((c) => /^\d{6,}$/.test(c.codigo))
+            .map((c) => [claveSubcuenta(c.codigo), c.descripcion ?? '']),
         )
-        const buscar = (codigo: string) =>
-          titulos.get(codigo) || (/^\d{6,}$/.test(codigo) ? porNumero.get(claveSubcuenta(codigo)) : undefined)
+        const tituloDelPlan = (codigo: string) =>
+          titulos.get(codigo) ||
+          (/^\d{6,}$/.test(codigo) ? porNumero.get(claveSubcuenta(codigo)) : undefined) ||
+          // Sin el plan entero, al menos el que ya está en memoria.
+          plan.porCodigo.get(codigo)?.descripcion
         setSumas(
           sumarDiarioB(lineas, {
-            equivalencias: consulta.conEquivalencias ? equivalencias : null,
-            soloSinEquivalencia: consulta.soloSinEquivalencia ? equivalencias : null,
-            descripcionSinEquivalencia:
-              consulta.descripcionSinEquivalencia && equivalencias
-                ? { equivalencias, buscar }
-                : null,
-            tituloDelPlan: (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
+            equivalencias: consulta.conEquivalencias ? lista : null,
+            soloSinEquivalencia: consulta.soloSinEquivalencia ? lista : null,
+            todasLasEquivalencias: lista,
+            tituloDelPlan,
             nivel: consulta.nivel,
             desde: consulta.desde,
             hasta: consulta.hasta,
@@ -230,6 +249,7 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
   const ocultas = (sumas?.cuentas.length ?? 0) - filas.length
 
   const total = sumas?.total ?? null
+  const conLado = consulta !== null && consulta.conEquivalencias && consulta.nivel === 0
   const conAsignar =
     puedeAsignar && consulta !== null && consulta.conEquivalencias && consulta.nivel === 0
   // Las dos primeras van en un grupo sin cabecera: así la fila de cabeceras de
@@ -252,6 +272,30 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
             ),
             Footer: () => 'Totales',
           },
+          // Aplicando equivalencias y por subcuenta: si la cuenta que se ve es la
+          // del diario B tal cual o el destino de una equivalencia.
+          ...(conLado
+            ? [
+                {
+                  id: 'lado',
+                  header: 'Origen / Destino',
+                  size: 110,
+                  grow: false,
+                  Cell: ({ row }: { row: { original: SumaDeCuenta } }) => {
+                    const lado = ladoDe(row.original)
+                    return (
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color={lado === 'Destino' ? 'blue' : 'gray'}
+                      >
+                        {lado}
+                      </Badge>
+                    )
+                  },
+                } satisfies MRT_ColumnDef<SumaDeCuenta>,
+              ]
+            : []),
           {
             accessorKey: 'titulo',
             header: 'Descripción',
@@ -310,7 +354,7 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
           ]
         : []),
     ],
-    [total, conAsignar],
+    [total, conAsignar, conLado],
   )
 
   const tabla = useMantineReactTable({
@@ -369,6 +413,12 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
       {error && (
         <Alert color="red" role="alert" title="No se pudieron calcular las sumas y saldos">
           {error}
+        </Alert>
+      )}
+
+      {avisoDescripciones && !error && (
+        <Alert color="yellow" role="alert">
+          {`Puede faltar alguna descripción: ${avisoDescripciones}`}
         </Alert>
       )}
 
