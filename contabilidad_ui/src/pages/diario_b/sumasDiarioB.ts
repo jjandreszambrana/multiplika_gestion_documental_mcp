@@ -192,13 +192,15 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
  */
 export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiarioB): SumasDiarioB {
   const { equivalencias, tituloDelPlan, nivel, desde, hasta, sinRegularizacion } = opciones
-  const destinoDe = new Map((equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
+  // Una equivalencia sin cuenta de destino (deshermanada) es como si no existiera.
+  const hermanadas = (es: EquivalenciaCuenta[]) => es.filter((e) => (e.cuenta_destino ?? '').trim() !== '')
+  const destinoDe = new Map(hermanadas(equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
   const conEquivalencia = opciones.soloSinEquivalencia
-    ? new Set(opciones.soloSinEquivalencia.map((e) => e.cuenta_origen))
+    ? new Set(hermanadas(opciones.soloSinEquivalencia).map((e) => e.cuenta_origen))
     : null
   const sinEquivalencia = opciones.descripcionSinEquivalencia ?? null
   const origenes = sinEquivalencia
-    ? new Set(sinEquivalencia.equivalencias.map((e) => e.cuenta_origen))
+    ? new Set(hermanadas(sinEquivalencia.equivalencias).map((e) => e.cuenta_origen))
     : null
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => (l.cuenta ?? '').trim().length))

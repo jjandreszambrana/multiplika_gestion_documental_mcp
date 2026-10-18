@@ -44,6 +44,14 @@ export function datosAEnviar(
   return datos
 }
 
+/**
+ * Las «deshermanadas»: las que no tienen cuenta de destino. El SIF no filtra
+ * por eso, así que se filtra aquí.
+ */
+export function soloSinDestino(equivalencias: EquivalenciaCuenta[]): EquivalenciaCuenta[] {
+  return equivalencias.filter((e) => (e.cuenta_destino ?? '').trim() === '')
+}
+
 /** Una cuenta de destino que ya tiene una equivalencia, y de qué cuenta viene. */
 export interface DestinoUsado {
   destino: string

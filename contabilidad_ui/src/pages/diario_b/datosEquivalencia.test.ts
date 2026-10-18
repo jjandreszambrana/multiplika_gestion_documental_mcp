@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta } from '../../api/diarioB'
-import { datosAEnviar, destinosUsados, valoresDe, yaAsignadaA } from './datosEquivalencia'
+import { normalizarEquivalencia } from '../../api/diarioB'
+import {
+  datosAEnviar,
+  destinosUsados,
+  soloSinDestino,
+  valoresDe,
+  yaAsignadaA,
+} from './datosEquivalencia'
 
 const GUARDADA: EquivalenciaCuenta = {
   id: 7,
@@ -67,5 +74,25 @@ describe('destinos ya asignados', () => {
     const sinLaMia = destinosUsados([GUARDADA, OTRA], GUARDADA.id)
     expect(yaAsignadaA('100000001', sinLaMia)).toBeNull()
     expect(yaAsignadaA('170000003', sinLaMia)).toBe('17000003')
+  })
+})
+
+describe('soloSinDestino', () => {
+  it('deja solo las que no tienen cuenta de destino', () => {
+    const lista: EquivalenciaCuenta[] = [
+      GUARDADA,
+      { ...GUARDADA, id: 2, cuenta_destino: '' },
+      { ...GUARDADA, id: 3, cuenta_destino: '   ' },
+    ]
+    expect(soloSinDestino(lista).map((e) => e.id)).toEqual([2, 3])
+  })
+})
+
+describe('normalizarEquivalencia sin cuentas', () => {
+  it('una deshermanada sin el campo de destino queda con cadena vacía', () => {
+    const { cuenta_destino: _quitada, ...sinDestino } = GUARDADA
+    const normalizada = normalizarEquivalencia(sinDestino)
+    expect(normalizada.cuenta_destino).toBe('')
+    expect(soloSinDestino([normalizada])).toHaveLength(1)
   })
 })

@@ -154,11 +154,21 @@ export interface EquivalenciaCuenta {
 }
 
 /** Como llega: los SIF que aún no tienen la marca no la mandan. */
-type EquivalenciaApi = Omit<EquivalenciaCuenta, 'flag'> & { flag?: number | null }
+type EquivalenciaApi = Omit<EquivalenciaCuenta, 'flag' | 'cuenta_origen' | 'cuenta_destino'> & {
+  flag?: number | null
+  // Una equivalencia sin cuenta de destino («deshermanada») llega sin el campo.
+  cuenta_origen?: string | null
+  cuenta_destino?: string | null
+}
 
 /** Sin marca, cuenta como 0. */
 export function normalizarEquivalencia(e: EquivalenciaApi): EquivalenciaCuenta {
-  return { ...e, flag: e.flag === 1 ? 1 : 0 }
+  return {
+    ...e,
+    cuenta_origen: e.cuenta_origen ?? '',
+    cuenta_destino: e.cuenta_destino ?? '',
+    flag: e.flag === 1 ? 1 : 0,
+  }
 }
 
 export type DatosEquivalencia = Partial<Omit<EquivalenciaCuenta, 'id'>>
@@ -178,12 +188,15 @@ export async function listarEquivalenciasCuenta(
   return { total, equivalencias: equivalencias.map(normalizarEquivalencia) }
 }
 
-/** Todas las equivalencias de la empresa, en tandas de mil. */
-export async function equivalenciasEnteras(senal?: AbortSignal): Promise<EquivalenciaCuenta[]> {
-  const primera = await listarEquivalenciasCuenta('', 0, TOPE_POR_LLAMADA, senal)
+/** Todas las equivalencias de la empresa, en tandas de mil. Con `texto`, las que lo cumplen. */
+export async function equivalenciasEnteras(
+  senal?: AbortSignal,
+  texto = '',
+): Promise<EquivalenciaCuenta[]> {
+  const primera = await listarEquivalenciasCuenta(texto, 0, TOPE_POR_LLAMADA, senal)
   const todas = [...primera.equivalencias]
   while (todas.length < primera.total) {
-    const siguiente = await listarEquivalenciasCuenta('', todas.length, TOPE_POR_LLAMADA, senal)
+    const siguiente = await listarEquivalenciasCuenta(texto, todas.length, TOPE_POR_LLAMADA, senal)
     if (siguiente.equivalencias.length === 0) break
     todas.push(...siguiente.equivalencias)
   }

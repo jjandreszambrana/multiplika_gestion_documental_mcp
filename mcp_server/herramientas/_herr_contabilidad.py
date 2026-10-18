@@ -337,7 +337,8 @@ async def diario_b_sumas_y_saldos_gd(
     destino: dict[str, tuple[str, str | None]] = {}
     if aplicar_equivalencias or solo_sin_equivalencia:
         for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
-            destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
+            if (e.get("cuenta_destino") or "").strip():  # sin destino (deshermanada) no cuenta
+                destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
     # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
     # cifras, p. ej. 1130) se completan con ceros: 1130 → 11300000.
     largo = max((len(l["cuenta"].strip()) for l in lineas), default=0)
@@ -385,6 +386,8 @@ def _misma_subcuenta(a: str, b: str) -> bool:
     """La misma subcuenta aunque tenga otra longitud: los ceros van en medio,
     entre la cuenta de mayor (4 cifras) y el número (10000001 = 100000001)."""
     a, b = a.strip(), b.strip()
+    if not a or not b:
+        return False
     if a == b:
         return True
     if not (a.isdigit() and b.isdigit() and len(a) >= 6 and len(b) >= 6):
@@ -395,7 +398,7 @@ def _misma_subcuenta(a: str, b: str) -> bool:
 async def _rechazar_destino_usado(id_empresa: int, cuenta_destino: str, id_actual: int | None = None) -> None:
     """Un destino solo puede estar en una equivalencia (regla del usuario, 2026-10-18)."""
     for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
-        if e["id"] != id_actual and _misma_subcuenta(e["cuenta_destino"], cuenta_destino):
+        if e["id"] != id_actual and _misma_subcuenta(e.get("cuenta_destino") or "", cuenta_destino):
             raise ToolError(f"La cuenta {cuenta_destino} ya es el destino de la equivalencia de la {e['cuenta_origen']}")
 
 

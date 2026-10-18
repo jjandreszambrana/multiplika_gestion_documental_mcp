@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core'
+import { Alert, Button, Checkbox, Group, Stack, Text, TextInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { IconCheck } from '@tabler/icons-react'
 import {
@@ -13,6 +13,7 @@ import {
   crearEquivalenciaCuenta,
   editarEquivalenciaCuenta,
   eliminarEquivalenciaCuenta,
+  equivalenciasEnteras,
   listarEquivalenciasCuenta,
   type EquivalenciaCuenta,
 } from '../../api/diarioB'
@@ -20,6 +21,8 @@ import { textoDeError } from '../../api/errores'
 import { alcanza } from '../../api/sesion'
 import { CELDA_QUE_CRECE, opcionesDeTabla } from '../../components/tabla'
 import { formatearEntero } from '../../lib/format'
+import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
+import { soloSinDestino } from './datosEquivalencia'
 import DialogoConfirmar from '../traspasos/DialogoConfirmar'
 import DialogoEquivalencia from './DialogoEquivalencia'
 import { IconosDeFila, propsDeFilaMarcable } from './filaMarcada'
@@ -29,9 +32,12 @@ interface Props {
   ejercicio: number | null
   nivel: string
   ancho: number
+  /** Usuario y empresa, para recordar la casilla. */
+  quienGuarda: string
 }
 
 const POR_PAGINA = 100
+const PREFERENCIA_SIN_DESTINO = 'diario_b.equivalencias.sin_destino'
 
 const CODIGO = (cuenta: string) => (
   <Text fz="sm" ff="monospace">
@@ -40,10 +46,15 @@ const CODIGO = (cuenta: string) => (
 )
 
 /** Las equivalencias de cuentas de la empresa, con un buscador. */
-export default function TablaEquivalencias({ ejercicio, nivel, ancho }: Props) {
+export default function TablaEquivalencias({ ejercicio, nivel, ancho, quienGuarda }: Props) {
   const puedeTocar = alcanza(nivel, 'cierre')
   const [texto, setTexto] = useState('')
   const [buscado] = useDebouncedValue(texto.trim(), 400)
+  // Las «deshermanadas». El SIF no filtra por eso: marcada, se traen todas las
+  // que cumplen el buscador y se filtra y pagina aquí.
+  const [sinDestino, setSinDestino] = useState(
+    () => leerPreferencia<boolean>(quienGuarda, PREFERENCIA_SIN_DESTINO) === true,
+  )
   const [pagina, setPagina] = useState<MRT_PaginationState>({ pageIndex: 0, pageSize: POR_PAGINA })
   const [filas, setFilas] = useState<EquivalenciaCuenta[]>([])
   const [total, setTotal] = useState(0)
@@ -55,18 +66,30 @@ export default function TablaEquivalencias({ ejercicio, nivel, ancho }: Props) {
   // La fila marcada, por su número. Si deja de estar en la página, no hay ninguna.
   const [marcada, setMarcada] = useState<number | null>(null)
 
-  useEffect(() => setPagina((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 })), [buscado])
+  useEffect(
+    () => setPagina((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 })),
+    [buscado, sinDestino],
+  )
+
+  useEffect(() => {
+    guardarPreferencia(quienGuarda, PREFERENCIA_SIN_DESTINO, sinDestino)
+  }, [quienGuarda, sinDestino])
 
   useEffect(() => {
     const corte = new AbortController()
     setCargando(true)
     setError(null)
-    listarEquivalenciasCuenta(
-      buscado,
-      pagina.pageIndex * pagina.pageSize,
-      pagina.pageSize,
-      corte.signal,
-    )
+    const desde = pagina.pageIndex * pagina.pageSize
+    const pedido = sinDestino
+      ? equivalenciasEnteras(corte.signal, buscado).then((todas) => {
+          const sueltas = soloSinDestino(todas)
+          return {
+            total: sueltas.length,
+            equivalencias: sueltas.slice(desde, desde + pagina.pageSize),
+          }
+        })
+      : listarEquivalenciasCuenta(buscado, desde, pagina.pageSize, corte.signal)
+    pedido
       .then((respuesta) => {
         setFilas(respuesta.equivalencias)
         setTotal(respuesta.total)
@@ -78,7 +101,7 @@ export default function TablaEquivalencias({ ejercicio, nivel, ancho }: Props) {
         setCargando(false)
       })
     return () => corte.abort()
-  }, [buscado, pagina, recarga])
+  }, [buscado, sinDestino, pagina, recarga])
 
   const columnas = useMemo<MRT_ColumnDef<EquivalenciaCuenta>[]>(
     () => [
@@ -163,6 +186,12 @@ export default function TablaEquivalencias({ ejercicio, nivel, ancho }: Props) {
           value={texto}
           onChange={(e) => setTexto(e.currentTarget.value)}
           w={300}
+        />
+        <Checkbox
+          label="Solo sin cuenta de destino"
+          checked={sinDestino}
+          onChange={(e) => setSinDestino(e.currentTarget.checked)}
+          pb={8}
         />
         {puedeTocar && (
           <Group gap="xs" ml="auto">

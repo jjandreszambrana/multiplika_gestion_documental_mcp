@@ -37,6 +37,12 @@ Cuenta de origen → cuenta de destino, con sus títulos y observaciones. **No e
 el cambio de plan contable** de `/equivalencias`.
 
 - Buscador «Buscar por cuenta o título». Paginado igual.
+- Casilla «Solo sin cuenta de destino», junto al buscador: deja solo las que el
+  usuario llama «deshermanadas», sin cuenta de destino. El SIF no filtra por
+  eso: marcada, se traen todas las que cumplen el buscador (tandas de mil) y se
+  filtra y pagina en el navegador; desmarcada, pagina el SIF como siempre. Se
+  recuerda por usuario y empresa. Una deshermanada llega sin el campo de la
+  cuenta de destino: se normaliza a vacío al recibirla (`normalizarEquivalencia`).
 - Columna «Flag» entre «Título de destino» y «Observaciones»: una marca verde si
   vale 1 y nada si vale 0. Es una marca de sí o no que pidió el usuario sin decir
   para qué ([5.33]), así que no lleva ningún texto que le dé significado. Solo
