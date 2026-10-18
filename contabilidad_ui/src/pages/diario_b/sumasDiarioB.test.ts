@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import type { EquivalenciaCuenta, LineaDiarioB } from '../../api/diarioB'
 import {
   busquedaInicial,
-  ladoDe,
   claveSubcuenta,
   clasificarAsientos,
   quitarSinSaldo,
@@ -56,7 +55,6 @@ const PLAN: Record<string, string> = {
 
 function opciones(cambios: Partial<OpcionesSumasDiarioB> = {}): OpcionesSumasDiarioB {
   return {
-    equivalencias: null,
     tituloDelPlan: (c) => PLAN[c],
     nivel: 0,
     desde: '',
@@ -151,16 +149,23 @@ describe('sumarDiarioB', () => {
     expect(f2(r.cuentas[0].acumHaber)).toBe('105.00')
   })
 
-  it('con equivalencias, la cuenta de origen se suma en la de destino', () => {
+  it('cada fila es la cuenta del diario B, con su equivalente al lado', () => {
     const r = sumarDiarioB(
       [linea('430000001', '50', '0'), linea('430000099', '25.50', '0'), linea('430000011', '1', '0')],
-      opciones({ equivalencias: [EQUIVALENCIA] }),
+      opciones({ todasLasEquivalencias: [EQUIVALENCIA] }),
     )
-    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430000011', '430000099'])
-    expect(f2(r.cuentas[1].debe)).toBe('75.50')
-    expect(r.cuentas[1].titulo).toBe('Cliente nuevo')
-    // Sin título propio en el plan, el de su cuenta de mayor (430).
-    expect(r.cuentas[0].titulo).toBe('Clientes')
+    // No se suma nada en el destino: tres filas, una por cuenta.
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430000001', '430000011', '430000099'])
+    const [conSuya, sinTitulo, destino] = r.cuentas
+    expect(f2(conSuya.debe)).toBe('50.00')
+    expect(conSuya.titulo).toBe('Cliente viejo')
+    expect(conSuya.equivalente).toBe('430000099')
+    expect(conSuya.tituloEquivalente).toBe('Cliente nuevo')
+    // Sin equivalencia, las dos columnas vacías; la descripción, la de su mayor.
+    expect(sinTitulo.equivalente).toBe('')
+    expect(sinTitulo.tituloEquivalente).toBe('')
+    expect(sinTitulo.titulo).toBe('Clientes')
+    expect(f2(destino.debe)).toBe('25.50')
   })
 
   it('no saca cuentas sin importes, pero sí las de saldo cero', () => {
@@ -201,18 +206,17 @@ describe('sumarDiarioB por niveles', () => {
     expect(grupo.cuentas[0].titulo).toBe('Acreedores y deudores')
   })
 
-  it('las equivalencias se aplican antes de juntar, con el título del plan', () => {
+  it('agrupando no hay equivalencia de fila ni se suma en el destino', () => {
     const traslado: EquivalenciaCuenta = { ...EQUIVALENCIA, cuenta_destino: '572000001' }
-    const r = sumarDiarioB(LINEAS, opciones({ equivalencias: [traslado], nivel: 3 }))
-    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430', '431', '570', '572'])
-    expect(f2(r.cuentas[0].debe)).toBe('25.50')
-    expect(f2(r.cuentas[3].debe)).toBe('50.00')
-    expect(r.cuentas[3].titulo).toBe('')
+    const r = sumarDiarioB(LINEAS, opciones({ todasLasEquivalencias: [traslado], nivel: 3 }))
+    expect(r.cuentas.map((c) => c.cuenta)).toEqual(['430', '431', '570'])
+    expect(f2(r.cuentas[0].debe)).toBe('75.50')
+    expect(r.cuentas.every((c) => c.equivalente === '')).toBe(true)
   })
 
   it('los totales son los mismos en todos los niveles', () => {
     for (const nivel of [0, 1, 2, 3] as const) {
-      const r = sumarDiarioB(LINEAS, opciones({ equivalencias: [EQUIVALENCIA], nivel }))
+      const r = sumarDiarioB(LINEAS, opciones({ todasLasEquivalencias: [EQUIVALENCIA], nivel }))
       expect(f2(r.total.inicial)).toBe('10.00')
       expect(f2(r.total.debe)).toBe('75.50')
       expect(f2(r.total.haber)).toBe('85.50')
@@ -292,16 +296,6 @@ describe('sumarDiarioB solo con cuentas sin equivalencia', () => {
     expect(f2(r.cuentas[0].debe)).toBe('25.50')
   })
 
-  it('aplicando además las equivalencias da lo mismo que sin aplicarlas', () => {
-    const solo = sumarDiarioB(LINEAS(), opciones({ soloSinEquivalencia: [EQUIVALENCIA] }))
-    const ambas = sumarDiarioB(
-      LINEAS(),
-      opciones({ soloSinEquivalencia: [EQUIVALENCIA], equivalencias: [EQUIVALENCIA] }),
-    )
-    expect(ambas.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)])).toEqual(
-      solo.cuentas.map((c) => [c.cuenta, f2(c.acumDebe), f2(c.acumHaber)]),
-    )
-  })
 })
 
 describe('sumarDiarioB: de dónde sale la descripción', () => {
@@ -334,24 +328,27 @@ describe('sumarDiarioB: de dónde sale la descripción', () => {
     return Object.fromEntries(r.cuentas.map((c) => [c.cuenta, c.titulo]))
   }
 
-  it('aplicando equivalencias, el título de destino', () => {
-    const t = titulos({ equivalencias: [EQUIVALENCIA], todasLasEquivalencias: [EQUIVALENCIA] })
-    expect(t['430000099']).toBe('Cliente nuevo')
+  it('la equivalente: el destino con su título o, si no trae, el del plan', () => {
+    const fila = (lista: EquivalenciaCuenta[]) =>
+      sumarDiarioB(
+        LINEAS(),
+        opciones({ tituloDelPlan: delPlan, todasLasEquivalencias: lista }),
+      ).cuentas.find((c) => c.cuenta === '430000001')!
+    expect(fila([EQUIVALENCIA]).tituloEquivalente).toBe('Cliente nuevo')
+    expect(fila([SIN_TITULO_DESTINO]).equivalente).toBe('430000099')
+    expect(fila([SIN_TITULO_DESTINO]).tituloEquivalente).toBe('Cliente del plan')
   })
 
-  it('aplicada sin título de destino, el del plan para la cuenta de destino', () => {
-    const t = titulos({
-      equivalencias: [SIN_TITULO_DESTINO],
-      todasLasEquivalencias: [SIN_TITULO_DESTINO],
-    })
-    expect(t['430000099']).toBe('Cliente del plan')
-  })
-
-  it('sin aplicarlas, el título de origen de su equivalencia hermanada', () => {
+  it('la descripción, el título de origen de su equivalencia hermanada', () => {
     const t = titulos({ todasLasEquivalencias: [EQUIVALENCIA, DESHERMANADA] })
     expect(t['430000001']).toBe('Cliente viejo')
     // Una deshermanada no cuenta: sale del plan, y si no hay, vacía.
     expect(t['600000000']).toBe('')
+    const r = sumarDiarioB(
+      LINEAS(),
+      opciones({ tituloDelPlan: delPlan, todasLasEquivalencias: [DESHERMANADA] }),
+    )
+    expect(r.cuentas.find((c) => c.cuenta === '600000000')!.equivalente).toBe('')
   })
 
   it('el plan por el código, y si no, la cuenta de mayor de 4 y de 3 cifras', () => {
@@ -388,23 +385,28 @@ describe('quitarSinSaldo', () => {
 })
 
 describe('asignar equivalencia desde sumas y saldos', () => {
-  it('la fila guarda la cuenta tal como viene y si se ha sumado por equivalencia', () => {
+  it('la fila guarda la forma original, y de ella sale la equivalente', () => {
+    const de1130: EquivalenciaCuenta = {
+      ...EQUIVALENCIA,
+      id: 11,
+      cuenta_origen: '1130',
+      cuenta_destino: '113000009',
+    }
     const r = sumarDiarioB(
       [
         linea('1130', '1', '0'),
         linea('113000000', '1', '0'),
         linea('1130', '1', '0'),
-        linea('430000001', '5', '0'),
-        linea('570000000', '0', '8'),
+        linea('570000000', '0', '3'),
       ],
-      opciones({ equivalencias: [EQUIVALENCIA] }),
+      opciones({ todasLasEquivalencias: [de1130] }),
     )
     const fila = (cuenta: string) => r.cuentas.find((c) => c.cuenta === cuenta)!
     // 1130 y 113000000 se juntan; la original es la que más líneas tiene.
     expect(fila('113000000').original).toBe('1130')
-    expect(fila('113000000').porEquivalencia).toBe(false)
-    expect(fila('430000099').porEquivalencia).toBe(true)
+    expect(fila('113000000').equivalente).toBe('113000009')
     expect(fila('570000000').original).toBe('570000000')
+    expect(fila('570000000').equivalente).toBe('')
   })
 
   it('claveSubcuenta casa la misma subcuenta con distinta longitud', () => {
@@ -421,52 +423,5 @@ describe('asignar equivalencia desde sumas y saldos', () => {
     expect(busquedaInicial(ivan, ['100000001', '570000000'])).toBe('100000001')
     expect(busquedaInicial(ivan, ['570000000'])).toBe('IVAN GONZALEZ')
     expect(busquedaInicial({ ...ivan, titulo: '' }, [])).toBe('10000001')
-  })
-})
-
-describe('Origen o Destino, aplicando equivalencias', () => {
-  const PLAN_SIF: Record<string, string> = { '430000099': 'Cliente del plan' }
-  const delPlan = (c: string) => PLAN_SIF[c]
-
-  it('Destino si sale de una equivalencia, Origen si es la cuenta tal cual', () => {
-    const r = sumarDiarioB(
-      [linea('430000001', '50', '0'), linea('570000000', '0', '50')],
-      opciones({ equivalencias: [EQUIVALENCIA], tituloDelPlan: delPlan }),
-    )
-    const lado = Object.fromEntries(r.cuentas.map((c) => [c.cuenta, ladoDe(c)]))
-    expect(lado).toEqual({ '430000099': 'Destino', '570000000': 'Origen' })
-  })
-
-  it('si se juntan las dos, Destino, con la descripción del destino', () => {
-    // La primera línea es de la propia cuenta de destino, sin equivalencia.
-    const r = sumarDiarioB(
-      [linea('430000099', '5', '0'), linea('430000001', '50', '0')],
-      opciones({
-        equivalencias: [EQUIVALENCIA],
-        todasLasEquivalencias: [
-          EQUIVALENCIA,
-          {
-            ...EQUIVALENCIA,
-            id: 9,
-            cuenta_origen: '430000099',
-            titulo_origen: 'Otra de origen',
-            cuenta_destino: '430000500',
-          },
-        ],
-        tituloDelPlan: delPlan,
-      }),
-    )
-    expect(ladoDe(r.cuentas[0])).toBe('Destino')
-    expect(r.cuentas[0].titulo).toBe('Cliente nuevo')
-  })
-
-  it('una deshermanada no hace Destino', () => {
-    const deshermanada: EquivalenciaCuenta = { ...EQUIVALENCIA, cuenta_destino: '' }
-    const r = sumarDiarioB(
-      [linea('430000001', '50', '0')],
-      opciones({ equivalencias: [deshermanada] }),
-    )
-    expect(ladoDe(r.cuentas[0])).toBe('Origen')
-    expect(r.cuentas[0].cuenta).toBe('430000001')
   })
 })

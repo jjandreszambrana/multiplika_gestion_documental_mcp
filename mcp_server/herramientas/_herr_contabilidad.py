@@ -312,7 +312,7 @@ def clasificar_asientos(lineas: list[dict], largo: int) -> dict[int, str]:
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def diario_b_sumas_y_saldos_gd(
     id_empresa: int, ejercicio: int, desde: str | None = None, hasta: str | None = None,
-    contabilizado: Literal[0, 1] | None = None, aplicar_equivalencias: bool = False,
+    contabilizado: Literal[0, 1] | None = None,
     nivel: Literal[0, 1, 2, 3] = 0, sin_regularizacion_ni_cierre: bool = False,
     solo_sin_equivalencia: bool = False,
 ) -> dict:
@@ -326,24 +326,23 @@ async def diario_b_sumas_y_saldos_gd(
     lo que hacen (o por la marca APERTURA/REGULARIZA/CIERRE en `diario`, que
     manda); `sin_regularizacion_ni_cierre` descarta esos dos.
     `solo_sin_equivalencia` deja solo las cuentas que no son cuenta de
-    origen de ninguna equivalencia (las que faltan por emparejar). Con `aplicar_equivalencias`, lo de cada cuenta de
-    origen se suma en su cuenta de destino. `nivel` 0 subcuenta a
-    subcuenta, 3 cuentas, 2 subgrupos, 1 grupos (después de las
-    equivalencias; los títulos solo salen en subcuentas). Llega como tabla
+    origen de ninguna equivalencia (las que faltan por emparejar). Cada
+    fila es la cuenta del diario B (origen); por subcuenta trae además su
+    cuenta equivalente y el título de esta, si tiene equivalencia. `nivel`
+    0 subcuenta a subcuenta, 3 cuentas, 2 subgrupos, 1 grupos. Llega como tabla
     (`columnas` y `filas`) con `totales`; cita las cifras tal cual."""
     lineas = await _todas(id_empresa, "/contabilidad/diario_b/listar", {
         "ejercicio": ejercicio, "fecha_hasta": hasta, "contabilizado": contabilizado,
     }, "lineas")
-    destino: dict[str, tuple[str, str | None]] = {}
-    if aplicar_equivalencias or solo_sin_equivalencia:
-        for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
-            if (e.get("cuenta_destino") or "").strip():  # sin destino (deshermanada) no cuenta
-                destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"))
+    destino: dict[str, tuple[str, str | None, str | None]] = {}  # origen → (destino, título destino, título origen)
+    for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
+        if (e.get("cuenta_destino") or "").strip():  # sin destino (deshermanada) no cuenta
+            destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"), e.get("titulo_origen"))
     # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
     # cifras, p. ej. 1130) se completan con ceros: 1130 → 11300000.
     largo = max((len(l["cuenta"].strip()) for l in lineas), default=0)
     clase = clasificar_asientos(lineas, largo)
-    cuentas: dict[str, list] = {}  # cuenta → [título, debe inicial, haber inicial, debe periodo, haber periodo]
+    cuentas: dict[str, list] = {}  # cuenta → [título, equivalente, título equiv., debe ini., haber ini., debe per., haber per.]
     sumadas = 0
     for linea in lineas:
         marca = clase.get(linea["asiento"], "")
@@ -357,27 +356,30 @@ async def diario_b_sumas_y_saldos_gd(
         if solo_sin_equivalencia and equivalencia:
             continue
         sumadas += 1
-        cuenta, titulo = (equivalencia if aplicar_equivalencias else None) or (original, None)
-        cuenta = cuenta.ljust(largo, "0")
+        cuenta = original.ljust(largo, "0")
+        titulo, equivalente, titulo_equivalente = (equivalencia[2], equivalencia[0], equivalencia[1]) if equivalencia else (None, None, None)
         if nivel:
-            cuenta, titulo = cuenta[:nivel], None
-        fila = cuentas.setdefault(cuenta, [titulo, Decimal(0), Decimal(0), Decimal(0), Decimal(0)])
+            cuenta, titulo, equivalente, titulo_equivalente = cuenta[:nivel], None, None, None
+        fila = cuentas.setdefault(cuenta, [titulo, equivalente, titulo_equivalente, Decimal(0), Decimal(0), Decimal(0), Decimal(0)])
+        if equivalente and not fila[1]:
+            fila[0:3] = [titulo, equivalente, titulo_equivalente]
         inicial = marca == DIARIO_APERTURA or bool(desde and fecha < desde)
-        fila[1 if inicial else 3] += Decimal(str(linea["debe"] or 0))
-        fila[2 if inicial else 4] += Decimal(str(linea["haber"] or 0))
+        fila[3 if inicial else 5] += Decimal(str(linea["debe"] or 0))
+        fila[4 if inicial else 6] += Decimal(str(linea["haber"] or 0))
     filas, totales = [], [Decimal(0)] * 7
-    for cuenta, (titulo, di, hi, dp, hp) in sorted(cuentas.items()):
+    for cuenta, (titulo, equivalente, titulo_equivalente, di, hi, dp, hp) in sorted(cuentas.items()):
         if not (di or hi or dp or hp):
             continue
         da, ha = di + dp, hi + hp
         valores = [di - hi, dp, hp, da, ha, max(da - ha, 0), max(ha - da, 0)]
         totales = [t + v for t, v in zip(totales, valores)]
-        filas.append([cuenta, titulo, *map(float, valores)])
+        filas.append([cuenta, titulo, *([equivalente, titulo_equivalente] if not nivel else []), *map(float, valores)])
     columnas = ["saldo_inicial", "debe_periodo", "haber_periodo", "debe_acumulado", "haber_acumulado", "saldo_deudor", "saldo_acreedor"]
     return {
-        "lineas_sumadas": sumadas, "equivalencias_aplicadas": aplicar_equivalencias, "nivel": nivel,
+        "lineas_sumadas": sumadas, "nivel": nivel,
         "sin_regularizacion_ni_cierre": sin_regularizacion_ni_cierre, "solo_sin_equivalencia": solo_sin_equivalencia,
-        "columnas": ["cuenta", "titulo", *columnas], "filas": filas,
+        "columnas": ["cuenta", "titulo", *(["cuenta_equivalente", "titulo_equivalente"] if not nivel else []), *columnas],
+        "filas": filas,
         "totales": dict(zip(columnas, map(float, totales))),
     }
 

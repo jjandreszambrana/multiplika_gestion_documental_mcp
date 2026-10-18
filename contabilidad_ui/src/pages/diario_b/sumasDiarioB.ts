@@ -21,24 +21,17 @@ export interface SumaDeCuenta {
    */
   original: string
   /**
-   * Si alguna de sus líneas se ha sumado aquí por una equivalencia hermanada
-   * (aplicando equivalencias): la fila es de Destino. Si no, de Origen.
+   * Por subcuenta, la cuenta de destino de la equivalencia hermanada de
+   * `original` y su título (el de la equivalencia o, si no trae, el del plan).
+   * Vacíos si no tiene, y siempre agrupando.
    */
-  porEquivalencia: boolean
-}
-
-/**
- * De qué lado es la cuenta que se ve, aplicando equivalencias: Destino si sale
- * de alguna equivalencia (aunque se junte con líneas propias), Origen si es la
- * cuenta del diario B tal cual.
- */
-export function ladoDe(fila: SumaDeCuenta): 'Origen' | 'Destino' {
-  return fila.porEquivalencia ? 'Destino' : 'Origen'
+  equivalente: string
+  tituloEquivalente: string
 }
 
 export type ImportesDiarioB = Omit<
   SumaDeCuenta,
-  'cuenta' | 'titulo' | 'original' | 'porEquivalencia'
+  'cuenta' | 'titulo' | 'original' | 'equivalente' | 'tituloEquivalente'
 >
 
 /**
@@ -71,16 +64,15 @@ export interface SumasDiarioB {
 }
 
 export interface OpcionesSumasDiarioB {
-  /** Nulo: sin aplicar equivalencias. */
-  equivalencias: EquivalenciaCuenta[] | null
   /**
    * El título de un código en el plan del SIF, o nada. Quien lo da decide cómo
    * casa (en pantalla: exacto o por `claveSubcuenta`).
    */
   tituloDelPlan: (cuenta: string) => string | null | undefined
   /**
-   * Todas las equivalencias de la empresa, se apliquen o no: de ellas sale el
-   * título de origen de una cuenta que tenga una hermanada. Nulo: no se usan.
+   * Todas las equivalencias de la empresa. De la hermanada de cada cuenta salen
+   * su título de origen y la cuenta equivalente. Nulo: no se usan. Ya no se
+   * suma nada en la cuenta de destino: cada fila es la cuenta del diario B.
    */
   todasLasEquivalencias?: EquivalenciaCuenta[] | null
   nivel: NivelDeBalance
@@ -91,46 +83,41 @@ export interface OpcionesSumasDiarioB {
   sinRegularizacion: boolean
   /**
    * Con una lista, solo entran las líneas cuya cuenta no es la de origen de
-   * ninguna de ellas. Nulo: sin este filtro. Va aparte de `equivalencias`
-   * porque se puede filtrar sin aplicarlas.
+   * ninguna de ellas. Nulo: sin este filtro.
    */
   soloSinEquivalencia?: EquivalenciaCuenta[] | null
 }
 
+/** El primer título que dé el plan para esos códigos, o vacío. */
+function delPlan(plan: (codigo: string) => string | null | undefined, codigos: string[]): string {
+  for (const codigo of codigos) {
+    const titulo = (plan(codigo) ?? '').trim()
+    if (titulo !== '') return titulo
+  }
+  return ''
+}
+
 /**
- * La descripción de una fila por subcuenta, de lo primero que haya:
- * 1. aplicando equivalencias, el título de destino;
- * 2. sin aplicarlas, el título de origen de su equivalencia hermanada;
- * 3. el plan, por el código (tal como viene y como se suma);
- * 4. el plan, por su cuenta de mayor de 4 y luego de 3 cifras;
- * 5. vacío.
- * Aplicada una equivalencia, el plan se mira con la cuenta de destino.
+ * Descripción y cuenta equivalente de una fila por subcuenta, con su forma
+ * original. Descripción, de lo primero que haya: el título de origen de su
+ * equivalencia hermanada; el plan por el código (tal cual y completado); el
+ * de su cuenta de mayor de 4 y luego de 3 cifras; vacío. Equivalente: el
+ * destino de esa equivalencia, con su título o el del plan para el destino.
  */
-function tituloDeSubcuenta(
+function datosDeSubcuenta(
   original: string,
   completa: string,
-  destino: string,
-  aplicada: EquivalenciaCuenta | undefined,
   suyaDe: Map<string, EquivalenciaCuenta>,
   plan: (codigo: string) => string | null | undefined,
-): string {
-  const delPlan = (codigos: string[]) => {
-    for (const codigo of codigos) {
-      const titulo = (plan(codigo) ?? '').trim()
-      if (titulo !== '') return titulo
-    }
-    return ''
-  }
-  if (aplicada) {
-    const propio = (aplicada.titulo_destino ?? '').trim()
-    if (propio !== '') return propio
-    const crudo = (aplicada.cuenta_destino ?? '').trim()
-    return delPlan([crudo, destino, destino.slice(0, 4), destino.slice(0, 3)])
-  }
+): { titulo: string; equivalente: string; tituloEquivalente: string } {
   const suya = suyaDe.get(original) ?? suyaDe.get(completa)
-  const deOrigen = (suya?.titulo_origen ?? '').trim()
-  if (deOrigen !== '') return deOrigen
-  return delPlan([original, completa, completa.slice(0, 4), completa.slice(0, 3)])
+  const titulo =
+    (suya?.titulo_origen ?? '').trim() ||
+    delPlan(plan, [original, completa, completa.slice(0, 4), completa.slice(0, 3)])
+  const equivalente = (suya?.cuenta_destino ?? '').trim()
+  const tituloEquivalente =
+    equivalente === '' ? '' : (suya?.titulo_destino ?? '').trim() || delPlan(plan, [equivalente])
+  return { titulo, equivalente, tituloEquivalente }
 }
 
 /** Las filas sin saldo deudor ni acreedor fuera; los totales no se tocan. */
@@ -226,8 +213,8 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
  * - Acumulados: inicial más periodo, debe y haber por separado; de ahí salen
  *   los saldos deudor y acreedor.
  *
- * Con `equivalencias`, la línea cuya cuenta sea exactamente una cuenta de
- * origen se suma en su destino. Con `nivel` 1, 2 o 3 se junta después por los
+ * Cada fila es la cuenta del diario B; su equivalente se enseña al lado (ver
+ * `datosDeSubcuenta`), pero no se suma en ella. Con `nivel` 1, 2 o 3 se junta por los
  * primeros dígitos, y el título es el del plan para ese código. Por subcuenta,
  * una cuenta más corta que las demás (la apertura, la regularización y el
  * cierre vienen en cuentas de 4 cifras, p. ej. 1130) se completa con ceros
@@ -238,10 +225,9 @@ export function clasificarAsientos(lineas: LineaDiarioB[], largo: number): Map<n
  * La clasificación de asientos se hace igual con todas las líneas.
  */
 export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiarioB): SumasDiarioB {
-  const { equivalencias, tituloDelPlan, nivel, desde, hasta, sinRegularizacion } = opciones
+  const { tituloDelPlan, nivel, desde, hasta, sinRegularizacion } = opciones
   // Una equivalencia sin cuenta de destino (deshermanada) es como si no existiera.
   const hermanadas = (es: EquivalenciaCuenta[]) => es.filter((e) => (e.cuenta_destino ?? '').trim() !== '')
-  const destinoDe = new Map(hermanadas(equivalencias ?? []).map((e) => [e.cuenta_origen, e]))
   const conEquivalencia = opciones.soloSinEquivalencia
     ? new Set(hermanadas(opciones.soloSinEquivalencia).map((e) => e.cuenta_origen))
     : null
@@ -254,13 +240,11 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   const porCuenta = new Map<
     string,
     {
-      titulo: string
       iniDebe: Decimal
       iniHaber: Decimal
       debe: Decimal
       haber: Decimal
       originales: Map<string, number>
-      porEquivalencia: boolean
     }
   >()
 
@@ -280,35 +264,13 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
     const completa = original.padEnd(largoSubcuenta, '0')
     // Se compara igual que al aplicar equivalencias: tal cual o con ceros.
     if (conEquivalencia && (conEquivalencia.has(original) || conEquivalencia.has(completa))) continue
-    const equivalencia = destinoDe.get(original) ?? destinoDe.get(completa)
-    const destino = (equivalencia?.cuenta_destino ?? original).padEnd(largoSubcuenta, '0')
-    const cuenta = nivel === 0 ? destino : destino.slice(0, nivel)
+    const cuenta = nivel === 0 ? completa : completa.slice(0, nivel)
     let suma = porCuenta.get(cuenta)
     if (!suma) {
-      const titulo =
-        nivel === 0
-          ? tituloDeSubcuenta(original, completa, destino, equivalencia, suyaDe, tituloDelPlan)
-          : tituloDelPlan(cuenta) || ''
-      suma = {
-        titulo,
-        iniDebe: CERO,
-        iniHaber: CERO,
-        debe: CERO,
-        haber: CERO,
-        originales: new Map(),
-        porEquivalencia: false,
-      }
+      suma = { iniDebe: CERO, iniHaber: CERO, debe: CERO, haber: CERO, originales: new Map() }
       porCuenta.set(cuenta, suma)
     }
     suma.originales.set(original, (suma.originales.get(original) ?? 0) + 1)
-    if (equivalencia && !suma.porEquivalencia) {
-      suma.porEquivalencia = true
-      // La fila es de Destino aunque su primera línea viniera tal cual: su
-      // descripción, la del destino.
-      if (nivel === 0) {
-        suma.titulo = tituloDeSubcuenta(original, completa, destino, equivalencia, suyaDe, tituloDelPlan)
-      }
-    }
     if (inicial) {
       suma.iniDebe = suma.iniDebe.plus(linea.debe)
       suma.iniHaber = suma.iniHaber.plus(linea.haber)
@@ -324,9 +286,15 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
       const acumDebe = s.iniDebe.plus(s.debe)
       const acumHaber = s.iniHaber.plus(s.haber)
       const saldo = acumDebe.minus(acumHaber)
+      // La forma que más líneas tiene; a igualdad, la primera que apareció.
+      const original = [...s.originales.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0]
+      const datos =
+        nivel === 0
+          ? datosDeSubcuenta(original, original.padEnd(largoSubcuenta, '0'), suyaDe, tituloDelPlan)
+          : { titulo: tituloDelPlan(cuenta) || '', equivalente: '', tituloEquivalente: '' }
       return {
         cuenta,
-        titulo: s.titulo,
+        ...datos,
         inicial: s.iniDebe.minus(s.iniHaber),
         debe: s.debe,
         haber: s.haber,
@@ -334,9 +302,7 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
         acumHaber,
         deudor: saldo.isPositive() && !saldo.isZero() ? saldo : CERO,
         acreedor: saldo.isNegative() && !saldo.isZero() ? saldo.negated() : CERO,
-        // La que más líneas tiene; a igualdad, la primera que apareció.
-        original: [...s.originales.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0],
-        porEquivalencia: s.porEquivalencia,
+        original,
       }
     })
     .filter((c) => !c.acumDebe.isZero() || !c.acumHaber.isZero())

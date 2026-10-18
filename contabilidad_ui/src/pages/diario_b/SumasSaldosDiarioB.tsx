@@ -1,6 +1,5 @@
 import {
   Alert,
-  Badge,
   Button,
   Group,
   Loader,
@@ -31,7 +30,6 @@ import DialogoOpcionesSumas, {
 } from './DialogoOpcionesSumas'
 import {
   busquedaInicial,
-  ladoDe,
   claveSubcuenta,
   quitarSinSaldo,
   sumarDiarioB,
@@ -166,10 +164,10 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
         },
         corte.signal,
       ),
-      // Siempre: de ellas sale también el título de origen de las cuentas que
-      // tienen equivalencia aunque no se apliquen. Solo es imprescindible si
-      // una opción las usa; si no, que fallen deja el balance sin esos títulos.
-      consulta.conEquivalencias || consulta.soloSinEquivalencia
+      // Siempre: de ellas salen la cuenta equivalente de cada fila y su título
+      // de origen. Solo son imprescindibles para «Solo cuentas sin
+      // equivalencia»; si no, que fallen deja el balance sin esas columnas.
+      consulta.soloSinEquivalencia
         ? equivalenciasEnteras(corte.signal)
         : sinRomper(equivalenciasEnteras(corte.signal)),
       // El plan entero del SIF, para las descripciones. El de memoria deja fuera
@@ -196,7 +194,6 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
           plan.porCodigo.get(codigo)?.descripcion
         setSumas(
           sumarDiarioB(lineas, {
-            equivalencias: consulta.conEquivalencias ? lista : null,
             soloSinEquivalencia: consulta.soloSinEquivalencia ? lista : null,
             todasLasEquivalencias: lista,
             tituloDelPlan,
@@ -249,11 +246,11 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
   const ocultas = (sumas?.cuentas.length ?? 0) - filas.length
 
   const total = sumas?.total ?? null
-  const conLado = consulta !== null && consulta.conEquivalencias && consulta.nivel === 0
-  const conAsignar =
-    puedeAsignar && consulta !== null && consulta.conEquivalencias && consulta.nivel === 0
-  // Las dos primeras van en un grupo sin cabecera: así la fila de cabeceras de
-  // grupo no deja en el pie una segunda fila vacía.
+  // Por subcuenta cada fila es una cuenta del diario B y lleva al lado su
+  // equivalente; agrupando no hay equivalencia de fila.
+  const porSubcuenta = consulta !== null && consulta.nivel === 0
+  // Las del principio van en un grupo sin cabecera: así la fila de cabeceras
+  // de grupo no deja en el pie una segunda fila vacía.
   const columnas = useMemo<MRT_ColumnDef<SumaDeCuenta>[]>(
     () => [
       {
@@ -262,7 +259,7 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
         columns: [
           {
             accessorKey: 'cuenta',
-            header: 'Cuenta',
+            header: porSubcuenta ? 'Cuenta origen' : 'Cuenta',
             size: 130,
             grow: false,
             Cell: ({ row }) => (
@@ -272,36 +269,43 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
             ),
             Footer: () => 'Totales',
           },
-          // Aplicando equivalencias y por subcuenta: si la cuenta que se ve es la
-          // del diario B tal cual o el destino de una equivalencia.
-          ...(conLado
-            ? [
-                {
-                  id: 'lado',
-                  header: 'Origen / Destino',
-                  size: 110,
-                  grow: false,
-                  Cell: ({ row }: { row: { original: SumaDeCuenta } }) => {
-                    const lado = ladoDe(row.original)
-                    return (
-                      <Badge
-                        size="xs"
-                        variant="light"
-                        color={lado === 'Destino' ? 'blue' : 'gray'}
-                      >
-                        {lado}
-                      </Badge>
-                    )
-                  },
-                } satisfies MRT_ColumnDef<SumaDeCuenta>,
-              ]
-            : []),
           {
             accessorKey: 'titulo',
             header: 'Descripción',
             grow: true,
             mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
           },
+          ...(porSubcuenta
+            ? [
+                {
+                  id: 'equivalente',
+                  header: 'Cuenta equivalente',
+                  size: 140,
+                  grow: false,
+                  Cell: ({ row }: { row: { original: SumaDeCuenta } }) =>
+                    row.original.equivalente !== '' ? (
+                      <Text fz="sm" ff="monospace">
+                        {row.original.equivalente}
+                      </Text>
+                    ) : puedeAsignar ? (
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        onClick={() => setAsignando(row.original)}
+                      >
+                        Asignar…
+                      </Button>
+                    ) : null,
+                } satisfies MRT_ColumnDef<SumaDeCuenta>,
+                {
+                  accessorKey: 'tituloEquivalente',
+                  header: 'Descripción equivalente',
+                  size: 220,
+                  grow: false,
+                  mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
+                } satisfies MRT_ColumnDef<SumaDeCuenta>,
+              ]
+            : []),
         ],
       },
       {
@@ -325,36 +329,8 @@ export default function SumasSaldosDiarioB({ ejercicio, nivel: nivelDeAcceso, qu
           columnaDeImporte('acreedor', 'Saldo acreedor', total),
         ],
       },
-      // Solo aplicando equivalencias y por subcuenta: es donde se ve qué
-      // cuentas del diario B se han quedado sin la suya.
-      ...(conAsignar
-        ? [
-            {
-              id: 'asignar',
-              header: '',
-              columns: [
-                {
-                  id: 'asignar_boton',
-                  header: 'Equivalencia',
-                  size: 110,
-                  grow: false,
-                  Cell: ({ row }: { row: { original: SumaDeCuenta } }) =>
-                    row.original.porEquivalencia ? null : (
-                      <Button
-                        size="compact-xs"
-                        variant="subtle"
-                        onClick={() => setAsignando(row.original)}
-                      >
-                        Asignar…
-                      </Button>
-                    ),
-                },
-              ],
-            } satisfies MRT_ColumnDef<SumaDeCuenta>,
-          ]
-        : []),
     ],
-    [total, conAsignar, conLado],
+    [total, porSubcuenta, puedeAsignar],
   )
 
   const tabla = useMantineReactTable({

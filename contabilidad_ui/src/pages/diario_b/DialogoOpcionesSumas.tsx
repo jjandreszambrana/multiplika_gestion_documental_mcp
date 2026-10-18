@@ -3,14 +3,12 @@ import { useEffect, useState } from 'react'
 
 /** Las opciones de sumas y saldos del diario B. Todas desmarcadas de fábrica. */
 export interface OpcionesSumas {
-  conEquivalencias: boolean
   soloSinEquivalencia: boolean
   sinRegularizacion: boolean
   ocultarSinSaldo: boolean
 }
 
 export const OPCIONES_DE_FABRICA: OpcionesSumas = {
-  conEquivalencias: false,
   soloSinEquivalencia: false,
   sinRegularizacion: false,
   ocultarSinSaldo: false,
@@ -33,7 +31,6 @@ export function normalizarOpciones(guardado: unknown): OpcionesSumas {
 }
 
 const CASILLAS: [keyof OpcionesSumas, string][] = [
-  ['conEquivalencias', 'Aplicar equivalencias de cuentas'],
   ['soloSinEquivalencia', 'Solo cuentas sin equivalencia'],
   ['sinRegularizacion', 'Sin regularización ni cierre'],
   ['ocultarSinSaldo', 'No mostrar las cuentas sin saldo'],
