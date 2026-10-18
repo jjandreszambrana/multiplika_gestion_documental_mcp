@@ -335,7 +335,10 @@ async def diario_b_sumas_y_saldos_gd(
         "ejercicio": ejercicio, "fecha_hasta": hasta, "contabilizado": contabilizado,
     }, "lineas")
     destino: dict[str, tuple[str, str | None, str | None]] = {}  # origen → (destino, título destino, título origen)
+    titulos_origen: dict[str, str] = {}  # también de las deshermanadas: tienen título de origen
     for e in await _todas(id_empresa, f"{RUTA_EQUIVALENCIAS}/listar", {}, "equivalencias"):
+        if (e.get("titulo_origen") or "").strip():
+            titulos_origen[(e.get("cuenta_origen") or "").strip()] = e["titulo_origen"].strip()
         if (e.get("cuenta_destino") or "").strip():  # sin destino (deshermanada) no cuenta
             destino[e["cuenta_origen"]] = (e["cuenta_destino"], e.get("titulo_destino"), e.get("titulo_origen"))
     # Por subcuenta, las cuentas cortas (la apertura y el cierre vienen en 4
@@ -357,7 +360,8 @@ async def diario_b_sumas_y_saldos_gd(
             continue
         sumadas += 1
         cuenta = original.ljust(largo, "0")
-        titulo, equivalente, titulo_equivalente = (equivalencia[2], equivalencia[0], equivalencia[1]) if equivalencia else (None, None, None)
+        titulo = titulos_origen.get(original) or titulos_origen.get(cuenta)
+        equivalente, titulo_equivalente = (equivalencia[0], equivalencia[1]) if equivalencia else (None, None)
         if nivel:
             cuenta, titulo, equivalente, titulo_equivalente = cuenta[:nivel], None, None, None
         fila = cuentas.setdefault(cuenta, [titulo, equivalente, titulo_equivalente, Decimal(0), Decimal(0), Decimal(0), Decimal(0)])

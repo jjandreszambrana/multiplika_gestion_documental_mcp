@@ -161,10 +161,11 @@ describe('sumarDiarioB', () => {
     expect(conSuya.titulo).toBe('Cliente viejo')
     expect(conSuya.equivalente).toBe('430000099')
     expect(conSuya.tituloEquivalente).toBe('Cliente nuevo')
-    // Sin equivalencia, las dos columnas vacías; la descripción, la de su mayor.
+    // Sin equivalencia, las dos columnas vacías; la descripción no se rellena
+    // con la de su cuenta de mayor.
     expect(sinTitulo.equivalente).toBe('')
     expect(sinTitulo.tituloEquivalente).toBe('')
-    expect(sinTitulo.titulo).toBe('Clientes')
+    expect(sinTitulo.titulo).toBe('')
     expect(f2(destino.debe)).toBe('25.50')
   })
 
@@ -339,11 +340,11 @@ describe('sumarDiarioB: de dónde sale la descripción', () => {
     expect(fila([SIN_TITULO_DESTINO]).tituloEquivalente).toBe('Cliente del plan')
   })
 
-  it('la descripción, el título de origen de su equivalencia hermanada', () => {
+  it('la descripción, el título de origen de la tabla de equivalencias', () => {
     const t = titulos({ todasLasEquivalencias: [EQUIVALENCIA, DESHERMANADA] })
     expect(t['430000001']).toBe('Cliente viejo')
-    // Una deshermanada no cuenta: sale del plan, y si no hay, vacía.
-    expect(t['600000000']).toBe('')
+    // También el de una deshermanada: no tiene destino, pero sí título de origen.
+    expect(t['600000000']).toBe('Compras viejas')
     const r = sumarDiarioB(
       LINEAS(),
       opciones({ tituloDelPlan: delPlan, todasLasEquivalencias: [DESHERMANADA] }),
@@ -351,11 +352,11 @@ describe('sumarDiarioB: de dónde sale la descripción', () => {
     expect(r.cuentas.find((c) => c.cuenta === '600000000')!.equivalente).toBe('')
   })
 
-  it('el plan por el código, y si no, la cuenta de mayor de 4 y de 3 cifras', () => {
+  it('sin título de origen, el plan por la misma subcuenta; nunca la cuenta de mayor', () => {
     const t = titulos({})
     expect(t['100000010']).toBe('IVAN GONZALEZ')
-    expect(t['572000009']).toBe('Bancos e instituciones de crédito')
-    expect(t['471000003']).toBe('Organismos de la Seguridad Social, deudores')
+    expect(t['572000009']).toBe('')
+    expect(t['471000003']).toBe('')
     expect(t['700000000']).toBe('')
   })
 

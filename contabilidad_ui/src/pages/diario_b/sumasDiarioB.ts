@@ -99,9 +99,10 @@ function delPlan(plan: (codigo: string) => string | null | undefined, codigos: s
 
 /**
  * Descripción y cuenta equivalente de una fila por subcuenta, con su forma
- * original. Descripción, de lo primero que haya: el título de origen de su
- * equivalencia hermanada; el plan por el código (tal cual y completado); el
- * de su cuenta de mayor de 4 y luego de 3 cifras; vacío. Equivalente: el
+ * original. Descripción: el título de origen que tenga en la tabla de
+ * equivalencias (con destino o sin él) y, si no, el plan con la misma subcuenta
+ * (tal cual, completada o con los ceros en medio). Nunca la de su cuenta de
+ * mayor: daba un nombre genérico que no es el de la cuenta. Equivalente: el
  * destino de esa equivalencia, con su título o el del plan para el destino.
  */
 function datosDeSubcuenta(
@@ -109,11 +110,11 @@ function datosDeSubcuenta(
   completa: string,
   suyaDe: Map<string, EquivalenciaCuenta>,
   plan: (codigo: string) => string | null | undefined,
+  titulosOrigen: Map<string, string>,
 ): { titulo: string; equivalente: string; tituloEquivalente: string } {
   const suya = suyaDe.get(original) ?? suyaDe.get(completa)
   const titulo =
-    (suya?.titulo_origen ?? '').trim() ||
-    delPlan(plan, [original, completa, completa.slice(0, 4), completa.slice(0, 3)])
+    titulosOrigen.get(original) ?? titulosOrigen.get(completa) ?? delPlan(plan, [original, completa])
   const equivalente = (suya?.cuenta_destino ?? '').trim()
   const tituloEquivalente =
     equivalente === '' ? '' : (suya?.titulo_destino ?? '').trim() || delPlan(plan, [equivalente])
@@ -234,6 +235,11 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
   const suyaDe = new Map(
     hermanadas(opciones.todasLasEquivalencias ?? []).map((e) => [e.cuenta_origen, e]),
   )
+  const titulosOrigen = new Map(
+    (opciones.todasLasEquivalencias ?? [])
+      .filter((e) => (e.titulo_origen ?? '').trim() !== '')
+      .map((e) => [(e.cuenta_origen ?? '').trim(), (e.titulo_origen ?? '').trim()]),
+  )
   const conFechas = desde !== '' || hasta !== ''
   const largoSubcuenta = Math.max(0, ...lineas.map((l) => (l.cuenta ?? '').trim().length))
   const clase = clasificarAsientos(lineas, largoSubcuenta)
@@ -290,7 +296,7 @@ export function sumarDiarioB(lineas: LineaDiarioB[], opciones: OpcionesSumasDiar
       const original = [...s.originales.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0]
       const datos =
         nivel === 0
-          ? datosDeSubcuenta(original, original.padEnd(largoSubcuenta, '0'), suyaDe, tituloDelPlan)
+          ? datosDeSubcuenta(original, original.padEnd(largoSubcuenta, '0'), suyaDe, tituloDelPlan, titulosOrigen)
           : { titulo: tituloDelPlan(cuenta) || '', equivalente: '', tituloEquivalente: '' }
       return {
         cuenta,
