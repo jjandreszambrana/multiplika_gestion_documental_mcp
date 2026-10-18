@@ -107,6 +107,15 @@ function ImporteOVacio({ valor, conCero = false }: { valor: Decimal; conCero?: b
  * Sumas y saldos del diario B, cuenta a cuenta. El SIF no lo da hecho, así que
  * se traen todas las líneas del filtro y se suman aquí (ver `sumarDiarioB`).
  */
+/**
+ * La misma subcuenta escrita con distinta longitud: los ceros van en medio,
+ * entre la cuenta de mayor (4 cifras) y el número. 10000001 y 100000001 dan
+ * los dos «1000|1»; 11300000 y 113000000, «1130|0».
+ */
+function claveSubcuenta(codigo: string): string {
+  return `${codigo.slice(0, 4)}|${Number(codigo.slice(4) || '0')}`
+}
+
 export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
   const plan = usePlanEnMemoria()
   const [desde, setDesde] = useState<Date | null>(null)
@@ -155,13 +164,20 @@ export default function SumasSaldosDiarioB({ ejercicio, quienGuarda }: Props) {
     ])
       .then(([lineas, equivalencias, planCompleto]) => {
         const titulos = new Map((planCompleto ?? []).map((c) => [c.codigo, c.descripcion ?? '']))
+        // El diario B puede traer las subcuentas con otra longitud que el plan
+        // (10000001 frente a 100000001): se casan por cuenta de mayor + número.
+        const porNumero = new Map(
+          (planCompleto ?? []).filter((c) => /^\d{6,}$/.test(c.codigo)).map((c) => [claveSubcuenta(c.codigo), c.descripcion ?? '']),
+        )
+        const buscar = (codigo: string) =>
+          titulos.get(codigo) || (/^\d{6,}$/.test(codigo) ? porNumero.get(claveSubcuenta(codigo)) : undefined)
         setSumas(
           sumarDiarioB(lineas, {
             equivalencias: consulta.conEquivalencias ? equivalencias : null,
             soloSinEquivalencia: consulta.soloSinEquivalencia ? equivalencias : null,
             descripcionSinEquivalencia:
               consulta.descripcionSinEquivalencia && equivalencias
-                ? { equivalencias, buscar: (codigo) => titulos.get(codigo) }
+                ? { equivalencias, buscar }
                 : null,
             tituloDelPlan: (cuenta) => plan.porCodigo.get(cuenta)?.descripcion,
             nivel: consulta.nivel,
