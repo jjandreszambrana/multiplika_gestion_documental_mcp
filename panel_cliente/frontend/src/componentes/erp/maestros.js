@@ -8,6 +8,8 @@
 // `padre`: el maestro cuelga de otro (los establecimientos, de un cliente):
 // se elige arriba y va en listar y crear.
 // `limite`: lo más que el SIF devuelve de una vez (se pide por tandas).
+// `hijos`: id del maestro que se despliega bajo cada fila (los
+// establecimientos bajo su cliente). `oculto`: no sale en el menú.
 
 const SI_NO = (v) => (v ? "Sí" : "No")
 
@@ -48,6 +50,7 @@ export const MAESTROS = [
     singular: "cliente",
     ruta: "/obligados/receptores",
     nombre: (f) => f.NombreRazon,
+    hijos: "establecimientos",
     columnas: [
       { campo: "codigo", titulo: "Código", ancho: 90 },
       { campo: "NombreRazon", titulo: "Nombre o razón social", crece: true },
@@ -81,6 +84,7 @@ export const MAESTROS = [
     id: "establecimientos",
     titulo: "Establecimientos",
     singular: "establecimiento",
+    oculto: true,
     ruta: "/obligados/receptores/establecimientos",
     padre: { campo: "id_receptor", titulo: "Cliente", ruta: "/obligados/receptores/listar", etiqueta: "NombreRazon" },
     columnas: [

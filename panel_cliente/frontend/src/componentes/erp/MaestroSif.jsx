@@ -6,7 +6,7 @@ import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { MantineReactTable, useMantineReactTable } from "mantine-react-table"
 import { CELDA_QUE_CRECE, opcionesDeTabla } from "@contabilidad/components/tabla.ts"
 import { api } from "../../api"
-import { LISTAS } from "./maestros"
+import { LISTAS, MAESTROS } from "./maestros"
 
 // Todo lo que haya, por tandas del tamaño que admite el SIF
 async function todo(pedir, ruta, cuerpo = {}, limite = 10000) {
@@ -21,7 +21,9 @@ async function todo(pedir, ruta, cuerpo = {}, limite = 10000) {
 // Un maestro del SIF (ver maestros.js): listado, alta, cambio y baja. Lo que
 // cada usuario puede hacer lo decide el SIF con su acceso; aquí solo se
 // enseña su respuesta si dice que no.
-export default function MaestroSif({ proyecto, empresa, maestro }) {
+// `idPadreFijo`: dentro de la fila de su padre (los establecimientos bajo su
+// cliente): sin selector de padre y más recogido.
+export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) {
   const pedirRuta = useCallback(
     (ruta, cuerpo) => api.erpSif(proyecto.id, empresa.id_empresa, ruta, cuerpo),
     [proyecto.id, empresa.id_empresa],
@@ -29,7 +31,9 @@ export default function MaestroSif({ proyecto, empresa, maestro }) {
   const pedir = useCallback((accion, cuerpo) => pedirRuta(`${maestro.ruta}/${accion}`, cuerpo), [pedirRuta, maestro.ruta])
   const { padre } = maestro
   const [padres, setPadres] = useState(null)
-  const [idPadre, setIdPadre] = useState(null)
+  const fijo = idPadreFijo !== undefined
+  const [idPadre, setIdPadre] = useState(fijo ? String(idPadreFijo) : null)
+  const hijos = maestro.hijos && MAESTROS.find((m) => m.id === maestro.hijos)
   const [filas, setFilas] = useState(null)
   const [opciones, setOpciones] = useState({})
   const [error, setError] = useState(null)
@@ -37,17 +41,17 @@ export default function MaestroSif({ proyecto, empresa, maestro }) {
   const [borrando, setBorrando] = useState(null)
 
   useEffect(() => {
-    if (!padre) return
+    if (!padre || fijo) return
     todo(pedirRuta, padre.ruta)
       .then((r) => {
         setPadres(r.map((f) => ({ value: String(f.id), label: f[padre.etiqueta] })))
         setIdPadre(r[0] ? String(r[0].id) : null)
       })
       .catch((err) => setError(err.message))
-  }, [pedirRuta, padre])
+  }, [pedirRuta, padre, fijo])
 
   const cargar = useCallback(() => {
-    if (padre && !idPadre) {
+    if (padre && !idPadre && !fijo) {
       setFilas(padres ? [] : null)
       return
     }
@@ -59,7 +63,7 @@ export default function MaestroSif({ proyecto, empresa, maestro }) {
         setFilas([])
         setError(err.message)
       })
-  }, [pedirRuta, maestro, padre, idPadre, padres])
+  }, [pedirRuta, maestro, padre, idPadre, padres, fijo])
   useEffect(cargar, [cargar])
 
   // Las listas de la ficha que vienen del SIF (países, formas de pago...)
@@ -104,8 +108,14 @@ export default function MaestroSif({ proyecto, empresa, maestro }) {
     data: filas || [],
     enablePagination: false,
     enableBottomToolbar: false,
-    enableTopToolbar: true,
-    enableGlobalFilter: true,
+    enableTopToolbar: !fijo,
+    enableGlobalFilter: !fijo,
+    // Solo se pinta el desplegado: cada uno pide lo suyo al SIF al abrirlo
+    ...(hijos ? {
+      renderDetailPanel: ({ row }) => row.getIsExpanded()
+        ? <MaestroSif proyecto={proyecto} empresa={empresa} maestro={hijos} idPadreFijo={row.original.id} />
+        : null,
+    } : {}),
     positionGlobalFilter: "left",
     initialState: { density: "xs", showGlobalFilter: true },
     mantineSearchTextInputProps: { placeholder: "Buscar" },
@@ -118,18 +128,18 @@ export default function MaestroSif({ proyecto, empresa, maestro }) {
   })
 
   return (
-    <Stack gap="md">
+    <Stack gap={fijo ? "xs" : "md"} py={fijo ? "xs" : 0}>
       <Group justify="space-between">
         <Group gap="md">
-          <Title order={3}>{maestro.titulo}</Title>
-          {padre && (
+          <Title order={fijo ? 5 : 3}>{maestro.titulo}</Title>
+          {padre && !fijo && (
             <Select
               aria-label={padre.titulo} placeholder={padre.titulo} w={360} searchable allowDeselect={false}
               data={padres || []} value={idPadre} onChange={setIdPadre}
             />
           )}
         </Group>
-        <Button leftSection={<IconPlus size={15} />} disabled={padre && !idPadre} onClick={() => setEditando({})}>
+        <Button size={fijo ? "xs" : "sm"} variant={fijo ? "light" : "filled"} leftSection={<IconPlus size={15} />} disabled={padre && !idPadre} onClick={() => setEditando({})}>
           {nuevo} {maestro.singular}
         </Button>
       </Group>

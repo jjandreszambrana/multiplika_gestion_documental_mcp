@@ -78,7 +78,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
 
       <Group align="flex-start" wrap="nowrap" gap="md">
         <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, borderRight: "1px solid var(--mantine-color-default-border)" }}>
-          {MAESTROS.map((m) => (
+          {MAESTROS.filter((m) => !m.oculto).map((m) => (
             <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
           ))}
           {proyecto.puede_editar && (
