@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react"
-import { Alert, Box, Button, Group, Loader, Select, Tabs, Text, Title } from "@mantine/core"
+import { ActionIcon, Alert, Box, Button, Group, Loader, NavLink, Select, Text, Title, Tooltip } from "@mantine/core"
+import { IconMenu2, IconMessageCircle } from "@tabler/icons-react"
 import { api } from "../api"
 import { ConexionErpContenido } from "../componentes/ConexionErp"
 import MaestroSif from "../componentes/erp/MaestroSif"
 import { MAESTROS } from "../componentes/erp/maestros"
 
+// Mismo ancho que el menú de la contabilidad (contabilidad_ui, Estructura)
+const ANCHO_MENU = 220
+
 // ERP → Gestión SIF: los maestros de facturación del SIF, como la
-// contabilidad: con los accesos al SIF de cada usuario y en la empresa que
-// elija. La última pestaña es la conexión que alimenta el CRM.
-export default function Erp({ proyecto, onVerAccesos }) {
+// contabilidad: pantalla completa con su propio menú a la izquierda (el de la
+// GD se esconde y se abre con el botón), con los accesos al SIF de cada
+// usuario y en la empresa que elija. La conexión que alimenta el CRM va al final.
+export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternarChat }) {
   const [empresas, setEmpresas] = useState(null)
   const [error, setError] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
-  const [pestana, setPestana] = useState(MAESTROS[0].id)
+  const [seccion, setSeccion] = useState(MAESTROS[0].id)
 
   useEffect(() => {
     api
@@ -28,46 +33,60 @@ export default function Erp({ proyecto, onVerAccesos }) {
   }, [proyecto.id])
 
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
-  const deEmpresa = pestana !== "conexion"
+  const maestro = MAESTROS.find((m) => m.id === seccion)
+
+  const contenido = seccion === "conexion" ? (
+    <ConexionErpContenido proyecto={proyecto} />
+  ) : empresas === null ? (
+    <Loader size="sm" />
+  ) : !empresa ? (
+    <Alert color="blue">
+      <Group justify="space-between" wrap="wrap" gap="xs">
+        <Text fz="sm">{error || "Ninguno de tus accesos al SIF funciona ahora mismo."}</Text>
+        <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
+      </Group>
+    </Alert>
+  ) : (
+    <MaestroSif key={`${maestro.id}-${empresa.id_empresa}`} proyecto={proyecto} empresa={empresa} maestro={maestro} />
+  )
 
   return (
-    <Tabs value={pestana} onChange={setPestana}>
-      <Box style={STICKY} mb="md">
-        <Group mb="lg" wrap="nowrap" gap="lg">
-          <Title order={2}>Gestión SIF</Title>
-          <Tabs.List style={{ flex: 1 }}>
-            {MAESTROS.map((m) => <Tabs.Tab key={m.id} value={m.id}>{m.titulo}</Tabs.Tab>)}
-            {proyecto.puede_editar && <Tabs.Tab value="conexion">Conexión con el CRM</Tabs.Tab>}
-          </Tabs.List>
+    <>
+      <Group justify="space-between" mb="xs" wrap="nowrap" gap="lg">
+        <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+          <Tooltip label="Menú de la gestión documental">
+            <ActionIcon variant="default" size="lg" aria-label="Abrir o cerrar el menú de la gestión documental" onClick={onAlternarMenu}>
+              <IconMenu2 size={18} />
+            </ActionIcon>
+          </Tooltip>
+          <Title order={4}>Gestión SIF</Title>
         </Group>
-      </Box>
-
-      {deEmpresa && (
-        empresas === null ? <Loader size="sm" /> : !empresa ? (
-          <Alert color="blue" mb="md">
-            <Group justify="space-between" wrap="wrap" gap="xs">
-              <Text fz="sm">{error || "Ninguno de tus accesos al SIF funciona ahora mismo."}</Text>
-              <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
-            </Group>
-          </Alert>
-        ) : empresas.length > 1 && (
+        {empresas?.length > 1 && seccion !== "conexion" ? (
           <Select
-            aria-label="Empresa" w={480} maw="100%" mb="md" searchable allowDeselect={false} value={idEmpresa} onChange={setIdEmpresa}
+            aria-label="Empresa" w={480} maw="100%" searchable allowDeselect={false} value={idEmpresa} onChange={setIdEmpresa}
             data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
           />
-        )
-      )}
+        ) : <span />}
+        {onAlternarChat && (
+          <Tooltip label="Chat con la IA">
+            <ActionIcon variant="light" size="lg" aria-label="Abrir o cerrar el chat con la IA" onClick={onAlternarChat}>
+              <IconMessageCircle size={18} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
 
-      {MAESTROS.map((m) => (
-        <Tabs.Panel key={m.id} value={m.id}>
-          {pestana === m.id && empresa && <MaestroSif key={`${m.id}-${empresa.id_empresa}`} proyecto={proyecto} empresa={empresa} maestro={m} />}
-        </Tabs.Panel>
-      ))}
-      <Tabs.Panel value="conexion">
-        {pestana === "conexion" && <ConexionErpContenido proyecto={proyecto} />}
-      </Tabs.Panel>
-    </Tabs>
+      <Group align="flex-start" wrap="nowrap" gap="md">
+        <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, borderRight: "1px solid var(--mantine-color-default-border)" }}>
+          {MAESTROS.map((m) => (
+            <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
+          ))}
+          {proyecto.puede_editar && (
+            <NavLink label="Conexión con el CRM" active={seccion === "conexion"} onClick={() => setSeccion("conexion")} />
+          )}
+        </Box>
+        <Box style={{ flex: 1, minWidth: 0 }}>{contenido}</Box>
+      </Group>
+    </>
   )
 }
-
-const STICKY = { position: "sticky", top: 0, zIndex: 20, background: "var(--mantine-color-body)" }

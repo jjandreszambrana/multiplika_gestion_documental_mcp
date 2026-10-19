@@ -376,8 +376,10 @@ export default function App() {
   const avisoEmpresa = empresas.length > 1
 
   const enConta = vista === "asesor-contable" && !idDocumentoActivo
+  // Gestión SIF ocupa también toda la pantalla, con su propio menú
+  const enErp = vista === "erp" && !idDocumentoActivo
   const pantallaContable = enConta
-  const menuOculto = pantallaContable && !menuAbierto
+  const menuOculto = (pantallaContable || enErp) && !menuAbierto
 
   return (
     <AppShell
@@ -430,8 +432,8 @@ export default function App() {
             </Container>
           </Box>
         )}
-        <Box h="100%" p="xl" hidden={enConta} style={{ overflowY: "auto" }}>
-        <Container size="lg" px={0}>
+        <Box h="100%" p={enErp ? "xs" : "xl"} hidden={enConta} style={{ overflowY: "auto" }}>
+        <Container size="lg" px={0} fluid={enErp}>
           {idDocumentoActivo ? (
             <DocumentoDetalle
               proyecto={proyecto}
@@ -463,7 +465,10 @@ export default function App() {
           ) : vista === "cuenta-email" ? (
             <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "erp" ? (
-            <Erp proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")} />
+            <Erp
+              proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")}
+              onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)} onAlternarChat={alternarChat}
+            />
           ) : vista === "accesos-sif" ? (
             <AccesosSif proyecto={proyecto} onVolver={() => navegar("inicio")} onCambiar={() => setVersionAccesos((v) => v + 1)} />
           ) : vista === "ayuda" ? (
