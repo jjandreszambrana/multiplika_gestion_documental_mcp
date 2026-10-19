@@ -45,7 +45,7 @@ PREFIJOS_PERMITIDOS = (
 RUTAS_PROHIBIDAS = ("/contabilidad/sesion/conmutar",)
 NOMBRE_CREDENCIAL = "SIF {url} · {usuario} · usuario GD {id_usuario}"
 MENSAJE_CLAVE_MALA = "El SIF no acepta ese usuario o esa contraseña"
-MENSAJE_SIN_ACCESO = "Para ver la contabilidad necesitas poner tu propio acceso al SIF en Asesor contable → Mis accesos al SIF"
+MENSAJE_SIN_ACCESO = "Para ver la contabilidad necesitas poner tu propio acceso al SIF en ERP → Mis accesos al SIF"
 
 _sesiones: dict[tuple, ClienteSIF] = {}
 

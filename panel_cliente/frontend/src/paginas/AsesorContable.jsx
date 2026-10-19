@@ -286,7 +286,7 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
               </ActionIcon>
             </Tooltip>
           )}
-          <Title order={pantallaCompleta ? 4 : 2}>Asesor contable</Title>
+          <Title order={pantallaCompleta ? 4 : 2}>Contabilidad</Title>
         </Group>
         {pestanas}
         {onAlternarChat && (

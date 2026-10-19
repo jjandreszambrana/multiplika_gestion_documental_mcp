@@ -36,6 +36,7 @@ import {
   IconNotebook,
   IconProgressCheck,
   IconPlugConnected,
+  IconListDetails,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
@@ -197,20 +198,22 @@ export default function Sidebar({
           <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
         </Grupo>
 
-        <Grupo id="negocio" titulo="Clientes y negocio" activo={["entidades", "ventas", "asesor-contable", "erp", "accesos-sif", "webs", "publicaciones"].includes(vista)}>
-          <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
-          <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
-          {/* Solo en las GD con el apartado activado (se activa en Contexto de negocio) */}
+        <Grupo id="negocio" titulo="Negocio" activo={["entidades", "ventas", "asesor-contable", "erp", "accesos-sif", "webs", "publicaciones"].includes(vista)}>
+          {/* Solo en las GD con el asesor contable activado (en Contexto de negocio).
+              "ERP" solo agrupa: lleva a su primera opción. */}
           {proyecto.modulo_contable && (
             <>
-              <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
-              <Item icon={IconPlugConnected} label="ERP" sangria active={vista === "erp"} onClick={() => onNavigate("erp")} />
+              <Item icon={IconPlugConnected} label="ERP" active={false} onClick={() => onNavigate("erp")} />
+              <Item icon={IconListDetails} label="Gestión SIF" sangria active={vista === "erp"} onClick={() => onNavigate("erp")} />
+              <Item icon={IconCalculator} label="Contabilidad" sangria active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
               {/* Los accesos son de cada usuario: soporte no tiene */}
               {!esSuperadmin && (
                 <Item icon={IconKey} label="Mis accesos al SIF" sangria active={vista === "accesos-sif"} onClick={() => onNavigate("accesos-sif")} />
               )}
             </>
           )}
+          <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
+          <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
           {/* Invitado no ve nada de webs y redes, ni para leer */}
           {(proyecto.puede_editar || proyecto.es_admin) && (
             <Item icon={IconWorld} label="Webs y redes" active={vista === "webs" || vista === "publicaciones"} onClick={() => onNavigate("webs")} />

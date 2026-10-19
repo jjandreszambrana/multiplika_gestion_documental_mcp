@@ -5,7 +5,7 @@ import { ConexionErpContenido } from "../componentes/ConexionErp"
 import MaestroSif from "../componentes/erp/MaestroSif"
 import { MAESTROS } from "../componentes/erp/maestros"
 
-// Asesor contable → ERP: los maestros de facturación del SIF, como la
+// ERP → Gestión SIF: los maestros de facturación del SIF, como la
 // contabilidad: con los accesos al SIF de cada usuario y en la empresa que
 // elija. La última pestaña es la conexión que alimenta el CRM.
 export default function Erp({ proyecto, onVerAccesos }) {
@@ -34,7 +34,7 @@ export default function Erp({ proyecto, onVerAccesos }) {
     <Tabs value={pestana} onChange={setPestana}>
       <Box style={STICKY} mb="md">
         <Group mb="lg" wrap="nowrap" gap="lg">
-          <Title order={2}>ERP</Title>
+          <Title order={2}>Gestión SIF</Title>
           <Tabs.List style={{ flex: 1 }}>
             {MAESTROS.map((m) => <Tabs.Tab key={m.id} value={m.id}>{m.titulo}</Tabs.Tab>)}
             {proyecto.puede_editar && <Tabs.Tab value="conexion">Conexión con el CRM</Tabs.Tab>}
