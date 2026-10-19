@@ -39,6 +39,7 @@ export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) 
   const [error, setError] = useState(null)
   const [editando, setEditando] = useState(null) // {} = alta
   const [borrando, setBorrando] = useState(null)
+  const [abierta, setAbierta] = useState(null) // la fila desplegada: solo una
 
   useEffect(() => {
     if (!padre || fijo) return
@@ -110,16 +111,24 @@ export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) 
     enableBottomToolbar: false,
     enableTopToolbar: !fijo,
     enableGlobalFilter: !fijo,
-    // Solo se pinta el desplegado: cada uno pide lo suyo al SIF al abrirlo
+    // Una fila desplegada cada vez (abrir otra cierra la anterior), y solo
+    // se pinta esa: cada una pide lo suyo al SIF al abrirla
     ...(hijos ? {
-      renderDetailPanel: ({ row }) => row.getIsExpanded()
+      getRowId: (f) => String(f.id),
+      getRowCanExpand: () => true,
+      enableExpandAll: false,
+      onExpandedChange: (cambio) => {
+        const nuevo = typeof cambio === "function" ? cambio(abierta ? { [abierta]: true } : {}) : cambio
+        setAbierta(Object.keys(nuevo).find((k) => nuevo[k] && k !== abierta) ?? null)
+      },
+      renderDetailPanel: ({ row }) => row.id === abierta
         ? <MaestroSif proyecto={proyecto} empresa={empresa} maestro={hijos} idPadreFijo={row.original.id} />
         : null,
     } : {}),
     positionGlobalFilter: "left",
     initialState: { density: "xs", showGlobalFilter: true },
     mantineSearchTextInputProps: { placeholder: "Buscar" },
-    state: { isLoading: filas === null },
+    state: { isLoading: filas === null, ...(hijos ? { expanded: abierta ? { [abierta]: true } : {} } : {}) },
     localization: {
       noRecordsToDisplay: padre && !idPadre
         ? `Elige un ${padre.titulo.toLowerCase()}.`
