@@ -16,6 +16,7 @@ import CabeceraEmpresa from './CabeceraEmpresa'
 import PantallaDiario from '../pages/diario/PantallaDiario'
 import PantallaConfiguracion from '../pages/configuracion/PantallaConfiguracion'
 import PantallaConexiones from '../pages/conexiones/PantallaConexiones'
+import PantallaUsuariosSif from '../pages/usuarios/PantallaUsuariosSif'
 import PantallaEjercicios from '../pages/ejercicios/PantallaEjercicios'
 import PantallaEliminados from '../pages/eliminados/PantallaEliminados'
 import PantallaEnlace from '../pages/maestros/PantallaEnlace'
@@ -136,11 +137,13 @@ export default function Estructura({
   }, [usuario])
 
   // El diario B solo existe en algunos SIF: hasta saberlo, no se enseña.
-  const [ocultas, setOcultas] = useState<ReadonlySet<string>>(() => new Set(['diario_b']))
+  // Los usuarios del SIF los atiende el proxy de la GD: fuera de ella, no.
+  const sinGD = embebido ? [] : ['usuarios_sif']
+  const [ocultas, setOcultas] = useState<ReadonlySet<string>>(() => new Set(['diario_b', ...sinGD]))
   const [diarioBSabido, setDiarioBSabido] = useState(false)
   useEffect(() => {
     void hayDiarioB().then((hay) => {
-      setOcultas(hay ? new Set() : new Set(['diario_b']))
+      setOcultas(new Set(hay ? sinGD : ['diario_b', ...sinGD]))
       setDiarioBSabido(true)
     })
   }, [])
@@ -308,6 +311,8 @@ export default function Estructura({
         ejercicio={ejercicio}
         alGuardada={setConfiguracion}
       />
+    ) : id === 'usuarios_sif' ? (
+      <PantallaUsuariosSif />
     ) : id === 'conexiones' ? (
       <PantallaConexiones
         idObligado={empresa.id_obligado}

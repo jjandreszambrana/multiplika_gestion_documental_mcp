@@ -440,3 +440,72 @@ async def usuarios_sif(config: dict, id_usuario: int, id_acceso: int, accion: st
                     error = r.text[:300]
             raise ValueError(f"El usuario se ha creado, pero sin permisos de operario ({error}). Avisa a quien administre el SIF")
     return datos if isinstance(datos, dict) else {"datos": datos}
+
+
+# ---------- Usuarios del SIF para el superadministrador ----------
+# Desde las pantallas de contabilidad, por el mismo proxy, con el prefijo
+# /superadmin/. Solo si el acceso con el que se trabaja es superadministrador
+# del SIF (rol 1): ese rol no tiene límites en el SIF, así que aquí no se
+# impone la empresa de la pantalla y se puede tocar cualquier usuario y
+# cualquier empresa. Tampoco se borra nada: un usuario se desactiva, suspende
+# o cancela con su estado.
+
+ROL_SUPERADMIN_SIF = 1
+RUTAS_SUPERADMIN = {
+    "usuarios/listar": "/usuarios/listar",
+    "usuarios/crear": "/usuarios/crear",
+    "usuarios/modificar": "/usuarios/modificar",
+    "empresas": "/obligados/listar",
+    "asesorias": "/representantes/listar",
+    "administradores": "/administradores/listar",
+    "perfiles": "/operarios/operarios_perfiles/listar",
+    "operarios/listar": "/operarios/operarios/listar",
+    "operarios/crear": "/operarios/operarios/crear",
+    "operarios/actualizar": "/operarios/operarios/actualizar",
+    "accesos/conceder": "/contabilidad/accesos/conceder",
+    "accesos/revocar": "/contabilidad/accesos/revocar",
+}
+
+
+async def _pedir_sif(cliente: ClienteSIF, ruta: str, cuerpo: dict):
+    try:
+        respuesta = await cliente.crudo("POST", ruta, json=cuerpo)
+    except ErrorSIF as e:
+        raise ValueError(str(e)) from e
+    try:
+        datos = respuesta.json()
+    except ValueError:
+        datos = {"message": respuesta.text[:300]}
+    if respuesta.status_code >= 400:
+        raise ValueError(_mensaje_sif(datos))
+    return datos
+
+
+async def _accesos_de_usuario(cliente: ClienteSIF, id_usuario_sif: int) -> list[dict]:
+    """En qué empresas tiene acceso a la contabilidad un usuario. El SIF solo
+    lo dice empresa a empresa: se recorren todas."""
+    empresas = (await _pedir_sif(cliente, "/obligados/listar", {"limit": 5000})).get("registros") or []
+    resultado = []
+    for empresa in empresas:
+        datos = await _pedir_sif(cliente, "/contabilidad/accesos/listar", {"id_obligado": empresa["id"]})
+        for a in datos.get("accesos") or []:
+            if a.get("id_usuario") == id_usuario_sif and a.get("estado") == 1:
+                resultado.append({"id_obligado": empresa["id"], "empresa": empresa.get("NombreRazon") or "", "nivel": a["nivel"]})
+    return resultado
+
+
+async def superadmin_sif(config: dict, id_usuario: int | None, id_empresa: int, accion: str, cuerpo: dict) -> dict:
+    _, cliente = await _empresa_y_cliente(config, id_usuario, id_empresa)
+    try:
+        yo = await cliente.yo()
+    except ErrorSIF as e:
+        raise ValueError(str(e)) from e
+    if int(yo.get("id_rol") or 0) != ROL_SUPERADMIN_SIF:
+        raise PermissionError("Solo el superadministrador del SIF puede gestionar sus usuarios desde aquí")
+    if accion == "accesos/usuario":
+        return {"accesos": await _accesos_de_usuario(cliente, int(cuerpo.get("id_usuario") or 0))}
+    ruta = RUTAS_SUPERADMIN.get(accion)
+    if not ruta:
+        raise LookupError("Esa acción no existe")
+    datos = await _pedir_sif(cliente, ruta, cuerpo)
+    return datos if isinstance(datos, dict) else {"datos": datos}

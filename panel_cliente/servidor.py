@@ -39,7 +39,7 @@ from urllib.parse import quote
 import anthropic
 from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from mtpk_mariadb import AsyncCrudBase
 from pydantic import BaseModel, Field
@@ -522,6 +522,14 @@ async def proxy_contabilidad_sif(
     en vez de al SIF: misma ruta, mismo cuerpo. Se reenvía con la sesión del
     SIF del usuario y su empresa, y se devuelve la respuesta tal cual."""
     config = get_db_config(proyecto["id"])
+    if ruta.startswith("superadmin/"):
+        try:
+            cuerpo = json.loads(await request.body() or b"{}")
+            return JSONResponse(await conta_sif.superadmin_sif(config, _id_usuario(identidad), id_empresa, ruta.removeprefix("superadmin/"), cuerpo))
+        except PermissionError as e:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+        except (ValueError, LookupError) as e:
+            raise _error_contable(e) from e
     tipo = request.headers.get("content-type") or ""
     try:
         if "multipart/form-data" in tipo:

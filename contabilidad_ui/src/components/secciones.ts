@@ -110,5 +110,14 @@ export const SECCIONES: Seccion[] = [
     // representantes y los operarios reciben 403 del SIF.
     soloRoles: [1, 2, 4],
   },
+  // Solo dentro de la GD (es su proxy el que lo atiende) y solo para el
+  // superadministrador del SIF.
+  {
+    id: 'usuarios_sif',
+    etiqueta: 'Usuarios del SIF',
+    nivelMinimo: 'consulta',
+    grupo: 'Utilidades',
+    soloRoles: [1],
+  },
   { id: 'accesos', etiqueta: 'Accesos', nivelMinimo: 'admin' },
 ]
