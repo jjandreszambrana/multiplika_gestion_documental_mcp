@@ -60,6 +60,12 @@ export const sesionPanel = {
   capturarTokenRenovado: (res) => _capturarTokenRenovado(res),
 }
 
+// Sesión rechazada (caducada, o el usuario ya no existe): App.jsx escucha
+// este evento y vuelve a la pantalla de entrada.
+function _avisarSiSesionNoValida(res) {
+  if (res.status === 401 && token) window.dispatchEvent(new Event("gd:sesion-no-valida"))
+}
+
 async function peticion(base, metodo, ruta, cuerpo) {
   const headers = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
@@ -70,6 +76,7 @@ async function peticion(base, metodo, ruta, cuerpo) {
     body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
   })
   _capturarTokenRenovado(res)
+  _avisarSiSesionNoValida(res)
 
   if (!res.ok) {
     let detalle = res.statusText
@@ -93,6 +100,7 @@ async function peticionConFichero(base, ruta, formData) {
 
   const res = await fetch(`${base}${ruta}`, { method: "POST", headers, body: formData })
   _capturarTokenRenovado(res)
+  _avisarSiSesionNoValida(res)
 
   if (!res.ok) {
     let detalle = res.statusText

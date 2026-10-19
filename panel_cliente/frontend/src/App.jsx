@@ -268,6 +268,11 @@ export default function App() {
     window.addEventListener("pointerup", soltar)
   }
 
+  useEffect(() => {
+    window.addEventListener("gd:sesion-no-valida", cerrarSesion)
+    return () => window.removeEventListener("gd:sesion-no-valida", cerrarSesion)
+  })
+
   function cerrarSesion() {
     setChatAbierto(false)
     setChatMontado(false)

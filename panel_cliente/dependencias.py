@@ -25,6 +25,7 @@ from database.config_db import get_db_config
 from database.control.dependencias._dep_api_keys import TABLA_API_KEYS
 from database.control.dependencias._dep_auditoria_soporte import TABLA_AUDITORIA_SOPORTE
 from database.control.dependencias._dep_proyectos import TABLA_PROYECTOS
+from database.control.dependencias._dep_usuarios import TABLA_USUARIOS
 from lib.jwt_tokens import decodificar_token, renovar_si_hace_falta
 from lib.roles_proyecto import es_admin_de_proyecto, puede_editar_proyecto, tiene_acceso_a_proyecto
 
@@ -33,6 +34,7 @@ from ..database.modelos._mod_chat import ChatConversacionesCRUD
 _proyectos = AsyncCrudBase(TABLA_PROYECTOS, get_db_config("control"))
 _auditoria = AsyncCrudBase(TABLA_AUDITORIA_SOPORTE, get_db_config("control"))
 _api_keys = AsyncCrudBase(TABLA_API_KEYS, get_db_config("control"))
+_usuarios = AsyncCrudBase(TABLA_USUARIOS, get_db_config("control"))
 
 
 @dataclass
@@ -48,7 +50,7 @@ def _token_crudo(authorization: str = Header(default="")) -> str:
     return authorization.removeprefix("Bearer ").strip()
 
 
-def identidad_actual(token: str = Depends(_token_crudo), response: Response = None) -> Identidad:
+async def identidad_actual(token: str = Depends(_token_crudo), response: Response = None) -> Identidad:
     payload = decodificar_token(token)
     if payload is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido o caducado")
@@ -58,6 +60,11 @@ def identidad_actual(token: str = Depends(_token_crudo), response: Response = No
     if payload.get("tipo") == "superadmin":
         return Identidad(tipo="superadmin", id=payload["id_superadmin"])
     if payload.get("tipo") == "usuario":
+        # Un token sigue siendo válido aunque el usuario se haya borrado o
+        # desactivado después: 401 para que la pantalla vuelva a la entrada.
+        usuario = await _usuarios.obtener(payload["id_usuario"])
+        if not usuario or usuario["estado"] != 1:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tu sesión ya no es válida, vuelve a entrar")
         return Identidad(tipo="usuario", id=payload["id_usuario"], id_tenant=payload["id_tenant"])
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido o caducado")
 
