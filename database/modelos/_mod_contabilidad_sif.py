@@ -496,10 +496,7 @@ async def _accesos_de_usuario(cliente: ClienteSIF, id_usuario_sif: int) -> list[
 
 async def superadmin_sif(config: dict, id_usuario: int | None, id_empresa: int, accion: str, cuerpo: dict) -> dict:
     _, cliente = await _empresa_y_cliente(config, id_usuario, id_empresa)
-    try:
-        yo = await cliente.yo()
-    except ErrorSIF as e:
-        raise ValueError(str(e)) from e
+    yo = (await _pedir_sif(cliente, "/contabilidad/sesion/me", {})).get("user") or {}
     if int(yo.get("id_rol") or 0) != ROL_SUPERADMIN_SIF:
         raise PermissionError("Solo el superadministrador del SIF puede gestionar sus usuarios desde aquí")
     if accion == "accesos/usuario":
