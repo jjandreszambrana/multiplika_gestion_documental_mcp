@@ -23,7 +23,7 @@ async function todo(pedir, ruta, cuerpo = {}, limite = 10000) {
 // enseña su respuesta si dice que no.
 // `idPadreFijo`: dentro de la fila de su padre (los establecimientos bajo su
 // cliente): sin selector de padre y más recogido.
-export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) {
+export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo, nombrePadre }) {
   const pedirRuta = useCallback(
     (ruta, cuerpo) => api.erpSif(proyecto.id, empresa.id_empresa, ruta, cuerpo),
     [proyecto.id, empresa.id_empresa],
@@ -122,7 +122,7 @@ export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) 
         setAbierta(Object.keys(nuevo).find((k) => nuevo[k] && k !== abierta) ?? null)
       },
       renderDetailPanel: ({ row }) => row.id === abierta
-        ? <MaestroSif proyecto={proyecto} empresa={empresa} maestro={hijos} idPadreFijo={row.original.id} />
+        ? <MaestroSif proyecto={proyecto} empresa={empresa} maestro={hijos} idPadreFijo={row.original.id} nombrePadre={maestro.nombre?.(row.original)} />
         : null,
     } : {}),
     positionGlobalFilter: "left",
@@ -157,6 +157,7 @@ export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) 
       {editando && (
         <Ficha
           maestro={maestro} fila={editando} opciones={opciones} pedir={pedir}
+          padre={padre && (nombrePadre ?? padres?.find((p) => p.value === idPadre)?.label)}
           extraAlta={padre ? { [padre.campo]: Number(idPadre) } : {}}
           alCerrar={() => setEditando(null)} alGuardar={() => { setEditando(null); cargar() }}
         />
@@ -171,7 +172,7 @@ export default function MaestroSif({ proyecto, empresa, maestro, idPadreFijo }) 
 
 const vacio = (c) => (c.tipo === "texto" || c.tipo === "nota" ? "" : null)
 
-function Ficha({ maestro, fila, opciones, pedir, extraAlta, alCerrar, alGuardar }) {
+function Ficha({ maestro, fila, opciones, pedir, padre, extraAlta, alCerrar, alGuardar }) {
   const alta = fila.id === undefined
   const [valores, setValores] = useState(() =>
     Object.fromEntries(maestro.campos.map((c) => [c.campo, fila[c.campo] ?? (alta ? c.defecto : undefined) ?? vacio(c)])),
@@ -226,7 +227,16 @@ function Ficha({ maestro, fila, opciones, pedir, extraAlta, alCerrar, alGuardar 
     return <TextInput {...comun} value={v ?? ""} onChange={(e) => poner(c.campo, e.currentTarget.value)} />
   }
 
-  const titulo = alta ? `${maestro.femenino ? "Nueva" : "Nuevo"} ${maestro.singular}` : `Cambiar ${maestro.singular}`
+  const accion = alta ? `${maestro.femenino ? "Nueva" : "Nuevo"} ${maestro.singular}` : `Cambiar ${maestro.singular}`
+  // De quién es (el cliente de un establecimiento): en la cabecera, que no se
+  // va con el scroll de la ficha
+  const titulo = padre ? (
+    <Stack gap={0}>
+      <Text fz="xs" c="dimmed">{maestro.padre.titulo}</Text>
+      <Text fw={600}>{padre}</Text>
+      <Text fz="sm">{accion}</Text>
+    </Stack>
+  ) : accion
   return (
     <Modal opened onClose={alCerrar} title={titulo} size={maestro.campos.length > 10 ? "xl" : "lg"}>
       <form onSubmit={guardar}>
