@@ -82,7 +82,9 @@ async function peticion(base, metodo, ruta, cuerpo) {
     let detalle = res.statusText
     try {
       const cuerpoError = await res.json()
-      detalle = cuerpoError.detail || detalle
+      const d = cuerpoError.detail ?? cuerpoError.message
+      // FastAPI da una lista de fallos por campo cuando no valida el cuerpo
+      detalle = Array.isArray(d) ? d.map((e) => e.msg).join(". ") : d || detalle
     } catch {
       // el cuerpo de error no era JSON, nos quedamos con statusText
     }
@@ -106,7 +108,9 @@ async function peticionConFichero(base, ruta, formData) {
     let detalle = res.statusText
     try {
       const cuerpoError = await res.json()
-      detalle = cuerpoError.detail || detalle
+      const d = cuerpoError.detail ?? cuerpoError.message
+      // FastAPI da una lista de fallos por campo cuando no valida el cuerpo
+      detalle = Array.isArray(d) ? d.map((e) => e.msg).join(". ") : d || detalle
     } catch {
       // el cuerpo de error no era JSON, nos quedamos con statusText
     }
@@ -189,6 +193,9 @@ export const api = {
   cambiarUsuariosSif: (idProyecto, idAcceso, accion, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}/usuarios/${accion}`, datos),
   borrarAccesoSif: (idProyecto, idAcceso) => peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/sif/accesos/${idAcceso}`),
+  // Maestros del ERP (SIF) por el mismo proxy que la contabilidad
+  erpSif: (idProyecto, idEmpresa, ruta, cuerpo = {}) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/proxy/${idEmpresa}${ruta}`, cuerpo),
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idEmpresa, estado) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),

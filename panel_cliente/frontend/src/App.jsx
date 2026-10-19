@@ -91,6 +91,8 @@ import Webs from "./paginas/Webs"
 import WebDetalle from "./paginas/WebDetalle"
 import Publicaciones from "./paginas/Publicaciones"
 import AsesorContable from "./paginas/AsesorContable"
+import Erp from "./paginas/Erp"
+import AccesosSif from "./paginas/AccesosSif"
 import Inicio from "./paginas/Inicio"
 
 // Cada cuánto se mira si han llegado notificaciones nuevas (el número
@@ -129,6 +131,7 @@ export default function App() {
   // salvo el chat: el menú de la GD se esconde y se abre con un botón.
   const [contaMontada, setContaMontada] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [versionAccesos, setVersionAccesos] = useState(0)
   const [anchoChat, setAnchoChat] = useState(anchoChatGuardado)
   const [redimensionando, setRedimensionando] = useState(false)
 
@@ -165,7 +168,7 @@ export default function App() {
         setProyecto(p)
         // El asesor contable solo si el módulo sigue activo en ese proyecto
         const ultima = vistaGuardada(p.id)
-        navegar(ultima === "asesor-contable" && !p.modulo_contable ? "inicio" : ultima)
+        navegar(["asesor-contable", "erp", "accesos-sif"].includes(ultima) && !p.modulo_contable ? "inicio" : ultima)
       })
       .catch((err) => setError(err.message))
   }
@@ -421,6 +424,8 @@ export default function App() {
                 pantallaCompleta
                 onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)}
                 onAlternarChat={alternarChat}
+                versionAccesos={versionAccesos}
+                onVerAccesos={() => navegar("accesos-sif")}
               />
             </Container>
           </Box>
@@ -457,6 +462,10 @@ export default function App() {
             <Avisos proyecto={proyecto} onVolver={() => navegar("inicio")} />
           ) : vista === "cuenta-email" ? (
             <CuentaCorreo proyecto={proyecto} onVolver={() => navegar("inicio")} />
+          ) : vista === "erp" ? (
+            <Erp proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")} />
+          ) : vista === "accesos-sif" ? (
+            <AccesosSif proyecto={proyecto} onVolver={() => navegar("inicio")} onCambiar={() => setVersionAccesos((v) => v + 1)} />
           ) : vista === "ayuda" ? (
             <Ayuda onVolver={() => navegar("inicio")} />
           ) : vista === "asesor-contable" ? null /* se pinta aparte, ver contaMontada */ : vista === "estilos" && estiloActivo ? (

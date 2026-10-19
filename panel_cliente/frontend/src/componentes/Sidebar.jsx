@@ -35,10 +35,11 @@ import {
   IconChartFunnel,
   IconNotebook,
   IconProgressCheck,
+  IconPlugConnected,
 } from "@tabler/icons-react"
 import { formatearFecha } from "../formato"
 
-function Item({ icon: Icon, label, active, onClick, badge }) {
+function Item({ icon: Icon, label, active, onClick, badge, sangria }) {
   return (
     <NavLink
       label={label}
@@ -52,7 +53,7 @@ function Item({ icon: Icon, label, active, onClick, badge }) {
       }
       active={active}
       onClick={onClick}
-      styles={{ root: { borderRadius: "var(--mantine-radius-md)" } }}
+      styles={{ root: { borderRadius: "var(--mantine-radius-md)", paddingLeft: sangria ? 28 : undefined } }}
     />
   )
 }
@@ -196,12 +197,19 @@ export default function Sidebar({
           <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
         </Grupo>
 
-        <Grupo id="negocio" titulo="Clientes y negocio" activo={["entidades", "ventas", "asesor-contable", "webs", "publicaciones"].includes(vista)}>
+        <Grupo id="negocio" titulo="Clientes y negocio" activo={["entidades", "ventas", "asesor-contable", "erp", "accesos-sif", "webs", "publicaciones"].includes(vista)}>
           <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />
           <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
           {/* Solo en las GD con el apartado activado (se activa en Contexto de negocio) */}
           {proyecto.modulo_contable && (
-            <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
+            <>
+              <Item icon={IconCalculator} label="Asesor contable" active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
+              <Item icon={IconPlugConnected} label="ERP" sangria active={vista === "erp"} onClick={() => onNavigate("erp")} />
+              {/* Los accesos son de cada usuario: soporte no tiene */}
+              {!esSuperadmin && (
+                <Item icon={IconKey} label="Mis accesos al SIF" sangria active={vista === "accesos-sif"} onClick={() => onNavigate("accesos-sif")} />
+              )}
+            </>
           )}
           {/* Invitado no ve nada de webs y redes, ni para leer */}
           {(proyecto.puede_editar || proyecto.es_admin) && (

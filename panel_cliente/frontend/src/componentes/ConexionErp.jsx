@@ -272,18 +272,25 @@ function Importar({ proyecto, onImportado }) {
   )
 }
 
-// CRM → "Conexión con el ERP": Multiplika SIF o importar desde Excel.
+// Multiplika SIF o importar desde Excel. Se usa en el menú (Asesor contable
+// → ERP) y en la ventana "Conexión con el ERP" del CRM.
+export function ConexionErpContenido({ proyecto, onImportado }) {
+  return (
+    <Tabs defaultValue="sif" keepMounted={false}>
+      <Tabs.List mb="md">
+        <Tabs.Tab value="sif">Multiplika SIF</Tabs.Tab>
+        {proyecto.puede_editar && <Tabs.Tab value="excel">Importar desde Excel</Tabs.Tab>}
+      </Tabs.List>
+      <Tabs.Panel value="sif"><SIF proyecto={proyecto} /></Tabs.Panel>
+      <Tabs.Panel value="excel"><Importar proyecto={proyecto} onImportado={onImportado} /></Tabs.Panel>
+    </Tabs>
+  )
+}
+
 export default function ConexionErp({ opened, onClose, proyecto, onImportado }) {
   return (
     <Modal opened={opened} onClose={onClose} size="xl" title="Conexión con el programa de facturación">
-      <Tabs defaultValue="sif" keepMounted={false}>
-        <Tabs.List mb="md">
-          <Tabs.Tab value="sif">Multiplika SIF</Tabs.Tab>
-          {proyecto.puede_editar && <Tabs.Tab value="excel">Importar desde Excel</Tabs.Tab>}
-        </Tabs.List>
-        <Tabs.Panel value="sif"><SIF proyecto={proyecto} /></Tabs.Panel>
-        <Tabs.Panel value="excel"><Importar proyecto={proyecto} onImportado={onImportado} /></Tabs.Panel>
-      </Tabs>
+      <ConexionErpContenido proyecto={proyecto} onImportado={onImportado} />
     </Modal>
   )
 }

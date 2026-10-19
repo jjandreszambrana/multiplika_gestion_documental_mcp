@@ -6,7 +6,6 @@ import { IconMenu2, IconMessageCircle, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
-import MisAccesosSif from "../componentes/contabilidad/MisAccesosSif"
 import PropuestasContables from "../componentes/contabilidad/PropuestasContables"
 import ContabilidadSIF from "./ContabilidadSIF"
 import { ALTO_INDICE } from "../theme"
@@ -173,7 +172,7 @@ function Biblioteca({ proyecto }) {
 // Cada usuario vincula sus propios accesos al SIF ([5.9] del canal
 // compartido): las pestañas de una empresa salen cuando tiene alguno, y la
 // empresa elegida dice con qué acceso se habla.
-function Contabilidad({ proyecto, cabecera }) {
+function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
   const [accesos, setAccesos] = useState(null)
   const [empresas, setEmpresas] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
@@ -203,13 +202,17 @@ function Contabilidad({ proyecto, cabecera }) {
         setErrorEmpresas(err.message)
       })
   }
-  useEffect(cargar, [proyecto.id])
-  // Con acceso al SIF se entra directamente en la contabilidad.
+  // versionAccesos sube al cambiar los accesos en su pantalla del menú
   const [entrada, setEntrada] = useState(false)
+  useEffect(() => {
+    setEntrada(false)
+    cargar()
+  }, [proyecto.id, versionAccesos]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Con acceso al SIF se entra directamente en la contabilidad.
   useEffect(() => {
     if (entrada || accesos === null || accesos === undefined) return
     setEntrada(true)
-    if (accesos.length > 0) abrir("contabilidad")
+    if (accesos.length > 0 && pestana === "biblioteca") abrir("contabilidad")
   }, [accesos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const conAcceso = accesos?.length > 0
@@ -227,7 +230,6 @@ function Contabilidad({ proyecto, cabecera }) {
           <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
           {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
           {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
-          <Tabs.Tab value="accesos">Mis accesos al SIF</Tabs.Tab>
         </Tabs.List>
         )}
       </Box>
@@ -237,7 +239,7 @@ function Contabilidad({ proyecto, cabecera }) {
           <Alert color="blue" mb="md">
             <Group justify="space-between" wrap="wrap" gap="xs">
               <Text fz="sm">{errorEmpresas || "Ninguno de tus accesos al SIF funciona ahora mismo."}</Text>
-              <Button size="xs" onClick={() => abrir("accesos")}>Revisar mis accesos</Button>
+              <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
             </Group>
           </Alert>
         ) : (
@@ -263,9 +265,6 @@ function Contabilidad({ proyecto, cabecera }) {
       <Tabs.Panel value="memoria">
         {abiertas.has("memoria") && empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
       </Tabs.Panel>
-      <Tabs.Panel value="accesos">
-        {abiertas.has("accesos") && <MisAccesosSif proyecto={proyecto} accesos={accesos} onCambiar={cargar} />}
-      </Tabs.Panel>
     </Tabs>
   )
 }
@@ -275,7 +274,7 @@ const STICKY = {
   marginTop: "calc(-1 * var(--mantine-spacing-xs))", paddingTop: "var(--mantine-spacing-xs)",
 }
 
-export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onAlternarChat }) {
+export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarMenu, onAlternarChat, versionAccesos, onVerAccesos }) {
   // `pestanas`: la contabilidad pone las suyas en la misma fila que el título
   const cabecera = (pestanas = null) => (
       <Group justify="space-between" mb={pantallaCompleta ? "xs" : "lg"} wrap="nowrap" gap="lg">
@@ -302,7 +301,7 @@ export default function AsesorContable({ proyecto, pantallaCompleta, onAlternarM
   return (
     <>
       {proyecto.modulo_contable ? (
-        <Contabilidad proyecto={proyecto} cabecera={cabecera} />
+        <Contabilidad proyecto={proyecto} cabecera={cabecera} versionAccesos={versionAccesos} onVerAccesos={onVerAccesos} />
       ) : (
         <>
         {cabecera()}
