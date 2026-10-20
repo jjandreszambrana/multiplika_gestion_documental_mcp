@@ -33,6 +33,7 @@ import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
 import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
 import { formatearEntero, formatearImporte } from '../../lib/format'
 import { columnasDeBalance } from './columnasBalance'
+import ModalMayor from './ModalMayor'
 
 interface Props {
   ejercicio: number | null
@@ -90,6 +91,8 @@ export default function PantallaBalance({ ejercicio, ancho, usuario }: Props) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bajando, setBajando] = useState(false)
+  /** La cuenta cuyo mayor se está mirando, sin salir del balance. */
+  const [mayorDe, setMayorDe] = useState('')
 
   const cargar = useCallback(
     async (senal: AbortSignal) => {
@@ -152,7 +155,13 @@ export default function PantallaBalance({ ejercicio, ancho, usuario }: Props) {
     }
   }
 
-  const columnas = useMemo(() => columnasDeBalance(), [])
+  // El enlace va con lo que se está viendo, no con el selector: hasta pulsar Ver
+  // las líneas siguen siendo las de antes.
+  const porSubcuenta = consulta?.nivel === 0
+  const columnas = useMemo(
+    () => columnasDeBalance(porSubcuenta ? setMayorDe : undefined),
+    [porSubcuenta],
+  )
 
   const tabla = useMantineReactTable({
     ...opcionesDeTabla<LineaSumasYSaldos>(),
@@ -262,6 +271,12 @@ export default function PantallaBalance({ ejercicio, ancho, usuario }: Props) {
           {cargando && <Loader size="xs" />}
         </Group>
       )}
+
+      <ModalMayor
+        cuenta={mayorDe}
+        ejercicio={consulta?.ejercicio ?? null}
+        alCerrar={() => setMayorDe('')}
+      />
     </Stack>
   )
 }
