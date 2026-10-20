@@ -104,8 +104,10 @@ Gestión → Cobros, tres pestañas sobre `/ventas/gestion_cobros` y `/remesas`:
 por cobrar (recibos; se marcan los de un cliente y se anota el cobro, total o
 parcial), cobros anotados (deshacer, devolución del banco, dar por cobrado un
 efecto en cartera) y remesas SEPA (nueva desde recibos domiciliados, fichero
-pain.008, abonada, recibos devueltos, cerrar, borrar). Sin arqueos de caja,
-anticipos ni remesas programadas todavía.
+pain.008, abonada, recibos devueltos, cerrar, borrar), anticipos (anotar,
+aplicar a recibos, devolver), remesas automáticas (días, hora, antelación,
+excluidos, abono automático, historial) y caja (movimientos y arqueos con
+vista previa).
 
 Lo que falta en el SIF para cobros (peticiones pendientes de revisar):
 - Las facturas SII no generan recibos, y `/recibos/listar` cruza los recibos
