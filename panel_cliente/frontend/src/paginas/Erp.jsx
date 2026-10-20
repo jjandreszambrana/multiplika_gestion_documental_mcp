@@ -87,19 +87,15 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
 
       <Group align="stretch" wrap="nowrap" gap="md" style={{ flex: 1, minHeight: 0 }}>
         <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, overflowY: "auto", borderRight: "1px solid var(--mantine-color-default-border)" }}>
-          <TituloGrupo primero>Maestros</TituloGrupo>
-          {MAESTROS.filter((m) => !m.oculto).map((m) => (
-            <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
+          {/* Como el menú de la contabilidad: grupos que se pliegan, abierto
+              de entrada el que tiene lo que se está viendo */}
+          {GRUPOS(proyecto).map((grupo) => (
+            <NavLink key={grupo.titulo} label={grupo.titulo} defaultOpened={grupo.opciones.some((o) => o.id === seccion)}>
+              {grupo.opciones.map((o) => (
+                <NavLink key={o.id} label={o.titulo} active={seccion === o.id} onClick={() => setSeccion(o.id)} />
+              ))}
+            </NavLink>
           ))}
-          <TituloGrupo>Gestión</TituloGrupo>
-          <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
-          <NavLink label="Facturas de compra" active={seccion === "facturas_compra"} onClick={() => setSeccion("facturas_compra")} />
-          {proyecto.puede_editar && (
-            <>
-              <TituloGrupo>Configuración</TituloGrupo>
-              <NavLink label="Conexión con el CRM" active={seccion === "conexion"} onClick={() => setSeccion("conexion")} />
-            </>
-          )}
         </Box>
         <Box style={{ flex: 1, minWidth: 0, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
           <SinRomper key={seccion}>{contenido}</SinRomper>
@@ -109,14 +105,12 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
   )
 }
 
-// Título de un grupo del menú, con el aspecto de los del menú de la GD
-function TituloGrupo({ primero, children }) {
-  return (
-    <Text size="11px" fw={600} c="dimmed" tt="uppercase" px="8" mt={primero ? 6 : "md"} mb="4" style={{ letterSpacing: ".04em" }}>
-      {children}
-    </Text>
-  )
-}
+// El menú de la izquierda
+const GRUPOS = (proyecto) => [
+  { titulo: "Maestros", opciones: MAESTROS.filter((m) => !m.oculto) },
+  { titulo: "Gestión", opciones: [{ id: "facturas_venta", titulo: "Facturas de venta" }, { id: "facturas_compra", titulo: "Facturas de compra" }] },
+  ...(proyecto.puede_editar ? [{ titulo: "Configuración", opciones: [{ id: "conexion", titulo: "Conexión con el CRM" }] }] : []),
+]
 
 // Si una pantalla falla al pintarse, un aviso en vez de la página en blanco
 class SinRomper extends Component {
