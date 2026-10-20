@@ -1980,6 +1980,21 @@ async def eliminar_credencial(
     await credenciales.eliminar(id_credencial)
 
 
+@app.post("/v1/proyectos/{id_proyecto}/credenciales/{id_credencial}/revelar")
+async def revelar_credencial(
+    id_proyecto: int, id_credencial: int, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    """Usuario y contraseña en claro, solo para un administrador desde el
+    panel. POST y no GET para que quede en el registro de actividad
+    (actividad_panel.py solo apunta los métodos que escriben) y no se cachee."""
+    config = get_db_config(proyecto["id"])
+    credenciales = CredencialesCRUD(config)
+    fila = await credenciales.obtener_del_proyecto(id_credencial)
+    if not fila:
+        raise HTTPException(404, "Credencial no encontrada")
+    return {"usuario": fila["usuario"], "valor": await credenciales.valor_descifrado(id_credencial)}
+
+
 # --- Certificados de entidades (ver docs/gestion-documental.md →
 # "Certificados de entidades") --- Igual de sensible que las
 # credenciales: solo admin_tenant. La descarga, además, exige un

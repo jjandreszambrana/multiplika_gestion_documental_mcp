@@ -369,6 +369,8 @@ export const api = {
     peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/credenciales/${idCredencial}`, datos),
   eliminarCredencial: (idProyecto, idCredencial) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/credenciales/${idCredencial}`),
+  revelarCredencial: (idProyecto, idCredencial) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/credenciales/${idCredencial}/revelar`),
 
   listarCertificados: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/certificados`),
   subirCertificado: (idProyecto, { nombre, descripcion, idEntidad, contrasena, archivo }) => {

@@ -83,7 +83,7 @@ class CredencialesCRUD(AsyncCrudBase):
 
     async def valor_descifrado(self, id_credencial: int) -> str | None:
         """Solo para uso interno del backend (p.ej. una futura herramienta
-        que se conecte de verdad a un servicio) — nunca se expone tal cual
-        por una API ni una tool MCP."""
+        que se conecte de verdad a un servicio) — nunca por una tool MCP; por
+        API solo en el panel a un administrador (revelar_credencial)."""
         fila = await self.obtener(id_credencial)
         return descifrar(fila["valor_cifrado"]) if fila else None

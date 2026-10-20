@@ -99,6 +99,7 @@ ACCIONES_PANEL = {
     "crear_credencial": ("dio de alta la credencial", "credencial", None),
     "actualizar_credencial": ("modificó la credencial", "credencial", "id_credencial"),
     "eliminar_credencial": ("eliminó la credencial", "credencial", "id_credencial"),
+    "revelar_credencial": ("vio la contraseña de la credencial", "credencial", "id_credencial"),
     "rellenar_formulario_credencial": ("rellenó por enlace una credencial", None, None),
     "crear_certificado": ("subió el certificado", "certificado", None),
     "actualizar_certificado": ("modificó el certificado", "certificado", "id_certificado"),

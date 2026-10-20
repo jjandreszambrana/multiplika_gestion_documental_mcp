@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { ActionIcon, Alert, Anchor, Button, Collapse, Group, PasswordInput, Stack, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
-import { IconArrowLeft, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
+import { ActionIcon, Alert, Anchor, Button, Collapse, CopyButton, Group, Modal, PasswordInput, Stack, Table, Text, TextInput, Title, Tooltip } from "@mantine/core"
+import { IconArrowLeft, IconCheck, IconCopy, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { api } from "../api"
 import { formatearFecha } from "../formato"
 
@@ -17,6 +17,7 @@ export default function Credenciales({ proyecto, onVolver }) {
   const [creando, setCreando] = useState(false)
   const [avanzadoAbierto, setAvanzadoAbierto] = useState(false)
   const [camposExtra, setCamposExtra] = useState(CAMPOS_EXTRA_INICIALES)
+  const [revelada, setRevelada] = useState(null)
 
   function cambiarCampoExtra(indice, clave, valorCampo) {
     setCamposExtra(camposExtra.map((c, i) => (i === indice ? { ...c, [clave]: valorCampo } : c)))
@@ -74,6 +75,15 @@ export default function Credenciales({ proyecto, onVolver }) {
     }
   }
 
+  async function revelar(credencial) {
+    setError(null)
+    try {
+      setRevelada({ nombre: credencial.nombre, ...(await api.revelarCredencial(proyecto.id, credencial.id)) })
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   return (
     <>
       <Anchor
@@ -91,8 +101,9 @@ export default function Credenciales({ proyecto, onVolver }) {
           </Title>
           <Text c="dimmed">
             Para que la IA pueda conectar con servicios externos. La contraseña/API key se guarda
-            cifrada y no vuelve a mostrarse — la IA ve el nombre, para qué sirve y el usuario (si
-            lleva), pero nunca la contraseña.
+            cifrada — la IA ve el nombre, para qué sirve y el usuario (si lleva), pero nunca la
+            contraseña. Un administrador puede verla con «Ver contraseña», y queda apuntado en la
+            actividad.
           </Text>
         </div>
         <Tooltip label="Refrescar">
@@ -216,9 +227,14 @@ export default function Credenciales({ proyecto, onVolver }) {
                 <Table.Td>{c.campos_extra?.length > 0 ? c.campos_extra.join(", ") : "—"}</Table.Td>
                 <Table.Td>{formatearFecha(c.fecha_actualizacion)}</Table.Td>
                 <Table.Td>
-                  <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
-                    Eliminar
-                  </Anchor>
+                  <Group gap="md" wrap="nowrap">
+                    <Anchor component="button" type="button" onClick={() => revelar(c)}>
+                      Ver contraseña
+                    </Anchor>
+                    <Anchor component="button" type="button" c="red" onClick={() => eliminar(c.id)}>
+                      Eliminar
+                    </Anchor>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
@@ -230,6 +246,35 @@ export default function Credenciales({ proyecto, onVolver }) {
           </Table.Tbody>
         </Table>
       )}
+
+      <Modal opened={revelada !== null} onClose={() => setRevelada(null)} title={revelada?.nombre}>
+        {revelada && (
+          <Stack>
+            {[["Usuario", revelada.usuario], ["Contraseña", revelada.valor]].map(([etiqueta, texto]) => (
+              <TextInput
+                key={etiqueta}
+                label={etiqueta}
+                value={texto || "—"}
+                readOnly
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                rightSection={texto && (
+                  <CopyButton value={texto}>
+                    {({ copied, copy }) => (
+                      <Tooltip label={copied ? "Copiado" : "Copiar"}>
+                        <ActionIcon variant="subtle" color={copied ? "teal" : "gray"} onClick={copy}>
+                          {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </CopyButton>
+                )}
+              />
+            ))}
+          </Stack>
+        )}
+      </Modal>
     </>
   )
 }
