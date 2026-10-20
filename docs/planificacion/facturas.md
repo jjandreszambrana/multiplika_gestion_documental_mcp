@@ -97,3 +97,19 @@ errores del SIF tal cual) más una rejilla de líneas editable.
   control de duplicados en las manuales, adjuntar el PDF de la factura.
 - Todas: `numero_registros` de `/listar` no es el total real en la última
   página (SII y compras).
+
+## Cobros (hecho 2026-10-20)
+
+Gestión → Cobros, tres pestañas sobre `/ventas/gestion_cobros` y `/remesas`:
+por cobrar (recibos; se marcan los de un cliente y se anota el cobro, total o
+parcial), cobros anotados (deshacer, devolución del banco, dar por cobrado un
+efecto en cartera) y remesas SEPA (nueva desde recibos domiciliados, fichero
+pain.008, abonada, recibos devueltos, cerrar, borrar). Sin arqueos de caja,
+anticipos ni remesas programadas todavía.
+
+Lo que falta en el SIF para cobros (peticiones pendientes de revisar):
+- Las facturas SII no generan recibos, y `/recibos/listar` cruza los recibos
+  SII con la factura Verifactu del mismo id.
+- Un cobro contabilizado no queda bloqueado (contabilizar no rellena
+  `id_exportacion`): se puede deshacer desde gestión.
+- No se importa la respuesta del banco (pain.002): las devoluciones se anotan a mano.
