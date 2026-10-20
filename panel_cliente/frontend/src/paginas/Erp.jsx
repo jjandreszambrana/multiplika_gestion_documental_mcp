@@ -87,13 +87,18 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
 
       <Group align="stretch" wrap="nowrap" gap="md" style={{ flex: 1, minHeight: 0 }}>
         <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, overflowY: "auto", borderRight: "1px solid var(--mantine-color-default-border)" }}>
-          <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
-          <NavLink label="Facturas de compra" active={seccion === "facturas_compra"} onClick={() => setSeccion("facturas_compra")} />
+          <TituloGrupo primero>Maestros</TituloGrupo>
           {MAESTROS.filter((m) => !m.oculto).map((m) => (
             <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
           ))}
+          <TituloGrupo>Gestión</TituloGrupo>
+          <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
+          <NavLink label="Facturas de compra" active={seccion === "facturas_compra"} onClick={() => setSeccion("facturas_compra")} />
           {proyecto.puede_editar && (
-            <NavLink label="Conexión con el CRM" active={seccion === "conexion"} onClick={() => setSeccion("conexion")} />
+            <>
+              <TituloGrupo>Configuración</TituloGrupo>
+              <NavLink label="Conexión con el CRM" active={seccion === "conexion"} onClick={() => setSeccion("conexion")} />
+            </>
           )}
         </Box>
         <Box style={{ flex: 1, minWidth: 0, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
@@ -101,6 +106,15 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
         </Box>
       </Group>
     </Stack>
+  )
+}
+
+// Título de un grupo del menú, con el aspecto de los del menú de la GD
+function TituloGrupo({ primero, children }) {
+  return (
+    <Text size="11px" fw={600} c="dimmed" tt="uppercase" px="8" mt={primero ? 6 : "md"} mb="4" style={{ letterSpacing: ".04em" }}>
+      {children}
+    </Text>
   )
 }
 
