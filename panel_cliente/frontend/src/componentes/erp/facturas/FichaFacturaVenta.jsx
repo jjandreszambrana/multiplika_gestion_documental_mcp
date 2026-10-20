@@ -15,6 +15,9 @@ import { estadoFactura, SERIES_RECTIFICATIVAS, TIPO_POR_SERIE } from "./estados"
 const RUTA = "/facturas_emitidas_borradores"
 const HOY = () => new Date().toISOString().slice(0, 10)
 const opcion = (valor, texto) => ({ value: String(valor), label: texto })
+// Las leyendas debajo de la casilla: así las casillas de una fila quedan a la
+// misma altura aunque unas tengan leyenda y otras no
+const ABAJO = { inputWrapperOrder: ["label", "input", "description", "error"] }
 
 export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador, rectifica, alAbrir, alVolver }) {
   const [id, setId] = useState(idBorrador)
@@ -191,24 +194,31 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
       {emitida && <EstadoAeat factura={factura} />}
 
       <Paper withBorder p="md" radius="md">
+        <Stack gap="xs">
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+            <Select
+              {...ABAJO} label="Cliente" required searchable data={listas.clientes} value={cab.id_receptor} disabled={!editable}
+              onChange={(v) => setCab((c) => ({ ...c, id_receptor: v, id_establecimiento_entrega: null }))} style={{ gridColumn: "span 2" }}
+            />
+            <Select {...ABAJO} label="Establecimiento" description={editable ? "Dónde se entrega" : undefined} data={establecimientos} value={cab.id_establecimiento_entrega} clearable disabled={!editable} onChange={(v) => poner("id_establecimiento_entrega", v)} />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 5 }} spacing="sm">
+            <Select
+              {...ABAJO} label="Serie" required data={listas.series.map((s) => opcion(s.id, s.serie_descripcion || s.serie))} value={cab.id_serie}
+              disabled={!editable || !!id} onChange={elegirSerie} description={id && editable ? "Para cambiarla, crea otra factura" : undefined}
+            />
+            <TextInput {...ABAJO} label="Fecha" type="date" required value={cab.fecha_emision || ""} disabled={!editable} onChange={(e) => poner("fecha_emision", e.currentTarget.value)} description={editable ? "Al emitir se pone la de ese día" : undefined} />
+            <TextInput {...ABAJO} label="Fecha de la operación" type="date" value={cab.fecha_transaccion || ""} disabled={!editable} onChange={(e) => poner("fecha_transaccion", e.currentTarget.value)} />
+            <Select {...ABAJO} label="Forma de pago" data={listas.formas} value={cab.id_forma_pago} disabled={!editable} onChange={(v) => poner("id_forma_pago", v)} />
+            <Select {...ABAJO} label="Medio de pago" data={listas.medios} value={cab.id_medio_pago} disabled={!editable} onChange={(v) => poner("id_medio_pago", v)} />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 4 }} spacing="sm">
+            <TextInput {...ABAJO} label="Su referencia" value={cab.referencia_obligado || ""} disabled={!editable} onChange={(e) => poner("referencia_obligado", e.currentTarget.value)} />
+            <NumberInput {...ABAJO} label="% Descuento comercial" value={cab.descuento_comercial ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("descuento_comercial", v)} />
+            <NumberInput {...ABAJO} label="% Descuento pronto pago" value={cab.descuento_pp ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("descuento_pp", v)} />
+            <NumberInput {...ABAJO} label="% IRPF" value={cab.irpf ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("irpf", v)} />
+          </SimpleGrid>
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm" verticalSpacing="xs">
-          <Select
-            label="Cliente" required searchable data={listas.clientes} value={cab.id_receptor} disabled={!editable}
-            onChange={(v) => setCab((c) => ({ ...c, id_receptor: v, id_establecimiento_entrega: null }))} style={{ gridColumn: "span 2" }}
-          />
-          <Select
-            label="Serie" required data={listas.series.map((s) => opcion(s.id, s.serie_descripcion || s.serie))} value={cab.id_serie}
-            disabled={!editable || !!id} onChange={elegirSerie} description={id && editable ? "Para cambiarla, crea otra factura" : undefined}
-          />
-          <TextInput label="Fecha" type="date" required value={cab.fecha_emision || ""} disabled={!editable} onChange={(e) => poner("fecha_emision", e.currentTarget.value)} description={editable ? "Al emitir se pone la de ese día" : undefined} />
-          <TextInput label="Fecha de la operación" type="date" value={cab.fecha_transaccion || ""} disabled={!editable} onChange={(e) => poner("fecha_transaccion", e.currentTarget.value)} />
-          <Select label="Entregar en" data={establecimientos} value={cab.id_establecimiento_entrega} clearable disabled={!editable} onChange={(v) => poner("id_establecimiento_entrega", v)} />
-          <Select label="Forma de pago" data={listas.formas} value={cab.id_forma_pago} disabled={!editable} onChange={(v) => poner("id_forma_pago", v)} />
-          <Select label="Medio de pago" data={listas.medios} value={cab.id_medio_pago} disabled={!editable} onChange={(v) => poner("id_medio_pago", v)} />
-          <TextInput label="Su referencia" value={cab.referencia_obligado || ""} disabled={!editable} onChange={(e) => poner("referencia_obligado", e.currentTarget.value)} />
-          <NumberInput label="% Descuento comercial" value={cab.descuento_comercial ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("descuento_comercial", v)} />
-          <NumberInput label="% Descuento pronto pago" value={cab.descuento_pp ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("descuento_pp", v)} />
-          <NumberInput label="% IRPF" value={cab.irpf ?? ""} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("irpf", v)} />
           {esRectificativa && (
             <>
               {serie.id_tipo_serie === 1 && (
@@ -229,6 +239,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
           <TextInput label="Descripción" value={cab.descripcion || ""} disabled={!editable} onChange={(e) => poner("descripcion", e.currentTarget.value)} style={{ gridColumn: "1 / -1" }} />
           <Nota factura={factura} cab={cab} poner={poner} editable={editable} pedir={pedir} alGuardar={cargar} />
         </SimpleGrid>
+        </Stack>
       </Paper>
 
       {id ? (
