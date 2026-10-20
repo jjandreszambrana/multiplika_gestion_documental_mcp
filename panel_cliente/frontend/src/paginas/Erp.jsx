@@ -1,5 +1,5 @@
 import { Component, useEffect, useState } from "react"
-import { ActionIcon, Alert, Box, Button, Group, Loader, NavLink, Select, Stack, Text, Title, Tooltip } from "@mantine/core"
+import { ActionIcon, Alert, Box, Button, Group, Loader, NavLink, Stack, Text, Title, Tooltip } from "@mantine/core"
 import { IconMenu2, IconMessageCircle } from "@tabler/icons-react"
 import { api } from "../api"
 import { ConexionErpContenido } from "../componentes/ConexionErp"
@@ -8,6 +8,7 @@ import FacturasVenta from "../componentes/erp/facturas/FacturasVenta"
 import FacturasCompra from "../componentes/erp/facturas/FacturasCompra"
 import Cobros from "../componentes/erp/cobros/Cobros"
 import { MAESTROS } from "../componentes/erp/maestros"
+import SelectorEmpresa, { fondoEmpresa } from "../componentes/SelectorEmpresa"
 
 // Mismo ancho que el menú de la contabilidad (contabilidad_ui, Estructura)
 const ANCHO_MENU = 220
@@ -64,7 +65,10 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
   // mueven solo sus filas y las fichas dejan fija su parte de arriba)
   return (
     <Stack gap="xs" h="calc(100dvh - 2 * var(--mantine-spacing-xs))">
-      <Group justify="space-between" wrap="nowrap" gap="lg">
+      <Group
+        justify="space-between" wrap="nowrap" gap="lg" p={4}
+        style={{ borderRadius: "var(--mantine-radius-sm)", background: empresa && seccion !== "conexion" ? fondoEmpresa(empresa.id_empresa) : undefined }}
+      >
         <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
           <Tooltip label="Menú de la gestión documental">
             <ActionIcon variant="default" size="lg" aria-label="Abrir o cerrar el menú de la gestión documental" onClick={onAlternarMenu}>
@@ -74,10 +78,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
           <Title order={4}>Gestión SIF</Title>
         </Group>
         {empresas?.length > 1 && seccion !== "conexion" ? (
-          <Select
-            aria-label="Empresa" w={480} maw="100%" searchable allowDeselect={false} value={idEmpresa} onChange={setIdEmpresa}
-            data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
-          />
+          <SelectorEmpresa empresas={empresas} value={idEmpresa} onChange={setIdEmpresa} />
         ) : <span />}
         {onAlternarChat && (
           <Tooltip label="Chat con la IA">

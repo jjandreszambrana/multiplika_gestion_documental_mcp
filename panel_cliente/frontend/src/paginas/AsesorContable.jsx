@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Box, Button, Grid, Group, Modal, NavLink, Paper, Select, Stack, Tabs, Text, TextInput, Title, Tooltip,
+  ActionIcon, Alert, Anchor, Badge, Box, Button, Grid, Group, Modal, NavLink, Paper, Stack, Tabs, Text, TextInput, Title, Tooltip,
 } from "@mantine/core"
 import { IconMenu2, IconMessageCircle, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
@@ -8,6 +8,7 @@ import Markdown from "../componentes/Markdown"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
 import PropuestasContables from "../componentes/contabilidad/PropuestasContables"
 import ContabilidadSIF from "./ContabilidadSIF"
+import SelectorEmpresa, { fondoEmpresa } from "../componentes/SelectorEmpresa"
 import { ALTO_INDICE } from "../theme"
 
 // Biblioteca del asesor contable (ver docs/contabilidad/planificacion.md,
@@ -223,7 +224,7 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
   return (
     <Tabs value={pestana} onChange={abrir}>
       {/* El título y las pestañas se quedan arriba al bajar por la página. */}
-      <Box style={STICKY} mb="md">
+      <Box style={{ ...STICKY, ...(deEmpresa && empresa && { background: fondoEmpresa(empresa.id_empresa) }) }} mb={deEmpresa ? 0 : "md"}>
         {cabecera(
         <Tabs.List style={{ flex: 1 }}>
           {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
@@ -243,12 +244,12 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
             </Group>
           </Alert>
         ) : (
-          <Group justify="space-between" wrap="nowrap" mb="md">
+          <Group
+            justify="space-between" wrap="nowrap" mb="md" p={4}
+            style={{ borderRadius: "0 0 var(--mantine-radius-sm) var(--mantine-radius-sm)", background: empresa && fondoEmpresa(empresa.id_empresa) }}
+          >
             {empresas?.length > 1 ? (
-              <Select
-                id="conta-empresa-activa" aria-label="Empresa" w={480} maw="100%" searchable value={idEmpresa} onChange={setIdEmpresa}
-                data={empresas.map((e) => ({ value: String(e.id_empresa), label: `${e.nombre}${e.nif ? ` (${e.nif})` : ""}` }))}
-              />
+              <SelectorEmpresa id="conta-empresa-activa" empresas={empresas} value={idEmpresa} onChange={setIdEmpresa} />
             ) : <span />}
             {pestana === "contabilidad" && <div ref={setHueco} />}
           </Group>
