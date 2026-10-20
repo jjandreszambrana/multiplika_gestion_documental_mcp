@@ -196,6 +196,29 @@ export const api = {
   // Maestros del ERP (SIF) por el mismo proxy que la contabilidad
   erpSif: (idProyecto, idEmpresa, ruta, cuerpo = {}) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/sif/proxy/${idEmpresa}${ruta}`, cuerpo),
+  // Un PDF u otro fichero del SIF por el proxy (POST con cuerpo JSON)
+  erpSifDescarga: async (idProyecto, idEmpresa, ruta, cuerpo = {}) => {
+    const headers = { "Content-Type": "application/json" }
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE_CLIENTE}/proyectos/${idProyecto}/contabilidad/sif/proxy/${idEmpresa}${ruta}`, {
+      method: "POST", headers, body: JSON.stringify(cuerpo),
+    })
+    _capturarTokenRenovado(res)
+    _avisarSiSesionNoValida(res)
+    if (!res.ok) {
+      let detalle = res.statusText
+      try {
+        const e = await res.json()
+        detalle = e.detail || e.message || detalle
+      } catch {
+        // el cuerpo de error no era JSON
+      }
+      throw new Error(typeof detalle === "string" ? detalle : JSON.stringify(detalle))
+    }
+    const disposicion = res.headers.get("Content-Disposition") || ""
+    const nombre = disposicion.match(/filename\*=UTF-8''([^;]+)/) || disposicion.match(/filename="?([^";]+)"?/)
+    return { blob: await res.blob(), nombreFichero: nombre ? decodeURIComponent(nombre[1]) : "documento.pdf" }
+  },
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idEmpresa, estado) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),

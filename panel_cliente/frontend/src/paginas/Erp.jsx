@@ -4,6 +4,7 @@ import { IconMenu2, IconMessageCircle } from "@tabler/icons-react"
 import { api } from "../api"
 import { ConexionErpContenido } from "../componentes/ConexionErp"
 import MaestroSif from "../componentes/erp/MaestroSif"
+import FacturasVenta from "../componentes/erp/facturas/FacturasVenta"
 import { MAESTROS } from "../componentes/erp/maestros"
 
 // Mismo ancho que el menú de la contabilidad (contabilidad_ui, Estructura)
@@ -17,7 +18,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
   const [empresas, setEmpresas] = useState(null)
   const [error, setError] = useState(null)
   const [idEmpresa, setIdEmpresa] = useState(null)
-  const [seccion, setSeccion] = useState(MAESTROS[0].id)
+  const [seccion, setSeccion] = useState("facturas_venta")
 
   useEffect(() => {
     api
@@ -46,6 +47,8 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
         <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
       </Group>
     </Alert>
+  ) : seccion === "facturas_venta" ? (
+    <FacturasVenta key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />
   ) : (
     <MaestroSif key={`${maestro.id}-${empresa.id_empresa}`} proyecto={proyecto} empresa={empresa} maestro={maestro} />
   )
@@ -78,6 +81,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
 
       <Group align="flex-start" wrap="nowrap" gap="md">
         <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, borderRight: "1px solid var(--mantine-color-default-border)" }}>
+          <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
           {MAESTROS.filter((m) => !m.oculto).map((m) => (
             <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
           ))}

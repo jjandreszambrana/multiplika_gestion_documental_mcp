@@ -37,11 +37,12 @@ ORDEN_NIVELES = {"consulta": 0, "apuntes": 1, "cierre": 2, "admin": 3}
 # Las conexiones externas (Codiplika) van fuera de contabilidad en el SIF, pero
 # se configuran desde la pantalla de contabilidad; crearlas, probarlas o
 # quitarlas lo sigue decidiendo el SIF (solo su superadministrador).
-# Los maestros de facturación, clientes y proveedores son los de ERP → Gestión SIF
+# Las facturas, los maestros de facturación, clientes y proveedores son los de ERP → Gestión SIF
 PREFIJOS_PERMITIDOS = (
     "/contabilidad/", "/maestros/conexiones_externas/",
     "/maestros/formas_pago/", "/maestros/medios_pago/", "/maestros/series/",
     "/obligados/receptores/", "/obligados/emisores/",
+    "/facturas_emitidas_borradores/", "/facturas_emitidas/",
 )
 RUTAS_PROHIBIDAS = ("/contabilidad/sesion/conmutar",)
 NOMBRE_CREDENCIAL = "SIF {url} · {usuario} · usuario GD {id_usuario}"
