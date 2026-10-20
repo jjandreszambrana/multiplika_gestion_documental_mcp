@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { ActionIcon, Alert, Box, Button, Group, Loader, NavLink, Select, Text, Title, Tooltip } from "@mantine/core"
+import { Component, useEffect, useState } from "react"
+import { ActionIcon, Alert, Box, Button, Group, Loader, NavLink, Select, Stack, Text, Title, Tooltip } from "@mantine/core"
 import { IconMenu2, IconMessageCircle } from "@tabler/icons-react"
 import { api } from "../api"
 import { ConexionErpContenido } from "../componentes/ConexionErp"
@@ -56,9 +56,12 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
     <MaestroSif key={`${maestro.id}-${empresa.id_empresa}`} proyecto={proyecto} empresa={empresa} maestro={maestro} />
   )
 
+  // Ocupa justo el alto de la ventana: la cabecera y el menú se quedan
+  // quietos y solo se mueve la zona de contenido (ahí dentro, las listas
+  // mueven solo sus filas y las fichas dejan fija su parte de arriba)
   return (
-    <>
-      <Group justify="space-between" mb="xs" wrap="nowrap" gap="lg">
+    <Stack gap="xs" h="calc(100dvh - 2 * var(--mantine-spacing-xs))">
+      <Group justify="space-between" wrap="nowrap" gap="lg">
         <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
           <Tooltip label="Menú de la gestión documental">
             <ActionIcon variant="default" size="lg" aria-label="Abrir o cerrar el menú de la gestión documental" onClick={onAlternarMenu}>
@@ -82,8 +85,8 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
         )}
       </Group>
 
-      <Group align="flex-start" wrap="nowrap" gap="md">
-        <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, borderRight: "1px solid var(--mantine-color-default-border)" }}>
+      <Group align="stretch" wrap="nowrap" gap="md" style={{ flex: 1, minHeight: 0 }}>
+        <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, overflowY: "auto", borderRight: "1px solid var(--mantine-color-default-border)" }}>
           <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
           <NavLink label="Facturas de compra" active={seccion === "facturas_compra"} onClick={() => setSeccion("facturas_compra")} />
           {MAESTROS.filter((m) => !m.oculto).map((m) => (
@@ -93,8 +96,26 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
             <NavLink label="Conexión con el CRM" active={seccion === "conexion"} onClick={() => setSeccion("conexion")} />
           )}
         </Box>
-        <Box style={{ flex: 1, minWidth: 0 }}>{contenido}</Box>
+        <Box style={{ flex: 1, minWidth: 0, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+          <SinRomper key={seccion}>{contenido}</SinRomper>
+        </Box>
       </Group>
-    </>
+    </Stack>
   )
+}
+
+// Si una pantalla falla al pintarse, un aviso en vez de la página en blanco
+class SinRomper extends Component {
+  state = { fallo: null }
+  static getDerivedStateFromError(fallo) {
+    return { fallo }
+  }
+  render() {
+    if (!this.state.fallo) return this.props.children
+    return (
+      <Alert color="red" title="Esta pantalla ha fallado">
+        {String(this.state.fallo?.message || this.state.fallo)}. Vuelve a entrar desde el menú de la izquierda.
+      </Alert>
+    )
+  }
 }

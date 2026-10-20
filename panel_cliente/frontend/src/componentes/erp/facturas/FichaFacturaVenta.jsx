@@ -6,7 +6,7 @@ import {
 import { IconArrowLeft, IconFileTypePdf, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { api } from "../../../api"
 import { formatearFecha, formatearImporte } from "../../../formato"
-import { estadoFactura, SERIES_RECTIFICATIVAS, TIPO_POR_SERIE } from "./estados"
+import { estadoFactura, SERIES_RECTIFICATIVAS, TIPO_POR_SERIE, lista } from "./estados"
 
 // Ficha de una factura de venta Verifactu. En borrador se edita todo
 // (cabecera y líneas; los importes los calcula el SIF); al emitirla el SIF la
@@ -394,7 +394,7 @@ function Lineas({ lineas, editable, alEditar, alBorrar }) {
 }
 
 function Totales({ factura }) {
-  const sub = factura.sub_totales || []
+  const sub = lista(factura.sub_totales)
   return (
     <Group justify="flex-end">
       <Table withTableBorder fz="sm" w="auto">

@@ -5,7 +5,7 @@ import {
 } from "@mantine/core"
 import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { formatearImporte } from "../../../formato"
-import { estadoCompra } from "./estados"
+import { estadoCompra, lista } from "./estados"
 import { FIJO } from "./FichaFacturaVenta"
 
 // Ficha de una factura de compra. Se guarda la cabecera y después se
@@ -278,7 +278,7 @@ function Lineas({ lineas, editable, alEditar, alBorrar }) {
 }
 
 function Totales({ factura }) {
-  const sub = factura.sub_totales || []
+  const sub = lista(factura.sub_totales)
   return (
     <Group justify="flex-end">
       <Table withTableBorder fz="sm" w="auto">

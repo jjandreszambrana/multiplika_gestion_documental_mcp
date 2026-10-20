@@ -28,6 +28,19 @@ export const ESTADOS_COMPRA = {
 }
 export const estadoCompra = (f) => ESTADOS_COMPRA[f.id_estado_msif] || ["gray", f.estado_msif || "—"]
 
+// Las listas que el SIF arma con JSON_ARRAYAGG (sub_totales, detalles...)
+// llegan a veces como texto
+export function lista(valor) {
+  if (Array.isArray(valor)) return valor
+  if (typeof valor !== "string" || !valor) return []
+  try {
+    const dato = JSON.parse(valor)
+    return Array.isArray(dato) ? dato : []
+  } catch {
+    return []
+  }
+}
+
 // El tipo de serie dice qué facturas salen de ella (ver el SIF:
 // maestros/series, id_tipo_serie → tipos de factura)
 export const TIPO_POR_SERIE = { 0: 0, 1: 3, 2: 1, 3: 2, 4: 7 }

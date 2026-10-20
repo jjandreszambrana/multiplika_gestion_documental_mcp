@@ -71,7 +71,8 @@ export default function FacturasCompra({ proyecto, empresa }) {
     enableBottomToolbar: false,
     // La rejilla ocupa lo que queda de pantalla y solo se mueven sus filas: el
     // título, los filtros y la cabecera de las columnas se quedan a la vista
-    mantineTableContainerProps: { style: { maxHeight: "calc(100dvh - 230px)" } },
+    mantinePaperProps: { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } },
+    mantineTableContainerProps: { style: { flex: 1, minHeight: 0, maxHeight: "none" } },
     state: { isLoading: filas === null },
     localization: { noRecordsToDisplay: "No hay facturas con estos filtros." },
     mantineTableBodyRowProps: ({ row }) => ({ onClick: () => setAbierta(row.original), style: { cursor: "pointer" } }),
@@ -89,7 +90,7 @@ export default function FacturasCompra({ proyecto, empresa }) {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
       <Group justify="space-between">
         <Title order={3}>Facturas de compra</Title>
         <Button leftSection={<IconPlus size={15} />} onClick={() => setAbierta("nueva")}>Nueva factura</Button>
