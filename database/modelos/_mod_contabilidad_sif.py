@@ -43,6 +43,7 @@ PREFIJOS_PERMITIDOS = (
     "/maestros/formas_pago/", "/maestros/medios_pago/", "/maestros/series/",
     "/obligados/receptores/", "/obligados/emisores/",
     "/facturas_emitidas_borradores/", "/facturas_emitidas/",
+    "/facturas_recibidas/facturas_recibidas_sii/", "/maestros/clasificacion_gastos/",
 )
 RUTAS_PROHIBIDAS = ("/contabilidad/sesion/conmutar",)
 NOMBRE_CREDENCIAL = "SIF {url} · {usuario} · usuario GD {id_usuario}"

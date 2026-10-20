@@ -5,6 +5,7 @@ import { api } from "../api"
 import { ConexionErpContenido } from "../componentes/ConexionErp"
 import MaestroSif from "../componentes/erp/MaestroSif"
 import FacturasVenta from "../componentes/erp/facturas/FacturasVenta"
+import FacturasCompra from "../componentes/erp/facturas/FacturasCompra"
 import { MAESTROS } from "../componentes/erp/maestros"
 
 // Mismo ancho que el menú de la contabilidad (contabilidad_ui, Estructura)
@@ -47,6 +48,8 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
         <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
       </Group>
     </Alert>
+  ) : seccion === "facturas_compra" ? (
+    <FacturasCompra key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />
   ) : seccion === "facturas_venta" ? (
     <FacturasVenta key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />
   ) : (
@@ -82,6 +85,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
       <Group align="flex-start" wrap="nowrap" gap="md">
         <Box w={ANCHO_MENU} pr="xs" style={{ flexShrink: 0, borderRight: "1px solid var(--mantine-color-default-border)" }}>
           <NavLink label="Facturas de venta" active={seccion === "facturas_venta"} onClick={() => setSeccion("facturas_venta")} />
+          <NavLink label="Facturas de compra" active={seccion === "facturas_compra"} onClick={() => setSeccion("facturas_compra")} />
           {MAESTROS.filter((m) => !m.oculto).map((m) => (
             <NavLink key={m.id} label={m.titulo} active={seccion === m.id} onClick={() => setSeccion(m.id)} />
           ))}

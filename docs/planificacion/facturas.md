@@ -1,6 +1,6 @@
 # Facturas de venta (Verifactu y SII) y de compra en Gestión SIF
 
-Estado (2026-10-20): fase 1 (ventas Verifactu) en código, sin probar contra un SIF real. Las peticiones al canal de abajo están pendientes de que el usuario las revise.
+Estado (2026-10-20): fases 1 (ventas Verifactu) y 2 (compras, sin el envío al SII) en código, sin probar contra un SIF real. La fase 3 y el envío al SII de compras esperan a saber el modo de cada empresa (primera petición de abajo). Las peticiones al canal están pendientes de que el usuario las revise.
 
 ## Qué se quiere
 
@@ -81,7 +81,12 @@ errores del SIF tal cual) más una rejilla de líneas editable.
 
 ## Lo que falta en el SIF (peticiones al canal)
 
-- Leer el modo Verifactu/SII de la empresa con cualquier rol.
+- Leer el modo Verifactu/SII de la empresa con cualquier rol (por ejemplo en
+  `/contabilidad/sesion/empresas`). **Bloquea**: sin él la GD no sabe qué
+  pantalla de ventas enseñar, y `/facturas_recibidas/.../transmitir` no exige
+  que la empresa vaya por SII (`require_sii_mode=False`), así que un botón de
+  "Enviar al SII" en una empresa Verifactu mandaría sus compras al SII. Mejor
+  aún: que transmitir lo exija.
 - Verifactu: filtros de fecha, estado e importe en `/facturas_emitidas/listar`;
   `motivo_anulacion` se recibe pero no se guarda; envío por email.
 - SII ventas: baja/anulación SII, eliminar factura no enviada, PDF, guardar la
