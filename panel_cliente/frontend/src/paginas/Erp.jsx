@@ -6,6 +6,7 @@ import { ConexionErpContenido } from "../componentes/ConexionErp"
 import MaestroSif from "../componentes/erp/MaestroSif"
 import FacturasVenta from "../componentes/erp/facturas/FacturasVenta"
 import FacturasCompra from "../componentes/erp/facturas/FacturasCompra"
+import Cobros from "../componentes/erp/cobros/Cobros"
 import { MAESTROS } from "../componentes/erp/maestros"
 
 // Mismo ancho que el menú de la contabilidad (contabilidad_ui, Estructura)
@@ -48,6 +49,8 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
         <Button size="xs" onClick={onVerAccesos}>Revisar mis accesos</Button>
       </Group>
     </Alert>
+  ) : seccion === "cobros" ? (
+    <Cobros key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />
   ) : seccion === "facturas_compra" ? (
     <FacturasCompra key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />
   ) : seccion === "facturas_venta" ? (
@@ -108,7 +111,7 @@ export default function Erp({ proyecto, onVerAccesos, onAlternarMenu, onAlternar
 // El menú de la izquierda
 const GRUPOS = (proyecto) => [
   { titulo: "Maestros", opciones: MAESTROS.filter((m) => !m.oculto) },
-  { titulo: "Gestión", opciones: [{ id: "facturas_venta", titulo: "Facturas de venta" }, { id: "facturas_compra", titulo: "Facturas de compra" }] },
+  { titulo: "Gestión", opciones: [{ id: "facturas_venta", titulo: "Facturas de venta" }, { id: "facturas_compra", titulo: "Facturas de compra" }, { id: "cobros", titulo: "Cobros" }] },
   ...(proyecto.puede_editar ? [{ titulo: "Configuración", opciones: [{ id: "conexion", titulo: "Conexión con el CRM" }] }] : []),
 ]
 
