@@ -1,3 +1,4 @@
+import { useElementSize } from "@mantine/hooks"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ActionIcon, Alert, Anchor, Badge, Button, Group, Loader, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Switch,
@@ -34,6 +35,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
   const [confirmar, setConfirmar] = useState(null) // "emitir" | "borrar" | "anular"
 
   const emitida = !!factura?.id_estado_msif
+  const arriba = useElementSize()
 
   // Las listas de la cabecera
   useEffect(() => {
@@ -174,7 +176,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
   return (
     <Stack gap="md">
       {/* Lo de arriba (volver, título y botones) no se va con el scroll */}
-      <Stack gap="xs" style={FIJO}>
+      <Stack gap="xs" style={FIJO} ref={arriba.ref}>
       {volver}
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
@@ -249,7 +251,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
       </Paper>
 
       {id ? (
-        <Lineas lineas={lineas} editable={editable} alEditar={setLinea} alBorrar={async (l) => {
+        <Lineas alto={arriba.height + 8} lineas={lineas} editable={editable} alEditar={setLinea} alBorrar={async (l) => {
           setError(null)
           try {
             await pedir(`${RUTA}/detalle/eliminar`, { id: l.id })
@@ -350,14 +352,15 @@ function EstadoAeat({ factura }) {
   )
 }
 
-function Lineas({ lineas, editable, alEditar, alBorrar }) {
+function Lineas({ alto, lineas, editable, alEditar, alBorrar }) {
   return (
     <Stack gap="xs">
       <Group justify="space-between">
         <Title order={5}>Líneas</Title>
         {editable && <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => alEditar({})}>Añadir línea</Button>}
       </Group>
-      <Table striped withTableBorder fz="sm">
+      {/* Los nombres de las columnas se quedan debajo de la parte fija de arriba */}
+      <Table striped withTableBorder fz="sm" stickyHeader stickyHeaderOffset={alto}>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Descripción</Table.Th><Table.Th ta="right">Cantidad</Table.Th><Table.Th ta="right">Precio</Table.Th>

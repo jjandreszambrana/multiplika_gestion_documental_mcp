@@ -1,3 +1,4 @@
+import { useElementSize } from "@mantine/hooks"
 import { useCallback, useEffect, useState } from "react"
 import {
   ActionIcon, Alert, Badge, Button, Group, Loader, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Switch,
@@ -36,6 +37,7 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
   const [confirmar, setConfirmar] = useState(null) // "aprobar" | "borrar"
 
   const id = factura?.id
+  const arriba = useElementSize()
   const estado = factura?.id_estado_msif ?? 0
   const editable = estado !== 2
 
@@ -108,7 +110,7 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
 
   return (
     <Stack gap="md">
-      <Stack gap="xs" style={FIJO}>
+      <Stack gap="xs" style={FIJO} ref={arriba.ref}>
       <Button variant="default" size="xs" leftSection={<IconArrowLeft size={14} />} onClick={alVolver} style={{ alignSelf: "flex-start" }}>
         Volver a las facturas
       </Button>
@@ -163,7 +165,7 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
       </Paper>
 
       {id ? (
-        <Lineas lineas={lineas} editable={editable} alEditar={setLinea} alBorrar={async (l) => {
+        <Lineas alto={arriba.height + 8} lineas={lineas} editable={editable} alEditar={setLinea} alBorrar={async (l) => {
           setError(null)
           try {
             await pedir(`${RUTA}/detalles/eliminar`, { id_detalle: l.id })
@@ -228,14 +230,15 @@ function cuerpoDe(cab) {
   return cuerpo
 }
 
-function Lineas({ lineas, editable, alEditar, alBorrar }) {
+function Lineas({ alto, lineas, editable, alEditar, alBorrar }) {
   return (
     <Stack gap="xs">
       <Group justify="space-between">
         <Title order={5}>Líneas</Title>
         {editable && <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => alEditar({})}>Añadir línea</Button>}
       </Group>
-      <Table striped withTableBorder fz="sm">
+      {/* Los nombres de las columnas se quedan debajo de la parte fija de arriba */}
+      <Table striped withTableBorder fz="sm" stickyHeader stickyHeaderOffset={alto}>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Descripción</Table.Th><Table.Th ta="right">Cantidad</Table.Th><Table.Th ta="right">Precio</Table.Th>

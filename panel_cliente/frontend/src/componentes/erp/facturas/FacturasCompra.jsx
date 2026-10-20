@@ -72,7 +72,8 @@ export default function FacturasCompra({ proyecto, empresa }) {
     // La rejilla ocupa lo que queda de pantalla y solo se mueven sus filas: el
     // título, los filtros y la cabecera de las columnas se quedan a la vista
     mantinePaperProps: { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } },
-    mantineTableContainerProps: { style: { flex: 1, minHeight: 0, maxHeight: "none" } },
+    mantineTableContainerProps: { style: { flex: 1, minHeight: 0, maxHeight: "none", overflowY: "auto" } },
+    mantineTableHeadProps: { style: { background: "var(--mantine-color-body)", zIndex: 2 } },
     state: { isLoading: filas === null },
     localization: { noRecordsToDisplay: "No hay facturas con estos filtros." },
     mantineTableBodyRowProps: ({ row }) => ({ onClick: () => setAbierta(row.original), style: { cursor: "pointer" } }),
