@@ -19,7 +19,7 @@ const opcion = (valor, texto) => ({ value: String(valor), label: texto })
 // Las leyendas debajo de la casilla: así las casillas de una fila quedan a la
 // misma altura aunque unas tengan leyenda y otras no
 export const FIJO = { position: "sticky", top: 0, zIndex: 30, background: "var(--mantine-color-body)", paddingBottom: 8 }
-const ABAJO = { inputWrapperOrder: ["label", "input", "description", "error"] }
+export const ABAJO = { inputWrapperOrder: ["label", "input", "description", "error"] }
 
 export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador, rectifica, alAbrir, alVolver }) {
   const [id, setId] = useState(idBorrador)

@@ -7,7 +7,7 @@ import {
 import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { formatearImporte } from "../../../formato"
 import { estadoCompra, lista } from "./estados"
-import { FIJO } from "./FichaFacturaVenta"
+import { ABAJO, FIJO } from "./FichaFacturaVenta"
 
 // Ficha de una factura de compra. Se guarda la cabecera y después se
 // añaden las líneas (los importes los calcula el SIF). Al aprobarla queda
@@ -135,33 +135,39 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
       )}
 
       <Paper withBorder p="md" radius="md">
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm" verticalSpacing="xs">
-          <Select
-            label="Proveedor" required searchable data={listas.proveedores} value={cab.id_emisor} disabled={!editable}
-            onChange={(v) => poner("id_emisor", v)} style={{ gridColumn: "span 2" }}
-            description="Si no está, dalo de alta en Proveedores"
-          />
-          <TextInput label="Número de la factura" required value={cab.numero_factura} disabled={!editable} onChange={(e) => poner("numero_factura", e.currentTarget.value)} />
-          <TextInput label="Fecha de la factura" type="date" required value={cab.fecha_emision} disabled={!editable} onChange={(e) => poner("fecha_emision", e.currentTarget.value)} />
-          <TextInput label="Fecha contable" type="date" required value={cab.fecha_contable} disabled={!editable} onChange={(e) => poner("fecha_contable", e.currentTarget.value)} description="La del periodo de IVA en que entra" />
-          <TextInput label="Fecha de la operación" type="date" value={cab.fecha_transaccion} disabled={!editable} onChange={(e) => poner("fecha_transaccion", e.currentTarget.value)} />
-          <Select label="Tipo de factura" data={listas.tipos} value={cab.id_tipo} allowDeselect={false} disabled={!editable} onChange={(v) => poner("id_tipo", v)} />
-          <Select label="Tipo de gasto" searchable data={listas.gastos} value={cab.id_tipo_gasto} disabled={!editable} onChange={(v) => poner("id_tipo_gasto", v)} />
-          <Select label="Régimen de IVA" data={listas.regimenes} value={cab.id_clave_regimen} allowDeselect={false} disabled={!editable} onChange={(v) => poner("id_clave_regimen", v)} />
-          <Select label="Medio de pago" data={listas.medios} value={cab.id_medio_pago} disabled={!editable} onChange={(v) => poner("id_medio_pago", v)} />
-          <NumberInput label="% IRPF" value={cab.irpf} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("irpf", v)} />
+        <Stack gap="xs">
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+            <Select
+              {...ABAJO} label="Proveedor" required searchable data={listas.proveedores} value={cab.id_emisor} disabled={!editable}
+              onChange={(v) => poner("id_emisor", v)} style={{ gridColumn: "span 2" }}
+              description={editable ? "Si no está, dalo de alta en Proveedores" : undefined}
+            />
+            <TextInput {...ABAJO} label="Número de la factura" required value={cab.numero_factura} disabled={!editable} onChange={(e) => poner("numero_factura", e.currentTarget.value)} />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 5 }} spacing="sm">
+            <TextInput {...ABAJO} label="Fecha de la factura" type="date" required value={cab.fecha_emision} disabled={!editable} onChange={(e) => poner("fecha_emision", e.currentTarget.value)} />
+            <TextInput {...ABAJO} label="Fecha contable" type="date" required value={cab.fecha_contable} disabled={!editable} onChange={(e) => poner("fecha_contable", e.currentTarget.value)} description={editable ? "La del periodo de IVA en que entra" : undefined} />
+            <TextInput {...ABAJO} label="Fecha de la operación" type="date" value={cab.fecha_transaccion} disabled={!editable} onChange={(e) => poner("fecha_transaccion", e.currentTarget.value)} />
+            <Select {...ABAJO} label="Tipo de factura" data={listas.tipos} value={cab.id_tipo} allowDeselect={false} disabled={!editable} onChange={(v) => poner("id_tipo", v)} />
+            <Select {...ABAJO} label="Régimen de IVA" data={listas.regimenes} value={cab.id_clave_regimen} allowDeselect={false} disabled={!editable} onChange={(v) => poner("id_clave_regimen", v)} />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 4 }} spacing="sm">
+            <Select {...ABAJO} label="Tipo de gasto" searchable data={listas.gastos} value={cab.id_tipo_gasto} disabled={!editable} onChange={(v) => poner("id_tipo_gasto", v)} style={{ gridColumn: "span 2" }} />
+            <Select {...ABAJO} label="Medio de pago" data={listas.medios} value={cab.id_medio_pago} disabled={!editable} onChange={(v) => poner("id_medio_pago", v)} />
+            <NumberInput {...ABAJO} label="% IRPF" value={cab.irpf} decimalScale={2} decimalSeparator="," min={0} disabled={!editable} onChange={(v) => poner("irpf", v)} />
+          </SimpleGrid>
           {esRectificativa && (
-            <>
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
               <Select
-                label="Cómo rectifica" disabled={!editable} value={cab.TipoRectificativa} onChange={(v) => poner("TipoRectificativa", v)}
+                {...ABAJO} label="Cómo rectifica" disabled={!editable} value={cab.TipoRectificativa} onChange={(v) => poner("TipoRectificativa", v)}
                 data={[{ value: "I", label: "Por diferencias" }, { value: "S", label: "Por sustitución" }]}
               />
-              <TextInput label="Factura que rectifica" value={cab.numero_factura_rectificada} disabled={!editable} onChange={(e) => poner("numero_factura_rectificada", e.currentTarget.value)} />
-              <TextInput label="Fecha de la que rectifica" type="date" value={cab.fecha_emision_rectificada} disabled={!editable} onChange={(e) => poner("fecha_emision_rectificada", e.currentTarget.value)} />
-            </>
+              <TextInput {...ABAJO} label="Factura que rectifica" value={cab.numero_factura_rectificada} disabled={!editable} onChange={(e) => poner("numero_factura_rectificada", e.currentTarget.value)} />
+              <TextInput {...ABAJO} label="Fecha de la que rectifica" type="date" value={cab.fecha_emision_rectificada} disabled={!editable} onChange={(e) => poner("fecha_emision_rectificada", e.currentTarget.value)} />
+            </SimpleGrid>
           )}
-          <TextInput label="Descripción" value={cab.descripcion} disabled={!editable} onChange={(e) => poner("descripcion", e.currentTarget.value)} style={{ gridColumn: "1 / -1" }} />
-        </SimpleGrid>
+          <TextInput {...ABAJO} label="Descripción" value={cab.descripcion} disabled={!editable} onChange={(e) => poner("descripcion", e.currentTarget.value)} />
+        </Stack>
       </Paper>
 
       {id ? (
