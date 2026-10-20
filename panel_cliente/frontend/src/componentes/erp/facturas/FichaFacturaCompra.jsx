@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
 import {
-  ActionIcon, Alert, Anchor, Badge, Button, Group, Loader, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Switch,
+  ActionIcon, Alert, Badge, Button, Group, Loader, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Switch,
   Table, Text, Textarea, TextInput, Title, Tooltip,
 } from "@mantine/core"
 import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react"
 import { formatearImporte } from "../../../formato"
 import { estadoCompra } from "./estados"
+import { FIJO } from "./FichaFacturaVenta"
 
 // Ficha de una factura de compra. Se guarda la cabecera y después se
 // añaden las líneas (los importes los calcula el SIF). Al aprobarla queda
@@ -107,9 +108,10 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
 
   return (
     <Stack gap="md">
-      <Anchor component="button" type="button" onClick={alVolver} c="dimmed" fz="13.5px" display="flex" style={{ alignItems: "center", gap: 6 }}>
-        <IconArrowLeft size={15} /> Facturas de compra
-      </Anchor>
+      <Stack gap="xs" style={FIJO}>
+      <Button variant="default" size="xs" leftSection={<IconArrowLeft size={14} />} onClick={alVolver} style={{ alignSelf: "flex-start" }}>
+        Volver a las facturas
+      </Button>
       <Group justify="space-between" align="flex-start">
         <Group gap="sm">
           <Title order={3}>{id ? `Factura ${factura.numero_factura}` : "Nueva factura de compra"}</Title>
@@ -121,6 +123,7 @@ export default function FichaFacturaCompra({ pedir, fila, alVolver }) {
           {id && ![2, 3, 4].includes(estado) && <Button color="red" variant="subtle" onClick={() => setConfirmar("borrar")}>Borrar</Button>}
         </Group>
       </Group>
+      </Stack>
 
       {error && <Alert color="red" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {aviso && <Alert color="green" withCloseButton onClose={() => setAviso(null)}>{aviso}</Alert>}

@@ -69,6 +69,9 @@ export default function FacturasCompra({ proyecto, empresa }) {
     data: filas || [],
     enablePagination: false,
     enableBottomToolbar: false,
+    // La rejilla ocupa lo que queda de pantalla y solo se mueven sus filas: el
+    // título, los filtros y la cabecera de las columnas se quedan a la vista
+    mantineTableContainerProps: { style: { maxHeight: "calc(100dvh - 230px)" } },
     state: { isLoading: filas === null },
     localization: { noRecordsToDisplay: "No hay facturas con estos filtros." },
     mantineTableBodyRowProps: ({ row }) => ({ onClick: () => setAbierta(row.original), style: { cursor: "pointer" } }),

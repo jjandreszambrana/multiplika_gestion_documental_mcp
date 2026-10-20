@@ -84,7 +84,11 @@ async function peticion(base, metodo, ruta, cuerpo) {
       const cuerpoError = await res.json()
       const d = cuerpoError.detail ?? cuerpoError.message
       // FastAPI da una lista de fallos por campo cuando no valida el cuerpo
+      // (el SIF la manda en `errors`, con "Error de validación" de mensaje)
       detalle = Array.isArray(d) ? d.map((e) => e.msg).join(". ") : d || detalle
+      if (Array.isArray(cuerpoError.errors) && cuerpoError.errors.length) {
+        detalle += `: ${cuerpoError.errors.map((e) => (e.campo ? `${e.campo} (${e.mensaje})` : e.mensaje)).join(", ")}`
+      }
     } catch {
       // el cuerpo de error no era JSON, nos quedamos con statusText
     }
@@ -110,7 +114,11 @@ async function peticionConFichero(base, ruta, formData) {
       const cuerpoError = await res.json()
       const d = cuerpoError.detail ?? cuerpoError.message
       // FastAPI da una lista de fallos por campo cuando no valida el cuerpo
+      // (el SIF la manda en `errors`, con "Error de validación" de mensaje)
       detalle = Array.isArray(d) ? d.map((e) => e.msg).join(". ") : d || detalle
+      if (Array.isArray(cuerpoError.errors) && cuerpoError.errors.length) {
+        detalle += `: ${cuerpoError.errors.map((e) => (e.campo ? `${e.campo} (${e.mensaje})` : e.mensaje)).join(", ")}`
+      }
     } catch {
       // el cuerpo de error no era JSON, nos quedamos con statusText
     }

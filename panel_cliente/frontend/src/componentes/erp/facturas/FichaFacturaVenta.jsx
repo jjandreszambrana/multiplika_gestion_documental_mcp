@@ -17,6 +17,7 @@ const HOY = () => new Date().toISOString().slice(0, 10)
 const opcion = (valor, texto) => ({ value: String(valor), label: texto })
 // Las leyendas debajo de la casilla: así las casillas de una fila quedan a la
 // misma altura aunque unas tengan leyenda y otras no
+export const FIJO = { position: "sticky", top: 0, zIndex: 30, background: "var(--mantine-color-body)", paddingBottom: 8 }
 const ABAJO = { inputWrapperOrder: ["label", "input", "description", "error"] }
 
 export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador, rectifica, alAbrir, alVolver }) {
@@ -59,7 +60,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
     setError(null)
     Promise.all([
       pedir(`${RUTA}/listar`, { offset: 0, limit: 1, id, id_estado_borrador: { op: "in", valor: [0, 1] } }),
-      pedir(`${RUTA}/detalle/listar`, { id_factura: id, offset: 0, limit: 5000 }),
+      pedir(`${RUTA}/detalle/listar`, { id_factura: { op: "=", valor: id }, offset: 0, limit: 5000 }),
     ])
       .then(([f, d]) => {
         const fila = f.registros[0]
@@ -158,19 +159,23 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
     }
   }
 
-  if (id && !factura) {
-    return error ? <Alert color="red">{error}</Alert> : <Loader size="sm" />
+  const volver = (
+    <Button variant="default" size="xs" leftSection={<IconArrowLeft size={14} />} onClick={alVolver} style={{ alignSelf: "flex-start" }}>
+      Volver a las facturas
+    </Button>
+  )
+  if ((id && !factura) || !cab) {
+    return <Stack gap="md">{volver}{error ? <Alert color="red">{error}</Alert> : <Loader size="sm" />}</Stack>
   }
-  if (!cab) return <Loader size="sm" />
 
   const [color, texto] = factura ? estadoFactura(factura) : ["gray", "Nueva"]
   const editable = !emitida
 
   return (
     <Stack gap="md">
-      <Anchor component="button" type="button" onClick={alVolver} c="dimmed" fz="13.5px" display="flex" style={{ alignItems: "center", gap: 6 }}>
-        <IconArrowLeft size={15} /> Facturas de venta
-      </Anchor>
+      {/* Lo de arriba (volver, título y botones) no se va con el scroll */}
+      <Stack gap="xs" style={FIJO}>
+      {volver}
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
           <Group gap="sm">
@@ -188,6 +193,7 @@ export default function FichaFacturaVenta({ proyecto, empresa, pedir, idBorrador
           {emitida && !factura.anulada && <Button color="red" variant="subtle" onClick={() => setConfirmar("anular")}>Anular</Button>}
         </Group>
       </Group>
+      </Stack>
 
       {error && <Alert color="red" withCloseButton onClose={() => setError(null)}>{error}</Alert>}
       {aviso && <Alert color="green" withCloseButton onClose={() => setAviso(null)}>{aviso}</Alert>}
