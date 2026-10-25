@@ -38,7 +38,8 @@ interface Props {
   /** El del selector de la cabecera: es el plan en el que se da de alta. */
   ejercicio: number | null
   alCerrar: () => void
-  alGuardado: () => void
+  /** Con el id del bien que se ha dado de alta o corregido. */
+  alGuardado: (idBien: number) => void
 }
 
 /** Importe listo para la API: cadena con punto. Vacío se queda vacío. */
@@ -125,6 +126,7 @@ export default function DialogoBien({
         usado: datos.usado,
       }
 
+      let idGuardado = bien?.id ?? 0
       if (bien === null) {
         const { id } = await altaDeBien({
           ...comunes,
@@ -138,6 +140,7 @@ export default function DialogoBien({
           // Cero es un bien; con un id es una mejora de ese bien.
           id_bien_padre: mejoraDe?.id ?? 0,
         })
+        idGuardado = id
         // El aviso de ese apunte deja de salir, y queda dicho en qué ficha
         // acabó. Sin esto volvería a preguntar cada vez.
         if (desdeApunte) {
@@ -167,7 +170,7 @@ export default function DialogoBien({
               }),
         })
       }
-      alGuardado()
+      alGuardado(idGuardado)
     } catch (fallo) {
       setError(textoDeError(fallo))
     } finally {

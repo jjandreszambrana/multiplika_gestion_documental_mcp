@@ -31,6 +31,18 @@ interface Props {
  *
  * Sin nivel `apuntes` no se ve ninguna acción: se esconde, no se apaga.
  */
+const CLAVE_ULTIMO_EDITADO = 'inmovilizado.ultimoEditado'
+
+/** El último bien tocado se recuerda aunque se salga de la pantalla. */
+function leerUltimoEditado(): number | null {
+  try {
+    const guardado = Number(localStorage.getItem(CLAVE_ULTIMO_EDITADO))
+    return Number.isInteger(guardado) && guardado > 0 ? guardado : null
+  } catch {
+    return null
+  }
+}
+
 export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props) {
   const [soloActivos, setSoloActivos] = useState(true)
   const [bienes, setBienes] = useState<Bien[] | null>(null)
@@ -45,6 +57,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
   const [aDarDeBaja, setADarDeBaja] = useState<Bien | null>(null)
   const [aCorregirValor, setACorregirValor] = useState<Bien | null>(null)
   const [recarga, setRecarga] = useState(0)
+  const [ultimoEditado, setUltimoEditado] = useState<number | null>(leerUltimoEditado)
 
   const apunta = alcanza(nivel, 'apuntes')
 
@@ -69,6 +82,17 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     void cargar(corte.signal)
     return () => corte.abort()
   }, [cargar, recarga])
+
+  /** Marca el bien tocado, y se queda marcado hasta que se toque otro. */
+  function marcarEditado(idBien: number) {
+    setUltimoEditado(idBien)
+    try {
+      localStorage.setItem(CLAVE_ULTIMO_EDITADO, String(idBien))
+    } catch {
+      // Sin almacenamiento solo se pierde el recuerdo entre visitas.
+    }
+    rehacer()
+  }
 
   /** Tras cualquier cambio, la lista se rehace: los totales han cambiado. */
   function rehacer() {
@@ -113,7 +137,12 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     },
     mantineTableBodyRowProps: ({ row }) => ({
       onClick: () => setFichaDe(row.original.id),
-      style: { cursor: 'pointer' },
+      style: {
+        cursor: 'pointer',
+        ...(row.original.id === ultimoEditado
+          ? { backgroundColor: 'var(--mantine-color-yellow-2)' }
+          : {}),
+      },
     }),
   })
 
@@ -167,7 +196,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
           ancho={ancho}
           ejercicio={ejercicio}
           alCerrar={() => setEnFormulario(null)}
-          alGuardado={rehacer}
+          alGuardado={marcarEditado}
         />
       )}
 
