@@ -84,13 +84,17 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
   }, [cargar, recarga])
 
   /** Marca el bien tocado, y se queda marcado hasta que se toque otro. */
-  function marcarEditado(idBien: number) {
+  function marcar(idBien: number) {
     setUltimoEditado(idBien)
     try {
       localStorage.setItem(CLAVE_ULTIMO_EDITADO, String(idBien))
     } catch {
       // Sin almacenamiento solo se pierde el recuerdo entre visitas.
     }
+  }
+
+  function marcarEditado(idBien: number) {
+    marcar(idBien)
     rehacer()
   }
 
@@ -136,7 +140,10 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
       noRecordsToDisplay: 'Esta empresa no tiene ningún bien de inmovilizado.',
     },
     mantineTableBodyRowProps: ({ row }) => ({
-      onClick: () => setFichaDe(row.original.id),
+      onClick: () => {
+        marcar(row.original.id)
+        setFichaDe(row.original.id)
+      },
       style: {
         cursor: 'pointer',
         ...(row.original.id === ultimoEditado
