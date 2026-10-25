@@ -210,6 +210,46 @@ async def buscar_cuenta_contable_gd(id_empresa: int, texto: str, ejercicio: int 
     return await _sif(id_empresa, "/contabilidad/plan/listar", {"ejercicio": ejercicio, "texto": texto, "limit": LIMITE_APUNTES_IA})
 
 
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def crear_subcuenta_contable_gd(
+    id_empresa: int, raiz: str, descripcion: str, ejercicio: int | None = None, codigo: str | None = None,
+) -> dict:
+    """Crea en el plan de la empresa una subcuenta nueva bajo una cuenta
+    mayor (p. ej. `raiz` "430" y `descripcion` el nombre del cliente). Si no
+    pasas `codigo`, el SIF pone el primer correlativo libre. Necesita nivel
+    de apuntes. Mira antes con `buscar_cuenta_contable_gd` que no exista ya."""
+    _sin_invitado()
+    return await _sif(id_empresa, "/contabilidad/plan/crear_subcuenta", {
+        "raiz": raiz, "descripcion": descripcion, "ejercicio": ejercicio, "codigo": codigo})
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def crear_cuenta_contable_gd(
+    id_empresa: int, codigo: str, descripcion: str, auxiliar: bool = False, ejercicio: int | None = None,
+) -> dict:
+    """Crea una cuenta propia de la empresa en su plan, ampliando el PGC sin
+    tocarlo. `auxiliar` True = cuenta de apuntes; False = cuenta de
+    estructura, que solo agrupa subcuentas. Necesita nivel de cierre. Para
+    una cuenta de cliente o proveedor usa `crear_subcuenta_contable_gd`."""
+    _sin_invitado()
+    return await _sif(id_empresa, "/contabilidad/plan/crear", {
+        "codigo": codigo, "descripcion": descripcion, "auxiliar": auxiliar, "ejercicio": ejercicio})
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def corregir_cuenta_contable_gd(
+    id_empresa: int, codigo: str, descripcion: str | None = None, auxiliar: bool | None = None,
+    ejercicio: int | None = None,
+) -> dict:
+    """Cambia el título o si admite apuntes de una cuenta del plan. Pasa solo
+    lo que cambia. Sobre una cuenta del PGC no se escribe: el SIF crea la
+    versión propia de la empresa. Necesita nivel de cierre. No borra ni
+    retira cuentas: eso se hace en el SIF."""
+    _sin_invitado()
+    return await _sif(id_empresa, "/contabilidad/plan/editar", {
+        "codigo": codigo, "descripcion": descripcion, "auxiliar": auxiliar, "ejercicio": ejercicio})
+
+
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def diario_b_gd(
     id_empresa: int, ejercicio: int | None = None, asiento: int | None = None, cuenta: str | None = None,
@@ -505,6 +545,41 @@ async def proponer_contable_gd(
         return await crear_propuesta(config, id_empresa, tipo, titulo, justificacion, asiento, id_tema, id_documento, creado_por=nombre)
     except (ValueError, LookupError) as e:
         raise ToolError(str(e)) from e
+
+
+@mcp_app.tool(tags={TAG_CONTABILIDAD, TAG_SIF})
+async def crear_borrador_asiento_gd(
+    id_empresa: int, ejercicio: int, fecha: str, concepto: str, apuntes: list[dict],
+) -> dict:
+    """Deja un asiento como BORRADOR en el diario del SIF, con la clave del
+    usuario que llama (necesita nivel de apuntes en esa empresa). Un borrador
+    no cuenta en saldos ni informes hasta que el contable lo revisa y lo
+    confirma en el SIF; esta herramienta nunca lo confirma.
+    `apuntes` = [{"cuenta": "629", "concepto": "...", "debe": "100.00",
+    "haber": "0"}, ...]: importes como texto, al menos dos líneas y el debe
+    igual al haber. Usa cuentas del plan de la empresa
+    (`buscar_cuenta_contable_gd`) y apóyate en la biblioteca contable.
+    Si no estás seguro del asiento, usa `proponer_contable_gd`.
+    Dile al usuario que es un borrador pendiente de confirmar, no un apunte
+    hecho, y el `id` que devuelve el SIF."""
+    _sin_invitado()
+    lineas = [
+        {"cuenta": str(a.get("cuenta", "")), "concepto": a.get("concepto") or concepto,
+         "debe": str(a["debe"]) if a.get("debe") is not None else None,
+         "haber": str(a["haber"]) if a.get("haber") is not None else None,
+         "documento": a.get("documento")}
+        for a in apuntes
+    ]
+    if len(lineas) < 2:
+        raise ToolError("Un asiento necesita al menos dos apuntes.")
+    debe = sum(Decimal(l["debe"] or "0") for l in lineas)
+    haber = sum(Decimal(l["haber"] or "0") for l in lineas)
+    if debe != haber:
+        raise ToolError(f"El asiento no cuadra: debe {debe} y haber {haber}.")
+    return await _sif(id_empresa, "/contabilidad/asientos/borrador/crear", {
+        "ejercicio": ejercicio, "fecha": fecha, "concepto": concepto, "lineas": [
+            {k: v for k, v in l.items() if v is not None} for l in lineas],
+    })
 
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
