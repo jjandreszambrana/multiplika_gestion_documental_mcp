@@ -155,7 +155,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
 
       <MantineReactTable table={tabla} />
 
-      <FichaBien idInmovilizado={fichaDe} alCerrar={() => setFichaDe(null)} />
+      <FichaBien idInmovilizado={fichaDe} ejercicio={ejercicio} alCerrar={() => setFichaDe(null)} />
 
       {enFormulario !== null && (
         <DialogoBien

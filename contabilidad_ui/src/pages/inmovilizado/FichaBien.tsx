@@ -1,14 +1,18 @@
-import { Alert, Badge, Group, Loader, Modal, Stack, Table, Text } from '@mantine/core'
+import { Alert, Badge, Button, Group, Loader, Modal, Stack, Table, Text } from '@mantine/core'
+import { IconBook } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { obtenerBien, type FichaDeBien } from '../../api/inmovilizado'
 import { formatearFecha, formatearImporte } from '../../lib/format'
 import { aDecimal } from '../../lib/dinero'
 import { nombreDePeriodo } from '../ejercicios/periodos'
+import ModalMayor from '../informes/ModalMayor'
 
 interface Props {
   /** Nulo con la ficha cerrada. */
   idInmovilizado: number | null
+  /** Ejercicio del que se abre el mayor de las cuentas del bien. */
+  ejercicio: number | null
   alCerrar: () => void
 }
 
@@ -27,7 +31,8 @@ function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode 
  * La ficha de un bien: sus datos y el cuadro de amortización, una fila por mes
  * dotado. El número de asiento es lo que permite ir del importe a su apunte.
  */
-export default function FichaBien({ idInmovilizado, alCerrar }: Props) {
+export default function FichaBien({ idInmovilizado, ejercicio, alCerrar }: Props) {
+  const [mayorDe, setMayorDe] = useState('')
   const [ficha, setFicha] = useState<FichaDeBien | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -116,11 +121,26 @@ export default function FichaBien({ idInmovilizado, alCerrar }: Props) {
             )}
 
             <Group gap="xl" wrap="wrap">
-              <Dato rotulo="Cuenta del activo">{ficha.cuenta_activo ?? ''}</Dato>
-              <Dato rotulo="Cuenta de amortización">
-                {ficha.cuenta_amortizacion ?? ''}
-              </Dato>
-              <Dato rotulo="Cuenta de gasto">{ficha.cuenta_gasto ?? ''}</Dato>
+              {[
+                ['Cuenta del activo', ficha.cuenta_activo],
+                ['Cuenta de amortización', ficha.cuenta_amortizacion],
+                ['Cuenta de gasto', ficha.cuenta_gasto],
+              ].map(([rotulo, cuenta]) => (
+                <Dato key={rotulo} rotulo={rotulo ?? ''}>
+                  {cuenta ?? ''}
+                  {cuenta && (
+                    <Button
+                      variant="subtle"
+                      size="compact-xs"
+                      ml="xs"
+                      leftSection={<IconBook size={14} />}
+                      onClick={() => setMayorDe(cuenta)}
+                    >
+                      Mayor
+                    </Button>
+                  )}
+                </Dato>
+              ))}
             </Group>
 
             {ficha.mejoras.length > 0 && (
@@ -219,6 +239,7 @@ export default function FichaBien({ idInmovilizado, alCerrar }: Props) {
           </>
         )}
       </Stack>
+      <ModalMayor cuenta={mayorDe} ejercicio={ejercicio} alCerrar={() => setMayorDe('')} />
     </Modal>
   )
 }

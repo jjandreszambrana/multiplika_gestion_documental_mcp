@@ -49,17 +49,14 @@ function importeParaApi(texto: string): string {
 function datosDe(bien: Bien): DatosBien {
   return {
     descripcion: bien.descripcion,
-    // El tipo de la ley no se guarda en el bien: solo sirvió para proponer el
-    // porcentaje al darlo de alta.
-    tipo: '',
+    tipo: bien.tipo_ley ?? '',
     valor: bien.valor_adquisicion.toString(),
     porcentaje: String(bien.porcentaje_anual),
     fechaInicio: bien.fecha_inicio ? new Date(bien.fecha_inicio) : null,
     fechaCompra: bien.fecha_compra ? new Date(bien.fecha_compra) : null,
     valorResidual: bien.valor_residual.toString(),
     amortizadoInicial: bien.amortizado_inicial.isZero() ? '' : bien.amortizado_inicial.toString(),
-    // No se guarda en el bien: solo sirvió para doblar la propuesta al darlo de alta.
-    usado: false,
+    usado: bien.usado ?? false,
     cuentaActivo: bien.cuenta_activo ?? '',
     cuentaAmortizacion: bien.cuenta_amortizacion ?? '',
     cuentaGasto: bien.cuenta_gasto ?? '',
@@ -124,6 +121,8 @@ export default function DialogoBien({
         fecha_compra: fechaParaApi(datos.fechaCompra),
         valor_residual: importeParaApi(datos.valorResidual),
         cuenta_gasto: datos.cuentaGasto.trim(),
+        tipo_ley: datos.tipo,
+        usado: datos.usado,
       }
 
       if (bien === null) {
@@ -215,6 +214,7 @@ export default function DialogoBien({
             conAmortizaciones={conAmortizaciones}
             alCrearCuenta={(campo, codigo) => setAlta({ campo, codigo })}
             tabla={tabla}
+            ejercicio={ejercicio}
           />
 
           <Group justify="flex-end">

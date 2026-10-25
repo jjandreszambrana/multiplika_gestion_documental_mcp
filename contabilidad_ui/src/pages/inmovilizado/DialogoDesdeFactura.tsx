@@ -157,6 +157,7 @@ export default function DialogoDesdeFactura({
               conAmortizaciones={false}
               alCrearCuenta={(campo, codigo) => setAlta({ campo, codigo })}
               tabla={tabla}
+              ejercicio={ejercicio}
             />
             <Text size="xs" c="dimmed">
               El valor sale de la base de la factura, sin IVA.

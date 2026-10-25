@@ -18929,6 +18929,16 @@ export interface components {
              */
             ref_id?: number | null;
             /**
+             * Tipo Ley
+             * @description Clave de la fila de la tabla de amortización elegida.
+             */
+            tipo_ley?: string | null;
+            /**
+             * Usado
+             * @description El bien se compró usado.
+             */
+            usado?: boolean | null;
+            /**
              * Estado
              * @description 1 = en uso y amortizandose, 0 = dado de baja.
              */
@@ -23199,6 +23209,16 @@ export interface components {
              */
             ref_id?: number | null;
             /**
+             * Tipo Ley
+             * @description Clave de la fila de la tabla de amortización elegida.
+             */
+            tipo_ley?: string | null;
+            /**
+             * Usado
+             * @description El bien se compró usado.
+             */
+            usado?: boolean | null;
+            /**
              * Estado
              * @description 1 = en uso y amortizandose, 0 = dado de baja.
              */
@@ -25151,6 +25171,18 @@ export interface components {
              * @default 0
              */
             ref_id: number | null;
+            /**
+             * Tipo Ley
+             * @description Clave de la fila de la tabla de amortización elegida.
+             * @default
+             */
+            tipo_ley: string | null;
+            /**
+             * Usado
+             * @description El bien se compró usado.
+             * @default false
+             */
+            usado: boolean | null;
             /**
              * Id Bien Padre
              * @description Si se rellena, la ficha es una **mejora** de ese bien: se amortiza aparte, con su valor y su ritmo, y la baja del bien se la lleva. No se admiten mejoras de mejoras.
@@ -27434,6 +27466,16 @@ export interface components {
             ref_tipo?: string | null;
             /** Ref Id */
             ref_id?: number | null;
+            /**
+             * Tipo Ley
+             * @description Clave de la fila de la tabla de amortización elegida.
+             */
+            tipo_ley?: string | null;
+            /**
+             * Usado
+             * @description El bien se compró usado.
+             */
+            usado?: boolean | null;
         };
         /** ModeloEditarBorrador */
         ModeloEditarBorrador: {

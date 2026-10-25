@@ -1,9 +1,12 @@
-import { Alert, Checkbox, Group, Select, Stack, Text, TextInput } from '@mantine/core'
-import { useMemo } from 'react'
+import { ActionIcon, Alert, Checkbox, Group, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { IconBook } from '@tabler/icons-react'
+import { useMemo, useState } from 'react'
 import type { TablaDeAmortizacion } from '../../api/inmovilizado'
 import CasillaDeCuenta from '../../components/CasillaDeCuenta'
 import { CasillaFecha } from '../../components/CasillaFecha'
+import { expandirCuenta } from '../../lib/cuenta'
 import { soloImporte } from '../../lib/dinero'
+import ModalMayor from '../informes/ModalMayor'
 
 /** Lo que se teclea. Los importes viven como texto hasta que se envían. */
 export interface DatosBien {
@@ -53,6 +56,8 @@ interface Props {
   alCrearCuenta: (campo: CampoDeCuenta, codigo: string) => void
   /** Nula mientras no llegue, o si no se pudo traer: se teclea a mano. */
   tabla: TablaDeAmortizacion | null
+  /** Ejercicio del que se abre el mayor de una cuenta. */
+  ejercicio: number | null
 }
 
 /** Las tres casillas de cuenta del formulario. */
@@ -85,7 +90,9 @@ export default function FormularioBien({
   conAmortizaciones,
   alCrearCuenta,
   tabla,
+  ejercicio,
 }: Props) {
+  const [mayorDe, setMayorDe] = useState('')
   const elegido = (tabla?.elementos ?? []).find((fila) => fila.clave === datos.tipo) ?? null
 
   // El coeficiente de la ley es un máximo fiscal: se avisa, pero no se impide.
@@ -140,16 +147,31 @@ export default function FormularioBien({
 
   function casillaDeCuenta(campo: CampoDeCuenta, etiqueta: string) {
     return (
-      <CasillaDeCuenta
-        id={campo}
-        label={etiqueta}
-        obligatoria={false}
-        valor={datos[campo]}
-        ancho={ancho}
-        alCambiar={(valor) => cambiar(campo, valor)}
-        alCrear={(codigo) => alCrearCuenta(campo, codigo)}
-        deshabilitada={conAmortizaciones && campo !== 'cuentaGasto'}
-      />
+      <Group gap={4} wrap="nowrap" align="flex-end">
+        <div style={{ flex: 1 }}>
+          <CasillaDeCuenta
+            id={campo}
+            label={etiqueta}
+            obligatoria={false}
+            valor={datos[campo]}
+            ancho={ancho}
+            alCambiar={(valor) => cambiar(campo, valor)}
+            alCrear={(codigo) => alCrearCuenta(campo, codigo)}
+            deshabilitada={conAmortizaciones && campo !== 'cuentaGasto'}
+          />
+        </div>
+        <Tooltip label="Ver el mayor">
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label={`Ver el mayor de ${etiqueta.toLowerCase()}`}
+            disabled={datos[campo].trim() === ''}
+            onClick={() => setMayorDe(expandirCuenta(datos[campo], ancho))}
+          >
+            <IconBook size={16} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
     )
   }
 
@@ -273,6 +295,8 @@ export default function FormularioBien({
           Si las dejas vacías se usan las de la configuración de la empresa.
         </Text>
       </Stack>
+
+      <ModalMayor cuenta={mayorDe} ejercicio={ejercicio} alCerrar={() => setMayorDe('')} />
     </Stack>
   )
 }
