@@ -58,6 +58,7 @@ function datosDe(bien: Bien): DatosBien {
     valorResidual: bien.valor_residual.toString(),
     amortizadoInicial: bien.amortizado_inicial.isZero() ? '' : bien.amortizado_inicial.toString(),
     usado: bien.usado ?? false,
+    anotaciones: bien.anotaciones ?? '',
     cuentaActivo: bien.cuenta_activo ?? '',
     cuentaAmortizacion: bien.cuenta_amortizacion ?? '',
     cuentaGasto: bien.cuenta_gasto ?? '',
@@ -124,6 +125,7 @@ export default function DialogoBien({
         cuenta_gasto: datos.cuentaGasto.trim(),
         tipo_ley: datos.tipo,
         usado: datos.usado,
+        anotaciones: datos.anotaciones.trim(),
       }
 
       let idGuardado = bien?.id ?? 0

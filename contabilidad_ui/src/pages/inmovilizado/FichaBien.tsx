@@ -106,6 +106,12 @@ export default function FichaBien({ idInmovilizado, ejercicio, alCerrar }: Props
               <Dato rotulo="Cuota anual">{formatearImporte(ficha.dotacion_anual)}</Dato>
             </Group>
 
+            {ficha.anotaciones && (
+              <Dato rotulo="Anotaciones">
+                <span style={{ whiteSpace: 'pre-wrap' }}>{ficha.anotaciones}</span>
+              </Dato>
+            )}
+
             {ficha.mejoras.length > 0 && (
               <Group gap="xl" wrap="wrap">
                 <Dato rotulo="Valor con mejoras">

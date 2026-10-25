@@ -18939,6 +18939,11 @@ export interface components {
              */
             usado?: boolean | null;
             /**
+             * Anotaciones
+             * @description Notas libres sobre el bien.
+             */
+            anotaciones?: string | null;
+            /**
              * Estado
              * @description 1 = en uso y amortizandose, 0 = dado de baja.
              */
@@ -23219,6 +23224,11 @@ export interface components {
              */
             usado?: boolean | null;
             /**
+             * Anotaciones
+             * @description Notas libres sobre el bien.
+             */
+            anotaciones?: string | null;
+            /**
              * Estado
              * @description 1 = en uso y amortizandose, 0 = dado de baja.
              */
@@ -25183,6 +25193,12 @@ export interface components {
              * @default false
              */
             usado: boolean | null;
+            /**
+             * Anotaciones
+             * @description Notas libres sobre el bien.
+             * @default
+             */
+            anotaciones: string | null;
             /**
              * Id Bien Padre
              * @description Si se rellena, la ficha es una **mejora** de ese bien: se amortiza aparte, con su valor y su ritmo, y la baja del bien se la lleva. No se admiten mejoras de mejoras.
@@ -27476,6 +27492,11 @@ export interface components {
              * @description El bien se compró usado.
              */
             usado?: boolean | null;
+            /**
+             * Anotaciones
+             * @description Notas libres sobre el bien.
+             */
+            anotaciones?: string | null;
         };
         /** ModeloEditarBorrador */
         ModeloEditarBorrador: {

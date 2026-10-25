@@ -76,6 +76,17 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
       ...A_LA_DERECHA,
       Cell: ({ row }) => formatearImporte(aDecimal(row.original.porcentaje_anual), 2),
     },
+    {
+      accessorKey: 'anotaciones',
+      header: 'Anotaciones',
+      size: 220,
+      grow: false,
+      Cell: ({ row }) => (
+        <Text size="sm" lineClamp={2} title={row.original.anotaciones ?? ''}>
+          {row.original.anotaciones ?? ''}
+        </Text>
+      ),
+    },
     columnaDeImporte('cuota', 'Cuota anual', (b) => b.dotacion_anual, 130),
     {
       accessorKey: 'ultima_dotacion',

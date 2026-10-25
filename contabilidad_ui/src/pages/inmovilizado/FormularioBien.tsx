@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Checkbox, Group, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Alert, Checkbox, Group, Select, Stack, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
 import { IconBook } from '@tabler/icons-react'
 import { useMemo, useState } from 'react'
 import type { TablaDeAmortizacion } from '../../api/inmovilizado'
@@ -22,6 +22,7 @@ export interface DatosBien {
   amortizadoInicial: string
   /** Marca de segunda mano: dobla el porcentaje que propone la tabla. */
   usado: boolean
+  anotaciones: string
   cuentaActivo: string
   cuentaAmortizacion: string
   cuentaGasto: string
@@ -37,6 +38,7 @@ export const BIEN_EN_BLANCO: DatosBien = {
   valorResidual: '',
   amortizadoInicial: '',
   usado: false,
+  anotaciones: '',
   cuentaActivo: '',
   cuentaAmortizacion: '',
   cuentaGasto: '',
@@ -295,6 +297,16 @@ export default function FormularioBien({
           Si las dejas vacías se usan las de la configuración de la empresa.
         </Text>
       </Stack>
+
+      <Textarea
+        label="Anotaciones"
+        value={datos.anotaciones}
+        onChange={(e) => cambiar('anotaciones', e.currentTarget.value)}
+        autosize
+        minRows={2}
+        maxRows={6}
+        maxLength={5000}
+      />
 
       <ModalMayor cuenta={mayorDe} ejercicio={ejercicio} alCerrar={() => setMayorDe('')} />
     </Stack>
