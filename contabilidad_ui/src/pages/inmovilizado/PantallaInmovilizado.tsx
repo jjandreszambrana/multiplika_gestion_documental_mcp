@@ -64,7 +64,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
   const cargar = useCallback(
     async (senal: AbortSignal) => {
       setError(null)
-      setBienes(null)
+      // No se vacía la lista al recargar: si no, la tabla se encoge y el scroll vuelve arriba.
       try {
         const { bienes: filas } = await listarBienes(soloActivos, senal)
         setBienes(filas)
