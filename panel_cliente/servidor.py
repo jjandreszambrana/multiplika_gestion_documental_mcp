@@ -61,7 +61,7 @@ from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestr
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_compartidos import CompartidosCRUD, anular_compartido, crear_compartido
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
-from ..database.modelos import _mod_conta_propuestas as conta_propuestas, _mod_contabilidad_sif as conta_sif
+from ..database.modelos import _mod_conciliacion as conciliacion, _mod_conta_propuestas as conta_propuestas, _mod_contabilidad_sif as conta_sif
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._tipos_archivo import comprobar_tipo_archivo
@@ -562,6 +562,65 @@ async def listar_propuestas_contables(
     config = get_db_config(proyecto["id"])
     ids = await _ids_visibles(config, identidad)
     return {"propuestas": await conta_propuestas.listar(config, ids, estado or None, id_empresa)}
+
+
+# --- Conciliación bancaria (ver docs/planificacion/conciliacion-bancaria.md). Se sube el
+# extracto en Norma 43 y se enseña; la GD no escribe nada en el SIF.
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones")
+async def subir_extracto_bancario(
+    id_proyecto: int, id_empresa: int = Form(...), archivo: UploadFile = File(...),
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    if id_empresa not in await _ids_visibles(config, identidad):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa empresa no existe")
+    try:
+        return await conciliacion.subir(config, id_empresa, await archivo.read(), _id_usuario(identidad))
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones")
+async def listar_extractos_bancarios(
+    id_proyecto: int, id_empresa: int | None = None,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    return {"extractos": await conciliacion.listar(config, await _ids_visibles(config, identidad), id_empresa)}
+
+
+async def _extracto_visible(config: dict, identidad: Identidad, id_conciliacion: int) -> dict:
+    extracto = await conciliacion.obtener(config, id_conciliacion)
+    if not extracto or extracto["id_empresa"] not in await _ids_visibles(config, identidad):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ese extracto no existe")
+    return extracto
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos")
+async def movimientos_extracto_bancario(
+    id_proyecto: int, id_conciliacion: int, estado: str | None = None,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    extracto = await _extracto_visible(config, identidad, id_conciliacion)
+    return {"extracto": extracto, "movimientos": await conciliacion.movimientos(config, id_conciliacion, estado or None)}
+
+
+@app.delete("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_extracto_bancario(
+    id_proyecto: int, id_conciliacion: int,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> None:
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        await conciliacion.eliminar(config, id_conciliacion)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
 
 
 async def _guardar_apartado_en_sif(config: dict, id_usuario: int | None, id_empresa: int, detalle: dict) -> None:

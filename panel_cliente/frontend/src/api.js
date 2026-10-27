@@ -232,6 +232,18 @@ export const api = {
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),
   resolverPropuestaContable: (idProyecto, idPropuesta, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/propuestas/${idPropuesta}/resolver`, datos),
+  listarExtractos: (idProyecto, idEmpresa) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones?id_empresa=${idEmpresa}`),
+  subirExtracto: (idProyecto, idEmpresa, archivo) => {
+    const formData = new FormData()
+    formData.append("id_empresa", idEmpresa)
+    formData.append("archivo", archivo)
+    return peticionConFichero(BASE_CLIENTE, `/proyectos/${idProyecto}/contabilidad/conciliaciones`, formData)
+  },
+  movimientosExtracto: (idProyecto, idConciliacion) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos`),
+  eliminarExtracto: (idProyecto, idConciliacion) =>
+    peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}`),
   catalogoMemoria: (idProyecto, modelo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria/catalogo/${modelo}`),
   obtenerMemoria: (idProyecto, idEmpresa, ejercicio) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria?id_empresa=${idEmpresa}&ejercicio=${ejercicio}`),

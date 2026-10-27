@@ -6,6 +6,7 @@ import { IconMenu2, IconMessageCircle, IconSearch } from "@tabler/icons-react"
 import { api } from "../api"
 import Markdown from "../componentes/Markdown"
 import MemoriaAnual from "../componentes/contabilidad/MemoriaAnual"
+import Conciliacion from "../componentes/contabilidad/Conciliacion"
 import PropuestasContables from "../componentes/contabilidad/PropuestasContables"
 import ContabilidadSIF from "./ContabilidadSIF"
 import SelectorEmpresa, { fondoEmpresa } from "../componentes/SelectorEmpresa"
@@ -218,7 +219,7 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
 
   const conAcceso = accesos?.length > 0
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
-  const deEmpresa = ["contabilidad", "propuestas", "memoria"].includes(pestana)
+  const deEmpresa = ["contabilidad", "propuestas", "conciliacion", "memoria"].includes(pestana)
   const sinAccesoQueFuncione = conAcceso && !empresas?.length
 
   return (
@@ -230,6 +231,7 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
           {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
           <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
           {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
+          {conAcceso && <Tabs.Tab value="conciliacion">Conciliación</Tabs.Tab>}
           {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
         </Tabs.List>
         )}
@@ -262,6 +264,9 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
       </Tabs.Panel>
       <Tabs.Panel value="propuestas">
         {abiertas.has("propuestas") && empresa && <PropuestasContables key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+      </Tabs.Panel>
+      <Tabs.Panel value="conciliacion">
+        {abiertas.has("conciliacion") && empresa && <Conciliacion key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
       </Tabs.Panel>
       <Tabs.Panel value="memoria">
         {abiertas.has("memoria") && empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
