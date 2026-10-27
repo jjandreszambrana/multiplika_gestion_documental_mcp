@@ -29,6 +29,25 @@ function Propuesta({ propuesta }) {
   )
 }
 
+function Acciones({ movimiento, onResolver, trabajando }) {
+  const { estado, propuesta } = movimiento
+  if (estado === "confirmado" || estado === "descartado") {
+    return (
+      <Group gap="xs" wrap="nowrap">
+        <Text fz="xs" c="dimmed">{movimiento.decision?.sin_factura ? "Sin factura" : ""}</Text>
+        <Button size="compact-xs" variant="default" loading={trabajando} onClick={() => onResolver(movimiento, "reabrir")}>Deshacer</Button>
+      </Group>
+    )
+  }
+  return (
+    <Group gap="xs" wrap="nowrap">
+      {propuesta && <Button size="compact-xs" loading={trabajando} onClick={() => onResolver(movimiento, "confirmar")}>Confirmar</Button>}
+      <Button size="compact-xs" variant="default" loading={trabajando} onClick={() => onResolver(movimiento, "confirmar", true)}>Sin factura</Button>
+      <Button size="compact-xs" variant="subtle" color="gray" loading={trabajando} onClick={() => onResolver(movimiento, "descartar")}>Descartar</Button>
+    </Group>
+  )
+}
+
 function Movimientos({ proyecto, extracto, onVolver, onError }) {
   const [datos, setDatos] = useState(null)
   const [filtro, setFiltro] = useState("todos")
@@ -49,6 +68,16 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
       })
       .catch((err) => onError(err.message))
       .finally(() => setBuscando(false))
+  }
+
+  const [resolviendo, setResolviendo] = useState(null)
+  const resolver = (m, accion, sinFactura = false) => {
+    setResolviendo(m.id)
+    api
+      .resolverMovimientoBancario(proyecto.id, extracto.id, m.id, { accion, sin_factura: sinFactura })
+      .then((nuevo) => setDatos((d) => ({ ...d, movimientos: d.movimientos.map((x) => (x.id === nuevo.id ? nuevo : x)) })))
+      .catch((err) => onError(err.message))
+      .finally(() => setResolviendo(null))
   }
 
   const filas = datos?.movimientos.filter((m) => filtro === "todos" || m.estado === filtro)
@@ -82,13 +111,14 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
               { value: "exacto", label: `Exactos (${cuantos("exacto")})` },
               { value: "dudoso", label: `Dudosos (${cuantos("dudoso")})` },
               { value: "sin_emparejar", label: `Sin emparejar (${cuantos("sin_emparejar")})` },
+              { value: "confirmado", label: `Confirmados (${cuantos("confirmado")})` },
             ]}
           />
-          <Table.ScrollContainer minWidth={760}>
+          <Table.ScrollContainer minWidth={900}>
             <Table withTableBorder fz="sm">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Fecha</Table.Th><Table.Th>Concepto</Table.Th><Table.Th ta="right">Importe</Table.Th><Table.Th>Estado</Table.Th><Table.Th>Propuesta</Table.Th>
+                  <Table.Th>Fecha</Table.Th><Table.Th>Concepto</Table.Th><Table.Th ta="right">Importe</Table.Th><Table.Th>Estado</Table.Th><Table.Th>Propuesta</Table.Th><Table.Th>Decisión</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -99,6 +129,7 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
                     <Table.Td ta="right" style={NUM} c={Number(m.importe) < 0 ? "red.7" : undefined}>{importe(m.importe)}</Table.Td>
                     <Table.Td><Badge variant="light" color={COLORES[m.estado] || "gray"}>{ESTADOS[m.estado] || m.estado}</Badge></Table.Td>
                     <Table.Td><Propuesta propuesta={m.propuesta} /></Table.Td>
+                    <Table.Td><Acciones movimiento={m} onResolver={resolver} trabajando={resolviendo === m.id} /></Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>

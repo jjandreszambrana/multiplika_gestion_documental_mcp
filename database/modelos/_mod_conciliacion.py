@@ -12,6 +12,7 @@ from decimal import Decimal
 from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_conciliacion import NOMBRE_TABLA_CONCILIACION_MOVIMIENTOS as _TM, NOMBRE_TABLA_CONCILIACIONES as _T
+from ._repeticiones import ahora_madrid
 from . import _conciliar, _mod_contabilidad_sif as conta_sif, _norma43
 
 LIMITE_MOVIMIENTOS = 2000
@@ -169,3 +170,46 @@ async def emparejar(config: dict, id_usuario: int | None, id_conciliacion: int) 
             (r["estado"], json.dumps(r["propuesta"], ensure_ascii=False) if r["propuesta"] else None, m["id"]),
         )
     return {"revisados": len(abiertos), **resumen, "avisos": avisos}
+
+
+ACCIONES = ("confirmar", "descartar", "reabrir")
+
+
+async def resolver(
+    config: dict, id_conciliacion: int, id_movimiento: int, accion: str, id_usuario: int | None,
+    sin_factura: bool = False, nota: str | None = None,
+) -> dict:
+    """Lo que decide el contable sobre un movimiento. Confirmar da por buena la
+    propuesta (o, con `sin_factura`, dice que no corresponde a ninguna
+    factura: comisiones, intereses...); descartar lo aparta; reabrir
+    deshace la decisión. No escribe en el SIF."""
+    if accion not in ACCIONES:
+        raise ValueError(f"Acción no válida: {accion} (vale {', '.join(ACCIONES)})")
+    db = AsyncDatabase(**config)
+    filas = await db.query(f'SELECT * FROM "{_TM}" WHERE id = %s AND id_conciliacion = %s', (id_movimiento, id_conciliacion))
+    if not filas:
+        raise LookupError("Ese movimiento no existe")
+    propuesta = json.loads(filas[0]["propuesta"]) if filas[0].get("propuesta") else None
+    if accion == "confirmar":
+        if not sin_factura and not propuesta:
+            raise ValueError("Ese movimiento no tiene factura propuesta: confírmalo como «sin factura» o descártalo")
+        estado = "confirmado"
+        decision = {"accion": "confirmado", "sin_factura": sin_factura, "candidatas": [] if sin_factura else propuesta["candidatas"]}
+    elif accion == "descartar":
+        estado, decision = "descartado", {"accion": "descartado"}
+    else:
+        estado, decision = ("dudoso" if propuesta else "sin_emparejar"), None
+    await db.query(
+        f'UPDATE "{_TM}" SET estado = %s, decision = %s, nota = %s, revisado_por = %s, fecha_revision = %s WHERE id = %s',
+        (estado, json.dumps(decision, ensure_ascii=False) if decision else None,
+         (nota or None) if accion != "reabrir" else None, id_usuario if accion != "reabrir" else None,
+         ahora_madrid() if accion != "reabrir" else None, id_movimiento),
+    )
+    return (await movimientos_por_id(config, id_movimiento))
+
+
+async def movimientos_por_id(config: dict, id_movimiento: int) -> dict:
+    fila = (await AsyncDatabase(**config).query(f'SELECT * FROM "{_TM}" WHERE id = %s', (id_movimiento,)))[0]
+    for campo in ("propuesta", "decision"):
+        fila[campo] = json.loads(fila[campo]) if fila.get(campo) else None
+    return fila

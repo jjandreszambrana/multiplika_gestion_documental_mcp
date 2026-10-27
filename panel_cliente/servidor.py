@@ -624,6 +624,29 @@ async def emparejar_extracto_bancario(
         raise _error_contable(e) from e
 
 
+class ResolverMovimiento(BaseModel):
+    accion: str  # confirmar | descartar | reabrir
+    sin_factura: bool = False
+    nota: str | None = None
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos/{id_movimiento}")
+async def resolver_movimiento_bancario(
+    id_proyecto: int, id_conciliacion: int, id_movimiento: int, datos: ResolverMovimiento,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Decisión del contable sobre un movimiento. No escribe en el SIF."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return await conciliacion.resolver(
+            config, id_conciliacion, id_movimiento, datos.accion, _id_usuario(identidad), datos.sin_factura, datos.nota,
+        )
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
 @app.delete("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_extracto_bancario(
     id_proyecto: int, id_conciliacion: int,
