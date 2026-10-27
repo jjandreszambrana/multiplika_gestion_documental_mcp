@@ -110,6 +110,7 @@ async def eliminar(config: dict, id_conciliacion: int) -> None:
 
 
 LIMITE_SIF = 5000
+LIMITE_CANDIDATAS = 50
 ESTADOS_ABIERTOS = ("sin_emparejar", "exacto", "dudoso")
 
 
@@ -177,7 +178,7 @@ ACCIONES = ("confirmar", "descartar", "reabrir")
 
 async def resolver(
     config: dict, id_conciliacion: int, id_movimiento: int, accion: str, id_usuario: int | None,
-    sin_factura: bool = False, nota: str | None = None,
+    sin_factura: bool = False, nota: str | None = None, candidatas: list[dict] | None = None,
 ) -> dict:
     """Lo que decide el contable sobre un movimiento. Confirmar da por buena la
     propuesta (o, con `sin_factura`, dice que no corresponde a ninguna
@@ -191,10 +192,17 @@ async def resolver(
         raise LookupError("Ese movimiento no existe")
     propuesta = json.loads(filas[0]["propuesta"]) if filas[0].get("propuesta") else None
     if accion == "confirmar":
-        if not sin_factura and not propuesta:
-            raise ValueError("Ese movimiento no tiene factura propuesta: confírmalo como «sin factura» o descártalo")
+        if candidatas:
+            elegidas = _candidatas_validas(candidatas, Decimal(str(filas[0]["importe"])))
+        elif sin_factura:
+            elegidas = []
+        elif propuesta:
+            elegidas = propuesta["candidatas"]
+        else:
+            raise ValueError("Ese movimiento no tiene factura propuesta: elige una, confírmalo como «sin factura» o descártalo")
         estado = "confirmado"
-        decision = {"accion": "confirmado", "sin_factura": sin_factura, "candidatas": [] if sin_factura else propuesta["candidatas"]}
+        decision = {"accion": "confirmado", "sin_factura": sin_factura and not candidatas, "candidatas": elegidas,
+                    "elegidas_a_mano": bool(candidatas)}
     elif accion == "descartar":
         estado, decision = "descartado", {"accion": "descartado"}
     else:
@@ -213,3 +221,36 @@ async def movimientos_por_id(config: dict, id_movimiento: int) -> dict:
     for campo in ("propuesta", "decision"):
         fila[campo] = json.loads(fila[campo]) if fila.get(campo) else None
     return fila
+
+
+CAMPOS_CANDIDATA = ("sentido", "id", "id_factura", "numero_factura", "tercero", "nif", "fecha_vencimiento", "pendiente")
+
+
+def _candidatas_validas(candidatas: list[dict], importe: Decimal) -> list[dict]:
+    """Las facturas que elige el contable a mano: se guardan solo los campos
+    conocidos y el sentido tiene que ser el del movimiento (un abono se
+    cobra, un cargo se paga)."""
+    sentido = "cobro" if importe > 0 else "pago"
+    limpias = []
+    for c in candidatas:
+        if c.get("sentido") != sentido or not isinstance(c.get("id"), int):
+            raise ValueError(f"Esa factura no corresponde a un movimiento de {'abono' if importe > 0 else 'cargo'}")
+        limpias.append({k: c.get(k) for k in CAMPOS_CANDIDATA})
+    return limpias
+
+
+async def candidatas_para(config: dict, id_usuario: int | None, id_conciliacion: int, id_movimiento: int, texto: str | None = None) -> list[dict]:
+    """Facturas pendientes del SIF entre las que elegir para un movimiento: de
+    cobro si es un abono, de pago si es un cargo. `texto` filtra por número de
+    factura, tercero o NIF."""
+    extracto = await obtener(config, id_conciliacion)
+    mov = next((m for m in await movimientos(config, id_conciliacion) if m["id"] == id_movimiento), None)
+    if not extracto or not mov:
+        raise LookupError("Ese movimiento no existe")
+    pedir = _cobros_pendientes if Decimal(str(mov["importe"])) > 0 else _pagos_pendientes
+    filas = await pedir(config, id_usuario, extracto["id_empresa"])
+    if texto and texto.strip():
+        q = _conciliar.plano(texto)
+        filas = [f for f in filas if q in _conciliar.plano(f"{f.get('numero_factura')} {f.get('nombre')} {f.get('nif')}")]
+    filas.sort(key=lambda f: str(f.get("fecha_vencimiento") or ""))
+    return [{**_conciliar.resumen(f)} for f in filas[:LIMITE_CANDIDATAS]]

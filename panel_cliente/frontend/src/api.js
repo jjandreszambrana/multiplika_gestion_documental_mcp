@@ -244,6 +244,8 @@ export const api = {
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos`),
   emparejarExtracto: (idProyecto, idConciliacion) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/emparejar`),
+  candidatasMovimientoBancario: (idProyecto, idConciliacion, idMovimiento, q) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}/candidatas?q=${encodeURIComponent(q || "")}`),
   resolverMovimientoBancario: (idProyecto, idConciliacion, idMovimiento, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}`, datos),
   eliminarExtracto: (idProyecto, idConciliacion) =>

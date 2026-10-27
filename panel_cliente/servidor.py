@@ -624,10 +624,25 @@ async def emparejar_extracto_bancario(
         raise _error_contable(e) from e
 
 
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos/{id_movimiento}/candidatas")
+async def candidatas_movimiento_bancario(
+    id_proyecto: int, id_conciliacion: int, id_movimiento: int, q: str | None = None,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Facturas pendientes del SIF entre las que elegir a mano para un movimiento."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return {"candidatas": await conciliacion.candidatas_para(config, _id_usuario(identidad), id_conciliacion, id_movimiento, q)}
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
 class ResolverMovimiento(BaseModel):
     accion: str  # confirmar | descartar | reabrir
     sin_factura: bool = False
     nota: str | None = None
+    candidatas: list[dict] | None = None  # facturas elegidas a mano en vez de la propuesta
 
 
 @app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos/{id_movimiento}")
@@ -641,7 +656,7 @@ async def resolver_movimiento_bancario(
     await _extracto_visible(config, identidad, id_conciliacion)
     try:
         return await conciliacion.resolver(
-            config, id_conciliacion, id_movimiento, datos.accion, _id_usuario(identidad), datos.sin_factura, datos.nota,
+            config, id_conciliacion, id_movimiento, datos.accion, _id_usuario(identidad), datos.sin_factura, datos.nota, datos.candidatas,
         )
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e

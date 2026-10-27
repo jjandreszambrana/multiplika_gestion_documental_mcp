@@ -24,7 +24,7 @@ SIN_VALOR = {"SOCIEDAD", "LIMITADA", "ANONIMA", "COMERCIAL", "SERVICIOS", "GRUPO
 CENTAVO = Decimal("0.01")
 
 
-def _plano(texto) -> str:
+def plano(texto) -> str:
     texto = unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode()
     return re.sub(r"[^A-Z0-9]", "", texto.upper())
 
@@ -36,10 +36,10 @@ def _palabras(texto) -> set[str]:
 
 def _pistas(candidata: dict, texto_plano: str, palabras: set[str]) -> list[str]:
     pistas = []
-    factura = _plano(candidata.get("numero_factura"))
+    factura = plano(candidata.get("numero_factura"))
     if len(factura) >= 3 and factura in texto_plano:
         pistas.append("número de factura")
-    nif = _plano(candidata.get("nif"))
+    nif = plano(candidata.get("nif"))
     if len(nif) >= 8 and nif in texto_plano:
         pistas.append("NIF")
     significativas = [p for p in re.findall(r"[A-Z0-9]+", _plano_con_espacios(candidata.get("nombre")))
@@ -53,7 +53,7 @@ def _plano_con_espacios(texto) -> str:
     return unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode().upper()
 
 
-def _resumen(c: dict, extra: dict | None = None) -> dict:
+def resumen(c: dict, extra: dict | None = None) -> dict:
     return {
         "sentido": c["sentido"], "id": c["id"], "id_factura": c.get("id_factura"), "numero_factura": c.get("numero_factura"),
         "tercero": c.get("nombre"), "nif": c.get("nif"), "fecha_vencimiento": c.get("fecha_vencimiento"),
@@ -76,7 +76,7 @@ def _suma_exacta(candidatas: list[dict], objetivo: Decimal) -> list[dict] | None
 
 def _proponer(estado: str, confianza: float, motivo: str, candidatas: list[dict]) -> dict:
     return {"estado": estado, "propuesta": {
-        "motivo": motivo, "confianza": confianza, "candidatas": [_resumen(c, extra) for c, extra in candidatas[:MAX_PROPUESTAS]],
+        "motivo": motivo, "confianza": confianza, "candidatas": [resumen(c, extra) for c, extra in candidatas[:MAX_PROPUESTAS]],
     }}
 
 
@@ -86,8 +86,8 @@ def _uno(movimiento: dict, candidatas: list[dict], usadas: set) -> dict:
     sentido = "cobro" if importe > 0 else "pago"
     posibles = [c for c in candidatas if c["sentido"] == sentido]
     texto = " ".join(str(movimiento.get(k) or "") for k in ("concepto", "referencia1", "referencia2", "numero_documento"))
-    plano, palabras = _plano(texto), _palabras(texto)
-    pistas = {_clave(c): _pistas(c, plano, palabras) for c in posibles}
+    texto_plano, palabras = plano(texto), _palabras(texto)
+    pistas = {_clave(c): _pistas(c, texto_plano, palabras) for c in posibles}
     con_pista = [c for c in posibles if pistas[_clave(c)]]
     mismo_importe = [c for c in posibles if abs(c["pendiente"] - cuantia) < CENTAVO]
 

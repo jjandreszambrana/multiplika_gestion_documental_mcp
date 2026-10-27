@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Badge, Button, Card, FileInput, Group, SegmentedControl, Stack, Table, Text } from "@mantine/core"
+import { Alert, Badge, Button, Card, Checkbox, FileInput, Group, Modal, SegmentedControl, Stack, Table, Text, TextInput } from "@mantine/core"
 import { api } from "../../api"
 
 // Conciliación bancaria (ver docs/planificacion/conciliacion-bancaria.md).
@@ -15,7 +15,19 @@ const ESTADOS = {
 const COLORES = { sin_emparejar: "gray", exacto: "green", dudoso: "yellow", confirmado: "blue", descartado: "gray" }
 const NUM = { fontVariantNumeric: "tabular-nums" }
 
-function Propuesta({ propuesta }) {
+function Propuesta({ propuesta, decision }) {
+  if (decision?.elegidas_a_mano) {
+    return (
+      <Stack gap={2}>
+        <Text fz="xs" c="dimmed">Elegidas por el contable</Text>
+        {decision.candidatas.map((c) => (
+          <Text key={`${c.sentido}-${c.id}`} fz="sm">
+            {c.sentido === "cobro" ? "Cobro" : "Pago"} · factura {c.numero_factura || c.id_factura} · {c.tercero} · {importe(c.pendiente)} €
+          </Text>
+        ))}
+      </Stack>
+    )
+  }
   if (!propuesta) return null
   return (
     <Stack gap={2}>
@@ -29,7 +41,56 @@ function Propuesta({ propuesta }) {
   )
 }
 
-function Acciones({ movimiento, onResolver, trabajando }) {
+// Elegir a mano las facturas de un movimiento, entre las pendientes del SIF
+function ElegirFactura({ proyecto, extracto, movimiento, onCerrar, onElegidas, onError }) {
+  const [texto, setTexto] = useState("")
+  const [lista, setLista] = useState(null)
+  const [marcadas, setMarcadas] = useState({})
+  const clave = (c) => `${c.sentido}-${c.id}`
+
+  useEffect(() => {
+    setLista(null)
+    const espera = setTimeout(() => {
+      api.candidatasMovimientoBancario(proyecto.id, extracto.id, movimiento.id, texto)
+        .then((r) => setLista(r.candidatas))
+        .catch((err) => { setLista([]); onError(err.message) })
+    }, 300)
+    return () => clearTimeout(espera)
+  }, [texto]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const elegidas = Object.values(marcadas)
+  const suma = elegidas.reduce((t, c) => t + Number(c.pendiente), 0)
+  const abono = Number(movimiento.importe) > 0
+  return (
+    <Modal opened onClose={onCerrar} size="lg" title={`${abono ? "Cobro" : "Pago"} de ${importe(Math.abs(movimiento.importe))} € — elige la factura`}>
+      <Stack gap="sm">
+        <TextInput id="conciliacion-buscar-factura" aria-label="Buscar factura" placeholder="Número de factura, nombre o NIF" value={texto} onChange={(e) => setTexto(e.currentTarget.value)} />
+        {!lista ? <Text>Cargando...</Text> : lista.length === 0 ? <Text c="dimmed">No hay facturas pendientes con ese filtro.</Text> : (
+          <Stack gap={4} mah={360} style={{ overflowY: "auto" }}>
+            {lista.map((c) => (
+              <Checkbox
+                key={clave(c)} checked={!!marcadas[clave(c)]}
+                onChange={(e) => {
+                  const marcar = e.currentTarget.checked
+                  setMarcadas((m) => { const n = { ...m }; if (marcar) n[clave(c)] = c; else delete n[clave(c)]; return n })
+                }}
+                label={`Factura ${c.numero_factura || c.id_factura} · ${c.tercero || ""} · vence ${c.fecha_vencimiento ? fecha(c.fecha_vencimiento) : "—"} · pendiente ${importe(c.pendiente)} €`}
+              />
+            ))}
+          </Stack>
+        )}
+        <Group justify="space-between">
+          <Text fz="sm" c={elegidas.length && Math.abs(suma - Math.abs(Number(movimiento.importe))) > 0.009 ? "orange" : "dimmed"}>
+            {elegidas.length ? `Elegidas ${elegidas.length}: ${importe(suma)} € de ${importe(Math.abs(movimiento.importe))} €` : "Marca una o varias facturas"}
+          </Text>
+          <Button disabled={!elegidas.length} onClick={() => onElegidas(elegidas)}>Confirmar con estas</Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}
+
+function Acciones({ movimiento, onResolver, onElegir, trabajando }) {
   const { estado, propuesta } = movimiento
   if (estado === "confirmado" || estado === "descartado") {
     return (
@@ -42,6 +103,7 @@ function Acciones({ movimiento, onResolver, trabajando }) {
   return (
     <Group gap="xs" wrap="nowrap">
       {propuesta && <Button size="compact-xs" loading={trabajando} onClick={() => onResolver(movimiento, "confirmar")}>Confirmar</Button>}
+      <Button size="compact-xs" variant="default" loading={trabajando} onClick={() => onElegir(movimiento)}>Elegir otra</Button>
       <Button size="compact-xs" variant="default" loading={trabajando} onClick={() => onResolver(movimiento, "confirmar", true)}>Sin factura</Button>
       <Button size="compact-xs" variant="subtle" color="gray" loading={trabajando} onClick={() => onResolver(movimiento, "descartar")}>Descartar</Button>
     </Group>
@@ -71,10 +133,11 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
   }
 
   const [resolviendo, setResolviendo] = useState(null)
-  const resolver = (m, accion, sinFactura = false) => {
+  const [eligiendo, setEligiendo] = useState(null)
+  const resolver = (m, accion, sinFactura = false, candidatas = null) => {
     setResolviendo(m.id)
     api
-      .resolverMovimientoBancario(proyecto.id, extracto.id, m.id, { accion, sin_factura: sinFactura })
+      .resolverMovimientoBancario(proyecto.id, extracto.id, m.id, { accion, sin_factura: sinFactura, candidatas })
       .then((nuevo) => setDatos((d) => ({ ...d, movimientos: d.movimientos.map((x) => (x.id === nuevo.id ? nuevo : x)) })))
       .catch((err) => onError(err.message))
       .finally(() => setResolviendo(null))
@@ -100,6 +163,12 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
         </Alert>
       )}
       {aviso && <Alert color="green" withCloseButton onClose={() => setAviso(null)}>{aviso}</Alert>}
+      {eligiendo && (
+        <ElegirFactura
+          proyecto={proyecto} extracto={extracto} movimiento={eligiendo} onError={onError} onCerrar={() => setEligiendo(null)}
+          onElegidas={(elegidas) => { resolver(eligiendo, "confirmar", false, elegidas); setEligiendo(null) }}
+        />
+      )}
       {!datos ? (
         <Text>Cargando...</Text>
       ) : (
@@ -128,8 +197,8 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
                     <Table.Td>{m.concepto || m.referencia1 || m.numero_documento || ""}</Table.Td>
                     <Table.Td ta="right" style={NUM} c={Number(m.importe) < 0 ? "red.7" : undefined}>{importe(m.importe)}</Table.Td>
                     <Table.Td><Badge variant="light" color={COLORES[m.estado] || "gray"}>{ESTADOS[m.estado] || m.estado}</Badge></Table.Td>
-                    <Table.Td><Propuesta propuesta={m.propuesta} /></Table.Td>
-                    <Table.Td><Acciones movimiento={m} onResolver={resolver} trabajando={resolviendo === m.id} /></Table.Td>
+                    <Table.Td><Propuesta propuesta={m.propuesta} decision={m.decision} /></Table.Td>
+                    <Table.Td><Acciones movimiento={m} onResolver={resolver} onElegir={setEligiendo} trabajando={resolviendo === m.id} /></Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
