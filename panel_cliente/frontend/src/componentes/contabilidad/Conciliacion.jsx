@@ -1,23 +1,58 @@
 import { useEffect, useState } from "react"
-import { Alert, Badge, Button, Card, FileInput, Group, Stack, Table, Text } from "@mantine/core"
+import { Alert, Badge, Button, Card, FileInput, Group, SegmentedControl, Stack, Table, Text } from "@mantine/core"
 import { api } from "../../api"
 
 // Conciliación bancaria (ver docs/planificacion/conciliacion-bancaria.md).
-// Esta fase sube el extracto (Norma 43) y lo enseña; el emparejado con las
-// facturas del SIF llega después. La GD no escribe nada en el SIF.
+// Se sube el extracto (Norma 43), se buscan las facturas del SIF que encajan
+// con cada movimiento y se enseña la propuesta. La GD no escribe nada en el SIF:
+// la decisión es del contable.
 
 const importe = (n) => Number(n).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fecha = (f) => new Date(f).toLocaleDateString("es-ES")
 const ESTADOS = {
   sin_emparejar: "Sin emparejar", exacto: "Exacto", dudoso: "Dudoso", confirmado: "Confirmado", descartado: "Descartado",
 }
+const COLORES = { sin_emparejar: "gray", exacto: "green", dudoso: "yellow", confirmado: "blue", descartado: "gray" }
 const NUM = { fontVariantNumeric: "tabular-nums" }
+
+function Propuesta({ propuesta }) {
+  if (!propuesta) return null
+  return (
+    <Stack gap={2}>
+      <Text fz="xs" c="dimmed">{propuesta.motivo}</Text>
+      {propuesta.candidatas.map((c) => (
+        <Text key={`${c.sentido}-${c.id}`} fz="sm">
+          {c.sentido === "cobro" ? "Cobro" : "Pago"} · factura {c.numero_factura || c.id_factura} · {c.tercero} · pendiente {importe(c.pendiente)} €
+        </Text>
+      ))}
+    </Stack>
+  )
+}
 
 function Movimientos({ proyecto, extracto, onVolver, onError }) {
   const [datos, setDatos] = useState(null)
-  useEffect(() => {
-    api.movimientosExtracto(proyecto.id, extracto.id).then(setDatos).catch((err) => onError(err.message))
-  }, [proyecto.id, extracto.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [filtro, setFiltro] = useState("todos")
+  const [buscando, setBuscando] = useState(false)
+  const [aviso, setAviso] = useState(null)
+
+  const cargar = () => api.movimientosExtracto(proyecto.id, extracto.id).then(setDatos).catch((err) => onError(err.message))
+  useEffect(() => { cargar() }, [proyecto.id, extracto.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const buscar = () => {
+    setBuscando(true)
+    setAviso(null)
+    api
+      .emparejarExtracto(proyecto.id, extracto.id)
+      .then((r) => {
+        setAviso(`Revisados ${r.revisados} movimientos: ${r.exacto} exactos, ${r.dudoso} dudosos y ${r.sin_emparejar} sin emparejar.${r.avisos.length ? ` ${r.avisos.join(" ")}` : ""}`)
+        return cargar()
+      })
+      .catch((err) => onError(err.message))
+      .finally(() => setBuscando(false))
+  }
+
+  const filas = datos?.movimientos.filter((m) => filtro === "todos" || m.estado === filtro)
+  const cuantos = (e) => datos?.movimientos.filter((m) => m.estado === e).length ?? 0
 
   return (
     <Stack gap="md">
@@ -25,35 +60,51 @@ function Movimientos({ proyecto, extracto, onVolver, onError }) {
         <Text fw={600}>
           Cuenta {extracto.banco}-{extracto.oficina}-{extracto.cuenta} · {fecha(extracto.fecha_desde)} a {fecha(extracto.fecha_hasta)}
         </Text>
-        <Button variant="default" onClick={onVolver}>Volver a los extractos</Button>
+        <Group>
+          <Button onClick={buscar} loading={buscando}>Buscar facturas</Button>
+          <Button variant="default" onClick={onVolver}>Volver a los extractos</Button>
+        </Group>
       </Group>
       {!extracto.cuadra && (
         <Alert color="yellow">
           Los movimientos de este extracto no suman lo que dice el banco: del saldo inicial {importe(extracto.saldo_inicial)} € al final {importe(extracto.saldo_final)} €. Puede que falte alguna línea.
         </Alert>
       )}
+      {aviso && <Alert color="green" withCloseButton onClose={() => setAviso(null)}>{aviso}</Alert>}
       {!datos ? (
         <Text>Cargando...</Text>
       ) : (
-        <Table.ScrollContainer minWidth={640}>
-          <Table withTableBorder fz="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Fecha</Table.Th><Table.Th>Concepto</Table.Th><Table.Th ta="right">Importe</Table.Th><Table.Th>Estado</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {datos.movimientos.map((m) => (
-                <Table.Tr key={m.id}>
-                  <Table.Td>{fecha(m.fecha_operacion)}</Table.Td>
-                  <Table.Td>{m.concepto || m.referencia1 || m.numero_documento || ""}</Table.Td>
-                  <Table.Td ta="right" style={NUM} c={Number(m.importe) < 0 ? "red.7" : undefined}>{importe(m.importe)}</Table.Td>
-                  <Table.Td><Badge variant="light" color="gray">{ESTADOS[m.estado] || m.estado}</Badge></Table.Td>
+        <>
+          <SegmentedControl
+            value={filtro} onChange={setFiltro} w="fit-content"
+            data={[
+              { value: "todos", label: `Todos (${datos.movimientos.length})` },
+              { value: "exacto", label: `Exactos (${cuantos("exacto")})` },
+              { value: "dudoso", label: `Dudosos (${cuantos("dudoso")})` },
+              { value: "sin_emparejar", label: `Sin emparejar (${cuantos("sin_emparejar")})` },
+            ]}
+          />
+          <Table.ScrollContainer minWidth={760}>
+            <Table withTableBorder fz="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Fecha</Table.Th><Table.Th>Concepto</Table.Th><Table.Th ta="right">Importe</Table.Th><Table.Th>Estado</Table.Th><Table.Th>Propuesta</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+              </Table.Thead>
+              <Table.Tbody>
+                {filas.map((m) => (
+                  <Table.Tr key={m.id}>
+                    <Table.Td>{fecha(m.fecha_operacion)}</Table.Td>
+                    <Table.Td>{m.concepto || m.referencia1 || m.numero_documento || ""}</Table.Td>
+                    <Table.Td ta="right" style={NUM} c={Number(m.importe) < 0 ? "red.7" : undefined}>{importe(m.importe)}</Table.Td>
+                    <Table.Td><Badge variant="light" color={COLORES[m.estado] || "gray"}>{ESTADOS[m.estado] || m.estado}</Badge></Table.Td>
+                    <Table.Td><Propuesta propuesta={m.propuesta} /></Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </>
       )}
     </Stack>
   )

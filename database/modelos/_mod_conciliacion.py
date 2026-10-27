@@ -7,11 +7,12 @@ decide sobre cada movimiento."""
 
 import hashlib
 import json
+from decimal import Decimal
 
 from mtpk_postgres.async_adapter import AsyncDatabase
 
 from ..dependencias._dep_conciliacion import NOMBRE_TABLA_CONCILIACION_MOVIMIENTOS as _TM, NOMBRE_TABLA_CONCILIACIONES as _T
-from . import _norma43
+from . import _conciliar, _mod_contabilidad_sif as conta_sif, _norma43
 
 LIMITE_MOVIMIENTOS = 2000
 
@@ -105,3 +106,66 @@ async def eliminar(config: dict, id_conciliacion: int) -> None:
     if actual["resueltos"]:
         raise ValueError("Ese extracto ya tiene movimientos confirmados o descartados: no se puede borrar")
     await AsyncDatabase(**config).query(f'DELETE FROM "{_T}" WHERE id = %s', (id_conciliacion,))
+
+
+LIMITE_SIF = 5000
+ESTADOS_ABIERTOS = ("sin_emparejar", "exacto", "dudoso")
+
+
+def _decimal(valor) -> Decimal:
+    return Decimal(str(valor or 0))
+
+
+async def _cobros_pendientes(config: dict, id_usuario: int | None, id_empresa: int) -> list[dict]:
+    r = await conta_sif.pedir(config, id_usuario, id_empresa, "/ventas/gestion_cobros/recibos/listar",
+                              {"offset": 0, "limit": LIMITE_SIF, "estado_calculado": "pendientes", "solo_vencidos": False})
+    return [
+        {"sentido": "cobro", "id": f["id_recibo"], "id_factura": f.get("id_factura"), "numero_factura": f.get("numero_factura"),
+         "nif": f.get("NIF_receptor"), "nombre": f.get("receptor_nombre"), "fecha_vencimiento": f.get("fecha_vencimiento"),
+         "pendiente": _decimal(f.get("importe_pendiente"))}
+        for f in r.get("registros") or [] if _decimal(f.get("importe_pendiente")) > 0
+    ]
+
+
+async def _pagos_pendientes(config: dict, id_usuario: int | None, id_empresa: int) -> list[dict]:
+    filas = []
+    for id_estado in (0, 2):  # pendiente y parcial
+        r = await conta_sif.pedir(config, id_usuario, id_empresa, "/compras/gestion_pagos/vencimientos/listar",
+                                  {"offset": 0, "limit": LIMITE_SIF, "id_estado": id_estado})
+        filas += r.get("registros") or []
+    return [
+        {"sentido": "pago", "id": f["id"], "id_factura": f.get("id_factura"), "numero_factura": f.get("numero_factura"),
+         "nif": f.get("NIF_emisor"), "nombre": f.get("NombreRazon_emisor"), "fecha_vencimiento": f.get("fecha_vencimiento"),
+         "pendiente": _decimal(f.get("importe_pendiente"))}
+        for f in filas if _decimal(f.get("importe_pendiente")) > 0
+    ]
+
+
+async def emparejar(config: dict, id_usuario: int | None, id_conciliacion: int) -> dict:
+    """Busca para cada movimiento aún abierto las facturas del SIF que le
+    corresponden y lo deja anotado como propuesta. No escribe en el SIF ni
+    toca lo que el contable ya confirmó o descartó. Si el SIF no da una de
+    las dos listas (p. ej. los pagos aún no existen allí), sigue con la otra
+    y lo cuenta en `avisos`."""
+    extracto = await obtener(config, id_conciliacion)
+    if not extracto:
+        raise LookupError("Ese extracto no existe")
+    id_empresa, avisos, candidatas = extracto["id_empresa"], [], []
+    for nombre, pedir in (("cobros", _cobros_pendientes), ("pagos", _pagos_pendientes)):
+        try:
+            candidatas += await pedir(config, id_usuario, id_empresa)
+        except (ValueError, LookupError) as e:
+            avisos.append(f"No se han podido consultar los {nombre} pendientes del SIF: {e}")
+    if not candidatas and avisos:
+        raise ValueError(avisos[0])
+    abiertos = [m for m in await movimientos(config, id_conciliacion) if m["estado"] in ESTADOS_ABIERTOS]
+    resultados = _conciliar.emparejar(abiertos, candidatas)
+    db = AsyncDatabase(**config)
+    resumen = {"exacto": 0, "dudoso": 0, "sin_emparejar": 0}
+    for m, r in zip(abiertos, resultados):
+        resumen[r["estado"]] += 1
+        await db.query(
+            f'UPDATE "{_TM}" SET estado = %s, propuesta = %s WHERE id = %s',
+            (r["estado"], json.dumps(r["propuesta"], ensure_ascii=False) if r["propuesta"] else None, m["id"]),
+        )
+    return {"revisados": len(abiertos), **resumen, "avisos": avisos}

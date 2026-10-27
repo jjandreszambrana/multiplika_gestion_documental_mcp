@@ -609,6 +609,21 @@ async def movimientos_extracto_bancario(
     return {"extracto": extracto, "movimientos": await conciliacion.movimientos(config, id_conciliacion, estado or None)}
 
 
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/emparejar")
+async def emparejar_extracto_bancario(
+    id_proyecto: int, id_conciliacion: int,
+    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Propone, para cada movimiento abierto, las facturas del SIF que le corresponden. No escribe en el SIF."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return await conciliacion.emparejar(config, _id_usuario(identidad), id_conciliacion)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
 @app.delete("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_extracto_bancario(
     id_proyecto: int, id_conciliacion: int,

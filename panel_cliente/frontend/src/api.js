@@ -242,6 +242,8 @@ export const api = {
   },
   movimientosExtracto: (idProyecto, idConciliacion) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos`),
+  emparejarExtracto: (idProyecto, idConciliacion) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/emparejar`),
   eliminarExtracto: (idProyecto, idConciliacion) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}`),
   catalogoMemoria: (idProyecto, modelo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria/catalogo/${modelo}`),
