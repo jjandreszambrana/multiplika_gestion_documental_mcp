@@ -134,6 +134,7 @@ ACCIONES_MCP = {
     "crear_cuenta_contable_gd": ("creó en el SIF la cuenta", None, None, "codigo"),
     "corregir_cuenta_contable_gd": ("corrigió en el SIF la cuenta", None, None, "codigo"),
     "crear_borrador_asiento_gd": ("dejó en el SIF un asiento en borrador", None, None, "concepto"),
+    "emparejar_extracto_gd": ("buscó las facturas de un extracto bancario", None, "id_conciliacion", None),
     "cambiar_seguimiento_gd": ("cambió el estado de seguimiento", None, None, None),
     "crear_activo_digital_gd": ("dio de alta la web o cuenta", "activo_digital", None, "nombre"),
     "actualizar_activo_digital_gd": ("modificó la web o cuenta", "activo_digital", "id_activo", None),

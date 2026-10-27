@@ -24,7 +24,7 @@ from fastmcp.server.middleware.middleware import Middleware
 from ._anotaciones import SOLO_LECTURA
 from ._herr_bloc_notas import _contexto
 from ..database import biblioteca_contable
-from ..database.modelos import _mod_contabilidad_sif as sif
+from ..database.modelos import _mod_conciliacion as conciliacion, _mod_contabilidad_sif as sif
 from ..database.modelos._mod_conta_analisis import analisis_financiero, compactar_informe
 from ..database.modelos._mod_conta_propuestas import crear as crear_propuesta, listar as listar_propuestas
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
@@ -678,3 +678,66 @@ async def proponer_apartado_memoria_gd(
 
 
 mcp_app.add_middleware(ModuloContableMiddleware(mcp_app))
+
+
+# --- Conciliación bancaria (docs/planificacion/conciliacion-bancaria.md). La IA
+# busca y propone; confirmar o descartar cada movimiento lo hace el contable en
+# la pantalla. Nada de esto escribe en el SIF.
+
+
+async def _extracto_de_la_empresa_del_usuario(config: dict, id_usuario, id_conciliacion: int) -> dict:
+    extracto = await conciliacion.obtener(config, id_conciliacion)
+    if not extracto or extracto["id_empresa"] not in {e["id_empresa"] for e in await sif.empresas_de(config, id_usuario)}:
+        raise LookupError("Ese extracto no existe")
+    return extracto
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def listar_extractos_bancarios_gd(id_empresa: int | None = None) -> dict:
+    """Extractos bancarios que el usuario ha subido a la GD para conciliar (Norma 43),
+    con cuántos movimientos tienen y cuántos ya ha resuelto el contable. Sin
+    `id_empresa`, los de todas las empresas que ve."""
+    config, _, id_usuario, _ = await _contexto()
+    try:
+        ids = [e["id_empresa"] for e in await sif.empresas_de(config, id_usuario)]
+        return {"extractos": await conciliacion.listar(config, ids, id_empresa)}
+    except (ValueError, LookupError) as e:
+        raise ToolError(str(e)) from e
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def listar_movimientos_conciliacion_gd(
+    id_conciliacion: int, estado: Literal["sin_emparejar", "exacto", "dudoso", "confirmado", "descartado"] | None = None,
+) -> dict:
+    """Movimientos de un extracto bancario con la factura que se les ha propuesto
+    (`propuesta`: motivo, confianza y candidatas) y lo que decidió el contable.
+    Importe negativo = cargo, positivo = abono. Usa `emparejar_extracto_gd`
+    antes si aún no se han buscado las facturas."""
+    config, _, id_usuario, _ = await _contexto()
+    try:
+        extracto = await _extracto_de_la_empresa_del_usuario(config, id_usuario, id_conciliacion)
+        filas = await conciliacion.movimientos(config, id_conciliacion, estado)
+    except (ValueError, LookupError) as e:
+        raise ToolError(str(e)) from e
+    return {
+        "extracto": {k: extracto[k] for k in ("id", "id_empresa", "banco", "oficina", "cuenta", "fecha_desde", "fecha_hasta", "saldo_inicial", "saldo_final", "cuadra")},
+        "movimientos": [
+            {k: f[k] for k in ("id", "fecha_operacion", "importe", "concepto", "estado", "propuesta", "decision", "nota")} for f in filas
+        ],
+    }
+
+
+@mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
+async def emparejar_extracto_gd(id_conciliacion: int) -> dict:
+    """Busca, para cada movimiento aún abierto de un extracto, las facturas del SIF
+    (cobros y pagos pendientes) que le corresponden y deja la propuesta
+    anotada: `exacto`, `dudoso` o `sin_emparejar`. No toca lo que el contable
+    ya confirmó o descartó. Es una propuesta: confirmar cada movimiento lo
+    hace el contable en la pantalla Conciliación; díselo al usuario."""
+    _sin_invitado()
+    config, _, id_usuario, _ = await _contexto()
+    try:
+        await _extracto_de_la_empresa_del_usuario(config, id_usuario, id_conciliacion)
+        return await conciliacion.emparejar(config, id_usuario, id_conciliacion)
+    except (ValueError, LookupError) as e:
+        raise ToolError(str(e)) from e
