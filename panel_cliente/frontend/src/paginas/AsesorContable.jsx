@@ -78,7 +78,7 @@ function Biblioteca({ proyecto }) {
       {(
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, md: 4 }}>
-            <Paper withBorder p="xs" mah={ALTO_INDICE} style={{ overflowY: "auto" }}>
+            <Paper withBorder p="xs" mah={ALTO_INDICE} style={{ overflowY: "auto", position: "sticky", top: 0 }}>
               <form onSubmit={buscar}>
                 <TextInput
                   id="buscar-tema-contable" aria-label="Buscar en la biblioteca" placeholder="Buscar: leasing, prorrata, 555..."
