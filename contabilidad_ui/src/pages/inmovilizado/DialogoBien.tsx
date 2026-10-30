@@ -40,6 +40,8 @@ interface Props {
   alCerrar: () => void
   /** Con el id del bien que se ha dado de alta o corregido. */
   alGuardado: (idBien: number) => void
+  /** Para mover las cuentas de un bien con amortizaciones, que aquí están bloqueadas. */
+  alCambiarCuentas?: (bien: Bien) => void
 }
 
 /** Importe listo para la API: cadena con punto. Vacío se queda vacío. */
@@ -62,6 +64,7 @@ function datosDe(bien: Bien): DatosBien {
     cuentaActivo: bien.cuenta_activo ?? '',
     cuentaAmortizacion: bien.cuenta_amortizacion ?? '',
     cuentaGasto: bien.cuenta_gasto ?? '',
+    color: bien.color ?? 0,
   }
 }
 
@@ -82,6 +85,7 @@ export default function DialogoBien({
   desdeApunte,
   alCerrar,
   alGuardado,
+  alCambiarCuentas,
 }: Props) {
   const plan = usePlanEnMemoria()
   const tabla = useTablaAmortizacion(abierto)
@@ -126,6 +130,7 @@ export default function DialogoBien({
         tipo_ley: datos.tipo,
         usado: datos.usado,
         anotaciones: datos.anotaciones.trim(),
+        color: datos.color,
       }
 
       let idGuardado = bien?.id ?? 0
@@ -221,6 +226,17 @@ export default function DialogoBien({
             tabla={tabla}
             ejercicio={ejercicio}
           />
+
+          {bien !== null && conAmortizaciones && alCambiarCuentas !== undefined && (
+            <Group gap="sm">
+              <Button variant="light" size="xs" onClick={() => alCambiarCuentas(bien)}>
+                Cambiar las cuentas…
+              </Button>
+              <Text size="xs" c="dimmed">
+                Hace un asiento en borrador que traslada el saldo entre las cuentas.
+              </Text>
+            </Group>
+          )}
 
           <Group justify="flex-end">
             <Button variant="default" onClick={cerrar}>

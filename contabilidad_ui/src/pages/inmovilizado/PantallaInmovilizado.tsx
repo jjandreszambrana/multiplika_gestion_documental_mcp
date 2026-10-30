@@ -1,4 +1,4 @@
-import { Alert, Button, Group, SegmentedControl, Stack, Title } from '@mantine/core'
+import { Alert, Button, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
@@ -10,6 +10,7 @@ import { opcionesDeTabla } from '../../components/tabla'
 import { columnasDeInmovilizado } from './columnas'
 import DialogoBajaConAsiento from './DialogoBajaConAsiento'
 import DialogoBien from './DialogoBien'
+import DialogoCambiarCuentas from './DialogoCambiarCuentas'
 import DialogoCorregirValor from './DialogoCorregirValor'
 import DialogoDejarDeAmortizar from './DialogoDejarDeAmortizar'
 import DialogoDotar from './DialogoDotar'
@@ -56,6 +57,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
   const [aDejarDeAmortizar, setADejarDeAmortizar] = useState<Bien | null>(null)
   const [aDarDeBaja, setADarDeBaja] = useState<Bien | null>(null)
   const [aCorregirValor, setACorregirValor] = useState<Bien | null>(null)
+  const [aCambiarCuentas, setACambiarCuentas] = useState<Bien[] | null>(null)
   const [recarga, setRecarga] = useState(0)
   const [ultimoEditado, setUltimoEditado] = useState<number | null>(leerUltimoEditado)
 
@@ -104,6 +106,8 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     setADejarDeAmortizar(null)
     setADarDeBaja(null)
     setACorregirValor(null)
+    setACambiarCuentas(null)
+    tabla.resetRowSelection()
     setDotando(false)
     setRecarga((n) => n + 1)
   }
@@ -115,6 +119,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
           ? {
               alCorregir: (bien) => setEnFormulario({ bien, mejoraDe: null }),
               alCorregirValor: setACorregirValor,
+              alCambiarCuentas: (bien) => setACambiarCuentas([bien]),
               alAnadirMejora: (bien) => setEnFormulario({ bien: null, mejoraDe: bien }),
               alDejarDeAmortizar: setADejarDeAmortizar,
               alDarDeBaja: setADarDeBaja,
@@ -133,6 +138,20 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     // Las mejoras cuelgan de su bien en vez de ir sueltas: el inventario se lee
     // por bienes, y cada uno se abre para ver lo que se le ha ido metiendo.
     enableExpanding: true,
+    // Se marcan bienes, no mejoras (van con su bien), y solo los que siguen en
+    // uso y no esperan ya un traslado.
+    enableRowSelection: apunta
+      ? (fila) =>
+          fila.original.estado === 1 &&
+          !fila.original.es_mejora &&
+          !fila.original.traslado_pendiente
+      : false,
+    getRowId: (fila) => String(fila.id),
+    displayColumnDefOptions: {
+      'mrt-row-select': { size: 40, grow: false },
+      'mrt-row-expand': { size: 40, grow: false },
+    },
+    positionToolbarAlertBanner: 'none',
     getSubRows: (fila) => fila.mejoras,
     filterFromLeafRows: true,
     state: { isLoading: bienes === null },
@@ -152,6 +171,8 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
       },
     }),
   })
+
+  const seleccionados = tabla.getSelectedRowModel().rows.map((fila) => fila.original)
 
   return (
     <Stack gap="md">
@@ -189,6 +210,20 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
         </Alert>
       )}
 
+      {seleccionados.length > 0 && (
+        <Group gap="sm">
+          <Text size="sm">
+            {seleccionados.length === 1 ? '1 bien marcado' : `${seleccionados.length} bienes marcados`}
+          </Text>
+          <Button size="xs" onClick={() => setACambiarCuentas(seleccionados)}>
+            Cambiar cuentas…
+          </Button>
+          <Button size="xs" variant="default" onClick={() => tabla.resetRowSelection()}>
+            Quitar la marca
+          </Button>
+        </Group>
+      )}
+
       <MantineReactTable table={tabla} />
 
       <FichaBien idInmovilizado={fichaDe} ejercicio={ejercicio} alCerrar={() => setFichaDe(null)} />
@@ -204,6 +239,10 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
           ejercicio={ejercicio}
           alCerrar={() => setEnFormulario(null)}
           alGuardado={marcarEditado}
+          alCambiarCuentas={(bien) => {
+            setEnFormulario(null)
+            setACambiarCuentas([bien])
+          }}
         />
       )}
 
@@ -226,6 +265,16 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
         alCerrar={() => setACorregirValor(null)}
         alHecho={rehacer}
       />
+
+      {aCambiarCuentas !== null && (
+        <DialogoCambiarCuentas
+          bienes={aCambiarCuentas}
+          ancho={ancho}
+          ejercicio={ejercicio}
+          alCerrar={() => setACambiarCuentas(null)}
+          alHecho={rehacer}
+        />
+      )}
 
       <DialogoDotar
         abierto={dotando}

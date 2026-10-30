@@ -2,6 +2,7 @@ import { Badge, Group, Text } from '@mantine/core'
 import type Decimal from 'decimal.js'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type { Bien } from '../../api/inmovilizado'
+import { colorDelTexto } from '../../lib/coloresBien'
 import { aDecimal } from '../../lib/dinero'
 import { formatearFecha, formatearImporte } from '../../lib/format'
 import { CELDA_QUE_CRECE } from '../../components/tabla'
@@ -13,18 +14,11 @@ const A_LA_DERECHA = {
   mantineTableBodyCellProps: { fz: 'sm', py: 4, style: { justifyContent: 'flex-end' } },
 } as const
 
-/** El último periodo dotado llega como `AAAA-MM`. Vacío si nunca se dotó. */
-export function mesDotado(periodo: string): string {
-  const trozos = /^(\d{4})-(\d{2})$/.exec(periodo)
-  if (!trozos) return periodo
-  return `${trozos[2]}/${trozos[1]}`
-}
-
 function columnaDeImporte(
   id: string,
   cabecera: string,
   valorDe: (bien: Bien) => Decimal,
-  ancho = 120,
+  ancho = 100,
 ): MRT_ColumnDef<Bien> {
   return {
     id,
@@ -47,7 +41,12 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
       mantineTableBodyCellProps: { fz: 'sm', py: 4, ...CELDA_QUE_CRECE },
       Cell: ({ row }) => (
         <Group gap="xs" wrap="nowrap">
-          <Text fw={row.original.es_mejora ? 400 : 500}>{row.original.descripcion}</Text>
+          <Text fw={row.original.es_mejora ? 400 : 500} c={colorDelTexto(row.original.color)}>{row.original.descripcion}</Text>
+          {!!row.original.traslado_pendiente && (
+            <Badge size="xs" variant="light" color="orange">
+              Traslado pendiente
+            </Badge>
+          )}
           {row.original.es_mejora && (
             <Badge size="xs" variant="light" color="blue">
               Mejora
@@ -58,20 +57,38 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
     },
     {
       accessorKey: 'fecha_compra',
-      header: 'Compra',
-      size: 110,
+      header: 'Año compra',
+      size: 105,
       grow: false,
-      Cell: ({ row }) => formatearFecha(row.original.fecha_compra),
+      Cell: ({ row }) => row.original.fecha_compra?.slice(0, 4) ?? '',
     },
     // En un bien con mejoras, el número del inventario es el del conjunto: lo
     // que cuesta y lo que lleva amortizado incluyen las suyas.
+    {
+      accessorKey: 'cuenta_activo',
+      header: 'Cta. activo',
+      size: 100,
+      grow: false,
+    },
+    {
+      accessorKey: 'cuenta_amortizacion',
+      header: 'Cta. amort.',
+      size: 100,
+      grow: false,
+    },
+    {
+      accessorKey: 'cuenta_gasto',
+      header: 'Cta. gasto',
+      size: 100,
+      grow: false,
+    },
     columnaDeImporte('valor', 'Valor', (b) => b.valor_con_mejoras),
     columnaDeImporte('amortizado', 'Amortizado', (b) => b.amortizado_con_mejoras),
     columnaDeImporte('pendiente', 'Pendiente', (b) => b.pendiente_de_amortizar),
     {
       accessorKey: 'porcentaje_anual',
       header: '% anual',
-      size: 90,
+      size: 85,
       grow: false,
       ...A_LA_DERECHA,
       Cell: ({ row }) => formatearImporte(aDecimal(row.original.porcentaje_anual), 2),
@@ -79,7 +96,7 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
     {
       accessorKey: 'anotaciones',
       header: 'Anotaciones',
-      size: 220,
+      size: 120,
       grow: false,
       Cell: ({ row }) => (
         <Text size="sm" lineClamp={2} title={row.original.anotaciones ?? ''}>
@@ -87,18 +104,11 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
         </Text>
       ),
     },
-    columnaDeImporte('cuota', 'Cuota anual', (b) => b.dotacion_anual, 130),
-    {
-      accessorKey: 'ultima_dotacion',
-      header: 'Última dotación',
-      size: 130,
-      grow: false,
-      Cell: ({ row }) => mesDotado(row.original.ultima_dotacion),
-    },
+    columnaDeImporte('cuota', 'Cuota anual', (b) => b.dotacion_anual, 105),
     {
       id: 'estado',
       header: 'Estado',
-      size: 150,
+      size: 115,
       grow: false,
       Cell: ({ row }) => {
         const bien = row.original

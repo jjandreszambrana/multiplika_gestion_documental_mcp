@@ -32,6 +32,10 @@ export interface Bien
     | 'valor_neto_con_mejoras'
     | 'mejoras'
   > {
+  /** Borrador de un cambio de cuentas sin confirmar. 0 o ausente: ninguno. */
+  traslado_pendiente?: number
+  /** Color con el que se destaca en la lista: 0 = ninguno, 1 a 10 = uno de los fijos. */
+  color?: number
   valor_adquisicion: Decimal
   valor_residual: Decimal
   /**
@@ -241,6 +245,104 @@ export async function bajaConAsiento(
       valor_adquisicion: aDecimal(pieza.valor_adquisicion),
       amortizado: aDecimal(pieza.amortizado),
       valor_neto: aDecimal(pieza.valor_neto),
+    })),
+  }
+}
+
+/** Un bien (o mejora) dentro de un cambio de cuentas. Los importes son los de la fecha del asiento. */
+export interface BienCambiado {
+  id_inmovilizado: number
+  descripcion: string
+  es_mejora: boolean
+  /** Distinto de 0: no se pidió, va con ese bien por estar en su misma cuenta. */
+  con_su_bien: number
+  valor_adquisicion: Decimal
+  amortizado: Decimal
+  cuenta_activo: string
+  cuenta_amortizacion: string
+  cuenta_gasto: string
+  nueva_cuenta_activo: string
+  nueva_cuenta_amortizacion: string
+  nueva_cuenta_gasto: string
+  dotaciones_posteriores: { ejercicio: number; periodo: string; importe: number; cuenta: string }[]
+  /** False: no hay saldo que mover y su ficha cambia en el acto. */
+  con_asiento: boolean
+}
+
+export interface LineaDeTraslado {
+  cuenta: string
+  debe: Decimal
+  haber: Decimal
+  concepto: string
+  id_inmovilizado: number
+}
+
+export interface ResultadoDeCambiarCuentas {
+  simulado: boolean
+  solo_fichas: boolean
+  fecha: string
+  ejercicio: number
+  /** Borrador creado. 0 si no hace falta asiento o se simuló. */
+  id_borrador: number
+  asiento: number
+  bienes: BienCambiado[]
+  lineas: LineaDeTraslado[]
+  total_debe: Decimal
+  total_haber: Decimal
+  fichas_cambiadas: number[]
+  avisos: string[]
+}
+
+export interface PeticionCambiarCuentas {
+  ids: number[]
+  cuenta_activo: string
+  cuenta_amortizacion: string
+  cuenta_gasto: string
+  /** AAAA-MM-DD. */
+  fecha: string
+  simular: boolean
+  solo_fichas: boolean
+}
+
+/**
+ * Cambia las cuentas de uno o varios bienes. Nivel `apuntes`. Con `simular`
+ * no escribe nada y devuelve el asiento propuesto. Sin él, deja el asiento en
+ * **borrador**: las fichas cambian cuando el contable lo confirma en el diario.
+ * Con `solo_fichas` cambia las fichas en el acto, sin asiento.
+ *
+ * Es la única vía para cambiar la cuenta del activo o de la amortización de un
+ * bien que ya tiene dotaciones.
+ */
+export async function cambiarCuentas(
+  datos: PeticionCambiarCuentas,
+): Promise<ResultadoDeCambiarCuentas> {
+  const { ids, ...resto } = datos
+  const salida = await pedir<
+    Omit<
+      ResultadoDeCambiarCuentas,
+      'total_debe' | 'total_haber' | 'lineas' | 'bienes'
+    > & {
+      total_debe: number
+      total_haber: number
+      lineas: (Omit<LineaDeTraslado, 'debe' | 'haber'> & { debe: number; haber: number })[]
+      bienes: (Omit<BienCambiado, 'valor_adquisicion' | 'amortizado'> & {
+        valor_adquisicion: number
+        amortizado: number
+      })[]
+    }
+  >('/contabilidad/inmovilizado/cambiar_cuentas', {
+    bienes: ids.map((id) => ({ id_inmovilizado: id })),
+    ...resto,
+  })
+  return {
+    ...salida,
+    total_debe: aDecimal(salida.total_debe),
+    total_haber: aDecimal(salida.total_haber),
+    lineas: salida.lineas.map((l) => ({ ...l, debe: aDecimal(l.debe), haber: aDecimal(l.haber) })),
+    bienes: salida.bienes.map((b) => ({
+      ...b,
+      valor_adquisicion: aDecimal(b.valor_adquisicion),
+      amortizado: aDecimal(b.amortizado),
     })),
   }
 }

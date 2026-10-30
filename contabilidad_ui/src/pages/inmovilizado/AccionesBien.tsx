@@ -1,6 +1,7 @@
 import { ActionIcon, Menu } from '@mantine/core'
 import {
   IconArchiveOff,
+  IconArrowsExchange,
   IconCurrencyEuro,
   IconDots,
   IconPencil,
@@ -12,6 +13,7 @@ import type { Bien } from '../../api/inmovilizado'
 export interface AccionesDeBien {
   alCorregir: (bien: Bien) => void
   alCorregirValor: (bien: Bien) => void
+  alCambiarCuentas: (bien: Bien) => void
   alAnadirMejora: (bien: Bien) => void
   alDejarDeAmortizar: (bien: Bien) => void
   alDarDeBaja: (bien: Bien) => void
@@ -58,6 +60,14 @@ export default function AccionesBien({
             onClick={() => acciones.alCorregirValor(bien)}
           >
             Corregir el valor…
+          </Menu.Item>
+        )}
+        {!bien.traslado_pendiente && (
+          <Menu.Item
+            leftSection={<IconArrowsExchange size={14} />}
+            onClick={() => acciones.alCambiarCuentas(bien)}
+          >
+            Cambiar cuentas…
           </Menu.Item>
         )}
         {!bien.es_mejora && (

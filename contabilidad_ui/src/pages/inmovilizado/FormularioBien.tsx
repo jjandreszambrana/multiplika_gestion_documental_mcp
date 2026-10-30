@@ -1,9 +1,10 @@
-import { ActionIcon, Alert, Checkbox, Group, Select, Stack, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Alert, Button, Checkbox, ColorSwatch, Group, Select, Stack, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
 import { IconBook } from '@tabler/icons-react'
 import { useMemo, useState } from 'react'
 import type { TablaDeAmortizacion } from '../../api/inmovilizado'
 import CasillaDeCuenta from '../../components/CasillaDeCuenta'
 import { CasillaFecha } from '../../components/CasillaFecha'
+import { COLORES_DE_BIEN } from '../../lib/coloresBien'
 import { expandirCuenta } from '../../lib/cuenta'
 import { soloImporte } from '../../lib/dinero'
 import ModalMayor from '../informes/ModalMayor'
@@ -26,6 +27,8 @@ export interface DatosBien {
   cuentaActivo: string
   cuentaAmortizacion: string
   cuentaGasto: string
+  /** 0 = sin color; 1 a 10, uno de los de `COLORES_DE_BIEN`. */
+  color: number
 }
 
 export const BIEN_EN_BLANCO: DatosBien = {
@@ -42,6 +45,7 @@ export const BIEN_EN_BLANCO: DatosBien = {
   cuentaActivo: '',
   cuentaAmortizacion: '',
   cuentaGasto: '',
+  color: 0,
 }
 
 interface Props {
@@ -296,6 +300,39 @@ export default function FormularioBien({
         <Text size="xs" c="dimmed">
           Si las dejas vacías se usan las de la configuración de la empresa.
         </Text>
+      </Stack>
+
+      <Stack gap={4}>
+        <Text size="sm" fw={500}>
+          Color para destacarlo en la lista
+        </Text>
+        <Group gap="xs">
+          <Button
+            size="compact-xs"
+            variant={datos.color === 0 ? 'filled' : 'default'}
+            onClick={() => cambiar('color', 0)}
+          >
+            Sin color
+          </Button>
+          {COLORES_DE_BIEN.map((c) => (
+            <Tooltip key={c.numero} label={c.nombre}>
+              <ColorSwatch
+                component="button"
+                type="button"
+                size={22}
+                color={`var(--mantine-color-${c.mantine}-6)`}
+                aria-label={c.nombre}
+                aria-pressed={datos.color === c.numero}
+                onClick={() => cambiar('color', c.numero)}
+                style={{
+                  cursor: 'pointer',
+                  outline: datos.color === c.numero ? '2px solid var(--mantine-color-dark-4)' : 'none',
+                  outlineOffset: 2,
+                }}
+              />
+            </Tooltip>
+          ))}
+        </Group>
       </Stack>
 
       <Textarea
