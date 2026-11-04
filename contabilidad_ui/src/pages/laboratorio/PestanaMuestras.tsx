@@ -1,11 +1,12 @@
-import { Alert, Box, Badge, Button, Group, Pagination, Select, Stack, Table, Text, TextInput } from '@mantine/core'
+import { Alert, Box, Badge, Button, Checkbox, Group, Pagination, Select, Stack, Table, Text, TextInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useState } from 'react'
-import { listarCatalogo, listarClientes, listarMuestras } from '../../api/laboratorio'
+import { crearLinea, crearMuestra, listarCatalogo, listarClientes, listarMuestras, obtenerMuestra, type DatosMuestra } from '../../api/laboratorio'
 import { CasillaFecha } from '../../components/CasillaFecha'
 import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearFecha } from '../../lib/format'
 import { FILAS_POR_PAGINA, importeLab, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
+import Confirmar from './Confirmar'
 import FichaMuestra from './FichaMuestra'
 import FormularioMuestra from './FormularioMuestra'
 
@@ -20,6 +21,9 @@ export default function PestanaMuestras() {
   const [pagina, setPagina] = useState(1)
   const [abierta, setAbierta] = useState<number | null>(null)
   const [nueva, setNueva] = useState(false)
+  const [marcadas, setMarcadas] = useState<ReadonlySet<number>>(new Set())
+  const [duplicando, setDuplicando] = useState(false)
+  const [hecho, setHecho] = useState<string | null>(null)
 
   const clientes = useCarga(listarClientes, [])
   const estados = useCarga(() => listarCatalogo('estados'), [])
@@ -42,6 +46,60 @@ export default function PestanaMuestras() {
   const filtrar = <T,>(poner: (v: T) => void) => (v: T) => {
     poner(v)
     setPagina(1)
+  }
+
+  const registros = lista.datos?.registros ?? []
+  const todasMarcadas = registros.length > 0 && registros.every((m) => marcadas.has(m.id))
+  const marcar = (ids: number[], poner: boolean) =>
+    setMarcadas((a) => {
+      const n = new Set(a)
+      ids.forEach((id) => (poner ? n.add(id) : n.delete(id)))
+      return n
+    })
+
+  /** Copia los datos y los parámetros de cada muestra marcada; los resultados quedan en blanco. */
+  async function duplicar() {
+    let hechas = 0
+    for (const id of [...marcadas]) {
+      const o = await obtenerMuestra(id)
+      const datos: DatosMuestra = {
+        id_receptor: o.id_receptor,
+        cliente_nif: o.cliente_nif,
+        cliente_nombre: o.id_receptor ? null : o.cliente_nombre,
+        cliente_direccion: o.cliente_direccion,
+        cliente_localidad: o.cliente_localidad,
+        cliente_codigo_postal: o.cliente_codigo_postal,
+        cliente_provincia: o.cliente_provincia,
+        fecha_toma: o.fecha_toma,
+        fecha_entrada: o.fecha_entrada,
+        fecha_prevista: o.fecha_prevista,
+        referencia: o.referencia,
+        punto_toma: o.punto_toma,
+        normativa: o.normativa,
+        observaciones: o.observaciones,
+        descripcion_servicio: o.descripcion_servicio,
+        id_laboratorio_externo: o.id_laboratorio_externo,
+        codigo_analisis_externo: o.codigo_analisis_externo,
+        id_tarifa: o.id_tarifa,
+        importe_neto: o.importe_neto === null || o.importe_neto === '' ? null : Number(o.importe_neto),
+      }
+      const copia = await crearMuestra(datos)
+      for (const l of o.lineas) {
+        await crearLinea(copia.id, {
+          id_parametro: l.id_parametro,
+          grupo: l.grupo,
+          parametro: l.parametro,
+          unidad: l.unidad,
+          metodo: l.metodo,
+          limite: l.limite,
+          marca: l.marca,
+        })
+      }
+      hechas += 1
+    }
+    setMarcadas(new Set())
+    setHecho(`${hechas === 1 ? 'Se ha duplicado 1 muestra' : `Se han duplicado ${hechas} muestras`}, con sus parámetros y sin resultados.`)
+    lista.recargar()
   }
 
   const total = lista.datos?.total ?? 0
@@ -90,18 +148,28 @@ export default function PestanaMuestras() {
           clearable
           w={150}
         />
-        <Button onClick={() => setNueva(true)} ml="auto">
-          Nueva muestra
+        <Button variant="light" onClick={() => setDuplicando(true)} disabled={marcadas.size === 0} ml="auto">
+          {`Duplicar${marcadas.size ? ` (${marcadas.size})` : ''}`}
         </Button>
+        <Button onClick={() => setNueva(true)}>Nueva muestra</Button>
       </Group>
 
       {lista.error && <Alert color="red">{lista.error}</Alert>}
+      {hecho && <Alert color="teal" withCloseButton onClose={() => setHecho(null)}>{hecho}</Alert>}
 
       <Box style={CUERPO_SCROLL}>
           <Table stickyHeader>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Nº</Table.Th>
+              <Table.Th w={40}>
+              <Checkbox
+                aria-label="Marcar todas las de esta página"
+                checked={todasMarcadas}
+                indeterminate={!todasMarcadas && registros.some((m) => marcadas.has(m.id))}
+                onChange={(e) => marcar(registros.map((m) => m.id), e.currentTarget.checked)}
+              />
+            </Table.Th>
+            <Table.Th>Nº</Table.Th>
               <Table.Th>Cliente</Table.Th>
               <Table.Th>Referencia</Table.Th>
               <Table.Th>Punto de toma</Table.Th>
@@ -112,9 +180,16 @@ export default function PestanaMuestras() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {(lista.datos?.registros ?? []).map((m) => (
+            {registros.map((m) => (
               <Table.Tr key={m.id} onClick={() => setAbierta(m.id)} style={{ cursor: 'pointer', backgroundColor: m.color_estado || undefined, color: m.color_estado ? '#212529' : undefined }}>
-                <Table.Td>{m.numero_entrada}</Table.Td>
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  aria-label={`Marcar la muestra ${m.numero_entrada}`}
+                  checked={marcadas.has(m.id)}
+                  onChange={(e) => marcar([m.id], e.currentTarget.checked)}
+                />
+              </Table.Td>
+              <Table.Td>{m.numero_entrada}</Table.Td>
                 <Table.Td>{m.cliente_nombre}</Table.Td>
                 <Table.Td>{m.referencia}</Table.Td>
                 <Table.Td>{m.punto_toma}</Table.Td>
@@ -137,6 +212,15 @@ export default function PestanaMuestras() {
         <Pagination value={pagina} onChange={setPagina} total={paginas} />
       </Group>
 
+      {duplicando && (
+        <Confirmar
+          titulo="Duplicar muestras"
+          texto={`Se crearán ${marcadas.size} muestras nuevas con los mismos datos y parámetros, sin resultados.`}
+          etiqueta="Duplicar"
+          alConfirmar={duplicar}
+          alCerrar={() => setDuplicando(false)}
+        />
+      )}
       {abierta !== null && (
         <FichaMuestra id={abierta} alCerrar={() => setAbierta(null)} alCambiar={lista.recargar} />
       )}
