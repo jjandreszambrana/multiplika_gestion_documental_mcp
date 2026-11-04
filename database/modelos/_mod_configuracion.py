@@ -29,15 +29,9 @@ class ConfiguracionCRUD(AsyncCrudBase):
         fila = await self.obtener(1)
         return bool(fila and fila["modulo_contable"])
 
-    async def actualizar_modulo_contable(self, activo: bool) -> None:
-        await self.update(1, {"modulo_contable": activo})
-
     async def obtener_modulo_laboratorio(self) -> bool:
         fila = await self.obtener(1)
         return bool(fila and fila["modulo_laboratorio"])
-
-    async def actualizar_modulo_laboratorio(self, activo: bool) -> None:
-        await self.update(1, {"modulo_laboratorio": activo})
 
     async def obtener_email_avisos(self) -> str | None:
         fila = await self.obtener(1)

@@ -83,8 +83,6 @@ ACCIONES_PANEL = {
     "crear_compartido_endpoint": ("compartió por enlace el documento", "documento", "id_documento"),
     "anular_compartido_endpoint": ("anuló el enlace compartido", "compartido", "id_compartido"),
     "actualizar_configuracion_avisos": ("cambió la configuración de avisos de caducidad", None, None),
-    "actualizar_modulo_contable": ("activó o desactivó el asesor contable", None, None),
-    "actualizar_modulo_laboratorio": ("activó o desactivó el laboratorio", None, None),
     "anadir_acceso_sif": ("añadió un acceso suyo a la contabilidad del SIF", None, None),
     "actualizar_acceso_sif": ("actualizó las empresas de un acceso suyo al SIF", None, None),
     "revision_acceso_sif": ("cambió la revisión nocturna de un acceso suyo al SIF", None, None),

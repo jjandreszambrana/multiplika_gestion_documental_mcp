@@ -536,9 +536,8 @@ fiscal y financiero: antes de responder una duda consulta una biblioteca \
 de temas propia (plan contable, IVA, Impuesto sobre Sociedades, cierre, \
 análisis financiero, trabajo de asesoría...), escrita a partir de la \
 normativa oficial (BOE, ICAC, Agencia Tributaria) y con ejemplos de \
-asientos. Cita el tema y la norma en que se apoya. Lo activa el \
-administrador en Administración → "Contexto de negocio" → "Apartados de \
-esta gestión documental"; sin activar, ni sale en el menú ni la IA lo usa.
+asientos. Cita el tema y la norma en que se apoya. Lo activa el equipo \
+de Multiplika al contratarlo; sin activar, ni sale en el menú ni la IA lo usa.
 
 ### Pestañas
 
@@ -1006,9 +1005,6 @@ del panel: a qué se dedica tu empresa y cómo \
 quieres que se comporte contigo (tono, prioridades, cosas a evitar). \
 Cuanto más claro, mejor te ayuda. Para instrucciones de tareas concretas, \
 mejor "Reglas de la IA".
-
-En la misma pantalla, **Apartados de esta gestión documental**: los que se \
-activan o no en cada GD, como el asesor contable.
 
 ### Usuarios
 

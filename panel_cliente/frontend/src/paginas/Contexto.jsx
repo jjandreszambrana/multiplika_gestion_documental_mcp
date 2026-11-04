@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Switch, Text, Title, useComputedColorScheme } from "@mantine/core"
+import { Alert, Anchor, Badge, Button, Group, Paper, Stack, Text, Title, useComputedColorScheme } from "@mantine/core"
 import { IconArrowLeft } from "@tabler/icons-react"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
@@ -61,56 +61,7 @@ function CampoContexto({ titulo, ayuda, valorInicial, onGuardar }) {
   )
 }
 
-// Apartados opcionales de esta GD: aquí y no en su propia pantalla, para que
-// nadie los apague de un clic sin querer.
-function Apartados({ proyecto, onCambiarModulo }) {
-  const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState(null)
-  return (
-    <Paper withBorder p="md" mb="lg">
-      <Stack gap="xs">
-        <Title order={4}>Apartados de esta gestión documental</Title>
-        {error && <Alert color="red">{error}</Alert>}
-        <Switch
-          id="apartado-asesor-contable"
-          label="Asesor contable"
-          description="La IA trabaja como asesor contable y fiscal con su biblioteca, y cada usuario puede conectar su contabilidad del SIF."
-          checked={!!proyecto.modulo_contable}
-          disabled={guardando}
-          onChange={(e) => {
-            const activo = e.currentTarget.checked
-            setGuardando(true)
-            setError(null)
-            api
-              .actualizarModuloContable(proyecto.id, activo)
-              .then(() => onCambiarModulo({ modulo_contable: activo }))
-              .catch((err) => setError(err.message))
-              .finally(() => setGuardando(false))
-          }}
-        />
-        <Switch
-          id="apartado-laboratorio"
-          label="Laboratorio"
-          description="Muestras, resultados, informes en PDF, facturación y portal de clientes, sobre el SIF. No depende del asesor contable."
-          checked={!!proyecto.modulo_laboratorio}
-          disabled={guardando}
-          onChange={(e) => {
-            const activo = e.currentTarget.checked
-            setGuardando(true)
-            setError(null)
-            api
-              .actualizarModuloLaboratorio(proyecto.id, activo)
-              .then(() => onCambiarModulo({ modulo_laboratorio: activo }))
-              .catch((err) => setError(err.message))
-              .finally(() => setGuardando(false))
-          }}
-        />
-      </Stack>
-    </Paper>
-  )
-}
-
-export default function Contexto({ proyecto, onVolver, onCambiarModulo }) {
+export default function Contexto({ proyecto, onVolver }) {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -148,7 +99,6 @@ export default function Contexto({ proyecto, onVolver, onCambiarModulo }) {
           {error}
         </Alert>
       )}
-      <Apartados proyecto={proyecto} onCambiarModulo={onCambiarModulo} />
       {cargando ? (
         <Text>Cargando...</Text>
       ) : (

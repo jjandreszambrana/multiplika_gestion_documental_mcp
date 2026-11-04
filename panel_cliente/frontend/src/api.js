@@ -179,10 +179,6 @@ export const api = {
   obtenerAyuda: () => peticion(BASE_CLIENTE, "GET", "/ayuda"),
   obtenerSeccionAyuda: (idSeccion) => peticion(BASE_CLIENTE, "GET", `/ayuda/${idSeccion}`),
 
-  actualizarModuloContable: (idProyecto, activo) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/contabilidad/modulo`, { activo }),
-  actualizarModuloLaboratorio: (idProyecto, activo) =>
-    peticion(BASE_CLIENTE, "PUT", `/proyectos/${idProyecto}/laboratorio/modulo`, { activo }),
   inicioPanel: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/inicio`),
   arbolContable: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/arbol`),
   buscarTemasContables: (idProyecto, texto) =>

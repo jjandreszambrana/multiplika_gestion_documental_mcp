@@ -455,7 +455,6 @@ export default function App() {
           ) : vista === "contexto" ? (
             <Contexto
               proyecto={proyecto} onVolver={() => navegar("inicio")}
-              onCambiarModulo={(cambio) => setProyecto({ ...proyecto, ...cambio })}
             />
           ) : vista === "credenciales" ? (
             <Credenciales proyecto={proyecto} onVolver={() => navegar("inicio")} />

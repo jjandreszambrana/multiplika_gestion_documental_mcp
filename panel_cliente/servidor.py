@@ -272,11 +272,7 @@ async def ver_proyecto(
 
 # --- Asesor contable (ver docs/contabilidad/planificacion.md, fase 1). La
 # biblioteca es la misma para todos los clientes (database/biblioteca_contable.py);
-# solo se sirve en las GD con el apartado activado. Activarlo es cosa del admin.
-
-
-class ActualizarModuloContable(BaseModel):
-    activo: bool
+# solo se sirve en las GD con el apartado activado. Lo activa el superadmin desde el panel de administración.
 
 
 async def biblioteca_contable_disponible(proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> dict:
@@ -298,26 +294,6 @@ async def sif_disponible(proyecto: dict = Depends(proyecto_gestion_documental_ac
     if not (await config.obtener_modulo_contable() or await config.obtener_modulo_laboratorio()):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Esta gestión documental no tiene ningún módulo que use el SIF")
     return proyecto
-
-
-class ActualizarModuloLaboratorio(BaseModel):
-    activo: bool
-
-
-@app.put("/v1/proyectos/{id_proyecto}/laboratorio/modulo")
-async def actualizar_modulo_laboratorio(
-    id_proyecto: int, datos: ActualizarModuloLaboratorio, proyecto: dict = Depends(admin_gestion_documental_actual)
-) -> dict:
-    await ConfiguracionCRUD(get_db_config(proyecto["id"])).actualizar_modulo_laboratorio(datos.activo)
-    return {"activo": datos.activo}
-
-
-@app.put("/v1/proyectos/{id_proyecto}/contabilidad/modulo")
-async def actualizar_modulo_contable(
-    id_proyecto: int, datos: ActualizarModuloContable, proyecto: dict = Depends(admin_gestion_documental_actual)
-) -> dict:
-    await ConfiguracionCRUD(get_db_config(proyecto["id"])).actualizar_modulo_contable(datos.activo)
-    return {"activo": datos.activo}
 
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/arbol")
