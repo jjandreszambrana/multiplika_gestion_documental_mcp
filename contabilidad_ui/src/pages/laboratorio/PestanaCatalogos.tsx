@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, ColorInput, Group, Modal, NumberInput, Select, Stack, Switch, Table, Text, Textarea, TextInput } from '@mantine/core'
+import { Alert, Box, Badge, Button, ColorInput, Group, Modal, NumberInput, Select, Stack, Switch, Table, Text, Textarea, TextInput } from '@mantine/core'
 import { Fragment, useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import {
@@ -11,7 +11,7 @@ import {
   type Opcion,
 } from '../../api/laboratorio'
 import { CATALOGOS, type Catalogo, type CampoCatalogo, type Origen } from './catalogos'
-import { importeLab, useCarga } from './comun'
+import { importeLab, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
 import Confirmar from './Confirmar'
 
 type Opciones = Record<string, Opcion[]>
@@ -56,7 +56,7 @@ export default function PestanaCatalogos() {
   const columnas = catalogo.columnas.map((k) => catalogo.campos.find((c) => c.clave === k)!)
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={PESTANA_FIJA}>
       <Group align="flex-end">
         <Select
           label="Catálogo"
@@ -73,32 +73,34 @@ export default function PestanaCatalogos() {
 
       {(filas.error || opciones.error) && <Alert color="red">{filas.error ?? opciones.error}</Alert>}
 
-      <Table highlightOnHover stickyHeader>
-        <Table.Thead>
-          <Table.Tr>
-            {columnas.map((c) => (
-              <Table.Th key={c.clave}>{c.etiqueta}</Table.Th>
-            ))}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {(filas.datos ?? []).map((f) => (
-            <Table.Tr key={f.id} onClick={() => setEdicion(f)} style={{ cursor: 'pointer' }}>
+      <Box style={CUERPO_SCROLL}>
+          <Table highlightOnHover stickyHeader>
+          <Table.Thead>
+            <Table.Tr>
               {columnas.map((c) => (
-                <Table.Td key={c.clave}>
-                  {c.clave === 'activo' && !Number(f.activo) ? (
-                    <Badge color="gray">Sin uso</Badge>
-                  ) : c.tipo === 'color' ? (
-                    f[c.clave] ? <Badge style={{ backgroundColor: String(f[c.clave]), color: '#212529' }}>{String(f[c.clave])}</Badge> : null
-                  ) : (
-                    textoDe(c, f, opciones.datos ?? {})
-                  )}
-                </Table.Td>
+                <Table.Th key={c.clave}>{c.etiqueta}</Table.Th>
               ))}
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {(filas.datos ?? []).map((f) => (
+              <Table.Tr key={f.id} onClick={() => setEdicion(f)} style={{ cursor: 'pointer' }}>
+                {columnas.map((c) => (
+                  <Table.Td key={c.clave}>
+                    {c.clave === 'activo' && !Number(f.activo) ? (
+                      <Badge color="gray">Sin uso</Badge>
+                    ) : c.tipo === 'color' ? (
+                      f[c.clave] ? <Badge style={{ backgroundColor: String(f[c.clave]), color: '#212529' }}>{String(f[c.clave])}</Badge> : null
+                    ) : (
+                      textoDe(c, f, opciones.datos ?? {})
+                    )}
+                  </Table.Td>
+                ))}
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Box>
       {!filas.cargando && filas.datos?.length === 0 && <Text c="dimmed">Todavía no hay nada en este catálogo.</Text>}
 
       {edicion !== null && (

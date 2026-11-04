@@ -42,7 +42,7 @@ export default function Laboratorio({ proyecto, onVerAccesos }) {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
       <Group justify="space-between" wrap="nowrap" p={4} style={{ borderRadius: "var(--mantine-radius-sm)", background: fondoEmpresa(empresa.id_empresa) }}>
         <Title order={4}>Laboratorio</Title>
         {empresas.length > 1 && <SelectorEmpresa empresas={empresas} value={idEmpresa} onChange={setIdEmpresa} />}

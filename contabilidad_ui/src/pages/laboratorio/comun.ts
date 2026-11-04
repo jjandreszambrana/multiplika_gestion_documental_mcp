@@ -50,3 +50,9 @@ export function useCarga<T>(cargar: () => Promise<T>, dependencias: readonly unk
   const recargar = useCallback(() => setVuelta((n) => n + 1), [])
   return { datos, error, cargando, recargar }
 }
+
+/** La pestaña ocupa el alto que le deja el marco: sus filtros y su pie se quedan fijos. */
+export const PESTANA_FIJA = { flex: 1, minHeight: 0 } as const
+
+/** Lo único que se desplaza en una pestaña: la tabla, con su cabecera pegada arriba. */
+export const CUERPO_SCROLL = { flex: 1, minHeight: 0, overflow: 'auto' } as const

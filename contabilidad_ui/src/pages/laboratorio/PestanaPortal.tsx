@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, CopyButton, Group, Modal, Select, Stack, Table, Text, TextInput } from '@mantine/core'
+import { Alert, Box, Badge, Button, CopyButton, Group, Modal, Select, Stack, Table, Text, TextInput } from '@mantine/core'
 import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import {
@@ -11,7 +11,7 @@ import {
   type UsuarioConClave,
   type UsuarioPortal,
 } from '../../api/laboratorio'
-import { fechaHora, useCarga } from './comun'
+import { fechaHora, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
 import Confirmar from './Confirmar'
 
 /** Quién del cliente puede entrar al portal a ver sus informes, y con qué clave. */
@@ -37,7 +37,7 @@ export default function PestanaPortal() {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={PESTANA_FIJA}>
       <Group align="flex-end">
         <Select label="Cliente" data={clientes.datos ?? []} value={cliente} onChange={setCliente} searchable clearable placeholder="Todos" w={320} />
         <Button ml="auto" onClick={() => setNuevo(true)}>
@@ -47,44 +47,46 @@ export default function PestanaPortal() {
 
       {(error || usuarios.error) && <Alert color="red">{error ?? usuarios.error}</Alert>}
 
-      <Table highlightOnHover stickyHeader>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Cliente</Table.Th>
-            <Table.Th>Usuario</Table.Th>
-            <Table.Th>Nombre</Table.Th>
-            <Table.Th>Último acceso</Table.Th>
-            <Table.Th>Estado</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {(usuarios.datos ?? []).map((u) => (
-            <Table.Tr key={u.id}>
-              <Table.Td>{nombreDe(u.id_receptor)}</Table.Td>
-              <Table.Td>{u.usuario}</Table.Td>
-              <Table.Td>{u.nombre}</Table.Td>
-              <Table.Td>{fechaHora(u.ultimo_acceso)}</Table.Td>
-              <Table.Td>
-                {u.activo ? u.debe_cambiar_clave ? <Badge color="yellow">Aún no ha cambiado la clave</Badge> : <Badge color="teal">Activo</Badge> : <Badge color="gray">Desactivado</Badge>}
-              </Table.Td>
-              <Table.Td>
-                <Group gap="xs" wrap="nowrap" justify="flex-end">
-                  <Button size="compact-xs" variant="light" onClick={() => void hacer(async () => setConClave(await restablecerClavePortal(u.id)))}>
-                    Nueva clave
-                  </Button>
-                  <Button size="compact-xs" variant="light" onClick={() => void hacer(() => cambiarActivoUsuarioPortal(u.id, !u.activo))}>
-                    {u.activo ? 'Desactivar' : 'Activar'}
-                  </Button>
-                  <Button size="compact-xs" variant="light" color="red" onClick={() => setBorrar(u)}>
-                    Eliminar
-                  </Button>
-                </Group>
-              </Table.Td>
+      <Box style={CUERPO_SCROLL}>
+          <Table highlightOnHover stickyHeader>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Cliente</Table.Th>
+              <Table.Th>Usuario</Table.Th>
+              <Table.Th>Nombre</Table.Th>
+              <Table.Th>Último acceso</Table.Th>
+              <Table.Th>Estado</Table.Th>
+              <Table.Th />
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {(usuarios.datos ?? []).map((u) => (
+              <Table.Tr key={u.id}>
+                <Table.Td>{nombreDe(u.id_receptor)}</Table.Td>
+                <Table.Td>{u.usuario}</Table.Td>
+                <Table.Td>{u.nombre}</Table.Td>
+                <Table.Td>{fechaHora(u.ultimo_acceso)}</Table.Td>
+                <Table.Td>
+                  {u.activo ? u.debe_cambiar_clave ? <Badge color="yellow">Aún no ha cambiado la clave</Badge> : <Badge color="teal">Activo</Badge> : <Badge color="gray">Desactivado</Badge>}
+                </Table.Td>
+                <Table.Td>
+                  <Group gap="xs" wrap="nowrap" justify="flex-end">
+                    <Button size="compact-xs" variant="light" onClick={() => void hacer(async () => setConClave(await restablecerClavePortal(u.id)))}>
+                      Nueva clave
+                    </Button>
+                    <Button size="compact-xs" variant="light" onClick={() => void hacer(() => cambiarActivoUsuarioPortal(u.id, !u.activo))}>
+                      {u.activo ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button size="compact-xs" variant="light" color="red" onClick={() => setBorrar(u)}>
+                      Eliminar
+                    </Button>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Box>
       {!usuarios.cargando && usuarios.datos?.length === 0 && <Text c="dimmed">Todavía no hay usuarios del portal.</Text>}
 
       {nuevo && (

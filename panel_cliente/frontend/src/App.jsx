@@ -382,6 +382,8 @@ export default function App() {
   const enConta = vista === "asesor-contable" && !idDocumentoActivo
   // Gestión SIF ocupa también toda la pantalla, con su propio menú
   const enErp = vista === "erp" && !idDocumentoActivo
+  // El laboratorio no desplaza toda la página: solo sus tablas, con filtros y cabeceras fijos
+  const enLab = vista === "laboratorio" && !idDocumentoActivo
   const pantallaContable = enConta
   const menuOculto = (pantallaContable || enErp) && !menuAbierto
 
@@ -436,8 +438,8 @@ export default function App() {
             </Container>
           </Box>
         )}
-        <Box h="100%" p={enErp ? "xs" : "xl"} hidden={enConta} style={{ overflowY: "auto" }}>
-        <Container size="lg" px={0} fluid={enErp}>
+        <Box h="100%" p={enErp ? "xs" : "xl"} hidden={enConta} style={enLab ? { overflow: "hidden", display: "flex", flexDirection: "column" } : { overflowY: "auto" }}>
+        <Container size="lg" px={0} fluid={enErp} style={enLab ? { flex: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column" } : undefined}>
           {idDocumentoActivo ? (
             <DocumentoDetalle
               proyecto={proyecto}

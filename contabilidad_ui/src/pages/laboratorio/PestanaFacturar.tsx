@@ -1,9 +1,9 @@
-import { Alert, Button, Checkbox, Group, Select, Stack, Table, Text } from '@mantine/core'
+import { Alert, Box, Button, Checkbox, Group, Select, Stack, Table, Text } from '@mantine/core'
 import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { crearAlbaran, listarClientes, listarSeries, muestrasPorFacturar } from '../../api/laboratorio'
 import { formatearFecha } from '../../lib/format'
-import { importeLab, useCarga } from './comun'
+import { importeLab, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
 
 /** Muestras con informe y tarifa que aún no se han facturado: se eligen y se crea un albarán. */
 export default function PestanaFacturar() {
@@ -49,7 +49,7 @@ export default function PestanaFacturar() {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={PESTANA_FIJA}>
       <Group align="flex-end" gap="md">
         <Select
           label="Cliente"
@@ -74,32 +74,34 @@ export default function PestanaFacturar() {
       {hecho && <Alert color="teal" withCloseButton onClose={() => setHecho(null)}>{hecho}</Alert>}
       {(error || pendientes.error) && <Alert color="red">{error ?? pendientes.error}</Alert>}
 
-      <Table highlightOnHover stickyHeader>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th w={40} />
-            <Table.Th>Nº</Table.Th>
-            <Table.Th>Cliente</Table.Th>
-            <Table.Th>Referencia</Table.Th>
-            <Table.Th>Informe</Table.Th>
-            <Table.Th ta="right">Importe</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {filas.map((m) => (
-            <Table.Tr key={m.id}>
-              <Table.Td>
-                <Checkbox aria-label={`Elegir la muestra ${m.numero_entrada}`} checked={elegidas.has(m.id)} onChange={(e) => alternar(m.id, e.currentTarget.checked)} />
-              </Table.Td>
-              <Table.Td>{m.numero_entrada}</Table.Td>
-              <Table.Td>{m.cliente_nombre}</Table.Td>
-              <Table.Td>{m.referencia}</Table.Td>
-              <Table.Td>{formatearFecha(m.fecha_informe)}</Table.Td>
-              <Table.Td ta="right">{importeLab(m.importe_neto)}</Table.Td>
+      <Box style={CUERPO_SCROLL}>
+          <Table highlightOnHover stickyHeader>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th w={40} />
+              <Table.Th>Nº</Table.Th>
+              <Table.Th>Cliente</Table.Th>
+              <Table.Th>Referencia</Table.Th>
+              <Table.Th>Informe</Table.Th>
+              <Table.Th ta="right">Importe</Table.Th>
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {filas.map((m) => (
+              <Table.Tr key={m.id}>
+                <Table.Td>
+                  <Checkbox aria-label={`Elegir la muestra ${m.numero_entrada}`} checked={elegidas.has(m.id)} onChange={(e) => alternar(m.id, e.currentTarget.checked)} />
+                </Table.Td>
+                <Table.Td>{m.numero_entrada}</Table.Td>
+                <Table.Td>{m.cliente_nombre}</Table.Td>
+                <Table.Td>{m.referencia}</Table.Td>
+                <Table.Td>{formatearFecha(m.fecha_informe)}</Table.Td>
+                <Table.Td ta="right">{importeLab(m.importe_neto)}</Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Box>
       {!pendientes.cargando && filas.length === 0 && <Text c="dimmed">No hay muestras pendientes de facturar.</Text>}
     </Stack>
   )

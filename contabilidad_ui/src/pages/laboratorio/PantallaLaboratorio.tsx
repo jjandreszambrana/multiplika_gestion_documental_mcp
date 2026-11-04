@@ -2,10 +2,13 @@ import { Alert, Button, Stack, Tabs, Text, Title } from '@mantine/core'
 import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { activarLaboratorio, type EstadoLaboratorio } from '../../api/laboratorio'
+import { PESTANA_FIJA } from './comun'
 import PestanaCatalogos from './PestanaCatalogos'
 import PestanaFacturar from './PestanaFacturar'
 import PestanaMuestras from './PestanaMuestras'
 import PestanaPortal from './PestanaPortal'
+
+const PANEL_FIJO = { ...PESTANA_FIJA, display: 'flex', flexDirection: 'column' } as const
 
 interface Props {
   estado: EstadoLaboratorio
@@ -47,25 +50,25 @@ export default function PantallaLaboratorio({ estado, alActivado }: Props) {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={PESTANA_FIJA}>
       <Title order={3}>Laboratorio</Title>
-      <Tabs defaultValue="muestras" keepMounted={false}>
+      <Tabs defaultValue="muestras" keepMounted={false} style={{ ...PESTANA_FIJA, display: 'flex', flexDirection: 'column' }}>
         <Tabs.List>
           <Tabs.Tab value="muestras">Muestras</Tabs.Tab>
           <Tabs.Tab value="facturar">Facturar</Tabs.Tab>
           <Tabs.Tab value="catalogos">Catálogos</Tabs.Tab>
           <Tabs.Tab value="portal">Portal de clientes</Tabs.Tab>
         </Tabs.List>
-        <Tabs.Panel value="muestras" pt="md">
+        <Tabs.Panel value="muestras" pt="md" style={PANEL_FIJO}>
           <PestanaMuestras />
         </Tabs.Panel>
-        <Tabs.Panel value="facturar" pt="md">
+        <Tabs.Panel value="facturar" pt="md" style={PANEL_FIJO}>
           <PestanaFacturar />
         </Tabs.Panel>
-        <Tabs.Panel value="catalogos" pt="md">
+        <Tabs.Panel value="catalogos" pt="md" style={PANEL_FIJO}>
           <PestanaCatalogos />
         </Tabs.Panel>
-        <Tabs.Panel value="portal" pt="md">
+        <Tabs.Panel value="portal" pt="md" style={PANEL_FIJO}>
           <PestanaPortal />
         </Tabs.Panel>
       </Tabs>
