@@ -3,13 +3,14 @@ import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { activarLaboratorio, type EstadoLaboratorio } from '../../api/laboratorio'
 import { PESTANA_FIJA } from './comun'
+import PestanaContratos from './PestanaContratos'
 import PestanaCatalogos from './PestanaCatalogos'
 import PestanaFacturar from './PestanaFacturar'
 import PestanaMuestras from './PestanaMuestras'
 import PestanaPortal from './PestanaPortal'
 
 interface Props {
-  /** Qué pantalla enseñar: muestras, facturar, catalogos o portal. */
+  /** Qué pantalla enseñar: muestras, facturar, contratos, catalogos o portal. */
   seccion: string
   estado: EstadoLaboratorio
   /** Tras activarlo, para que el marco vuelva a preguntar. */
@@ -54,6 +55,8 @@ export default function PantallaLaboratorio({ seccion, estado, alActivado }: Pro
     <Stack gap="md" style={PESTANA_FIJA}>
       {seccion === 'facturar' ? (
         <PestanaFacturar />
+      ) : seccion === 'contratos' ? (
+        <PestanaContratos />
       ) : seccion === 'catalogos' ? (
         <PestanaCatalogos />
       ) : seccion === 'portal' ? (

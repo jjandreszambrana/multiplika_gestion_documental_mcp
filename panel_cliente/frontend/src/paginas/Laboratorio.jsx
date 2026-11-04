@@ -13,6 +13,7 @@ const ANCHO_MENU = 220
 const OPCIONES = [
   { id: "muestras", titulo: "Muestras" },
   { id: "facturar", titulo: "Facturar" },
+  { id: "contratos", titulo: "Contratos" },
   { id: "catalogos", titulo: "Catálogos" },
   { id: "portal", titulo: "Portal de clientes" },
 ]

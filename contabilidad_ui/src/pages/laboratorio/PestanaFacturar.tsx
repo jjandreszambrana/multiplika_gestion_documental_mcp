@@ -1,11 +1,11 @@
 import { Alert, Box, Button, Checkbox, Group, Select, Stack, Table, Text } from '@mantine/core'
 import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
-import { crearAlbaran, listarClientes, listarSeries, muestrasPorFacturar } from '../../api/laboratorio'
+import { crearBorrador, listarClientes, listarSeries, muestrasPorFacturar } from '../../api/laboratorio'
 import { formatearFecha } from '../../lib/format'
 import { importeLab, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
 
-/** Muestras con informe y tarifa que aún no se han facturado: se eligen y se crea un albarán. */
+/** Muestras con informe y tarifa que aún no se han facturado: se eligen y se crea un borrador de factura. */
 export default function PestanaFacturar() {
   const [cliente, setCliente] = useState<string | null>(null)
   const [serie, setSerie] = useState<string | null>(null)
@@ -37,8 +37,8 @@ export default function PestanaFacturar() {
     setError(null)
     setHecho(null)
     try {
-      const r = await crearAlbaran([...elegidas], Number(serie))
-      setHecho(`Albarán creado con ${r.muestras} muestras, por ${importeLab(r.importe_neto)}. Se factura desde los albaranes, como siempre.`)
+      const r = await crearBorrador([...elegidas], Number(serie))
+      setHecho(`Borrador de factura creado con ${r.muestras} muestras, por ${importeLab(r.importe_neto)}. Revísalo y apruébalo en los borradores de factura.`)
       setElegidas(new Set())
       pendientes.recargar()
     } catch (fallo) {
@@ -64,13 +64,13 @@ export default function PestanaFacturar() {
           placeholder="Todos"
           w={300}
         />
-        <Select label="Serie del albarán" data={series.datos ?? []} value={serie} onChange={setSerie} searchable w={260} />
+        <Select label="Serie de la factura" data={series.datos ?? []} value={serie} onChange={setSerie} searchable w={260} />
         <Button onClick={() => void crear()} loading={creando} disabled={elegidas.size === 0 || mezcla || !serie}>
-          {`Crear albarán${elegidas.size ? ` (${elegidas.size})` : ''}`}
+          {`Crear borrador${elegidas.size ? ` (${elegidas.size})` : ''}`}
         </Button>
       </Group>
 
-      {mezcla && <Alert color="yellow">Un albarán es de un solo cliente: deja marcadas solo las muestras de uno.</Alert>}
+      {mezcla && <Alert color="yellow">Una factura es de un solo cliente: deja marcadas solo las muestras de uno.</Alert>}
       {hecho && <Alert color="teal" withCloseButton onClose={() => setHecho(null)}>{hecho}</Alert>}
       {(error || pendientes.error) && <Alert color="red">{error ?? pendientes.error}</Alert>}
 

@@ -16,6 +16,8 @@ import { useCarga } from './comun'
 interface Props {
   /** Nula para dar de alta. */
   muestra: Muestra | null
+  /** Alta desde el plan de muestreo de un contrato. */
+  idLineaContrato?: number
   alCerrar: () => void
   alGuardada: (muestra: Muestra) => void
 }
@@ -23,7 +25,7 @@ interface Props {
 /** Campos que la API guarda con hora (el resto va solo con fecha): a medianoche si solo se elige el día. */
 const CON_HORA = ['fecha_toma', 'fecha_entrada'] as const
 
-type Valores = Required<Omit<DatosMuestra, 'oculto' | 'fecha_informe' | 'id_laboratorio_externo' | 'id_tarifa' | 'id_receptor' | 'importe_neto'>> & {
+type Valores = Required<Omit<DatosMuestra, 'oculto' | 'id_linea_contrato' | 'fecha_informe' | 'id_laboratorio_externo' | 'id_tarifa' | 'id_receptor' | 'importe_neto'>> & {
   id_receptor: string | null
   id_tarifa: string | null
   id_laboratorio_externo: string | null
@@ -58,7 +60,7 @@ function inicialesDe(m: Muestra | null): Valores {
 }
 
 /** Alta y edición de los datos de una muestra. Los resultados se ponen en su ficha. */
-export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Props) {
+export default function FormularioMuestra({ muestra, idLineaContrato, alCerrar, alGuardada }: Props) {
   const inicial = inicialesDe(muestra)
   const [v, setV] = useState<Valores>(inicial)
   const [guardando, setGuardando] = useState(false)
@@ -104,7 +106,7 @@ export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Pro
     setError(null)
     try {
       const datos = cambios()
-      alGuardada(muestra ? await editarMuestra(muestra.id, datos) : await crearMuestra(datos))
+      alGuardada(muestra ? await editarMuestra(muestra.id, datos) : await crearMuestra(idLineaContrato ? { ...Object.fromEntries(Object.entries(datos).filter(([, x]) => x !== null)), id_linea_contrato: idLineaContrato } : datos))
     } catch (fallo) {
       setError(textoDeError(fallo))
       setGuardando(false)
@@ -114,6 +116,10 @@ export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Pro
   return (
     <Modal opened onClose={alCerrar} size="xl" title={muestra ? `Muestra ${muestra.numero_entrada}` : 'Nueva muestra'}>
       <Stack gap="sm">
+        {idLineaContrato ? (
+          <Alert color="blue">El cliente y la descripción del servicio se rellenan solos con los del contrato.</Alert>
+        ) : (
+          <>
         <Select
           label="Cliente"
           data={clientes.datos ?? []}
@@ -133,6 +139,8 @@ export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Pro
             <TextInput label="Provincia" {...texto_('cliente_provincia')} />
           </SimpleGrid>
         )}
+          </>
+        )}
         <SimpleGrid cols={3}>
           <CasillaFecha label="Fecha de toma" {...fecha('fecha_toma')} />
           <CasillaFecha label="Fecha de entrada" {...fecha('fecha_entrada')} />
@@ -144,7 +152,7 @@ export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Pro
         </SimpleGrid>
         <Textarea label="Normativa" autosize minRows={2} {...texto_('normativa')} />
         <Textarea label="Observaciones" autosize minRows={2} {...texto_('observaciones')} />
-        <Textarea label="Descripción del servicio" autosize minRows={2} {...texto_('descripcion_servicio')} />
+        {!idLineaContrato && <Textarea label="Descripción del servicio" autosize minRows={2} {...texto_('descripcion_servicio')} />}
         <SimpleGrid cols={3}>
           <Select
             label="Tarifa"

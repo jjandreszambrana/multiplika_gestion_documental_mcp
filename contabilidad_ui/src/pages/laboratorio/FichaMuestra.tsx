@@ -101,7 +101,7 @@ export default function FichaMuestra({ id, alCerrar, alCambiar }: Props) {
               {m.normativa && <Text size="sm">{m.normativa}</Text>}
               {m.observaciones && <Text size="sm">{m.observaciones}</Text>}
               {m.importe_neto !== null && m.importe_neto !== '' && <Text size="sm">{`Importe: ${importeLab(m.importe_neto)}`}</Text>}
-              {m.id_albaran && <Badge variant="light" color="teal">Facturada en un albarán</Badge>}
+              {m.id_borrador && <Badge variant="light" color="teal">En un borrador de factura</Badge>}
               {m.oculto ? <Badge color="gray">Oculta</Badge> : null}
             </Stack>
             <Group gap="xs">

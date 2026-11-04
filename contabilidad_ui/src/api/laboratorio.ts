@@ -81,7 +81,7 @@ export interface ResumenMuestra {
   color_estado?: string | null
   codigo_estado?: number
   importe_neto: number | string | null
-  id_albaran: number | null
+  id_borrador: number | null
   id_factura: number | null
   oculto: number
 }
@@ -147,6 +147,8 @@ export interface DatosMuestra {
   id_laboratorio_externo?: number | null
   codigo_analisis_externo?: string | null
   id_tarifa?: number | null
+  /** Línea de muestreo de un contrato: rellena sola el cliente y el servicio. */
+  id_linea_contrato?: number | null
   importe_neto?: number | null
   oculto?: number
 }
@@ -245,11 +247,156 @@ export async function muestrasPorFacturar(id_receptor?: number): Promise<Muestra
   return registros
 }
 
-export const crearAlbaran = (ids_muestras: number[], id_serie: number) =>
-  pedir<{ id_albaran: number; muestras: number; importe_neto: number | string }>(
-    `${RAIZ}/facturacion/crear_albaran`,
+export const crearBorrador = (ids_muestras: number[], id_serie: number) =>
+  pedir<{ id_borrador: number; muestras: number; importe_neto: number | string }>(
+    `${RAIZ}/facturacion/crear_borrador`,
     { ids_muestras, id_serie },
   )
+
+// ---------- Contratos y plan de muestreo (guía, apartado 7 bis) ----------
+
+export interface ResumenContrato {
+  id: number
+  id_receptor: number | null
+  cliente_nombre: string | null
+  cliente_nif: string | null
+  descripcion: string | null
+  fecha_inicio: string | null
+  fecha_fin: string | null
+  importe: number | string | null
+  id_serie: number | null
+  estado: 'activo' | 'inactivo'
+  lineas_facturacion: number
+  lineas_muestreo: number
+}
+
+export interface LineaContrato {
+  id: number
+  tipo: 'facturacion' | 'muestreo'
+  meses: number[] | string
+  descripcion: string | null
+  activo: number
+  importe?: number | string | null
+  id_articulo?: number | null
+  texto?: string | null
+}
+
+export interface FacturacionHecha {
+  id_linea: number
+  anio_mes: string
+  importe: number | string | null
+  id_borrador: number | null
+  origen: 'sif' | 'historico'
+  factura_antigua: string | null
+}
+
+export interface Contrato extends ResumenContrato {
+  observaciones: string | null
+  id_articulo: number | null
+  lineas: LineaContrato[]
+  facturaciones: FacturacionHecha[]
+}
+
+export async function listarContratos(filtro: { estado?: string; texto?: string; id_receptor?: number } = {}) {
+  return pedir<{ registros: ResumenContrato[]; total: number }>(`${RAIZ}/contratos/listar`, {
+    ...filtro,
+    limite: MAXIMO_FILAS,
+    desplazamiento: 0,
+  })
+}
+
+export const obtenerContrato = (id: number) => pedir<Contrato>(`${RAIZ}/contratos/obtener`, { id })
+
+/** Lo que se da de alta o se edita de un contrato; todo es opcional. */
+export interface DatosContrato {
+  id_receptor?: number | null
+  cliente_nif?: string | null
+  cliente_nombre?: string | null
+  cliente_direccion?: string | null
+  cliente_localidad?: string | null
+  cliente_codigo_postal?: string | null
+  cliente_provincia?: string | null
+  descripcion?: string | null
+  fecha_inicio?: string | null
+  fecha_fin?: string | null
+  importe?: number | null
+  id_serie?: number | null
+  id_articulo?: number | null
+  estado?: 'activo' | 'inactivo'
+  observaciones?: string | null
+}
+
+export interface DatosLineaContrato {
+  tipo?: 'facturacion' | 'muestreo'
+  meses?: number[]
+  descripcion?: string | null
+  activo?: number
+  importe?: number | null
+  id_articulo?: number | null
+  texto?: string | null
+}
+
+export const crearContrato = (datos: DatosContrato) => pedir<Contrato>(`${RAIZ}/contratos/crear`, datos)
+export const editarContrato = (id: number, datos: DatosContrato) => pedir<Contrato>(`${RAIZ}/contratos/editar`, { id, ...datos })
+export const eliminarContrato = (id: number) => pedir(`${RAIZ}/contratos/eliminar`, { id })
+export const crearLineaContrato = (id_contrato: number, datos: DatosLineaContrato) =>
+  pedir(`${RAIZ}/contratos/lineas/crear`, { id_contrato, ...datos })
+export const editarLineaContrato = (id: number, datos: DatosLineaContrato) =>
+  pedir(`${RAIZ}/contratos/lineas/editar`, { id, ...datos })
+export const eliminarLineaContrato = (id: number) => pedir(`${RAIZ}/contratos/lineas/eliminar`, { id })
+
+export interface ContratoAFacturar {
+  id: number
+  id_receptor: number | null
+  cliente_nombre: string | null
+  descripcion: string | null
+  id_serie: number | null
+  importe: number | string | null
+  lineas: { id: number; descripcion: string | null; importe: number | string | null }[]
+  puede_facturarse: boolean
+  problemas: string[]
+}
+
+export async function contratosAFacturar(anio: number, mes: number): Promise<ContratoAFacturar[]> {
+  const { registros } = await pedir<{ registros: ContratoAFacturar[] }>(`${RAIZ}/contratos/a_facturar`, { anio, mes })
+  return registros
+}
+
+export interface ResultadoFacturarContratos {
+  facturados: { id_contrato: number; cliente_nombre: string | null; ids_borradores: number[]; importe: number | string }[]
+  errores: { id_contrato: number; motivo: string }[]
+}
+
+export const facturarContratos = (anio: number, mes: number, ids_contratos: number[], separar_lineas: boolean) =>
+  pedir<ResultadoFacturarContratos>(`${RAIZ}/contratos/facturar`, { anio, mes, ids_contratos, separar_lineas })
+
+export interface MuestreoDelMes {
+  id_linea: number
+  linea: string | null
+  texto: string | null
+  id_contrato: number
+  cliente_nombre: string | null
+  descripcion: string | null
+  tomadas: number
+  pendiente: boolean
+}
+
+export async function muestreoDelMes(anio: number, mes: number): Promise<MuestreoDelMes[]> {
+  const { registros } = await pedir<{ registros: MuestreoDelMes[] }>(`${RAIZ}/contratos/muestreo_del_mes`, { anio, mes })
+  return registros
+}
+
+/** Artículo con que se facturan los contratos que no traen uno propio. */
+export async function articuloContratos(): Promise<string | null> {
+  const r = await pedir<{ id_articulo_contratos?: number | null; configuracion?: { id_articulo_contratos?: number | null } | null }>(
+    `${RAIZ}/configuracion/obtener`,
+  )
+  const id = r.configuracion?.id_articulo_contratos ?? r.id_articulo_contratos
+  return id ? String(id) : null
+}
+
+export const fijarArticuloContratos = (id: number | null) =>
+  pedir(`${RAIZ}/configuracion/actualizar`, { id_articulo_contratos: id })
 
 // ---------- Usuarios del portal de clientes ----------
 
