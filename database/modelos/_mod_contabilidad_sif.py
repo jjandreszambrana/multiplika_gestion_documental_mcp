@@ -18,7 +18,9 @@ Las sesiones con el SIF se quedan abiertas en memoria del proceso (una por
 credencial): el SIF renueva la cookie solo y `ClienteSIF` vuelve a entrar
 ante un 401. Lanza ValueError / LookupError con mensajes para enseñar."""
 
+import asyncio
 import json
+import time
 
 from mtpk_postgres.async_adapter import AsyncDatabase
 
@@ -188,6 +190,7 @@ async def anadir_acceso(config: dict, id_usuario: int, url: str, usuario: str, c
         )
         id_acceso = db.ultimo_insert_id
     acceso = await _acceso(config, id_usuario, id_acceso)
+    _modulos_cache.clear()
     return {**_publico(acceso), "empresas": await _guardar_empresas(config, acceso, empresas)}
 
 
@@ -204,6 +207,7 @@ async def actualizar_acceso(config: dict, acceso: dict) -> dict:
             (str(e), ahora_madrid(), acceso["id"]),
         )
         raise ValueError(f"No se puede entrar en el SIF con ese acceso: {e}") from e
+    _modulos_cache.clear()
     tipo, nombre_sif = _datos_de(yo)
     await db.query(
         f'UPDATE "{_T_ACC}" SET tipo = %s, nombre_sif = %s, estado = %s, ultimo_error = NULL, ultima_comprobacion = %s WHERE id = %s',
@@ -218,6 +222,7 @@ async def actualizar_acceso_de(config: dict, id_usuario: int, id_acceso: int) ->
 
 async def borrar_acceso(config: dict, id_usuario: int, id_acceso: int) -> None:
     acceso = await _acceso(config, id_usuario, id_acceso)
+    _modulos_cache.clear()
     await _olvidar(config, acceso["id_credencial"])
     await CredencialesCRUD(config).eliminar(acceso["id_credencial"])
     await AsyncDatabase(**config).query(f'DELETE FROM "{_T_ACC}" WHERE id = %s', (id_acceso,))
@@ -227,6 +232,7 @@ async def cambiar_pausa(config: dict, id_usuario: int, id_acceso: int, pausado: 
     """Un acceso pausado no se usa para nada (empresas, revisión nocturna,
     usuarios) hasta reanudarlo; no se borra ni se olvida su contraseña."""
     acceso = await _acceso(config, id_usuario, id_acceso)
+    _modulos_cache.clear()
     if pausado:
         await _olvidar(config, acceso["id_credencial"])
     await AsyncDatabase(**config).query(f'UPDATE "{_T_ACC}" SET pausado = %s WHERE id = %s', (pausado, id_acceso))
@@ -253,6 +259,47 @@ async def accesos_de(config: dict, id_usuario: int | None) -> list[dict]:
         (id_usuario,),
     )
     return [{**_publico(f), "usuario_sif": f["usuario_sif"], "empresas": f["empresas"]} for f in filas]
+
+
+TTL_MODULOS_SEGUNDOS = 60
+TIEMPO_MAXIMO_MODULOS_SEGUNDOS = 10
+_modulos_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+async def _tiene_laboratorio(config: dict, id_usuario: int, empresa: dict) -> bool:
+    try:
+        _, cliente = await _empresa_y_cliente(config, id_usuario, empresa["id_empresa"])
+        await cliente.pedir("/laboratorio/configuracion/obtener", {"id_obligado": empresa["id_obligado_sif"]})
+        return True
+    except (ErrorSIF, ValueError, LookupError):  # 403 (no habilitado), 404 (ese SIF no lo trae) o sin acceso
+        return False
+
+
+async def modulos_del_usuario(config: dict, id_usuario: int | None) -> dict:
+    """Qué módulos le salen a este usuario, según lo que dice el SIF de las
+    empresas de sus accesos: `contabilidad` si alguna tiene contabilidad y
+    `laboratorio` con los ids de las empresas que lo tienen habilitado. No hay
+    interruptor en la GD: si el SIF no lo da, no sale. Se recuerda un minuto."""
+    clave = (config.get("db"), config.get("host"), id_usuario)
+    guardado = _modulos_cache.get(clave)
+    if guardado and time.monotonic() - guardado[0] < TTL_MODULOS_SEGUNDOS:
+        return guardado[1]
+    try:
+        empresas = await empresas_de(config, id_usuario)
+    except ValueError:  # sin accesos propios al SIF
+        empresas = []
+
+    async def con_laboratorio() -> list[int]:
+        quien = await asyncio.gather(*(_tiene_laboratorio(config, id_usuario, e) for e in empresas))
+        return [e["id_empresa"] for e, tiene in zip(empresas, quien) if tiene]
+
+    try:
+        laboratorio = await asyncio.wait_for(con_laboratorio(), TIEMPO_MAXIMO_MODULOS_SEGUNDOS)
+    except asyncio.TimeoutError:  # el SIF no contesta: sin laboratorio por ahora, y no se recuerda
+        return {"contabilidad": bool(empresas), "laboratorio": []}
+    resultado = {"contabilidad": bool(empresas), "laboratorio": laboratorio}
+    _modulos_cache[clave] = (time.monotonic(), resultado)
+    return resultado
 
 
 async def todos_los_accesos(config: dict) -> list[dict]:

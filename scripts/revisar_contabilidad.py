@@ -29,7 +29,6 @@ from database.config_db import get_db_config
 from ..database.modelos import _mod_contabilidad_sif as sif
 from ..database.modelos._mod_conta_analisis import saldos_anomalos
 from ..database.modelos._mod_conta_propuestas import aviso_sin_repetir
-from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 from ..database.modelos._repeticiones import ahora_madrid
 from .procesar_programaciones import _proyectos_gestion_documental_activos
 
@@ -63,8 +62,6 @@ async def main() -> int:
     for proyecto in await _proyectos_gestion_documental_activos():
         config = get_db_config(proyecto["id"])
         try:
-            if not await ConfiguracionCRUD(config).obtener_modulo_contable():
-                continue
             accesos = await sif.todos_los_accesos(config)
         except Exception as e:  # base caída: sigue con el resto
             errores += 1

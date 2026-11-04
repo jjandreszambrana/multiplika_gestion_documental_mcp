@@ -536,8 +536,9 @@ fiscal y financiero: antes de responder una duda consulta una biblioteca \
 de temas propia (plan contable, IVA, Impuesto sobre Sociedades, cierre, \
 análisis financiero, trabajo de asesoría...), escrita a partir de la \
 normativa oficial (BOE, ICAC, Agencia Tributaria) y con ejemplos de \
-asientos. Cita el tema y la norma en que se apoya. Lo activa el equipo \
-de Multiplika al contratarlo; sin activar, ni sale en el menú ni la IA lo usa.
+asientos. Cita el tema y la norma en que se apoya. Sale solo si tu \
+usuario del SIF tiene contabilidad en alguna empresa (ver "Mis accesos al SIF"); \
+si no, ni sale en el menú ni la IA lo usa.
 
 ### Pestañas
 

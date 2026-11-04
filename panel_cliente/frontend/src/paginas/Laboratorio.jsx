@@ -8,7 +8,7 @@ const EmbebidoLaboratorio = lazy(() => import("@contabilidad/EmbebidoLaboratorio
 
 // Laboratorio: muestras, informes, facturación y portal de clientes, sobre el
 // SIF de la empresa que se elija (con los accesos al SIF de cada usuario).
-// Es independiente de la contabilidad.
+// Es independiente de la contabilidad. No tiene interruptor: sale si el SIF lo da en alguna empresa.
 export default function Laboratorio({ proyecto, onVerAccesos }) {
   const [empresas, setEmpresas] = useState(null)
   const [error, setError] = useState(null)
@@ -18,8 +18,10 @@ export default function Laboratorio({ proyecto, onVerAccesos }) {
     api
       .empresasContables(proyecto.id)
       .then((r) => {
-        setEmpresas(r.empresas)
-        setIdEmpresa(r.empresas[0] ? String(r.empresas[0].id_empresa) : null)
+        // Solo las empresas donde el SIF da el laboratorio
+        const conLaboratorio = r.empresas.filter((e) => proyecto.empresas_laboratorio?.includes(e.id_empresa))
+        setEmpresas(conLaboratorio)
+        setIdEmpresa(conLaboratorio[0] ? String(conLaboratorio[0].id_empresa) : null)
       })
       .catch((err) => {
         setEmpresas([])

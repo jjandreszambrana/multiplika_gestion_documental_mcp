@@ -7,10 +7,9 @@
   (database/modelos/_mod_contabilidad_sif.py), los ratios calculados en
   código y las propuestas para el contable. Nada de esto escribe en el SIF.
 
-Solo existen para la IA en las GD con el apartado activado
-(`gd_configuracion.modulo_contable`), y las del SIF además solo si quien
-llama tiene algún acceso suyo al SIF: `ModuloContableMiddleware` oculta y rechaza
-las demás, para que sus definiciones no ocupen contexto donde no sirven."""
+Solo existen para la IA si quien llama tiene algún acceso suyo al SIF
+funcionando (no hay interruptor en la GD): `ModuloContableMiddleware` oculta
+y rechaza las demás, para que sus definiciones no ocupen contexto donde no sirven."""
 
 from collections import defaultdict
 from decimal import Decimal
@@ -27,7 +26,6 @@ from ..database import biblioteca_contable
 from ..database.modelos import _mod_conciliacion as conciliacion, _mod_contabilidad_sif as sif
 from ..database.modelos._mod_conta_analisis import analisis_financiero, compactar_informe
 from ..database.modelos._mod_conta_propuestas import crear as crear_propuesta, listar as listar_propuestas
-from ..database.modelos._mod_configuracion import ConfiguracionCRUD
 
 TAG_CONTABILIDAD = "contabilidad"
 TAG_SIF = "contabilidad_sif"
@@ -47,10 +45,11 @@ INFORMES_FISCALES = ("iva", "retenciones", "cuadre_iva", "libros_iva")
 
 
 async def _estado_modulo() -> tuple[bool, bool]:
-    """(apartado activado, quien llama tiene algún acceso suyo al SIF)."""
+    """(hay asesor contable, quien llama tiene algún acceso suyo al SIF): es lo
+    mismo, porque el asesor sale cuando el usuario tiene un acceso que funciona."""
     config, _, id_usuario, _ = await _contexto()
-    activo = await ConfiguracionCRUD(config).obtener_modulo_contable()
-    return activo, activo and bool(await sif.accesos_de(config, id_usuario))
+    conectado = any(a["estado"] == "activo" and not a["pausado"] for a in await sif.accesos_de(config, id_usuario))
+    return conectado, conectado
 
 
 def _oculta(tool, activo: bool, conectado: bool) -> bool:
@@ -74,7 +73,7 @@ class ModuloContableMiddleware(Middleware):
         if tool.tags and {TAG_CONTABILIDAD, TAG_SIF} & set(tool.tags):
             activo, conectado = await _estado_modulo()
             if _oculta(tool, activo, conectado):
-                raise ToolError("El asesor contable no está activado, o no está conectado con el SIF, en esta gestión documental.")
+                raise ToolError("El asesor contable necesita un acceso tuyo al SIF que funcione (Mis accesos al SIF en el panel).")
         return await call_next(context)
 
 

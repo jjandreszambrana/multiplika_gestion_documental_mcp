@@ -171,8 +171,7 @@ export default function App() {
         const ultima = vistaGuardada(p.id)
         const sinModulo =
           (["asesor-contable", "erp"].includes(ultima) && !p.modulo_contable) ||
-          (ultima === "laboratorio" && !p.modulo_laboratorio) ||
-          (ultima === "accesos-sif" && !p.modulo_contable && !p.modulo_laboratorio)
+          (ultima === "laboratorio" && !p.modulo_laboratorio)
         navegar(sinModulo ? "inicio" : ultima)
       })
       .catch((err) => setError(err.message))

@@ -209,12 +209,12 @@ export default function Sidebar({
               <Item icon={IconCalculator} label="Contabilidad" sangria active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
             </>
           )}
-          {/* Independiente del asesor contable: tiene su propio interruptor */}
+          {/* Sale si el SIF lo da en alguna empresa del usuario */}
           {proyecto.modulo_laboratorio && (
             <Item icon={IconFlask} label="Laboratorio" active={vista === "laboratorio"} onClick={() => onNavigate("laboratorio")} />
           )}
-          {/* Los accesos son de cada usuario (soporte no tiene) y los usa cualquiera de los dos módulos */}
-          {(proyecto.modulo_contable || proyecto.modulo_laboratorio) && !esSuperadmin && (
+          {/* Los accesos son de cada usuario (soporte no tiene): de ellos depende que salgan los módulos del SIF */}
+          {!esSuperadmin && (
             <Item icon={IconKey} label="Mis accesos al SIF" sangria={!!proyecto.modulo_contable} active={vista === "accesos-sif"} onClick={() => onNavigate("accesos-sif")} />
           )}
           <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
