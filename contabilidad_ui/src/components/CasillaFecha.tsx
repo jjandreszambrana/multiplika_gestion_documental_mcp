@@ -1,6 +1,6 @@
 import { DateInput, type DateInputProps } from '@mantine/dates'
 import { useState } from 'react'
-import { fechaDeApi, parsearFechaEscrita } from '../lib/fecha'
+import { fechaDeApi, fechaParaApi, parsearFechaEscrita } from '../lib/fecha'
 
 /**
  * Desde Mantine 8 el `DateInput` devuelve la fecha como cadena `aaaa-mm-dd`.
@@ -49,7 +49,13 @@ export function CasillaFecha({
   return (
     <DateInput
       valueFormat="DD/MM/YYYY"
-      dateParser={parsearFechaEscrita}
+      // Mantine 8 maneja las fechas como cadena `aaaa-mm-dd`: devolver un Date
+      // aquí hacía que lo tecleado no llegara nunca a `onChange` y la casilla
+      // se vaciara al salir.
+      dateParser={(texto) => {
+        const fecha = parsearFechaEscrita(texto)
+        return fecha ? fechaParaApi(fecha) : null
+      }}
       onClick={(e) => {
         setAbierto(true)
         onClick?.(e)

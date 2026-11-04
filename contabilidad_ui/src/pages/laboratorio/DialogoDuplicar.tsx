@@ -37,7 +37,8 @@ export default function DialogoDuplicar({ cantidad, alDuplicar, alCerrar }: Prop
   }
 
   return (
-    <Modal opened onClose={alCerrar} title="Duplicar muestras" closeOnClickOutside={false}>
+    // Alto mínimo: el calendario se abre dentro del diálogo y, sin sitio, queda cortado.
+    <Modal opened onClose={alCerrar} title="Duplicar muestras" closeOnClickOutside={false} styles={{ body: { minHeight: 480 } }}>
       <Stack gap="md">
         <Text size="sm">
           {cantidad === 1 ? 'Se creará 1 muestra nueva' : `Se crearán ${cantidad} muestras nuevas`} con los mismos datos y
