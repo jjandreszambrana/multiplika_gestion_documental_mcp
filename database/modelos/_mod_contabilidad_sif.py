@@ -46,6 +46,11 @@ PREFIJOS_PERMITIDOS = (
     "/facturas_recibidas/facturas_recibidas_sii/", "/maestros/clasificacion_gastos/",
     "/ventas/gestion_cobros/", "/remesas/", "/compras/gestion_pagos/",
 )
+# El laboratorio es independiente de la contabilidad: su proxy solo deja pasar esto
+# (más los clientes, las series y los artículos que sus pantallas eligen).
+PREFIJOS_LABORATORIO = (
+    "/laboratorio/", "/obligados/receptores/listar", "/maestros/series/listar", "/maestros/articulos/listar",
+)
 RUTAS_PROHIBIDAS = ("/contabilidad/sesion/conmutar",)
 NOMBRE_CREDENCIAL = "SIF {url} · {usuario} · usuario GD {id_usuario}"
 MENSAJE_CLAVE_MALA = "El SIF no acepta ese usuario o esa contraseña"
@@ -290,9 +295,9 @@ async def _empresa_y_cliente(config: dict, id_usuario: int | None, id_empresa: i
         raise
 
 
-def _ruta_permitida(ruta: str) -> str:
+def _ruta_permitida(ruta: str, prefijos: tuple = PREFIJOS_PERMITIDOS) -> str:
     ruta = "/" + ruta.lstrip("/")
-    if not ruta.startswith(PREFIJOS_PERMITIDOS) or ruta in RUTAS_PROHIBIDAS or ".." in ruta:
+    if not ruta.startswith(prefijos) or ruta in RUTAS_PROHIBIDAS or ".." in ruta:
         raise LookupError("Esa parte del SIF no se puede usar desde la GD")
     return ruta
 
@@ -310,6 +315,7 @@ async def pedir(config: dict, id_usuario: int | None, id_empresa: int, ruta: str
 async def reenviar(
     config: dict, id_usuario: int | None, id_empresa: int, ruta: str,
     contenido: bytes = b"", campos: dict | None = None, ficheros: list | None = None,
+    prefijos: tuple = PREFIJOS_PERMITIDOS,
 ):
     """Para el proxy de las pantallas de contabilidad: reenvía la petición
     (JSON en `contenido`, o un formulario con `campos` y `ficheros` como los
@@ -317,7 +323,7 @@ async def reenviar(
     y descargas. La empresa se impone aquí, en el cuerpo, que es donde la
     lee el SIF (`obligado_del_cuerpo`)."""
     empresa, cliente = await _empresa_y_cliente(config, id_usuario, id_empresa)
-    ruta, id_obligado = _ruta_permitida(ruta), empresa["id_obligado_sif"]
+    ruta, id_obligado = _ruta_permitida(ruta, prefijos), empresa["id_obligado_sif"]
     if campos is not None or ficheros:
         return await cliente.crudo("POST", ruta, data={**(campos or {}), "id_obligado": str(id_obligado)}, files=ficheros)
     cuerpo = json.loads(contenido or b"{}")

@@ -92,6 +92,7 @@ import WebDetalle from "./paginas/WebDetalle"
 import Publicaciones from "./paginas/Publicaciones"
 import AsesorContable from "./paginas/AsesorContable"
 import Erp from "./paginas/Erp"
+import Laboratorio from "./paginas/Laboratorio"
 import AccesosSif from "./paginas/AccesosSif"
 import Inicio from "./paginas/Inicio"
 
@@ -168,7 +169,11 @@ export default function App() {
         setProyecto(p)
         // El asesor contable solo si el módulo sigue activo en ese proyecto
         const ultima = vistaGuardada(p.id)
-        navegar(["asesor-contable", "erp", "accesos-sif"].includes(ultima) && !p.modulo_contable ? "inicio" : ultima)
+        const sinModulo =
+          (["asesor-contable", "erp"].includes(ultima) && !p.modulo_contable) ||
+          (ultima === "laboratorio" && !p.modulo_laboratorio) ||
+          (ultima === "accesos-sif" && !p.modulo_contable && !p.modulo_laboratorio)
+        navegar(sinModulo ? "inicio" : ultima)
       })
       .catch((err) => setError(err.message))
   }
@@ -450,7 +455,7 @@ export default function App() {
           ) : vista === "contexto" ? (
             <Contexto
               proyecto={proyecto} onVolver={() => navegar("inicio")}
-              onCambiarModulo={(activo) => setProyecto({ ...proyecto, modulo_contable: activo })}
+              onCambiarModulo={(cambio) => setProyecto({ ...proyecto, ...cambio })}
             />
           ) : vista === "credenciales" ? (
             <Credenciales proyecto={proyecto} onVolver={() => navegar("inicio")} />
@@ -469,6 +474,8 @@ export default function App() {
               proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")}
               onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)} onAlternarChat={alternarChat}
             />
+          ) : vista === "laboratorio" ? (
+            <Laboratorio proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")} />
           ) : vista === "accesos-sif" ? (
             <AccesosSif proyecto={proyecto} onVolver={() => navegar("inicio")} onCambiar={() => setVersionAccesos((v) => v + 1)} />
           ) : vista === "ayuda" ? (

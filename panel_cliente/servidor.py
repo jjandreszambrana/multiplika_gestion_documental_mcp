@@ -261,10 +261,12 @@ async def ver_proyecto(
     rol invitado); `id_tenant` hace falta para gestionar los usuarios de
     la empresa (viven por tenant, no por proyecto)."""
     puede_editar = identidad.tipo == "usuario" and await puede_editar_proyecto(identidad.id, proyecto["id"])
-    modulo_contable = await ConfiguracionCRUD(get_db_config(proyecto["id"])).obtener_modulo_contable()
+    configuracion = ConfiguracionCRUD(get_db_config(proyecto["id"]))
+    modulo_contable = await configuracion.obtener_modulo_contable()
     return {
         "id": proyecto["id"], "id_tenant": proyecto["id_tenant"], "nombre": proyecto["nombre"],
         "es_admin": es_admin, "puede_editar": puede_editar, "modulo_contable": modulo_contable,
+        "modulo_laboratorio": await configuracion.obtener_modulo_laboratorio(),
     }
 
 
@@ -281,6 +283,33 @@ async def biblioteca_contable_disponible(proyecto: dict = Depends(proyecto_gesti
     if not await ConfiguracionCRUD(get_db_config(proyecto["id"])).obtener_modulo_contable():
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El asesor contable no está activado en esta gestión documental")
     return proyecto
+
+
+async def laboratorio_disponible(proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> dict:
+    if not await ConfiguracionCRUD(get_db_config(proyecto["id"])).obtener_modulo_laboratorio():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El laboratorio no está activado en esta gestión documental")
+    return proyecto
+
+
+async def sif_disponible(proyecto: dict = Depends(proyecto_gestion_documental_actual)) -> dict:
+    """Los accesos al SIF y la lista de sus empresas sirven a los dos módulos
+    que lo usan (asesor contable y laboratorio): vale con que esté uno."""
+    config = ConfiguracionCRUD(get_db_config(proyecto["id"]))
+    if not (await config.obtener_modulo_contable() or await config.obtener_modulo_laboratorio()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Esta gestión documental no tiene ningún módulo que use el SIF")
+    return proyecto
+
+
+class ActualizarModuloLaboratorio(BaseModel):
+    activo: bool
+
+
+@app.put("/v1/proyectos/{id_proyecto}/laboratorio/modulo")
+async def actualizar_modulo_laboratorio(
+    id_proyecto: int, datos: ActualizarModuloLaboratorio, proyecto: dict = Depends(admin_gestion_documental_actual)
+) -> dict:
+    await ConfiguracionCRUD(get_db_config(proyecto["id"])).actualizar_modulo_laboratorio(datos.activo)
+    return {"activo": datos.activo}
 
 
 @app.put("/v1/proyectos/{id_proyecto}/contabilidad/modulo")
@@ -398,7 +427,7 @@ MEMORIA_FORMULADA = 2  # estado de la memoria en el SIF: 0 borrador, 1 revisada,
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos")
 async def mis_accesos_sif(
-    id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    id_proyecto: int, proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     return {"accesos": await conta_sif.accesos_de(get_db_config(proyecto["id"]), _id_usuario(identidad))}
 
@@ -406,7 +435,7 @@ async def mis_accesos_sif(
 @app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos")
 async def anadir_acceso_sif(
     id_proyecto: int, datos: AccesoSif,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         return await conta_sif.anadir_acceso(get_db_config(proyecto["id"]), _usuario_real(identidad), datos.url, datos.usuario, datos.contrasena)
@@ -417,7 +446,7 @@ async def anadir_acceso_sif(
 @app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/actualizar")
 async def actualizar_acceso_sif(
     id_proyecto: int, id_acceso: int,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         return await conta_sif.actualizar_acceso_de(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso)
@@ -428,7 +457,7 @@ async def actualizar_acceso_sif(
 @app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/revision")
 async def revision_acceso_sif(
     id_proyecto: int, id_acceso: int, datos: RevisionAcceso,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         await conta_sif.cambiar_revision(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, datos.activa)
@@ -440,7 +469,7 @@ async def revision_acceso_sif(
 @app.put("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/pausa")
 async def pausa_acceso_sif(
     id_proyecto: int, id_acceso: int, datos: PausaAcceso,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         await conta_sif.cambiar_pausa(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso, datos.pausado)
@@ -452,7 +481,7 @@ async def pausa_acceso_sif(
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/usuarios/{accion}")
 async def ver_usuarios_acceso_sif(
     id_proyecto: int, id_acceso: int, accion: str, id_empresa: int | None = None, id_obligado: int | None = None,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     """Lecturas para gestionar usuarios del SIF (lista, quién soy, empresas,
     asesorías, permisos de una empresa, perfiles de operario de una empresa
@@ -473,7 +502,7 @@ async def ver_usuarios_acceso_sif(
 @app.post("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}/usuarios/{accion}")
 async def usuarios_acceso_sif(
     id_proyecto: int, id_acceso: int, accion: str, datos: dict = Body(default={}),
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     """Cambios en los usuarios del SIF desde un acceso: lo que ese usuario del
     SIF pueda hacer según su rol (lo decide el SIF). Nunca borra."""
@@ -488,7 +517,7 @@ async def usuarios_acceso_sif(
 @app.delete("/v1/proyectos/{id_proyecto}/contabilidad/sif/accesos/{id_acceso}", status_code=status.HTTP_204_NO_CONTENT)
 async def borrar_acceso_sif(
     id_proyecto: int, id_acceso: int,
-    proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> None:
     try:
         await conta_sif.borrar_acceso(get_db_config(proyecto["id"]), _usuario_real(identidad), id_acceso)
@@ -498,7 +527,7 @@ async def borrar_acceso_sif(
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/sif/empresas")
 async def empresas_contabilidad_sif(
-    id_proyecto: int, proyecto: dict = Depends(biblioteca_contable_disponible), identidad: Identidad = Depends(identidad_actual),
+    id_proyecto: int, proyecto: dict = Depends(sif_disponible), identidad: Identidad = Depends(identidad_actual),
 ) -> dict:
     try:
         return {"empresas": await conta_sif.empresas_de(get_db_config(proyecto["id"]), _id_usuario(identidad))}
@@ -541,6 +570,24 @@ async def proxy_contabilidad_sif(
             respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_empresa, ruta, campos=campos, ficheros=ficheros)
         else:
             respuesta = await conta_sif.reenviar(config, _id_usuario(identidad), id_empresa, ruta, await request.body())
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+    cabeceras = {k: v for k, v in respuesta.headers.items() if k.lower() in CABECERAS_PROXY}
+    return Response(content=respuesta.content, status_code=respuesta.status_code, headers=cabeceras)
+
+
+@app.post("/v1/proyectos/{id_proyecto}/laboratorio/sif/proxy/{id_empresa}/{ruta:path}")
+async def proxy_laboratorio_sif(
+    id_proyecto: int, id_empresa: int, ruta: str, request: Request,
+    proyecto: dict = Depends(laboratorio_disponible), identidad: Identidad = Depends(identidad_actual),
+) -> Response:
+    """Las pantallas del laboratorio llaman aquí: como el proxy de contabilidad,
+    pero independiente de ese módulo y solo con las rutas del laboratorio."""
+    try:
+        respuesta = await conta_sif.reenviar(
+            get_db_config(proyecto["id"]), _id_usuario(identidad), id_empresa, ruta, await request.body(),
+            prefijos=conta_sif.PREFIJOS_LABORATORIO,
+        )
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
     cabeceras = {k: v for k, v in respuesta.headers.items() if k.lower() in CABECERAS_PROXY}

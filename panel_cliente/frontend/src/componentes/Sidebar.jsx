@@ -10,6 +10,7 @@ import {
   IconPalette,
   IconBriefcase,
   IconUsers,
+  IconFlask,
   IconKey,
   IconLock,
   IconCertificate,
@@ -198,7 +199,7 @@ export default function Sidebar({
           <Item icon={IconPalette} label="Estilos de informe" active={vista === "estilos"} onClick={() => onNavigate("estilos")} />
         </Grupo>
 
-        <Grupo id="negocio" titulo="Negocio" activo={["entidades", "ventas", "asesor-contable", "erp", "accesos-sif", "webs", "publicaciones"].includes(vista)}>
+        <Grupo id="negocio" titulo="Negocio" activo={["entidades", "ventas", "asesor-contable", "erp", "laboratorio", "accesos-sif", "webs", "publicaciones"].includes(vista)}>
           {/* Solo en las GD con el asesor contable activado (en Contexto de negocio).
               "ERP" solo agrupa: lleva a su primera opción. */}
           {proyecto.modulo_contable && (
@@ -206,11 +207,15 @@ export default function Sidebar({
               <Item icon={IconPlugConnected} label="ERP" active={false} onClick={() => onNavigate("erp")} />
               <Item icon={IconListDetails} label="Gestión SIF" sangria active={vista === "erp"} onClick={() => onNavigate("erp")} />
               <Item icon={IconCalculator} label="Contabilidad" sangria active={vista === "asesor-contable"} onClick={() => onNavigate("asesor-contable")} />
-              {/* Los accesos son de cada usuario: soporte no tiene */}
-              {!esSuperadmin && (
-                <Item icon={IconKey} label="Mis accesos al SIF" sangria active={vista === "accesos-sif"} onClick={() => onNavigate("accesos-sif")} />
-              )}
             </>
+          )}
+          {/* Independiente del asesor contable: tiene su propio interruptor */}
+          {proyecto.modulo_laboratorio && (
+            <Item icon={IconFlask} label="Laboratorio" active={vista === "laboratorio"} onClick={() => onNavigate("laboratorio")} />
+          )}
+          {/* Los accesos son de cada usuario (soporte no tiene) y los usa cualquiera de los dos módulos */}
+          {(proyecto.modulo_contable || proyecto.modulo_laboratorio) && !esSuperadmin && (
+            <Item icon={IconKey} label="Mis accesos al SIF" sangria={!!proyecto.modulo_contable} active={vista === "accesos-sif"} onClick={() => onNavigate("accesos-sif")} />
           )}
           <Item icon={IconChartFunnel} label="CRM" active={vista === "ventas"} onClick={() => onNavigate("ventas")} />
           <Item icon={IconUsers} label="Entidades" active={vista === "entidades"} onClick={() => onNavigate("entidades")} />

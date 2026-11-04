@@ -83,7 +83,24 @@ function Apartados({ proyecto, onCambiarModulo }) {
             setError(null)
             api
               .actualizarModuloContable(proyecto.id, activo)
-              .then(() => onCambiarModulo(activo))
+              .then(() => onCambiarModulo({ modulo_contable: activo }))
+              .catch((err) => setError(err.message))
+              .finally(() => setGuardando(false))
+          }}
+        />
+        <Switch
+          id="apartado-laboratorio"
+          label="Laboratorio"
+          description="Muestras, resultados, informes en PDF, facturación y portal de clientes, sobre el SIF. No depende del asesor contable."
+          checked={!!proyecto.modulo_laboratorio}
+          disabled={guardando}
+          onChange={(e) => {
+            const activo = e.currentTarget.checked
+            setGuardando(true)
+            setError(null)
+            api
+              .actualizarModuloLaboratorio(proyecto.id, activo)
+              .then(() => onCambiarModulo({ modulo_laboratorio: activo }))
               .catch((err) => setError(err.message))
               .finally(() => setGuardando(false))
           }}

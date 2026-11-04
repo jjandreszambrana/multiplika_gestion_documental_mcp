@@ -31,6 +31,8 @@ def construir_tabla_configuracion(proveedor_embedding: str = PROVEEDOR_EMBEDDING
                 comentario="Dimensión del vector de embedding — debe coincidir con gd_chunks.embedding"),
         Columna(nombre="modulo_contable", tipo="BOOLEAN", not_null=True, default=False,
                 comentario="Apartado de asesor contable activado (ver docs/contabilidad/planificacion.md)"),
+        Columna(nombre="modulo_laboratorio", tipo="BOOLEAN", not_null=True, default=False,
+                comentario="Apartado de laboratorio activado (independiente del asesor contable)"),
         Columna(nombre="email_avisos", tipo="VARCHAR", longitud=255,
                 comentario="A quién avisar por email cuando hay documentos por caducar (aviso "
                            "proactivo diario, no solo si se pregunta — ver "

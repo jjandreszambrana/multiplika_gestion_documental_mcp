@@ -38,18 +38,18 @@ export function configurarCliente(cambios: Partial<ConfiguracionCliente>): void 
 }
 
 /** El `fetch` de todo el módulo: prefijo, cabeceras, cookie y gancho de respuesta. */
-async function llamar(ruta: string, init: RequestInit): Promise<Response> {
+async function llamar(ruta: string, init: RequestInit, cfg: ConfiguracionCliente = configuracion): Promise<Response> {
   let respuesta: Response
   try {
-    respuesta = await fetch(`${configuracion.prefijo}${ruta}`, {
+    respuesta = await fetch(`${cfg.prefijo}${ruta}`, {
       ...init,
-      headers: { ...configuracion.cabeceras(), ...(init.headers as Record<string, string>) },
+      headers: { ...cfg.cabeceras(), ...(init.headers as Record<string, string>) },
       credentials: 'include',
     })
   } catch (causa) {
     throw new ErrorRed(causa)
   }
-  configuracion.trasRespuesta(respuesta)
+  cfg.trasRespuesta(respuesta)
   return respuesta
 }
 
@@ -78,8 +78,8 @@ async function leerError(respuesta: Response): Promise<ErrorApi> {
   return new ErrorApi(respuesta.status, detalle, cuerpo)
 }
 
-async function ejecutar<T>(ruta: string, init: RequestInit): Promise<T> {
-  const respuesta = await llamar(ruta, init)
+async function ejecutar<T>(ruta: string, init: RequestInit, cfg?: ConfiguracionCliente): Promise<T> {
+  const respuesta = await llamar(ruta, init, cfg)
   if (!respuesta.ok) throw await leerError(respuesta)
   return (await respuesta.json()) as T
 }
@@ -101,13 +101,22 @@ export function enviarFormulario<T>(ruta: string, datos: FormData): Promise<T> {
  * filtro del diario, lo que se estaba bajando deja de valer y sigue ocupando la
  * conexión. Quien aborta tiene que ignorar el fallo que llega después.
  */
-export function pedir<T>(ruta: string, cuerpo: object = {}, senal?: AbortSignal): Promise<T> {
-  return ejecutar<T>(ruta, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-    signal: senal,
-  })
+export function pedir<T>(
+  ruta: string,
+  cuerpo: object = {},
+  senal?: AbortSignal,
+  cfg?: ConfiguracionCliente,
+): Promise<T> {
+  return ejecutar<T>(
+    ruta,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+      signal: senal,
+    },
+    cfg,
+  )
 }
 
 /** Un fichero que llega en el cuerpo de la respuesta, con el nombre que le puso el servidor. */
@@ -141,13 +150,18 @@ export async function descargar(
   ruta: string,
   cuerpo: object = {},
   senal?: AbortSignal,
+  cfg?: ConfiguracionCliente,
 ): Promise<Descarga> {
-  const respuesta = await llamar(ruta, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-    signal: senal,
-  })
+  const respuesta = await llamar(
+    ruta,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+      signal: senal,
+    },
+    cfg,
+  )
 
   if (!respuesta.ok) throw await leerError(respuesta)
 
