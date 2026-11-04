@@ -12,6 +12,7 @@ import {
   listarArticulos,
   listarContratos,
   muestreoDelMes,
+  type MuestreoDelMes,
   obtenerContrato,
   type ResultadoFacturarContratos,
 } from '../../api/laboratorio'
@@ -158,15 +159,46 @@ function AFacturar({ anio, mes, cambiar }: { anio: number; mes: number; cambiar:
   )
 }
 
+const escapar = (t: string | null) =>
+  (t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
+
+/** Abre el plan del mes en una hoja limpia y lanza la impresión: ahí se elige «Guardar como PDF». */
+function imprimirMuestreo(anio: number, mes: number, filas: MuestreoDelMes[]): boolean {
+  const ventana = window.open('', '_blank')
+  if (!ventana) return false
+  const titulo = `Qué toca muestrear en ${MESES[mes - 1]} de ${anio}`
+  const cuerpo = filas
+    .map(
+      (f) =>
+        `<tr><td>${escapar(f.cliente_nombre)}</td><td>${escapar(f.descripcion)}</td><td>${escapar(f.texto)}</td><td>${f.pendiente ? 'Pendiente' : `Tomadas: ${f.tomadas}`}</td></tr>`,
+    )
+    .join('')
+  ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${titulo}</title>
+<style>body{font:12px/1.4 sans-serif;margin:24px}h1{font-size:18px}table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #999;padding:5px 8px;text-align:left;vertical-align:top}th{background:#eee}tr{break-inside:avoid}</style></head>
+<body><h1>${titulo}</h1><table><thead><tr><th>Cliente</th><th>Contrato</th><th>Qué se muestrea</th><th>Estado</th></tr></thead><tbody>${cuerpo}</tbody></table></body></html>`)
+  ventana.document.close()
+  ventana.focus()
+  ventana.print()
+  return true
+}
+
 function Muestreo({ anio, mes, cambiar }: { anio: number; mes: number; cambiar: (a: number, m: number) => void }) {
   const [tomando, setTomando] = useState<number | null>(null)
   const [hecho, setHecho] = useState(false)
+  const [sinVentana, setSinVentana] = useState(false)
   const lista = useCarga(() => muestreoDelMes(anio, mes), [anio, mes])
   const filas = lista.datos ?? []
 
   return (
     <Stack gap="md" style={PESTANA_FIJA}>
-      <ElegirMes anio={anio} mes={mes} cambiar={cambiar} />
+      <Group align="flex-end" gap="md">
+        <ElegirMes anio={anio} mes={mes} cambiar={cambiar} />
+        <Button variant="default" disabled={filas.length === 0} onClick={() => setSinVentana(!imprimirMuestreo(anio, mes, filas))}>
+          Sacar PDF
+        </Button>
+      </Group>
+      {sinVentana && <Alert color="yellow" withCloseButton onClose={() => setSinVentana(false)}>El navegador ha bloqueado la ventana. Permite las ventanas emergentes para esta página.</Alert>}
       {hecho && <Alert color="teal" withCloseButton onClose={() => setHecho(false)}>Muestra creada.</Alert>}
       {lista.error && <Alert color="red">{lista.error}</Alert>}
       <Box style={CUERPO_SCROLL}>
