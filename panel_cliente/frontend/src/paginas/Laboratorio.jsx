@@ -16,12 +16,10 @@ export default function Laboratorio({ proyecto, onVerAccesos }) {
 
   useEffect(() => {
     api
-      .empresasContables(proyecto.id)
+      .empresasLaboratorio(proyecto.id)
       .then((r) => {
-        // Solo las empresas donde el SIF da el laboratorio
-        const conLaboratorio = r.empresas.filter((e) => proyecto.empresas_laboratorio?.includes(e.id_empresa))
-        setEmpresas(conLaboratorio)
-        setIdEmpresa(conLaboratorio[0] ? String(conLaboratorio[0].id_empresa) : null)
+        setEmpresas(r.empresas)
+        setIdEmpresa(r.empresas[0] ? String(r.empresas[0].id_empresa) : null)
       })
       .catch((err) => {
         setEmpresas([])

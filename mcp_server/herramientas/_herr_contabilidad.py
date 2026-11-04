@@ -46,9 +46,12 @@ INFORMES_FISCALES = ("iva", "retenciones", "cuadre_iva", "libros_iva")
 
 async def _estado_modulo() -> tuple[bool, bool]:
     """(hay asesor contable, quien llama tiene algún acceso suyo al SIF): es lo
-    mismo, porque el asesor sale cuando el usuario tiene un acceso que funciona."""
+    mismo, porque el asesor sale cuando algún acceso suyo da contabilidad."""
     config, _, id_usuario, _ = await _contexto()
-    conectado = any(a["estado"] == "activo" and not a["pausado"] for a in await sif.accesos_de(config, id_usuario))
+    try:
+        conectado = bool(await sif.empresas_de(config, id_usuario))
+    except ValueError:  # sin accesos propios al SIF, o ninguno con contabilidad
+        conectado = False
     return conectado, conectado
 
 

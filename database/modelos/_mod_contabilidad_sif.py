@@ -105,11 +105,28 @@ async def _entrar(url: str, usuario: str, contrasena: str) -> ClienteSIF:
     return cliente
 
 
+NIVEL_SOLO_LABORATORIO = "laboratorio"  # en gd_conta_acceso_empresas.nivel: la empresa no tiene contabilidad para este usuario
+
+
+async def _lista_o_vacia(cliente: ClienteSIF, ruta: str) -> list[dict]:
+    try:
+        return (await cliente.pedir(ruta, {})).get("empresas") or []
+    except ErrorSIF:  # sin contabilidad, o este SIF no trae laboratorio: no ve nada por esa vía
+        return []
+
+
 async def _lo_que_ve(cliente: ClienteSIF) -> tuple[dict, list[dict]]:
-    """(quién es en el SIF, empresas cuya contabilidad puede abrir)."""
+    """(quién es en el SIF, empresas que puede abrir): las de contabilidad, con
+    su nivel, y las que solo tienen laboratorio, con `nivel` = NIVEL_SOLO_LABORATORIO."""
     yo = (await cliente.pedir("/contabilidad/sesion/me")).get("user") or {}
-    empresas = (await cliente.pedir("/contabilidad/sesion/empresas")).get("empresas") or []
-    return yo, empresas
+    empresas = await _lista_o_vacia(cliente, "/contabilidad/sesion/empresas")
+    con_contabilidad = {int(e["id_obligado"]) for e in empresas}
+    solo_laboratorio = [
+        {**e, "nivel": NIVEL_SOLO_LABORATORIO}
+        for e in await _lista_o_vacia(cliente, "/laboratorio/configuracion/empresas")
+        if int(e["id_obligado"]) not in con_contabilidad
+    ]
+    return yo, empresas + solo_laboratorio
 
 
 def _datos_de(yo: dict) -> tuple[str, str | None]:
@@ -160,7 +177,7 @@ async def anadir_acceso(config: dict, id_usuario: int, url: str, usuario: str, c
     finally:
         await cliente.http.aclose()
     if not empresas:
-        raise ValueError("Ese usuario del SIF no tiene acceso a la contabilidad de ninguna empresa")
+        raise ValueError("Ese usuario del SIF no tiene acceso a la contabilidad ni al laboratorio de ninguna empresa")
 
     db = AsyncDatabase(**config)
     credenciales = CredencialesCRUD(config)
@@ -268,7 +285,7 @@ _modulos_cache: dict[tuple, tuple[float, dict]] = {}
 
 async def _tiene_laboratorio(config: dict, id_usuario: int, empresa: dict) -> bool:
     try:
-        _, cliente = await _empresa_y_cliente(config, id_usuario, empresa["id_empresa"])
+        _, cliente = await _empresa_y_cliente(config, id_usuario, empresa["id_empresa"], todas=True)
         await cliente.pedir("/laboratorio/configuracion/obtener", {"id_obligado": empresa["id_obligado_sif"]})
         return True
     except (ErrorSIF, ValueError, LookupError):  # 403 (no habilitado), 404 (ese SIF no lo trae) o sin acceso
@@ -285,9 +302,10 @@ async def modulos_del_usuario(config: dict, id_usuario: int | None) -> dict:
     if guardado and time.monotonic() - guardado[0] < TTL_MODULOS_SEGUNDOS:
         return guardado[1]
     try:
-        empresas = await empresas_de(config, id_usuario)
+        empresas = await empresas_de(config, id_usuario, todas=True)
     except ValueError:  # sin accesos propios al SIF
         empresas = []
+    con_contabilidad = any(e["nivel"] != NIVEL_SOLO_LABORATORIO for e in empresas)
 
     async def con_laboratorio() -> list[int]:
         quien = await asyncio.gather(*(_tiene_laboratorio(config, id_usuario, e) for e in empresas))
@@ -296,10 +314,18 @@ async def modulos_del_usuario(config: dict, id_usuario: int | None) -> dict:
     try:
         laboratorio = await asyncio.wait_for(con_laboratorio(), TIEMPO_MAXIMO_MODULOS_SEGUNDOS)
     except asyncio.TimeoutError:  # el SIF no contesta: sin laboratorio por ahora, y no se recuerda
-        return {"contabilidad": bool(empresas), "laboratorio": []}
-    resultado = {"contabilidad": bool(empresas), "laboratorio": laboratorio}
+        return {"contabilidad": con_contabilidad, "laboratorio": []}
+    resultado = {"contabilidad": con_contabilidad, "laboratorio": laboratorio}
     _modulos_cache[clave] = (time.monotonic(), resultado)
     return resultado
+
+
+async def empresas_con_laboratorio(config: dict, id_usuario: int | None) -> list[dict]:
+    """Las empresas del usuario donde el SIF da el laboratorio (para su selector)."""
+    ids = set((await modulos_del_usuario(config, id_usuario))["laboratorio"])
+    if not ids:
+        return []
+    return [e for e in await empresas_de(config, id_usuario, todas=True) if e["id_empresa"] in ids]
 
 
 async def todos_los_accesos(config: dict) -> list[dict]:
@@ -308,15 +334,17 @@ async def todos_los_accesos(config: dict) -> list[dict]:
 
 # ---------- Empresas y peticiones ----------
 
-async def empresas_de(config: dict, id_usuario: int | None) -> list[dict]:
-    """Empresas que puede abrir este usuario con sus accesos que funcionan,
-    una vez cada una (con el acceso de mayor nivel si la ve por varios)."""
+async def empresas_de(config: dict, id_usuario: int | None, todas: bool = False) -> list[dict]:
+    """Empresas cuya contabilidad puede abrir este usuario con sus accesos que
+    funcionan, una vez cada una (con el acceso de mayor nivel si la ve por
+    varios). Con `todas`, también las que solo tienen laboratorio."""
     if not id_usuario:
         raise ValueError(MENSAJE_SIN_ACCESO)
     filas = await AsyncDatabase(**config).query(
         f'SELECT e.id AS id_empresa, e.nombre, e.nif, e.url_sif, e.id_obligado_sif, ae.nivel, a.id AS id_acceso '
         f'FROM "{_T_AE}" ae JOIN "{_T_ACC}" a ON a.id = ae.id_acceso JOIN "{_T_EMP}" e ON e.id = ae.id_empresa '
-        f"WHERE a.id_usuario = %s AND a.estado <> 'clave_incorrecta' AND NOT a.pausado ORDER BY e.nombre",
+        f"WHERE a.id_usuario = %s AND a.estado <> 'clave_incorrecta' AND NOT a.pausado "
+        + ("" if todas else f"AND COALESCE(ae.nivel, '') <> '{NIVEL_SOLO_LABORATORIO}' ") + "ORDER BY e.nombre",
         (id_usuario,),
     )
     mejor: dict[int, dict] = {}
@@ -329,8 +357,10 @@ async def empresas_de(config: dict, id_usuario: int | None) -> list[dict]:
     return sorted(mejor.values(), key=lambda e: e["nombre"] or "")
 
 
-async def _empresa_y_cliente(config: dict, id_usuario: int | None, id_empresa: int) -> tuple[dict, ClienteSIF]:
-    empresas = {e["id_empresa"]: e for e in await empresas_de(config, id_usuario)}
+async def _empresa_y_cliente(
+    config: dict, id_usuario: int | None, id_empresa: int, todas: bool = False
+) -> tuple[dict, ClienteSIF]:
+    empresas = {e["id_empresa"]: e for e in await empresas_de(config, id_usuario, todas)}
     if id_empresa not in empresas:
         raise LookupError("No tienes acceso a la contabilidad de esa empresa")
     empresa = empresas[id_empresa]
@@ -362,14 +392,14 @@ async def pedir(config: dict, id_usuario: int | None, id_empresa: int, ruta: str
 async def reenviar(
     config: dict, id_usuario: int | None, id_empresa: int, ruta: str,
     contenido: bytes = b"", campos: dict | None = None, ficheros: list | None = None,
-    prefijos: tuple = PREFIJOS_PERMITIDOS,
+    prefijos: tuple = PREFIJOS_PERMITIDOS, todas: bool = False,
 ):
     """Para el proxy de las pantallas de contabilidad: reenvía la petición
     (JSON en `contenido`, o un formulario con `campos` y `ficheros` como los
     acepta httpx) y devuelve la respuesta del SIF sin tocar, también errores
     y descargas. La empresa se impone aquí, en el cuerpo, que es donde la
     lee el SIF (`obligado_del_cuerpo`)."""
-    empresa, cliente = await _empresa_y_cliente(config, id_usuario, id_empresa)
+    empresa, cliente = await _empresa_y_cliente(config, id_usuario, id_empresa, todas)
     ruta, id_obligado = _ruta_permitida(ruta, prefijos), empresa["id_obligado_sif"]
     if campos is not None or ficheros:
         return await cliente.crudo("POST", ruta, data={**(campos or {}), "id_obligado": str(id_obligado)}, files=ficheros)
@@ -396,7 +426,7 @@ async def pedir_con_errores(config: dict, id_usuario: int | None, id_empresa: in
 async def empresas_del_acceso(config: dict, acceso: dict) -> list[dict]:
     filas = await AsyncDatabase(**config).query(
         f'SELECT e.id AS id_empresa, e.nombre, e.id_obligado_sif FROM "{_T_AE}" ae JOIN "{_T_EMP}" e ON e.id = ae.id_empresa '
-        "WHERE ae.id_acceso = %s ORDER BY e.nombre", (acceso["id"],),
+        "WHERE ae.id_acceso = %s AND COALESCE(ae.nivel, '') <> %s ORDER BY e.nombre", (acceso["id"], NIVEL_SOLO_LABORATORIO),
     )
     return [dict(f) for f in filas]
 

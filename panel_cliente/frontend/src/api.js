@@ -225,6 +225,7 @@ export const api = {
     const nombre = disposicion.match(/filename\*=UTF-8''([^;]+)/) || disposicion.match(/filename="?([^";]+)"?/)
     return { blob: await res.blob(), nombreFichero: nombre ? decodeURIComponent(nombre[1]) : "documento.pdf" }
   },
+  empresasLaboratorio: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/laboratorio/sif/empresas`),
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idEmpresa, estado) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),

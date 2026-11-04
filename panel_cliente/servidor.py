@@ -535,6 +535,13 @@ async def proxy_contabilidad_sif(
     return Response(content=respuesta.content, status_code=respuesta.status_code, headers=cabeceras)
 
 
+@app.get("/v1/proyectos/{id_proyecto}/laboratorio/sif/empresas")
+async def empresas_laboratorio_sif(
+    id_proyecto: int, proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    return {"empresas": await conta_sif.empresas_con_laboratorio(get_db_config(proyecto["id"]), _id_usuario(identidad))}
+
+
 @app.post("/v1/proyectos/{id_proyecto}/laboratorio/sif/proxy/{id_empresa}/{ruta:path}")
 async def proxy_laboratorio_sif(
     id_proyecto: int, id_empresa: int, ruta: str, request: Request,
@@ -545,7 +552,7 @@ async def proxy_laboratorio_sif(
     try:
         respuesta = await conta_sif.reenviar(
             get_db_config(proyecto["id"]), _id_usuario(identidad), id_empresa, ruta, await request.body(),
-            prefijos=conta_sif.PREFIJOS_LABORATORIO,
+            prefijos=conta_sif.PREFIJOS_LABORATORIO, todas=True,
         )
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
