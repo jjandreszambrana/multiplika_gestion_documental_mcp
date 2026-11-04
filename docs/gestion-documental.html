@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>gestion-documental.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="gestión-documental-producto-sobre-multiplika-mcp">Gestión documental (producto sobre Multiplika MCP)</h1>
+<h2 id="idea">Idea</h2>
+<p>No es un almacén de documentos. Es un pipeline donde la IA lee cualquier documento de un cliente (PDF, foto, Word, etc.), lo interpreta y lo convierte a markdown estructurado, y ese markdown se indexa como base de conocimiento digitalizada de la empresa cliente — para que el cliente IA (Claude Desktop/Code conectado al MCP del proyecto) pueda consultarla y montar respuestas a las preguntas del usuario.</p>
+<p>Objetivo: producto replicable — se monta este proyecto de gestión documental por separado a cada cliente que lo pida.</p>
+<p>Sin interfaz propia: todo el flujo (subir documentos, corregirlos, consultarlos) pasa por conversación con el cliente IA vía tools MCP — no hay panel/formulario de gestión documental.</p>
+<h2 id="decisiones-de-arquitectura">Decisiones de arquitectura</h2>
+<h3 id="multi-proyecto-en-un-único-servidor-2026-09-06">Multi-proyecto en un único servidor (2026-09-06)</h3>
+<p>Un único servidor/proceso MCP multi-proyecto, NO una instancia independiente por cliente. Se evita duplicar código en múltiples carpetas/despliegues.</p>
+<ul>
+<li>El aislamiento entre clientes se apoya en el mecanismo que ya tiene el Multiplika MCP: autenticación y contexto por proyecto (<code>obtener_contexto_proyecto</code> / <code>actualizar_contexto_proyecto</code> ya devuelven/actualizan datos scoped al proyecto autenticado).</li>
+</ul>
+<h3 id="almacenamiento-postgres--pgvector-1-bd-por-cliente-2026-09-06-revisado">Almacenamiento: Postgres + pgvector, 1 BD por cliente (2026-09-06, revisado)</h3>
+<ul>
+<li>Una base de datos Postgres independiente por cliente (no un esquema compartido con <code>project_id</code>), por aislamiento fuerte y portabilidad (dar de baja/exportar un cliente de forma autocontenida).</li>
+<li><strong><code>pgvector</code> se instala siempre</strong> en la base de cada cliente (la extensión), da igual el modo de búsqueda que tenga activo — no tiene coste tenerla instalada sin usar.</li>
+<li>Se pasó de MariaDB a Postgres por la portabilidad que exige el esquema de 1 BD por cliente.</li>
+<li>Librería de acceso a datos: el usuario ya usa <code>mtpk-mariadb</code> (ORM propio en PyPI) en otros proyectos. Decisión: no tocar <code>mtpk-mariadb</code>; construir un paquete nuevo y separado, <strong><code>mtpk-postgres</code></strong>, con la misma interfaz/filosofía pero sobre <code>psycopg</code>. Repo local: <code>/home/jjandres/desarrollos/python3/mtpk_postgres</code>.
+<ul>
+<li><strong>Estado: publicado en PyPI como <code>mtpk-postgres</code> v0.1.1.</strong> El bug que impedía crear/migrar tablas con índice ya está corregido y verificado — ver [[mtpk-postgres-adaptacion]].</li>
+</ul>
+</li>
+</ul>
+<h3 id="modo-de-búsqueda-por-cliente-fulltext-o-semántico-2026-09-06">Modo de búsqueda por cliente: fulltext o semántico (2026-09-06)</h3>
+<ul>
+<li>Cada cliente tiene un modo de búsqueda configurable, guardado en su propia base (<code>gd_configuracion</code>): <code>fulltext</code> (búsqueda por palabras, nativa de Postgres, sin coste ni modelo de IA) o <code>semantico</code> (búsqueda por significado, vía embeddings + <code>pgvector</code>).</li>
+<li><strong>Cambiable en cualquier momento</strong>, no fijo al alta. Por eso el esquema (índice de texto + tabla de embeddings) existe siempre en todos los clientes desde el principio — lo único condicionado por el modo activo es si el pipeline de ingesta genera o no el embedding de cada documento nuevo (eso sí tiene coste real: llamada a la API). Si un cliente pasa de <code>fulltext</code> a <code>semantico</code> más adelante, hace falta un proceso de &quot;backfill&quot; que genere a posteriori los embeddings de los documentos ya ingeridos (pendiente de detallar cuando toque implementarlo).</li>
+<li>Un futuro modo &quot;híbrido&quot; (combinar las dos búsquedas) queda como posible mejora, no bloquea nada: con este diseño, añadirlo no exige tocar el esquema, solo lógica de consulta nueva.</li>
+<li><strong>Proveedor de embedding</strong>: OpenAI <code>text-embedding-3-small</code> (1536 dimensiones) como estándar de la plataforma. La dimensión se guarda como parámetro por cliente en <code>gd_configuracion</code>, así que un cliente concreto podría usar otro proveedor en el futuro sin rediseñar el esquema.</li>
+<li><strong>Chunking</strong>: por encabezados markdown (cada sección, con tope de tamaño), no por documento completo — necesario para que el embedding de un documento largo sea preciso.</li>
+</ul>
+<h3 id="esquema-de-datos-2026-09-06">Esquema de datos (2026-09-06)</h3>
+<p>Por cada base de datos de cliente:</p>
+<pre class="hljs"><code><div>gd_configuracion (1 fila)
+  - modo_busqueda        TEXT ('fulltext' | 'semantico')
+  - proveedor_embedding  TEXT (p.ej. 'openai:text-embedding-3-small')
+  - dimension_embedding  INT  (1536 por defecto)
+
+gd_documentos
+  - id
+  - nombre / referencia
+  - tipo_documento       VARCHAR(50), texto libre (ver &quot;Tipos de documento&quot; más abajo)
+  - todas_versiones_buscables  BOOLEAN DEFAULT FALSE
+  - fecha_alta
+
+gd_tipos_documento (catálogo abierto de sugerencias, no una lista cerrada — ver más abajo)
+  - id
+  - nombre               VARCHAR(50) UNIQUE
+  - formato_requerido    TEXT  -- opcional, ver &quot;Cumplimiento de formato/normativa&quot;
+  - normativa_aplicable  TEXT  -- opcional, ídem
+  - fecha_alta
+
+gd_versiones
+  - id
+  - id_documento          FK
+  - vigente               BOOLEAN   -- true solo en la última
+  - borrador              BOOLEAN DEFAULT FALSE  -- ver &quot;Borrador&quot; más abajo
+  - markdown_original     TEXT      -- lo que generó la IA
+  - markdown_actual       TEXT      -- vigente (= original o corregido a mano)
+  - tmp                   TEXT      -- borrador de edición del panel sin confirmar, ver &quot;Edición desde el panel&quot;
+  - tmp_id_usuario        INT       -- quién dejó ese borrador (→ mcpc_usuarios.id, sin FK real)
+  - tmp_fecha             TIMESTAMP -- cuándo se escribió tmp por última vez
+  - revisado_manualmente  BOOLEAN DEFAULT FALSE
+  - incumplimientos       TEXT  -- opcional, ver &quot;Cumplimiento de formato/normativa&quot;
+  - tsvector_actual       (GENERATED ALWAYS AS to_tsvector(markdown_actual) STORED + índice GIN)
+  - fecha_documento       -- la del propio documento, no la de subida
+  - fecha_subida
+
+gd_historial_ediciones (ver &quot;Edición desde el panel&quot;)
+  - id
+  - id_version         FK
+  - id_usuario         INT (→ mcpc_usuarios.id, sin FK real)
+  - markdown_anterior  TEXT      -- snapshot completo de markdown_actual justo antes de esta confirmación
+  - fecha
+
+gd_chunks (solo si el modo es/fue semántico, y solo de versiones buscables)
+  - id
+  - id_version    FK
+  - orden
+  - texto
+  - embedding     VECTOR(dimension_embedding) + índice HNSW
+</div></code></pre>
+<p>Búsqueda (full-text o semántica): siempre filtra por <code>vigente = true</code>, salvo que <code>gd_documentos.todas_versiones_buscables = true</code> (entonces entran todas las versiones de ese documento).</p>
+<p><strong>Correcciones — dos escenarios contemplados:</strong></p>
+<ul>
+<li><strong>A) Nueva versión del documento</strong> (el cliente sube una versión corregida/actualizada): nueva fila en <code>gd_versiones</code>, la anterior deja de ser <code>vigente</code>. Se guarda todo el histórico, sin límite de tiempo ni purga (decisión: el espacio que ocupa es marginal — texto y vectores pequeños; no se almacena el binario original).</li>
+<li><strong>B) Corrección del markdown mal generado por la IA</strong> (sin que haya documento nuevo del cliente): se edita <code>markdown_actual</code> de la versión existente, conservando <code>markdown_original</code> como lo que generó la IA la primera vez, y marcando <code>revisado_manualmente=true</code>. Mecanismo (decidido 2026-09-08): siempre vía tool MCP (<code>corregir_documento_gd</code>), a petición del propio cliente a su IA — sin revisión de nadie del equipo, porque no hay capacidad para tenerla. El riesgo asumido es que una corrección mal hecha por la IA del cliente quede guardada sin que nadie la verifique; se acepta porque <code>markdown_original</code> nunca se pierde.</li>
+</ul>
+<h3 id="borrador-2026-09-13">Borrador (2026-09-13)</h3>
+<p>Problema: a veces llega un documento incompleto (le faltan páginas, el cliente aún lo está revisando) y las idas y vueltas hasta cerrarlo no deberían ensuciar el histórico de <code>gd_versiones</code> con una versión por cada corrección intermedia.</p>
+<p>Solución: <code>gd_versiones.borrador</code> (BOOLEAN, default false). Mientras la versión vigente de un documento sea un borrador, <code>guardar_documento_gd(id_documento_existente=..., ...)</code> <strong>sobrescribe esa misma fila</strong> (incluido <code>markdown_original</code> — única excepción a &quot;nunca se sobrescribe&quot;, justificada porque mientras es borrador no es un documento real todavía) en vez de crear una versión nueva. El cliente lo da por bueno de dos formas: llamando otra vez a <code>guardar_documento_gd</code> con <code>borrador=false</code> (guarda el contenido final y lo cierra en el mismo paso), o con <code>confirmar_documento_gd</code> si el contenido no cambia y solo hace falta la confirmación. A partir de ahí, <code>borrador=false</code> para siempre en esa versión: cualquier guardado posterior sobre ese documento vuelve a crear una versión nueva, como con cualquier documento normal — el flujo A de arriba no cambia.</p>
+<p>Por defecto <code>borrador=false</code>: un documento que llega completo se guarda igual que siempre, sin que el cliente tenga que saber que existe este mecanismo.</p>
+<h3 id="edición-desde-el-panel-2026-09-13">Edición desde el panel (2026-09-13)</h3>
+<p>Hasta ahora el panel del cliente era de solo lectura: guardar o corregir un documento era siempre por conversación con la IA. Se añade edición directa del texto desde el panel, con un control de cambios (quién y cuándo) y la posibilidad de revertir.</p>
+<p><strong>Rol nuevo: invitado.</strong> El catálogo de roles (<code>mcpc_roles</code> del core) gana un cuarto rol, <code>invitado</code> (id=4): acceso de solo lectura, no puede editar nada. <code>admin_tenant</code> y <code>operador</code> sí pueden editar. <code>lib/roles_proyecto.puede_editar_proyecto()</code> es la comprobación (cualquier rol salvo invitado); un superadmin NO puede editar documentos por este camino — el historial de ediciones referencia <code>mcpc_usuarios</code>, no <code>mcpc_superadmins</code>, así que para dar soporte editando algo hay que entrar con un usuario real de ese tenant.</p>
+<p><strong>Guardado sin ensuciar el historial: <code>gd_versiones.tmp</code>.</strong> Mientras se edita, cada &quot;guardar&quot; del panel escribe en <code>tmp</code> (+ <code>tmp_id_usuario</code>, <code>tmp_fecha</code>) sin tocar <code>markdown_actual</code> ni generar ningún registro — exactamente igual que guardar un archivo no es un commit en git. Solo una acción explícita, &quot;confirmar&quot;, cierra la edición: el <code>markdown_actual</code> de antes pasa a <code>gd_historial_ediciones</code> y <code>tmp</code> pasa a ser el nuevo <code>markdown_actual</code> (y se vacía). Si el editor se reabre con <code>tmp</code> todavía con contenido, es que quedó una edición sin confirmar (de quien sea, no hay bloqueo entre usuarios) — se carga ese texto en vez del confirmado, con un aviso visible de quién lo dejó y cuándo, para que quien lo retome sepa lo que está haciendo.</p>
+<p><strong>Historial: snapshot completo, no solo el diff.</strong> <code>gd_historial_ediciones</code> guarda, en cada confirmación, el texto completo de <code>markdown_actual</code> de justo antes (columna <code>markdown_anterior</code>), no un diff — el coste en espacio es marginal (mismo razonamiento que ya justifica no purgar nunca <code>gd_versiones</code>). El diff que ve el cliente se calcula al vuelo (<code>difflib.unified_diff</code>, formato tipo <code>git diff</code>) comparando dos snapshots consecutivos, solo cuando alguien lo pide. Guardar el snapshot completo (y no solo el diff) es lo que hace trivial revertir: copiar <code>markdown_anterior</code> de vuelta a <code>markdown_actual</code> — y ese propio revertir queda registrado como una confirmación más, nunca se pierde el rastro de qué pasó.</p>
+<p>Esto es independiente del mecanismo de &quot;Borrador&quot; de más arriba (que evita versiones nuevas mientras un documento entero está sin cerrar, vía chat): la edición desde el panel corrige el texto de la versión vigente, sea o no un borrador.</p>
+<h3 id="alta-manual-desde-el-panel-2026-09-24">Alta manual desde el panel (2026-09-24)</h3>
+<p>Hasta ahora el panel solo dejaba editar un documento ya existente (ver arriba) o encolar un fichero crudo en <code>gd_documentos_pendientes</code> a la espera de que la IA lo procesara en conversación — no había forma de dar de alta un documento nuevo sin pasar por la IA. Se añade <code>POST /v1/proyectos/{id}/documentos</code>: el propio usuario pega o escribe el markdown ya convertido (mismos metadatos que pide <code>guardar_documento_gd</code>: nombre, tipo, fecha, ámbito, caducidad, histórico buscable) y el panel llama directamente a <code>guardar_documento()</code> — mismo camino de guardado que usa la tool MCP, sin duplicar lógica de negocio.</p>
+<p>Decisión de alcance (2026-09-24): sin OCR/conversión automática en el panel — convertir un PDF o una foto a markdown lo sigue haciendo solo la IA en conversación (es su punto fuerte, y montar un pipeline de extracción propio en el panel sería peor calidad y mucho más código). Lo que sí se añade es poder <strong>adjuntar el PDF original tal cual</strong> al crear a mano (<code>gd_versiones.archivo_original</code> + <code>_nombre</code> + <code>_tipo_mime</code>, BLOB opcional): queda guardado solo como referencia descargable junto al documento — <code>markdown_actual</code> sigue siendo lo único que se busca y lo que manda. Mismo permiso que editar (<code>puede_editar_documento_actual</code>, ver &quot;Edición desde el panel&quot;); si el modo de búsqueda del proyecto es semántico, se reindexa igual que si lo hubiera guardado la IA.</p>
+<h3 id="pipeline-de-ingesta-2026-09-06">Pipeline de ingesta (2026-09-06)</h3>
+<p>Sin interfaz: el cliente le dice a su Claude &quot;guárdame esta factura&quot; (la pega o adjunta) y es el propio cliente IA quien gestiona todo el proceso vía tools MCP.</p>
+<p>La IA <strong>siempre pregunta</strong> al usuario antes de guardar (no infiere del contenido), como mínimo:</p>
+<ol>
+<li>Tipo de documento — consultando antes <code>listar_tipos_documento_gd()</code> para sugerir uno ya existente (ver &quot;Tipos de documento&quot; más abajo).</li>
+<li>Nombre/referencia corta para identificarlo después.</li>
+<li>Si es una versión nueva de un documento ya guardado o uno distinto — si dice que es nueva versión, la IA debe confirmar cuál usando <code>buscar_documentos()</code>, no adivinar.</li>
+<li>Fecha del propio documento (no la de subida).</li>
+<li>Si ese documento necesita que todo su histórico quede buscable, o solo la última versión (por defecto: solo la última).</li>
+</ol>
+<h3 id="tools-mcp-2026-09-06">Tools MCP (2026-09-06)</h3>
+<p>Tres herramientas cubren todo el ciclo de consulta (la de ingesta/guardado queda para cuando se aborde la implementación, junto con el mecanismo de corrección del punto B de arriba):</p>
+<ol>
+<li><strong><code>consultar_documentos(pregunta, limite=5)</code></strong> — la principal, para responder preguntas del cliente. Resuelve sola el modo de búsqueda del proyecto (fulltext o semántico) y devuelve los fragmentos más relevantes con su documento, tipo, fecha e identificadores, para que la IA cite la fuente y pueda pedir el documento completo si hace falta.</li>
+<li><strong><code>obtener_documento_completo(id_documento, version=None)</code></strong> — devuelve el markdown completo de la versión vigente (o la indicada), para cuando un fragmento no basta.</li>
+<li><strong><code>buscar_documentos(referencia)</code></strong> — búsqueda por metadatos (nombre, tipo, fecha), no por contenido; sirve tanto para consulta exploratoria como para evitar duplicados al ingerir.</li>
+</ol>
+<p><strong><code>obtener_estado_proyecto_gd()</code></strong> (añadida 2026-09-09): total de documentos guardados y fecha de la última alta (documento o versión nueva) — es el dato de estado por proyecto planteado en <code>docs/decisiones.md</code> del repo core, apartado &quot;Contexto compartido: separar negocio de preferencias&quot; (paso 3). No refleja correcciones hechas con <code>corregir_documento_gd</code>, solo altas — para no necesitar tocar el esquema. Vive aquí porque es específico de este producto, no de la plataforma core.</p>
+<p><strong><code>archivar_documento_gd(id_documento)</code> / <code>desarchivar_documento_gd(id_documento)</code></strong> (añadidas 2026-09-09): un documento que ya no aplica (anulado, subido por error) se marca <code>archivado</code> en vez de borrarse — desaparece de <code>buscar_documentos_gd</code> (salvo <code>incluir_archivados=True</code>) y de <code>consultar_documentos_gd</code> (fulltext y semántico), pero sigue accesible por id y se puede recuperar sin perder nada del histórico.</p>
+<p><strong><code>confirmar_documento_gd(id_documento, id_version=None)</code></strong> (añadida 2026-09-13): cierra un borrador (ver &quot;Borrador&quot; más arriba) sin cambiar su contenido.</p>
+<p><strong><code>listar_credenciales_gd()</code></strong> (añadida 2026-09-09): nombre, descripción y usuario (si lo lleva) de cada credencial del proyecto — nunca la contraseña/API key. Ver &quot;Credenciales&quot; más abajo.</p>
+<p><strong><code>listar_estilos_informe_gd()</code> / <code>obtener_estilo_informe_gd(nombre_tipo)</code></strong> (añadidas 2026-09-09): tipos de informe disponibles, e instrucciones + imágenes fijas de uno en concreto (las imágenes llegan como contenido nativo de imagen de la propia respuesta, no como URL). Ver &quot;Tabla de estilos&quot; más abajo.</p>
+<h3 id="tipos-de-documento-catálogo-abierto-no-lista-cerrada-2026-09-10">Tipos de documento: catálogo abierto, no lista cerrada (2026-09-10)</h3>
+<p><code>tipo_documento</code> empezó siendo una lista cerrada de 5 valores fija en el esquema (factura/certificado/contrato/informe/otro). El cliente pidió que fuera &quot;amplia, incluso configurable por el propio cliente&quot; — se sustituyó por texto libre (<code>VARCHAR(50)</code>) más una tabla de sugerencias, <code>gd_tipos_documento</code>, que NO restringe qué se puede guardar: es solo una lista de &quot;ya usados&quot; para que la IA reutilice uno existente en vez de crear variaciones del mismo tipo (p.ej. &quot;Factura&quot; vs &quot;facturas&quot;).</p>
+<ul>
+<li><strong><code>listar_tipos_documento_gd()</code></strong> (tool MCP): devuelve el catálogo. La IA la consulta antes de preguntar el tipo al guardar un documento, y sugiere uno de los ya existentes si encaja.</li>
+<li><strong><code>guardar_documento_gd</code></strong>: si el tipo indicado no está en el catálogo (y es un documento nuevo, no una versión nueva de uno existente), se añade solo — sin que el cliente tenga que darlo de alta antes en el panel.</li>
+<li><strong>Gestión desde el panel</strong>: <code>GET/POST /v1/proyectos/{id}/tipos-documento</code> (cualquier usuario del proyecto) y <code>PUT</code>/<code>DELETE /v1/proyectos/{id}/tipos-documento/{id_tipo}</code> (solo admin) — un cliente puede curar su propio catálogo (añadir tipos por adelantado, borrar uno mal escrito, definir formato/normativa — ver &quot;Cumplimiento de formato/normativa&quot;) sin depender de nosotros. Borrar una entrada del catálogo no afecta a los documentos que ya usan ese texto como <code>tipo_documento</code> — son independientes, el catálogo es solo una ayuda de sugerencia.</li>
+<li>Al aplicar el esquema (<code>update_db.py</code>) se siembran los 5 tipos por defecto <strong>solo si la tabla está vacía</strong> — así un cliente que ya haya editado su catálogo no los ve reaparecer en cada migración futura.</li>
+</ul>
+<p><strong>Gotcha de migración encontrado al probarlo (2026-09-10):</strong> el proyecto ya provisionado (<code>desarrollo_interno_gestion_documental_dev</code>) tenía, además del tipo de columna, una restricción <code>CHECK</code> residual (<code>gd_documentos_tipo_documento_check</code>, <code>tipo_documento IN ('factura', ...)</code>) de una versión anterior del esquema. <code>ManagerDB.crear_todo()</code> de <code>mtpk_postgres</code> no la detectó ni la quitó (ni siquiera con <code>--permitir-drop</code>, que solo cubre índices/FKs huérfanos) — guardar un tipo nuevo fallaba con un error de Postgres hasta borrar la restricción a mano (<code>ALTER TABLE gd_documentos DROP CONSTRAINT gd_documentos_tipo_documento_check</code>). Si en el futuro hay más clientes con Postgres ya provisionados antes de este cambio, hay que revisar si tienen la misma restricción residual antes de darlos por migrados.</p>
+<h3 id="cumplimiento-de-formatonormativa-2026-09-13">Cumplimiento de formato/normativa (2026-09-13)</h3>
+<p>Un tipo de documento puede llevar, opcionalmente, <code>formato_requerido</code> (cómo debe estar estructurado, p.ej. qué campos lleva una factura) y/o <code>normativa_aplicable</code> (qué reglamento debe cumplir). Es texto libre en ambos casos, no una validación estructurada — sigue sin haber lista cerrada ni esquema por tipo, esto es una guía para que la IA la lea y la aplique con criterio, no una regla mecánica.</p>
+<ul>
+<li><strong>Gestión</strong>: <code>PUT /v1/proyectos/{id}/tipos-documento/{id_tipo}</code> (solo admin, página &quot;Tipos de documento&quot; del panel) para definir o borrar estos dos campos de un tipo. No afecta a documentos ya guardados.</li>
+<li><strong>Al guardar</strong>: antes de <code>guardar_documento_gd</code>, la IA consulta <code>listar_tipos_documento_gd()</code> — si el tipo del documento tiene requisitos, compara el contenido contra ellos y describe en <code>incumplimientos</code> (parámetro de <code>guardar_documento_gd</code>) lo que no cumpla, en sus propias palabras. Si cumple, o el tipo no tiene requisitos, lo deja vacío.</li>
+<li><strong>Dónde queda</strong>: <code>gd_versiones.incumplimientos</code> — por versión, no por documento (una versión corregida puede dejar de incumplir mientras otras versiones antiguas siguieran sin cumplir, aunque en la práctica solo importa la vigente). El panel lo muestra como aviso en rojo en la ficha del documento.</li>
+<li><strong>Resolución</strong>: no se limpia solo. Cuando el documento se corrige (<code>corregir_documento_gd</code>, <code>guardar_documento_gd</code> con una versión nueva, o edición desde el panel) y la IA valora que ya cumple, llama a la tool nueva <code>actualizar_incumplimientos_gd(id_documento, incumplimientos=None)</code> para vaciarlo. Si sigue sin cumplir pero por otro motivo, actualiza el texto en vez de vaciarlo.</li>
+</ul>
+<h3 id="credenciales-2026-09-09-ampliada-2026-09-10">Credenciales (2026-09-09, ampliada 2026-09-10)</h3>
+<p>Gestor genérico de credenciales del cliente para conectar con servicios externos — sin un servicio concreto todavía, así que se diseñó abierto: un nombre, para qué sirve, un usuario opcional y la contraseña/API key/token, cifrada.</p>
+<p>Primera versión (2026-09-09) metía usuario+contraseña como JSON dentro de un único campo <code>valor_cifrado</code> — se corrigió el mismo día siguiente porque escribir JSON a mano no es razonable para alguien no técnico: ahora <code>usuario</code> es su propia columna, sin cifrar (no es secreto) y visible para la IA; solo la contraseña/token va cifrada.</p>
+<pre class="hljs"><code><div>gd_credenciales
+  - id
+  - nombre              VARCHAR(100) UNIQUE  -- p.ej. &quot;erp_contabilidad&quot;
+  - descripcion         MEDIUMTEXT           -- para qué sirve (esto sí lo ve la IA)
+  - usuario             VARCHAR(150)         -- opcional, sin cifrar, la IA sí lo ve
+  - valor_cifrado        VARCHAR(500)         -- la contraseña/API key/token — Fernet, lib.cifrado del repo core
+  - fecha_actualizacion TIMESTAMP
+</div></code></pre>
+<p>Decisión clave: <strong>se gestiona solo desde el panel, nunca por conversación con la IA</strong> — mismo motivo por el que la clave de Mistral/OpenAI ya se gestiona así hoy (Fase 3): si el cliente se la dictara a su IA por chat, quedaría escrita en el historial de esa conversación. La herramienta MCP <code>listar_credenciales_gd()</code> es de solo lectura de metadatos — nombre, descripción y usuario, nunca la contraseña. No hay (todavía) ninguna herramienta que <em>use</em> una credencial para conectarse a algo: eso es una herramienta por servicio, y sin un caso real no tenía sentido inventarla. <code>CredencialesCRUD.valor_descifrado()</code> existe para cuando llegue ese caso (uso interno del backend, nunca expuesto tal cual por una API ni una tool).</p>
+<p>Endpoints del panel (<code>admin_gestion_documental_actual</code>, igual que las API keys — es la única información realmente sensible de este panel):</p>
+<pre class="hljs"><code><div>GET/POST   /v1/proyectos/{id}/credenciales
+PUT/DELETE /v1/proyectos/{id}/credenciales/{id_credencial}
+</div></code></pre>
+<h3 id="tabla-de-estilos-2026-09-09">Tabla de estilos (2026-09-09)</h3>
+<p>Por cada tipo de informe que la IA pueda construir (p.ej. &quot;informe_mensual&quot;, &quot;memoria_anual&quot;): instrucciones de cómo montarlo, más sus imágenes fijas (logo, plantilla...), subidas una vez desde el panel — un estilo puede tener varias imágenes.</p>
+<pre class="hljs"><code><div>gd_estilos
+  - id
+  - nombre_tipo          VARCHAR(100) UNIQUE   -- &quot;informe_mensual&quot;
+  - instrucciones        MEDIUMTEXT            -- estructura, tono, apartados
+  - fecha_actualizacion  TIMESTAMP
+
+gd_estilos_imagenes
+  - id
+  - id_estilo         FK -&gt; gd_estilos.id, ON DELETE CASCADE
+  - nombre            VARCHAR(150)   -- &quot;logo_cabecera&quot;
+  - descripcion_uso   MEDIUMTEXT     -- cuándo/cómo usarla
+  - imagen            BLOB (BYTEA en Postgres) -- el binario, directo en la fila
+  - tipo_mime         VARCHAR(50)    -- &quot;image/png&quot;
+  - fecha_alta        TIMESTAMP
+</div></code></pre>
+<p><strong>La imagen se guarda como <code>BYTEA</code> directo en la fila</strong> — no hay almacén de ficheros en este proyecto y montar uno (S3, disco) solo para unos pocos logos/plantillas habría sido sobredimensionado.</p>
+<p><strong>Cómo le llegan las imágenes a la IA</strong> (decisión 2026-09-09, con el usuario): el servidor MCP y el panel son dos backends con autenticación distinta (<code>x-api-key</code> la IA, JWT el panel), así que una URL del panel no le sirve a la IA sin más. Se descartó montar un endpoint público sin login. En su lugar, <code>obtener_estilo_informe_gd(nombre_tipo)</code> devuelve las imágenes <strong>dentro de la propia respuesta de la tool</strong>, como contenido de imagen nativo del protocolo MCP (<code>fastmcp.utilities.types.Image</code>) — sin URLs, sin permisos nuevos que gestionar. Cada imagen va precedida de un bloque de texto con su nombre y su <code>descripcion_uso</code>, para que la IA sepa cuál es cuál. Probado de punta a punta: la respuesta trae 3 bloques (instrucciones, texto identificador + imagen), cada imagen con su <code>mime_type</code> correcto.</p>
+<p>Endpoints del panel: lectura (<code>GET</code>) abierta a cualquiera con acceso al proyecto — no es información sensible, es contenido de plantilla. Alta/edición/borrado (incluida la subida de imágenes): cualquiera salvo el rol invitado (<code>escritor_gestion_documental_actual</code>, 2026-09-21; antes era solo admin, como las API keys). Regla dada por el usuario: todos los usuarios escriben en todo salvo invitado, que solo lee. Las tools MCP se rigen por el rol de la clave de API, no por una persona (2026-09-21): cada key es operador (lee y escribe) o invitado (solo lee), se elige al emitirla en el panel. Las tools que solo leen llevan <code>@mcp_app.tool(annotations=SOLO_LECTURA)</code> (<code>mcp_server/herramientas/_anotaciones.py</code>); una tool nueva sin marcar se bloquea para claves invitadas — si solo lee, márcala. Ver <code>docs/decisiones.md</code> del core → &quot;Rol de la key&quot;.</p>
+<pre class="hljs"><code><div>GET/POST   /v1/proyectos/{id}/estilos
+PUT/DELETE /v1/proyectos/{id}/estilos/{id_estilo}
+GET        /v1/proyectos/{id}/estilos/{id_estilo}/imagenes                    (metadatos, sin el binario)
+POST       /v1/proyectos/{id}/estilos/{id_estilo}/imagenes                    (multipart)
+GET        /v1/proyectos/{id}/estilos/{id_estilo}/imagenes/{id_imagen}/contenido  (sirve el binario, con sesión)
+DELETE     /v1/proyectos/{id}/estilos/{id_estilo}/imagenes/{id_imagen}
+</div></code></pre>
+<p>El frontend nunca pone el binario en un <code>&lt;img src=&quot;...&quot;&gt;</code> con el token en la URL (quedaría en logs del servidor) — lo trae con <code>fetch()</code> (cabecera <code>Authorization</code>) y lo muestra con un <code>object URL</code> (ver <code>ImagenEstilo</code> en <code>EstiloDetalle.jsx</code>).</p>
+<p><strong>Escritura desde la IA y documentos guía (2026-09-21)</strong>: a petición del usuario, la IA también puede dar de alta y editar estilos, y vincular documentos a ellos:</p>
+<ul>
+<li><code>crear_estilo_informe_gd(nombre_tipo, instrucciones)</code> y <code>actualizar_estilo_informe_gd(nombre_tipo, instrucciones)</code> (esta reemplaza las instrucciones completas). No hay tool para borrar un estilo (arrastraría sus imágenes) ni una imagen — eso sigue siendo solo del panel.</li>
+<li><code>subir_imagen_estilo_gd(nombre_tipo, nombre, descripcion_uso, imagen_base64 | url)</code> (2026-09-21): la imagen llega por <code>imagen_base64</code> (solo viable si la IA tiene el archivo al alcance, p.ej. Claude Code — una imagen adjunta al chat no la puede leer como bytes) o por <code>url</code> pública directa. Se valida por los primeros bytes (PNG/JPEG/GIF/WEBP, máx. 5 MB), no por el tipo que declare quien la envía. La descarga por URL rechaza direcciones no públicas y no sigue redirecciones (para que no sirva de sonda contra servicios internos del servidor). Si ya existe una imagen con ese <code>nombre</code> en el estilo, se reemplaza.</li>
+<li><code>gd_documentos.id_estilo</code> (INT, opcional, FK → <code>gd_estilos.id</code>, <code>ON DELETE SET NULL</code>): un documento que explica cómo elaborar un tipo de informe se vincula a su estilo con <code>asignar_estilo_documento_gd(id_documento, nombre_tipo)</code> (sin <code>nombre_tipo</code> quita el vínculo). Un documento va a un solo estilo; un estilo puede tener varios documentos guía. Se guarda el <code>id</code>, no el nombre, para que renombrar un estilo no rompa el vínculo (ver regla &quot;id, nunca slug&quot;).</li>
+<li><code>obtener_estilo_informe_gd</code> añade, tras las instrucciones, la lista de documentos guía no archivados (<code>id</code> + nombre) para que la IA los lea con <code>obtener_documento_completo_gd</code> antes de redactar; este último devuelve ahora <code>estilo_informe</code> (nombre del estilo vinculado o <code>null</code>).</li>
+<li>Esquema desplegado en los 5 servidores activos (2026-09-22, incluye <code>codemartia.multiplika.net</code>, dado de alta después del punto anterior — no lo tenía).</li>
+<li><strong>Exportar a PDF (2026-09-22)</strong>: tanto el botón &quot;PDF...&quot; del panel (abre un modal con la opción de incluir metadatos en el pie de página, preferencia recordada en <code>localStorage</code>) como <code>generar_informe_pdf_gd</code> incrustan ahora las imágenes fijas (logo...) del estilo — el panel usa automáticamente <code>documento.id_estilo</code>, sin que haga falta indicarlo a mano. Lógica compartida en <code>imagenes_estilo_html()</code> (<code>database/modelos/_mod_pdf.py</code>). Las instrucciones de texto del estilo siguen sin aplicarse al render (solo las usa la IA para redactar el markdown de antemano).</li>
+<li><strong>Ya no pendiente</strong>: el panel sí muestra y permite cambiar el vínculo documento-estilo (selector &quot;Estilo de informe&quot; en la edición de <code>DocumentoDetalle.jsx</code>, endpoint <code>PUT /documentos/{id}/estilo</code>).</li>
+</ul>
+<h3 id="certificados-de-entidades-2026-09-22">Certificados de entidades (2026-09-22)</h3>
+<p>Tabla <code>gd_certificados</code> para certificados digitales (.p12/.pfx con contraseña, o .cer/.pem sin ella), calcada del patrón de <code>gd_credenciales</code> (cifrado Fernet vía <code>lib.cifrado</code> del núcleo). Esquema en <code>database/dependencias/_dep_certificados.py</code>, CRUD y extracción en <code>database/modelos/_mod_certificados.py</code>:</p>
+<ul>
+<li>Columnas: <code>nombre</code>, <code>descripcion</code>, <code>id_entidad</code> (FK nullable a <code>gd_entidades</code>, <strong>N:1</strong> — un certificado cuelga de como mucho una entidad, vínculo opcional, a diferencia de documentos↔entidades que es N:M), datos extraídos en claro del propio certificado (<code>titular</code>, <code>nif_titular</code>, <code>emisor</code>, <code>numero_serie</code>, <code>fecha_emision</code>, <code>fecha_caducidad</code>), y dos campos cifrados: <code>archivo_cifrado</code> (el fichero original, cifrado siempre — también para .cer aunque solo tenga la parte pública, por coherencia de código) y <code>contrasena_cifrada</code> (nullable, solo si es .p12/.pfx). Cifrado como texto (<code>cifrar()</code>/<code>descifrar()</code> de <code>lib/cifrado.py</code> operan sobre <code>str</code>, no bytes — el archivo binario va en base64 antes de cifrar).</li>
+<li>Extracción automática al subir (<code>_parsear_certificado()</code>): prueba primero como PKCS12 (con la contraseña dada, que puede ser None) y si falla como X.509 plano (PEM o DER) — de ahí saca <code>subject</code> (CN + <code>NameOID.SERIAL_NUMBER</code>, que en certificados españoles suele llevar el NIF), <code>issuer</code> CN, número de serie y fechas de validez. Si no se puede leer con ninguno de los dos métodos, <code>ValueError</code> → 400, no se guarda nada a medias. Probado con un certificado autofirmado real (PEM y PKCS12, contraseña correcta/incorrecta/archivo basura) antes de desplegar.</li>
+<li><code>cryptography</code> añadida a <code>requirements.txt</code> de este proyecto (antes solo llegaba transitiva vía <code>fastmcp</code>→<code>authlib</code>).</li>
+<li>Aviso de caducidad: mismo mecanismo que documentos (<code>fecha_caducidad</code> + <code>aviso_caducidad_enviado</code>), <code>scripts/avisar_caducidades.py</code> manda ahora un único correo combinado con las dos secciones (&quot;Documentos por caducar&quot; / &quot;Certificados por caducar&quot;) cuando hay algo de cualquiera de los dos tipos.</li>
+<li>Renovar un certificado caducado = subir uno nuevo (fila nueva), no se sobrescribe el archivo de uno existente — igual que credenciales tampoco permite cambiar el secreto ya guardado, mantiene histórico. Solo se puede editar <code>nombre</code>/<code>descripcion</code>/<code>id_entidad</code> (<code>PUT .../certificados/{id}</code>).</li>
+<li>Sin tools MCP (como credenciales, la IA nunca ve el secreto) — todo desde el panel: pantalla <code>Certificados.jsx</code> (listar, subir con archivo + contraseña opcional + entidad opcional, descargar original, ver el log de uso, eliminar). Endpoints en <code>panel_cliente/servidor.py</code>, todos restringidos a admin_tenant (<code>admin_gestion_documental_actual</code>, igual que credenciales).</li>
+</ul>
+<p><strong>Trazabilidad de uso</strong>: cada descarga del archivo queda registrada en <code>gd_certificados_log</code> (<code>id_certificado</code>, <code>certificado_nombre</code> denormalizado, <code>id_usuario</code>, <code>accion</code>, <code>detalle</code>, <code>fecha</code>). FK <code>id_certificado</code> en <code>ON DELETE SET NULL</code> (no CASCADE) — el registro de auditoría sobrevive aunque se borre el certificado, gracias al nombre denormalizado. Log de solo escritura: sin endpoint de editar ni borrar filas. <code>CertificadosLogCRUD.registrar()</code> se llama desde <code>GET .../certificados/{id}/archivo</code> (la única &quot;uso&quot; que existe hoy) con <code>accion=&quot;descarga&quot;</code>; queda genérica para que cualquier operación futura pase por el mismo sitio. Requiere un usuario real del tenant, no un superadmin (<code>admin_certificados_actual</code> en <code>panel_cliente/dependencias.py</code>, mismo motivo que <code>puede_editar_documento_actual</code> con <code>gd_historial_ediciones</code>: el <code>id_usuario</code> referencia <code>mcpc_usuarios</code>). El panel muestra el log en un modal (&quot;Ver uso&quot;) por certificado.</p>
+<h3 id="estructura-del-repo-igual-que-cualquier-proyecto-de-cliente-de-multiplika-mcp-2026-09-06">Estructura del repo: igual que cualquier proyecto de cliente de Multiplika MCP (2026-09-06)</h3>
+<p>Este proyecto no inventa una estructura propia — sigue exactamente la misma que ya usa cualquier proyecto de cliente sobre Multiplika MCP, documentada en <code>guia_nuevo_proyecto.md</code> del repo core:</p>
+<pre class="hljs"><code><div>multiplika_gestion_documental_mcp/
+├── database/
+│   ├── dependencias/    # esquema (gd_configuracion, gd_documentos, gd_versiones, gd_chunks,
+│   │                    #          gd_credenciales, gd_estilos, gd_estilos_imagenes)
+│   ├── modelos/         # CRUD y lógica de negocio
+│   └── update_db.py     # migración de esta base (vía mtpk-postgres, no mtpk-mariadb)
+├── mcp_server/
+│   └── herramientas/    # las tools MCP (consultar_documentos_gd, buscar_documentos_gd,
+│                        #  archivar/desarchivar, listar_credenciales_gd,
+│                        #  listar_estilos_informe_gd/obtener_estilo_informe_gd...)
+└── panel_cliente/       # panel web del cliente — ver &quot;Panel del cliente&quot; en el plan de fases
+    ├── servidor.py       # backend FastAPI: documentos, API keys, credenciales, estilos
+    └── frontend/         # React — se despliega ya compilado (dist/), sin Node en el servidor
+</div></code></pre>
+<p>Repo propio e independiente del core (<code>multiplika_mcp</code>), igual que cualquier otro proyecto de cliente — se junta con la plataforma solo en el servidor, vía <code>sync.py</code>. La única diferencia respecto a un proyecto de cliente normal es el motor de base de datos (<code>mtpk-postgres</code> en vez de <code>mtpk-mariadb</code>), ya contemplado en <code>guia_nuevo_proyecto.md</code>.</p>
+<h3 id="aprovisionamiento-y-catálogo-de-clientesservidores">Aprovisionamiento y catálogo de clientes/servidores</h3>
+<p>Esto <strong>no es de este proyecto</strong> — es una capacidad del core de Multiplika MCP (detección/instalación del motor de BD + saber qué clientes hay y en qué servidor), que gestión documental usa pero no posee. Ver doc [[multiplika-mcp-catalogo-clientes]].</p>
+<h2 id="plan-de-implementación-fases-2026-09-06">Plan de implementación (fases, 2026-09-06)</h2>
+<p>Requisito previo, no es una fase de este proyecto: <code>mtpk-postgres</code> (librería independiente, repo propio) tiene que estar disponible sin el bug de índices — ya lo está, v0.1.1 en PyPI (ver [[mtpk-postgres-adaptacion]]).</p>
+<p><strong>Fase 1 — Esqueleto del repo + esquema</strong></p>
+<ul>
+<li>Crear el repo <code>multiplika_gestion_documental_mcp</code> con la estructura estándar (<code>database/dependencias</code>, <code>database/modelos</code>, <code>mcp_server/herramientas</code>), siguiendo <code>guia_nuevo_proyecto.md</code> de <code>multiplika_mcp</code>.</li>
+<li>Definir <code>_dep_configuracion.py</code>, <code>_dep_documentos.py</code>, <code>_dep_versiones.py</code>, <code>_dep_chunks.py</code> con <code>mtpk-postgres</code>.</li>
+<li>Aplicar el esquema contra una Postgres de pruebas (<code>update_db.py</code>), incluyendo <code>CREATE EXTENSION vector</code>.</li>
+</ul>
+<p><strong>Fase 2 — Ingesta y consulta básicas (modo fulltext, sin depender aún de OpenAI)</strong> — hecho (2026-09-07)</p>
+<ul>
+<li>Modelos CRUD (<code>_mod_documentos.py</code>, <code>_mod_versiones.py</code>).</li>
+<li>Tool <code>guardar_documento_gd</code> (documento nuevo vs. nueva versión, con las preguntas mínimas ya definidas arriba, en una única transacción).</li>
+<li>Tool <code>buscar_documentos_gd</code>.</li>
+<li>Tool <code>consultar_documentos_gd</code> en modo <code>fulltext</code> únicamente, con una configuración de búsqueda en español que ignora acentos (<code>spanish_unaccent</code>, creada al aprovisionar la base — ver <code>scripts/aprovisionar_proyecto.py</code> del repo core).</li>
+<li>Probado de punta a punta contra una base Postgres real (proyecto de desarrollo interno, sin cliente todavía) y contra una réplica del árbol que produce <code>sync.py</code> del repo core.</li>
+<li>Con esto hay ya un piloto funcional mínimo, sin coste de IA externa.</li>
+</ul>
+<p><strong>Fase 3 — Modo semántico</strong> — hecho (2026-09-08)</p>
+<ul>
+<li>Proveedor de embeddings: <strong>Mistral Embed</strong> (<code>mistral-embed</code>, <strong>1024 dimensiones — confirmado con una llamada real a la API</strong>, no es el dato de catálogo de 1536 que traía OpenAI). La clave de API <strong>la paga y gestiona la empresa (tenant) dueña del proyecto</strong> (decidido 2026-09-08 — cada una la suya, no una clave global de la plataforma), desde el panel de administración del repo core (empresa → &quot;Configuración IA&quot;), cifrada en <code>mcpc_tenants</code>, nunca en un archivo del repo.</li>
+<li>Chunking por encabezados (<code>_mod_embeddings.py::chunkear_por_encabezados</code>) + generación de <code>gd_chunks</code> (<code>_mod_chunks.py</code>).</li>
+<li><code>consultar_documentos_gd</code> ampliada para modo <code>semantico</code> (búsqueda por similitud de coseno con pgvector, operador <code>&lt;=&gt;</code>).</li>
+<li>Tool <code>activar_busqueda_semantica_gd</code> de backfill: cambia el modo y genera embeddings de todo lo ya guardado que sea buscable.</li>
+<li><code>guardar_documento_gd</code> y <code>corregir_documento_gd</code> reindexan solos cuando el modo es semántico (ver <code>_reindexar_si_semantico</code> en <code>_herr_documentos.py</code>); las versiones que dejan de ser buscables (superadas por una nueva, sin histórico completo) se limpian solas.</li>
+<li>Probado de punta a punta contra Mistral real y Postgres real: activar, guardar (autoindexado), preguntar por dos aspectos distintos del mismo documento (cada uno prioriza el fragmento correcto), corregir (reindexa) y volver a preguntar (ya no aparece el dato viejo).</li>
+<li><strong>OpenAI disponible como alternativa</strong> (2026-09-08, por si algún cliente lo prefiere — hoy todos usan Mistral por defecto): <code>gd_configuracion.proveedor_embedding</code> decide el proveedor real usado, elegible por cliente con <code>update_db.py --proveedor-embedding</code> al dar de alta su base (la dimensión del vector va fija en la columna, no se puede cambiar después sin migrar a mano). <code>_mod_embeddings.py</code> enruta a Mistral u OpenAI según ese valor; la clave de OpenAI se gestiona igual que la de Mistral, por empresa. Probado de verdad: la llamada llega a la API real de OpenAI (confirmado con un 401 de credenciales al usar una clave inválida — no es un fallo de código), y Mistral se comprobó que sigue funcionando igual tras el cambio.</li>
+<li><strong>Clave de API por empresa, no global</strong> (2026-09-08): <code>database.config_db.get_mistral_api_key(alias_proyecto)</code> / <code>get_openai_api_key(alias_proyecto)</code> resuelven el proyecto → su tenant → la clave de ESE tenant. Probado de punta a punta contra el servidor real: guardar la clave desde &quot;Configuración IA&quot; de una empresa en el panel, y confirmar que <code>guardar_documento_gd</code>/<code>consultar_documentos_gd</code> la recogen sin ningún paso manual.</li>
+</ul>
+<p><strong>Fase 4 — Corrección de markdown + documento completo</strong></p>
+<ul>
+<li>Tool <code>obtener_documento_completo_gd</code> — hecho (2026-09-07), probada de punta a punta (versión vigente, versión concreta, y los dos casos de error).</li>
+<li>Mecanismo de corrección (escenario B): <strong>decidido 2026-09-08 — siempre el cliente, con su propia IA, sin revisión de nadie del equipo</strong> (no hay capacidad para que alguien del equipo esté pendiente de corregir). Tool <code>corregir_documento_gd</code> — hecho, probada de punta a punta (corrige <code>markdown_actual</code>, conserva <code>markdown_original</code> intacto, marca <code>revisado_manualmente=true</code>, rechaza versiones inexistentes o de otro documento).</li>
+</ul>
+<p><strong>Panel del cliente (<code>panel_cliente/</code>) — hecho (2026-09-08)</strong></p>
+<ul>
+<li>Decisión original: visualmente solo listado y búsqueda (solo lectura); guardar y corregir documentos sigue siendo exclusivamente por conversación con la IA — se valoró y se descartó subir archivos sin IA (markitdown vale para PDF digital, pero no para fotos/escaneados, que es justo el caso que peor resuelve un OCR sin IA). <strong>Esto se quedó corto con el tiempo</strong> — el panel ya tiene bastante más que lectura: archivar documentos, credenciales, estilos (con subida de imágenes) y usuarios, todo añadido después (ver más abajo). Lo que sigue intacto es el mecanismo de ingesta/corrección de documentos en sí: eso sigue siendo solo por conversación con la IA, nunca desde el panel.</li>
+<li>Reutiliza el login del panel de administración del repo core (mismo JWT, mismo usuario/contraseña de la empresa) y su sistema de roles por proyecto — no hay una segunda base de usuarios ni una segunda pantalla de login que mantener.</li>
+<li>Un tenant con varios proyectos de gestión documental ve un selector; con uno solo, entra directo — se resuelve por <code>mcpc_proyectos.tipo_producto = &quot;gestion_documental&quot;</code> (repo core), no hace falta que el cliente sepa nada del identificador del proyecto.</li>
+<li>Desplegado en <code>https://mcp-d.multiplika.net/gd</code>, servicio systemd propio (<code>multiplika_gd_panel</code>, puerto 8112) — primer proyecto de cliente con panel propio; <code>sync.py</code> del repo core ahora sabe sincronizar una carpeta <code>panel_cliente/</code> opcional (su frontend compilado no viaja por git, se copia aparte porque el servidor no tiene Node).</li>
+<li>Probado de punta a punta en producción real: login, selección de proyecto, listado, búsqueda por contenido, ver un documento completo creado de verdad a través del MCP, y que no se puede ver el proyecto de otra empresa ni sin tener rol asignado.</li>
+</ul>
+<p><strong>Cómo compilar el frontend para producción (gotcha real, 2026-09-11):</strong> <code>panel_cliente/frontend/vite.config.js</code> y <code>src/api.js</code> leen tres variables de entorno en build time — sin ellas, <code>npm run build</code> genera un <code>dist/</code> que solo funciona en local, no detrás del proxy de Apache:</p>
+<pre class="hljs"><code><div><span class="hljs-built_in">cd</span> panel_cliente/frontend
+VITE_BASE=/gd/ VITE_API_ADMIN=/panel/v1 VITE_API_CLIENTE=/gd/v1 npm run build
+</div></code></pre>
+<p>Sin <code>VITE_BASE</code>, Vite genera rutas de assets absolutas desde la raíz (<code>/assets/...</code>) en vez de con el prefijo <code>/gd/</code> bajo el que vive el panel — el navegador pide <code>/assets/index-xxx.js</code> a un dominio que solo tiene <code>/gd/assets/index-xxx.js</code>, Apache lo devuelve 404 (no hay <code>ProxyPass &quot;/assets&quot;</code>, solo <code>/mcp</code>, <code>/panel</code> y <code>/gd</code>) y la página sale en blanco. Sin <code>VITE_API_ADMIN</code>/<code>VITE_API_CLIENTE</code>, <code>api.js</code> usa sus valores por defecto de desarrollo (<code>http://127.0.0.1:8001</code> y <code>:8002</code>) — localhost del navegador de quien entra al panel, no del servidor, así que cualquier llamada a la API falla con &quot;Failed to fetch&quot; aunque la página cargue bien. Al subir el <code>dist/</code> compilado siempre hay que borrar lo anterior (<code>rsync --delete</code>) — los ficheros llevan hash de contenido en el nombre, así que un <code>dist/</code> a medio actualizar puede dejar un <code>index.html</code> apuntando a un asset ya borrado.</p>
+<p><strong>Archivar/desarchivar desde el panel — hecho (2026-09-09)</strong>
+Primera acción de escritura real del panel del cliente sobre documentos (hasta entonces solo lectura). Botón Archivar/Desarchivar en el detalle del documento, y una etiqueta gris &quot;🗄 Archivado&quot; tanto en el detalle como en el listado (que a partir de aquí incluye también los archivados, antes se excluían). Permiso: <strong>para cualquiera con acceso al proyecto, no solo admins</strong> — decidido así explícitamente: archivar es parte del día a día con los documentos, no una acción de administración como gestionar API keys. Probado de punta a punta contra <code>mcp-d.multiplika.net</code>.</p>
+<p><strong>Credenciales y tabla de estilos — hecho (2026-09-09)</strong></p>
+<ul>
+<li><code>gd_credenciales</code>: credenciales del cliente para servicios externos, cifradas, gestionadas solo desde el panel — ver &quot;Credenciales&quot; arriba. Tool <code>listar_credenciales_gd()</code>.</li>
+<li><code>gd_estilos</code> / <code>gd_estilos_imagenes</code>: instrucciones e imágenes fijas por tipo de informe — ver &quot;Tabla de estilos&quot; arriba. Tools <code>listar_estilos_informe_gd()</code> / <code>obtener_estilo_informe_gd()</code> (más crear/actualizar/asignar a documento — ver &quot;Escritura desde la IA y documentos guía&quot;).</li>
+<li>Primera vez que el panel del cliente permite escribir más allá de archivar: crear/editar estilos y credenciales, y subir imágenes (<code>multipart/form-data</code>, <code>python-multipart</code> añadido a <code>requirements.txt</code>).</li>
+<li>Probado de punta a punta contra <code>mcp-d.multiplika.net</code>: creación de una credencial y un estilo desde el panel (navegador real), subida de una imagen con miniatura visible, y verificación desde un cliente MCP real de que <code>listar_credenciales_gd()</code> nunca devuelve el valor y de que <code>obtener_estilo_informe_gd()</code> trae las instrucciones más la imagen como contenido nativo (bloque <code>image</code>, <code>mime_type</code> correcto). Datos de prueba limpiados al terminar.</li>
+</ul>
+<p><strong>Migración del panel del cliente a Mantine — hecho (2026-09-10)</strong>
+Todas las pantallas (<code>Login</code>, <code>ElegirProyecto</code>, <code>Documentos</code>, <code>DocumentoDetalle</code>, <code>ApiKeys</code>, <code>Credenciales</code>, <code>Estilos</code>, <code>EstiloDetalle</code>) pasan de CSS a mano a componentes de <code>@mantine/core</code> — motivo: dos fallos visuales seguidos (una clase CSS usada sin existir, botones sin separación) por mantener estilos propios. <code>index.css</code> queda reducido al fondo de página. Mismo cambio hecho en el panel de administración del repo core (ver <code>docs/decisiones.md</code> de ese repo). Probado con capturas de pantalla reales de las ocho pantallas.</p>
+<p><strong>Retoques posteriores a credenciales y estilos — hecho (2026-09-10)</strong></p>
+<ul>
+<li>Credenciales: el campo <code>valor</code> (contraseña/API key) llevaba usuario+contraseña como JSON cuando hacía falta — se corrigió el mismo día: <code>usuario</code> es ahora su propia columna, sin cifrar (no es secreto), visible para la IA; solo la contraseña sigue cifrada y oculta. Ver &quot;Credenciales&quot; arriba.</li>
+<li>Credenciales: el navegador ofrecía autorrellenar esos dos campos con contraseñas guardadas de otro sitio (los reconocía como un login) — <code>autoComplete=&quot;off&quot;</code>/<code>&quot;new-password&quot;</code> más los atributos que respetan 1Password/LastPass.</li>
+<li>Estilos: la caja de instrucciones (<code>rows={6}</code>/<code>{4}</code>) se quedaba corta y obligaba a hacer scroll — ahora <code>autosize</code> (crece con el contenido, hasta 30-40 líneas antes de scrollar) y con fuente monoespaciada en el detalle.</li>
+</ul>
+<p><strong>Pantalla de usuarios en el panel del cliente — hecho (2026-09-10)</strong>
+Antes, dar de alta un usuario de la empresa o asignarle un rol en un proyecto era cosa exclusiva de superadmin (repo core, por curl) — el cliente tenía que pedírselo al equipo. Decisión (a petición explícita del usuario): el admin_tenant de un proyecto también puede, y se le da una pantalla para hacerlo sin salir de este panel (<code>Usuarios.jsx</code>, botón &quot;Usuarios&quot; junto a API keys/Credenciales/Estilos, visible solo si <code>proyecto.es_admin</code>). Reutiliza tal cual los endpoints del panel de administración del repo core (mismo JWT, mismo patrón que <code>login</code>/<code>listarProyectosDeLaEmpresa</code> — ver <code>docs/decisiones.md</code> del core → &quot;Alta de usuarios: también admin_tenant&quot;), así que no hay lógica de permisos duplicada aquí. <code>ver_proyecto</code> (<code>GET /v1/proyectos/{id}</code>) devuelve ahora también <code>id_tenant</code>, necesario porque los usuarios son por tenant, no por proyecto. Sin edición ni borrado de usuarios en ningún sitio — a propósito.</p>
+<p>Probado con una usuaria real (no el enlace de soporte de superadmin): login normal con su propio email/contraseña, ve el botón, crea otro usuario ella sola sin que nadie del equipo intervenga. Datos de prueba limpiados al terminar.</p>
+<p><strong>Conservar el archivo original — planificado (2026-09-10), pendiente de implementar</strong></p>
+<p>Hoy solo se guarda el markdown que genera la IA; la foto o el PDF que sube el cliente se descarta. Riesgo real para un cliente tipo gestoría: si la IA lee mal algo, o si hace falta el escaneado original para algo legal, no está en ningún sitio. Diseño acordado con el usuario, sin implementar todavía:</p>
+<ul>
+<li><strong>Nueva tabla <code>gd_versiones_originales</code></strong> (no columnas dentro de <code>gd_versiones</code>, para no arrastrar binarios pesados en cada búsqueda/listado normal): <code>id</code>, <code>id_version</code> (FK → <code>gd_versiones.id</code>, única — una por versión, ON DELETE CASCADE), <code>archivo</code> (BLOB/BYTEA), <code>tipo_mime</code>, <code>nombre_fichero</code> (opcional), <code>fecha_alta</code>. No todas las versiones tendrán fila aquí — una corrección (<code>corregir_documento_gd</code>) no sube archivo nuevo.</li>
+<li><strong><code>guardar_documento_gd</code> gana tres parámetros opcionales</strong>: <code>archivo_original_base64</code>, <code>archivo_tipo_mime</code>, <code>archivo_nombre</code>. Opcionales para no romper casos sin archivo real, pero la propia herramienta debe instruir a la IA para que los mande siempre que tenga el archivo.</li>
+<li><strong>Vía de subida decidida</strong>: la IA manda el archivo junto con el markdown, en la misma llamada — no una subida aparte desde el panel. Motivo: un solo paso, no cambia el flujo actual de conversación. Riesgo aceptado y pendiente de probar: un PDF escaneado de muchas páginas podría no caber bien en una llamada — validar con un caso real grande antes de darlo por cerrado.</li>
+<li><strong>Base64 solo de paso, nunca almacenado así</strong>: es la única forma de que el archivo viaje dentro de una llamada a herramienta (JSON no lleva binario), pero en cuanto llega se decodifica y se guarda como binario de verdad (BYTEA) — un archivo en base64 ocupa un 33% más que en binario, y con miles de documentos acumulándose se nota.</li>
+<li><strong>Recuperación</strong>: botón &quot;Descargar original&quot; en el detalle del documento del panel, mismo patrón que las imágenes de estilos (<code>GET .../documentos/{id}/original/contenido</code>, autenticado, sirve el binario con su <code>tipo_mime</code>). Exponerlo también a la IA (para que pueda mostrarlo/adjuntarlo) queda como posible fase 2, no imprescindible para la primera versión.</li>
+</ul>
+<p><strong>Fase 5 — Piloto con un cliente real</strong></p>
+<ul>
+<li>Elegir el primer cliente, probar el ciclo completo (subir, consultar, corregir) y ajustar según lo que salga.</li>
+<li>Pendiente: modelo de coste al cliente por el uso de embeddings — decisión de negocio, no técnica.</li>
+</ul>
+<h2 id="cinco-mejoras-planificadas-2026-09-10-pendientes-de-implementar">Cinco mejoras planificadas (2026-09-10), pendientes de implementar</h2>
+<p>Diseño acordado con el usuario para las cinco ideas que quedaron solo anotadas. Se implementan en este orden, de más a menos autocontenida.</p>
+<h3 id="1-filtros-en-la-búsqueda-del-panel--implementado-y-probado-2026-09-10">1. Filtros en la búsqueda del panel — implementado y probado (2026-09-10)</h3>
+<p><code>GET /v1/proyectos/{id}/documentos</code> acepta ahora parámetros opcionales <code>tipo_documento</code> y <code>fecha_desde</code>/<code>fecha_hasta</code> (no a la búsqueda por contenido, que sigue siendo solo el texto — son dos modos que no se combinan), con un <code>Select</code> de tipo y dos selectores de fecha en <code>Documentos.jsx</code>.</p>
+<p>A mitad de esta implementación el cliente pidió que la lista de tipos dejara de ser cerrada — ver &quot;Tipos de documento&quot; más arriba, que se implementó primero por ser un prerrequisito: el <code>Select</code> de este filtro ahora carga sus opciones desde <code>listar_tipos_documento_gd()</code>/<code>GET /v1/proyectos/{id}/tipos-documento</code> en vez de una lista fija en el frontend.</p>
+<h3 id="2-documentos-pendientes-la-pieza-compartida-por-subida-masiva-e-ingesta-por-email--implementado-y-probado-2026-09-10">2. Documentos pendientes: la pieza compartida por subida masiva e ingesta por email — implementado y probado (2026-09-10)</h3>
+<p>Decidido con el usuario: cuando un documento llega <strong>sin nadie delante</strong> (un lote subido al panel, o un email reenviado), no puede pasar por las preguntas que la IA siempre hace (tipo, nombre, si es una versión nueva...) — así que se queda <strong>pendiente</strong> hasta que el cliente habla con su IA, que lo procesa entonces con las mismas preguntas de siempre. No cambia la regla de &quot;la IA siempre pregunta&quot;, solo cambia cuándo pregunta.</p>
+<pre class="hljs"><code><div>gd_documentos_pendientes
+  - id
+  - archivo         BLOB (BYTEA)   -- el fichero tal cual llegó
+  - tipo_mime        VARCHAR(50)
+  - nombre_original   VARCHAR(255)   -- nombre de fichero o asunto del email
+  - origen            ENUM('panel', 'email')
+  - fecha_alta         TIMESTAMP
+</div></code></pre>
+<p>Tools MCP:</p>
+<ul>
+<li><code>listar_documentos_pendientes_gd()</code> — metadatos de lo que hay en la cola (nombre, origen, fecha), para que la IA pueda avisar al cliente (&quot;tienes 2 documentos nuevos, ¿los proceso?&quot;) al empezar una conversación.</li>
+<li><code>obtener_documento_pendiente_gd(id)</code> — devuelve el fichero como contenido de imagen/archivo nativo de la respuesta (mismo mecanismo que las imágenes de estilos: <code>Image</code> para <code>image/*</code>, <code>File</code> para el resto — PDF incluido), para que la IA pueda leerlo de verdad antes de preguntar.</li>
+<li><code>guardar_documento_gd</code> gana un parámetro opcional <code>id_documento_pendiente</code> — si se indica, al guardar con éxito borra esa fila de la cola.</li>
+</ul>
+<p><strong>Subida masiva</strong> (vía panel): <code>GET/POST /v1/proyectos/{id}/documentos-pendientes</code> (POST multipart, campo repetido <code>archivos</code>, una fila por fichero) y <code>DELETE /v1/proyectos/{id}/documentos-pendientes/{id_pendiente}</code> para descartar uno sin procesarlo. Abierto a cualquier usuario del proyecto (no solo admin) — mismo criterio que archivar/desarchivar: es día a día con documentos, no configuración sensible. <code>Documentos.jsx</code> tiene un botón &quot;Subir documentos&quot; (selector múltiple) y, si hay algo en cola, una tabla pequeña con botón &quot;Descartar&quot; por fila.</p>
+<p><strong>Ingesta por email</strong>: el proceso que lee el correo entrante inserta en esta misma tabla, con <code>origen='email'</code> (ver &quot;3. Ingesta por email&quot;).</p>
+<h3 id="3-ingesta-por-email--implementado-2026-09-10-rediseñado-el-mismo-día">3. Ingesta por email — implementado (2026-09-10, rediseñado el mismo día)</h3>
+<p><strong>Diseño descartado primero, y por qué:</strong> la idea inicial era un buzón/dominio compartido de la plataforma (<code>&lt;algo-por-cliente&gt;@documentos.multiplika.net</code>), con <code>getmail</code> entregando a un script vía Postfix. Al ir a montarlo, la tabla <code>mail_domain</code> de ISPConfig estaba vacía — no hay ningún dominio de correo dado de alta en este servidor — así que hacía falta crear uno nuevo, tocando DNS del dominio raíz. Se probó un atajo (una dirección bajo el propio hostname del servidor, <code>facturae.multiplika.net</code>, que Postfix ya acepta sin tocar DNS, con un alias en <code>/etc/aliases</code> que canaliza el correo directo a un script) y <strong>el usuario lo frenó a tiempo</strong>: no tiene sentido depender de una dirección del servidor cuando cada cliente de Gestión Documental ya tiene su propia cuenta de correo de empresa. Diseño final, mucho más simple: <strong>cada cliente da de alta SU PROPIA cuenta de correo</strong> (la que ya usa) en el panel, y esa misma cuenta sirve para las dos cosas — mandar los avisos de caducidad y recibir documentos.</p>
+<pre class="hljs"><code><div>gd_configuracion (añadido a la fila única)
+  - email_cuenta_direccion         VARCHAR(255)
+  - email_cuenta_usuario           VARCHAR(255)  -- login SMTP/IMAP si es distinto de la dirección
+  - email_cuenta_password_cifrada  VARCHAR(500)  -- Fernet, lib.cifrado, igual que gd_credenciales
+  - email_cuenta_smtp_host / _smtp_port (587) / _smtp_seguridad ENUM('starttls','ssl','ninguna')
+  - email_cuenta_imap_host / _imap_port (993) / _imap_seguridad ENUM('ssl','starttls','ninguna')
+</div></code></pre>
+<p><code>_seguridad</code> es explícito, elegido por el cliente en el panel — la primera versión lo adivinaba por el puerto (465 = SSL, cualquier otro = STARTTLS, e IMAP siempre SSL), lo que no vale para configuraciones fuera de lo habitual. El usuario lo pidió al revisar la pantalla.</p>
+<ul>
+<li>Panel: <code>GET/PUT /v1/proyectos/{id}/configuracion/cuenta-email</code> (solo admin) — pantalla &quot;Cuenta de correo&quot; (botón junto a los demás en <code>Documentos.jsx</code>). El <code>GET</code> nunca devuelve la contraseña, aunque esté guardada; el <code>PUT</code> solo la sobrescribe si se manda una nueva (dejarla vacía no la borra) — mismo patrón que <code>gd_credenciales</code>.</li>
+<li><code>scripts/revisar_correo_entrante.py</code> (cron cada 15 min, <code>mcp_gd_revisar_correo</code>): por cada proyecto con cuenta configurada, se conecta por IMAP, busca correos no leídos, extrae los adjuntos válidos (imagen o PDF) de cada uno, los inserta en <code>gd_documentos_pendientes</code> con <code>origen='email'</code>, y marca el correo como leído (tenga o no adjuntos válidos, para no revisarlo otra vez). Una cuenta mal configurada (contraseña caducada, servidor caído...) de un cliente no impide revisar la de los demás — mismo <code>try/except</code> por proyecto que ya lleva <code>avisar_caducidades.py</code>.</li>
+<li><code>scripts/avisar_caducidades.py</code> (ver &quot;4.&quot; más abajo) se actualizó para mandar los avisos desde esta misma cuenta por SMTP, en vez de desde un remitente compartido del servidor.</li>
+</ul>
+<p><strong>Probado:</strong> el parseo MIME/extracción de adjuntos (con un correo sintético) y el CRUD del panel — de punta a punta con una cuenta IMAP/SMTP real todavía no, porque hace falta una cuenta de verdad para probarlo (una cuenta de prueba del propio usuario, o una que cree para el caso).</p>
+<p><strong>Bug real encontrado al probar el CRUD del panel (2026-09-10):</strong> <code>actualizar_cuenta_email</code> solo protegía la contraseña de un <code>PUT</code> parcial — el resto de campos (dirección, usuario, hosts, puertos) se escribían literalmente, así que corregir un solo campo (p.ej. el host SMTP) borraba todo lo demás ya guardado a <code>NULL</code>. Arreglado igual que la contraseña: solo se actualizan los campos que llegan con un valor (no <code>None</code>). Verificado por revisión de código y por la lógica ya probada del mismo patrón en la contraseña; no se ha vuelto a lanzar el test de extremo a extremo tras el arreglo.</p>
+<h3 id="4-fechas-de-caducidad-y-avisos-proactivos-por-email--implementado-2026-09-10">4. Fechas de caducidad y avisos proactivos por email — implementado (2026-09-10)</h3>
+<ul>
+<li><code>gd_versiones.fecha_caducidad</code> (DATE, opcional) — junto a <code>fecha_documento</code>, no en <code>gd_documentos</code>: la caducidad es del contenido de esa versión concreta (un contrato renovado es, en la práctica, otra fecha). <code>gd_versiones.aviso_caducidad_enviado</code> (BOOLEAN) acompaña al campo: <strong>un solo aviso por documento, no un recordatorio diario</strong> (decidido explícitamente por el usuario al planificar esto) — se marca a <code>true</code> en cuanto se manda el correo, para no repetirlo.</li>
+<li><code>guardar_documento_gd</code> gana un parámetro opcional <code>fecha_caducidad</code>.</li>
+<li>Tool <code>listar_documentos_por_caducar_gd(dias=30)</code> — para que la IA pueda responder si se le pregunta (independiente del aviso proactivo).</li>
+<li><strong>Aviso proactivo por email</strong>: <code>gd_configuracion.email_avisos</code> (a quién avisar; NULL desactiva el aviso), gestionable desde el panel (<code>GET/PUT /v1/proyectos/{id}/configuracion/avisos</code>, solo admin — pantalla &quot;Avisos de caducidad&quot;, botón junto a los demás en <code>Documentos.jsx</code>) sin depender de nosotros. Script diario <code>scripts/avisar_caducidades.py</code> (cron <code>mcp_gd_avisos_caducidad</code>, 07:15 — mismo patrón que <code>backup_diario.py</code> del core: recorre <code>mcpc_proyectos</code> con <code>motor='postgres'</code> y <code>tipo_producto='gestion_documental'</code>) que, por cada proyecto con algo por caducar y <code>email_avisos</code> configurado, manda UN correo con todo lo pendiente y marca esas versiones como avisadas — <strong>por SMTP desde la cuenta de correo propia del cliente</strong> (<code>gd_configuracion.email_cuenta_*</code>, ver &quot;3. Ingesta por email&quot; — mismo mecanismo, se comparte la misma cuenta), sin remitente compartido de la plataforma. Sin cuenta configurada, o sin <code>email_avisos</code>, se omite ese proyecto.</li>
+</ul>
+<p><strong>Bug real encontrado al probarlo end-to-end (2026-09-10):</strong> el envío por <code>smtplib</code> no tenía manejo de errores — un <code>email_avisos</code> mal configurado (buzón inexistente, dominio caído...) de UN solo cliente propagaba la excepción hasta abortar el script entero, dejando sin avisar a TODOS los demás clientes esa noche (sin pérdida de datos: al no marcarse <code>aviso_caducidad_enviado</code>, se reintenta solo con la siguiente ejecución diaria, pero silenciosamente hasta entonces). Arreglado con un <code>try/except</code> alrededor del envío en <code>_procesar_proyecto()</code>, que solo salta ese proyecto y sigue con el resto. Autocontenido a propósito (SQL en línea contra <code>gd_versiones</code>/<code>gd_documentos</code>/<code>gd_configuracion</code>, sin pasar por <code>database/modelos</code> de este repo) para no depender de que sus imports relativos funcionen fuera del árbol de despliegue del servidor MCP — ver el docstring del propio script para el razonamiento completo. Desplegado junto a <code>panel_cliente/</code>, en <code>apps/mcp_server/paneles_cliente/multiplika_gestion_documental_mcp/scripts/</code>.</p>
+<h3 id="5-exportar-un-informe-a-pdf--implementado-2026-09-10">5. Exportar un informe a PDF — implementado (2026-09-10)</h3>
+<p>Sencillo para empezar (texto formateado + logo, no maquetación compleja). Tool <code>generar_informe_pdf_gd(markdown, nombre_archivo, nombre_tipo_estilo=None)</code>: convierte el markdown que acaba de escribir la IA a HTML (biblioteca <code>markdown</code>) y de ahí a PDF (<code>WeasyPrint</code> — valorado <code>pandoc</code>, no está instalado en el servidor y añadiría una dependencia externa al margen de Python), incrustando las imágenes fijas del estilo indicado (si se pasa uno) al principio del documento, y devuelve el PDF como contenido de archivo nativo de la respuesta (la IA se lo entrega al cliente directamente, sin pasar por el panel).</p>
+<p><strong>Infraestructura de servidor que hizo falta (no solo pip):</strong> WeasyPrint necesita bibliotecas nativas del sistema (Pango, Cairo, GDK-Pixbuf, GObject) — <code>libgdk-pixbuf-2.0-0</code> no estaba instalada en <code>mcp-d</code>; el mirror <code>security.debian.org</code> tenía el índice caducado para la versión exacta esperada, así que se instaló la versión equivalente disponible en el mirror normal (<code>apt-get install libgdk-pixbuf-2.0-0=2.42.2+dfsg-1+deb11u2 ...</code>).</p>
+<p><strong>Gotcha real de conda encontrado al probarlo:</strong> el proceso del servidor MCP corre en un entorno conda (<code>py313mcp</code>) <strong>compartido por las herramientas de todos los proyectos</strong>. Ese entorno trae su propio <code>libffi</code>, incompatible con el <code>libgobject</code> del sistema que WeasyPrint carga por <code>dlopen</code> (fallo real: <code>undefined symbol: ffi_type_uint32, version LIBFFI_BASE_7.0</code>). Instalar Pango/Cairo/GObject vía <code>conda install -c conda-forge pango</code> habría sido la solución &quot;de manual&quot;, pero el servidor solo tiene ~1 GB de RAM libre y sin swap — el solver de conda-forge se quedó sin memoria y el proceso murió (<code>Terminado (killed)</code>), en un servidor que aloja más servicios además de este. Se descartó por riesgo de tumbar algo más mientras resuelve.</p>
+<p>Solución adoptada, sin tocar el entorno compartido: <code>generar_informe_pdf_gd</code> lanza el render de WeasyPrint en un <strong>subproceso aparte</strong> (<code>asyncio.create_subprocess_exec</code>, HTML por stdin, PDF por stdout), con <code>LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libffi.so.7</code> puesto solo en el entorno de ese subproceso — fuerza a usar el libffi del sistema (compatible con el gobject del sistema) sin cambiar nada del proceso principal del servidor ni de las demás herramientas que comparten ese mismo entorno conda.</p>
+<hr>
+<p>Orden de implementación: 1 → 2 (con subida masiva) → 5 → 4 → 3. Las cinco, implementadas y desplegadas el 2026-09-10 — la 3 tuvo que rediseñarse a mitad de camino (ver su apartado: se descartó un buzón/dominio propio de la plataforma a favor de que cada cliente use su propia cuenta de correo).</p>
+<h2 id="normativas-legales-como-caso-de-uso-2026-09-11">Normativas legales como caso de uso (2026-09-11)</h2>
+<p>Un cliente puede usar la Gestión Documental para consultar normativas legales (leyes, reglamentos, órdenes) además de sus propios documentos. No hizo falta esquema nuevo salvo dos campos:</p>
+<ul>
+<li><strong>Tipo de documento</strong>: <code>&quot;normativa&quot;</code> como cualquier otro valor de <code>tipo_documento</code> — el catálogo ya es texto libre (ver &quot;Tipos de documento&quot; más arriba), no hace falta ningún cambio.</li>
+<li><strong>Vigente / derogada</strong>: ya cubierto por el mecanismo de versiones existente. Cuando una normativa se sustituye por otra, es una nueva versión del mismo documento (<code>guardar_documento_gd</code> con <code>id_documento_existente</code>): la anterior deja de ser <code>vigente</code> pero queda en el histórico, tal cual ya funciona hoy para cualquier documento corregido.</li>
+<li><strong><code>gd_versiones.url_origen</code></strong> (VARCHAR(1000), opcional, campo nuevo): URL pública de donde se leyó esa versión (p.ej. la ficha del BOE de esa publicación concreta). Es solo referencia para poder volver a consultar la fuente si hace falta — el markdown guardado sigue siendo la fuente de verdad, no se depende de que la URL siga viva. Cada versión de una normativa suele tener su propia URL oficial (una revisión posterior es una publicación distinta), así que vive en <code>gd_versiones</code>, no en <code>gd_documentos</code>.</li>
+<li><strong><code>gd_documentos.ambito</code></strong> (VARCHAR(50), opcional, campo nuevo, 2026-09-11): ámbito de aplicación — p.ej. &quot;nacional&quot;, &quot;autonómica&quot;, &quot;privada&quot; para normativas. Texto libre como <code>tipo_documento</code>, pero sin catálogo de sugerencias (a diferencia de <code>gd_tipos_documento</code>): son pocos valores esperados y no aplica a todos los tipos de documento (una factura no tiene ámbito). Vive en <code>gd_documentos</code>, no en <code>gd_versiones</code> — no cambia entre versiones del mismo documento. Solo se fija al crear el documento (parámetro <code>ambito</code> de <code>guardar_documento_gd</code>); no se puede cambiar al subir una versión nueva de uno ya existente, igual que <code>tipo_documento</code>. Decidido explícitamente para NO meterlo dentro de <code>tipo_documento</code> (p.ej. &quot;normativa nacional&quot;, &quot;normativa autonómica&quot;) porque el filtro de tipo del panel dejaría de poder agrupar todas las normativas juntas.</li>
+</ul>
+<p><strong>Flujo de ingesta desde una URL</strong>: no hay una tool de descarga en el servidor MCP — es el propio cliente IA (Claude Desktop/Code, con su capacidad de leer URLs) quien descarga y lee el PDF, igual que hoy lee un PDF adjunto en la conversación. <code>guardar_documento_gd</code> gana el parámetro opcional <code>url_origen</code> para guardar esa referencia; el resto del pipeline (preguntas de siempre, markdown, indexado) no cambia.</p>
+<p>Implementado y desplegado (2026-09-11): columnas en <code>_dep_versiones.py</code>/<code>_dep_documentos.py</code>, parámetros en <code>guardar_documento()</code> (<code>database/modelos/_mod_versiones.py</code>) y en la tool <code>guardar_documento_gd</code> (<code>mcp_server/herramientas/_herr_documentos.py</code>), devueltos también por <code>obtener_documento_completo_gd</code> y por el detalle de documento del panel (<code>GET /v1/proyectos/{id}/documentos/{id}</code>, mostrado en <code>DocumentoDetalle.jsx</code> como filas &quot;Fuente&quot; y &quot;Ámbito&quot; de la tabla de metadatos). Migración (<code>update_db.py</code>) aplicada en la base del proyecto de pruebas interno (<code>desarrollo_interno_gestion_documental_dev</code>) — sigue pendiente para cualquier otra base de cliente que se provisione antes de tener esto ya en su <code>update_db.py</code> de referencia (hoy no hay ninguna: solo existe ese proyecto de pruebas).</p>
+<h3 id="ayuda-para-el-cliente-mismo-texto-en-la-ia-y-en-el-panel-2026-09-11">Ayuda para el cliente: mismo texto en la IA y en el panel (2026-09-11)</h3>
+<p>El cliente puede preguntarle a su IA &quot;¿cómo funciona esto?&quot; y también quiere un sitio equivalente en el panel — un único texto explicando todo el flujo (guardar, cola de pendientes, buscar, corregir, versiones, archivar, caducidades, normativas/ámbito, informes PDF, qué se gestiona desde el panel), sin mantener dos redacciones distintas.</p>
+<p><strong>Dónde vive el contenido:</strong> <code>database/ayuda_gd.py</code> (constante <code>TEXTO_AYUDA_GD</code>, markdown en texto plano) — no en <code>docs/</code> porque <code>sync.py</code> no despliega <code>docs/</code> a ningún sitio (ver &quot;Cómo se organizan los proyectos&quot; del repo core), y <code>database/</code> sí: es la única carpeta que <code>sincroniza_proyectos()</code> copia <strong>entera</strong> tanto a <code>apps/mcp_server/proyectos/p&lt;id&gt;/database/</code> (para las tools MCP) como a <code>apps/mcp_server/paneles_cliente/&lt;repo&gt;/database/</code> (para el panel) — ver &quot;Cómo compilar el frontend...&quot; más arriba sobre esa doble copia. Poniendo el contenido ahí, con el mismo import relativo <code>..database.ayuda_gd</code> que ya usan <code>modelos</code>/<code>dependencias</code>, un solo archivo de origen llega a los dos árboles de despliegue sin duplicar texto ni depender de rutas de fichero calculadas a mano (que además serían distintas en cada árbol).</p>
+<ul>
+<li>Tool MCP <strong><code>obtener_ayuda_gd()</code></strong> (<code>mcp_server/herramientas/_herr_documentos.py</code>): devuelve el texto tal cual, para que la IA lo use en conversación.</li>
+<li>Panel: <strong><code>GET /v1/ayuda</code></strong> (<code>panel_cliente/servidor.py</code>) — sin autenticación ni proyecto, es contenido estático igual para cualquier cliente. Pantalla nueva &quot;Ayuda&quot; (<code>Ayuda.jsx</code>), enlazada con un botón más en <code>Documentos.jsx</code>/<code>App.jsx</code>, mismo patrón de texto monoespaciado que ya usa <code>DocumentoDetalle.jsx</code> para el markdown de un documento (no hace falta una librería de renderizado de markdown para esto).</li>
+</ul>
+<h3 id="formularios-mcp-elicitation-para-datos-que-da-el-cliente-2026-09-15">Formularios MCP (elicitation) para datos que da el cliente (2026-09-15)</h3>
+<p>Hasta ahora, los datos que solo puede rellenar el cliente (nunca deducirlos del contenido) se le pedían en texto suelto por chat, uno detrás de otro. El protocolo MCP tiene un mecanismo pensado justo para esto — <strong>elicitation</strong>: la propia tool le pide a la aplicación (Claude Desktop/Code, ChatGPT en modo desarrollador...) que le muestre un formulario de verdad al cliente; la respuesta vuelve a la tool ya estructurada, sin que la IA tenga que transcribir ni interpretar nada. <code>fastmcp</code> (framework ya usado por el core) lo trae de serie: <code>ctx: Context</code> como parámetro de la tool (FastMCP lo inyecta solo, no aparece en el esquema que ve la IA) y <code>await ctx.elicit(mensaje, response_type=UnModeloPydantic)</code>.</p>
+<p>Dos tools migradas a este mecanismo:</p>
+<ul>
+<li><strong><code>guardar_documento_gd</code></strong>: los campos que &quot;se preguntan siempre al cliente&quot; (nombre, tipo de documento, fecha del documento, fecha de caducidad, ámbito, si el histórico debe quedar buscable) salen de la firma de la tool y se piden con un formulario (<code>_DatosDocumento</code>) en cuanto se llama. Lo que sigue siendo parámetro de la tool es lo que decide la propia IA a partir de la conversación o del contenido: <code>markdown</code>, <code>id_documento_existente</code> (tras confirmar con <code>buscar_documentos_gd</code>), <code>id_documento_pendiente</code>, <code>url_origen</code>, <code>borrador</code>, <code>incumplimientos</code>. El mensaje del formulario incluye los tipos de documento ya usados en el proyecto (consultando <code>gd_tipos_documento</code>), a modo de sugerencia.</li>
+<li><strong><code>crear_credencial_gd</code></strong> (tool nueva): antes solo se podía dar de alta una credencial desde el panel, precisamente para que su valor no quedara escrito en la conversación con la IA (ver &quot;Credenciales&quot; más arriba). Con elicitation esa razón deja de obligar a pasar por el panel: el formulario (<code>_DatosCredencialNueva</code>) recoge nombre/descripción/valor/usuario directamente del cliente, y el valor va del formulario al servidor sin que la IA lo vea ni lo escriba en ningún mensaje — igual de seguro que el panel, pero sin salir de la conversación. Editar o borrar una credencial ya creada sigue siendo solo desde el panel (no hay tool para eso).</li>
+</ul>
+<p>Si el cliente cierra el formulario sin rellenarlo (<code>action != &quot;accept&quot;</code>), la tool falla con <code>ToolError</code> y la propia IA debe avisar de que no se ha guardado nada, sin insistir ni pedir los datos por chat como alternativa.</p>
+<p><strong>Sin probar todavía contra un cliente MCP real</strong> (ni Claude ni ChatGPT) — depende de que la aplicación que conecta soporte elicitation; en ChatGPT hace falta además su &quot;Developer Mode&quot;. Antes de dar esto por bueno hay que verificarlo con una conexión real.</p>
+<h3 id="registros-de-seguimiento-comentarios-anotaciones-observaciones-incidencias-2026-09-16">Registros de seguimiento: comentarios, anotaciones, observaciones, incidencias (2026-09-16)</h3>
+<p>El cliente quiere poder dejar comentarios/anotaciones/observaciones sobre un documento, abrir incidencias con un responsable asignado, resolverlas dejando constancia de cómo, relacionar estos registros entre sí, y que todo eso siga disponible aunque el documento tenga una versión nueva.</p>
+<p><strong>Decisión clave — una sola tabla (<code>gd_registros</code>), no cinco.</strong> Un campo <code>tipo</code> (<code>comentario</code> / <code>anotacion</code> / <code>observacion</code> / <code>incidencia</code> / <code>resolucion</code>) distingue cada caso. Ventaja principal: relacionar dos registros entre sí es la misma mecánica sea cual sea su tipo, y una resolución no deja de ser más que un registro de tipo <code>resolucion</code> enlazado a su incidencia — no hace falta un mecanismo aparte para &quot;resolver&quot;.</p>
+<ul>
+<li><strong>Cuelga de <code>gd_documentos</code>, no de <code>gd_versiones</code></strong> — a propósito, para que un registro siga apareciendo entero con cualquier versión nueva del documento sin copiarlo ni migrarlo nada. Lleva además <code>id_version_origen</code> (nullable, informativo): en qué versión estaba el documento cuando se creó, pero nunca decide en qué versiones se ve.</li>
+<li><strong><code>creado_por</code> es texto libre, no un id de usuario real.</strong> Desde el panel se podría resolver de sobra (hay sesión, <code>puede_editar_documento_actual</code> ya da el <code>id_usuario</code>, ver &quot;Edición desde el panel&quot;), pero desde una tool MCP no hay una identidad de persona fiable — la API key identifica al proyecto, no a quién escribe en ese momento del chat. En vez de dos mecanismos distintos según el origen, un único campo de texto: el panel lo rellena solo con el nombre real de quien tiene la sesión, y por chat se le pregunta a la IA que lo pida si no lo sabe ya (nunca que lo invente).</li>
+<li><strong><code>responsable</code> es texto libre en cualquier tipo de registro, no solo en incidencias</strong> — decisión explícita del cliente: no hace falta que sea un usuario real del sistema, y no vale la pena limitarlo a un tipo concreto.</li>
+<li><strong><code>estado</code> (<code>abierta</code>/<code>resuelta</code>) solo tiene sentido en incidencias</strong> — estructuralmente disponible en cualquier registro (columna nullable en la misma tabla, no una tabla aparte) por simplicidad, pero NULL fuera de ese tipo.</li>
+<li><strong>Relaciones en tabla aparte (<code>gd_registros_relaciones</code>)</strong>, no una columna <code>id_registro_padre</code>: un registro puede relacionarse con más de uno, y en cualquier dirección. <code>tipo_relacion</code> es una etiqueta libre (p.ej. &quot;relacionado&quot;, &quot;duplica&quot;); <code>&quot;resuelve&quot;</code> la pone siempre <code>resolver_incidencia()</code>, nunca a mano — así una incidencia resuelta tiene garantizado tener su resolución enlazada (misma transacción: crear el registro de resolución, crear la relación, marcar <code>estado='resuelta'</code>).</li>
+<li><strong>Crear una <code>resolucion</code> directamente está bloqueado</strong> (<code>crear_registro()</code> solo acepta los otros cuatro tipos) — la única vía es <code>resolver_incidencia_gd</code>/el endpoint de resolver, para que ese invariante (incidencia resuelta ⇒ resolución enlazada) no se pueda romper por otro camino.</li>
+</ul>
+<p><strong>Tools MCP</strong> (<code>mcp_server/herramientas/_herr_registros.py</code>): <code>crear_registro_documento_gd</code>, <code>listar_registros_documento_gd</code>, <code>resolver_incidencia_gd</code>, <code>asignar_responsable_registro_gd</code>, <code>relacionar_registros_gd</code>. Sin elicitation aquí — a diferencia de <code>guardar_documento_gd</code>/<code>crear_credencial_gd</code>, <code>creado_por</code>/<code>responsable</code> son campos sueltos de bajo riesgo (no secretos, no un cluster de varios campos), así que van como parámetro normal de la tool con instrucción en el docstring de preguntarlos por chat en vez de inventarlos.</p>
+<p><strong>Panel</strong>: sección nueva &quot;Comentarios e incidencias&quot; en <code>DocumentoDetalle.jsx</code> (<code>componentes/RegistrosDocumento.jsx</code>) — listar, crear, resolver, asignar responsable y relacionar, todo desde la ficha del documento. Mismo criterio de permisos que editar el documento (<code>puede_editar_documento_actual</code>): invitado puede leer, no crear.</p>
+<p><strong>Estado (2026-09-16): implementado y desplegado en los 4 servidores</strong> (<code>mcp-d</code>, <code>maderascilpe</code>, <code>mgsasesores</code>, <code>adimelsl</code>), esquema aplicado sobre Postgres real en las 4 bases sin tocar datos existentes (verificado contando filas de <code>gd_documentos</code>/<code>gd_versiones</code> antes y después). Sin probar todavía con un cliente MCP real end-to-end (Claude Desktop/Code) ni desde el panel en producción — pendiente de una prueba real antes de darlo por cerrado del todo.</p>
+<p>Quién decidió: usuario (confirmado en conversación, incluida la decisión explícita de que <code>responsable</code> sea libre en todos los tipos).
+Reversible: sí — son dos tablas nuevas, sin tocar ninguna existente; quitar las tools/el endpoint/la sección del panel no afecta a nada más.</p>
+<h3 id="aviso-de-incidencias-abiertas-por-email-2026-09-17">Aviso de incidencias abiertas por email (2026-09-17)</h3>
+<p>Mismo problema que resolvió &quot;Fechas de caducidad y avisos proactivos por email&quot; (más arriba), aplicado a incidencias: si nadie entra al panel ni le pregunta a la IA, abrir una incidencia y asignarle un responsable no avisa a nadie de que existe.</p>
+<p><strong>Decisión: un aviso por asignación, no un recordatorio diario mientras siga abierta.</strong> Se valoró mandar un resumen diario con todo lo abierto (como hace <code>avisar_caducidades.py</code> cada día hasta que caduca), pero una incidencia puede tardar semanas en resolverse — recibir el mismo aviso cada día durante ese tiempo es ruido, no ayuda a que se resuelva antes. En vez de eso: columna <code>gd_registros.aviso_responsable_enviado</code> (mismo patrón que <code>gd_versiones.aviso_caducidad_enviado</code>), y <code>RegistrosCRUD.actualizar_responsable()</code> la reinicia a <code>false</code> cada vez que cambia el responsable — así reasignarla sí vuelve a avisar (a quien corresponda ahora), pero dejarla como está no genera más correos.</p>
+<p><strong>El correo va a <code>email_avisos</code>, no al responsable directamente</strong> — <code>responsable</code> es texto libre (ver decisión de arriba), no necesariamente un email real ni un usuario del sistema, así que no hay a quién escribirle de forma fiable. El cuerpo del correo menciona el nombre del responsable en cada línea para que quien lo reciba (normalmente un admin, la misma persona que ya recibe los avisos de caducidad) sepa a quién avisar.</p>
+<p><strong><code>scripts/avisar_incidencias.py</code></strong> — autocontenido, mismo patrón exacto que <code>avisar_caducidades.py</code> (SQL en línea, no importa <code>database/modelos</code>, recorre <code>mcpc_proyectos</code> con <code>motor='postgres'</code> y <code>tipo_producto='gestion_documental'</code>, manda desde la cuenta de correo propia del cliente, un fallo de un proyecto no tumba a los demás). Cron <code>mcp_gd_avisos_incidencias</code>, 07:20 (justo después del de caducidad, 07:15, para no competir por la misma conexión SMTP del cliente al mismo tiempo).</p>
+<p>Quién decidió: usuario pidió &quot;programar esos avisos&quot; tras una recomendación del asistente; el diseño concreto (una vez por asignación, destinatario <code>email_avisos</code>) lo decidió el asistente por las razones de arriba — a revisar si no encaja con lo que el cliente esperaba.
+Reversible: sí — una columna nueva (<code>aviso_responsable_enviado</code>, <code>NOT NULL DEFAULT false</code>, no rompe nada existente) y un script/cron independiente; quitar el cron basta para desactivarlo del todo.</p>
+<h3 id="el-responsable-puede-llevar-su-propio-email-2026-09-17">El responsable puede llevar su propio email (2026-09-17)</h3>
+<p>A los pocos minutos de cerrar lo de arriba, pregunta obvia en retrospectiva: si <code>responsable</code> es texto libre, ¿por qué no dejar apuntar también su email, para escribirle a él en vez de al <code>email_avisos</code> genérico?</p>
+<p><strong><code>gd_registros.responsable_email</code></strong>, columna nueva, opcional — no se valida el formato (es un dato de contacto, no una cuenta del sistema; ver la misma filosofía de <code>responsable</code> en sí). <code>RegistrosCRUD.actualizar_responsable()</code> la actualiza junto con <code>responsable</code> y sigue reiniciando <code>aviso_responsable_enviado</code> si cualquiera de los dos cambia (así añadir el email que faltaba también dispara un aviso nuevo, no solo cambiar de persona).</p>
+<p><code>avisar_incidencias.py</code> ahora separa las incidencias pendientes de aviso en dos grupos: las que tienen <code>responsable_email</code> van agrupadas por dirección (una persona con varias incidencias recibe un solo correo con todas) directo a esa persona; las que no, siguen cayendo en el correo a <code>email_avisos</code> de siempre, mencionando el nombre. Un proyecto sin <code>email_avisos</code> configurado ya no bloquea los avisos a responsables que sí tienen email — cada grupo se manda con independencia del otro.</p>
+<p>Tools/API: <code>crear_registro_documento_gd</code>, <code>asignar_responsable_registro_gd</code> y sus endpoints/formulario del panel llevan <code>responsable_email</code> opcional junto a <code>responsable</code>. Mismo criterio que el nombre: si viene por chat, la IA lo pasa solo si el cliente lo da, nunca lo inventa.</p>
+<p>Quién decidió: usuario.
+Reversible: sí — columna nullable, no rompe nada existente; sin <code>responsable_email</code> en ningún registro, el comportamiento es idéntico al de antes de este cambio.</p>
+<h3 id="grupos-de-documentos-2026-09-17">Grupos de documentos (2026-09-17)</h3>
+<p>El cliente quiere poder agrupar documentos &quot;para un fin concreto&quot; (una auditoría, un expediente) sin que eso implique que todo documento tenga que estar en un grupo.</p>
+<p><strong>Decisión: muchos-a-muchos, no un <code>id_grupo</code> en <code>gd_documentos</code></strong> — confirmado con el usuario: un mismo documento puede estar en varios grupos a la vez (p.ej. una factura relevante tanto para &quot;Auditoría 2026&quot; como para &quot;Proyecto X&quot;). De ahí <code>gd_documentos_grupos</code>, tabla de relación pura, mismo patrón que <code>gd_registros_relaciones</code> — índice único <code>(id_documento, id_grupo)</code> para que asignar dos veces no duplique fila, <code>ON DELETE CASCADE</code> en ambos lados (borrar un documento o un grupo limpia sus relaciones solas).</p>
+<p><strong><code>gd_grupos</code> deliberadamente mínima: solo <code>nombre</code> (único) y <code>proposito</code></strong> — el usuario descartó explícitamente añadir responsable/estado al grupo en esta primera versión; se puede ampliar después si hace falta, sin migrar nada existente.</p>
+<p><strong>Borrar un grupo no toca los documentos</strong> — solo desaparecen sus filas de <code>gd_documentos_grupos</code> (cascada), los documentos en sí quedan intactos. Sin &quot;archivar&quot; (a diferencia de documentos/versiones): un grupo es metadato organizativo sin historial que conservar, borrar sin más es suficiente.</p>
+<p><strong>Tools MCP</strong> (<code>mcp_server/herramientas/_herr_grupos.py</code>): <code>crear_grupo_gd</code>, <code>listar_grupos_gd</code>, <code>asignar_documento_grupo_gd</code>, <code>quitar_documento_grupo_gd</code>, <code>listar_documentos_grupo_gd</code>, <code>eliminar_grupo_gd</code>.</p>
+<p><strong>Panel</strong>: pantalla nueva &quot;Grupos&quot; (<code>Grupos.jsx</code> → lista y crea; <code>GrupoDetalle.jsx</code> → edita, borra, añade/quita documentos), enlazada en la barra lateral igual que Tipos de documento/Estilos (no gated a admin — es día a día, no configuración). En la ficha de cada documento, <code>componentes/GruposDocumento.jsx</code> muestra sus grupos como chips (con su propósito en el tooltip) y deja añadir/quitar sin salir de ahí. Mismo criterio de permisos que registros: cualquiera con acceso lee, <code>puede_editar</code> para crear/asignar/quitar/borrar.</p>
+<p><strong>Ajuste (2026-09-17, mismo día): crear un grupo nuevo también desde la ficha del documento.</strong> La primera versión de <code>GruposDocumento.jsx</code> solo dejaba asignar a grupos ya existentes — para crear uno había que ir a la pantalla &quot;Grupos&quot; y volver. El usuario no quería salir del documento en ningún caso: se añadió un formulario compacto (nombre + propósito) plegable en el propio widget, que crea el grupo y lo asigna al documento en el mismo paso (dos llamadas seguidas, <code>crearGrupo</code> + <code>asignarDocumentoGrupo</code>, sin transacción — aceptable: si la segunda fallase, el grupo queda creado pero sin asignar, visible y corregible a mano desde &quot;Grupos&quot;, no es un estado inconsistente grave). <strong>Mismo ajuste en <code>EntidadesDocumento.jsx</code> (2026-09-17, pedido después)</strong> — con una diferencia: en vez de un formulario compacto inline (la entidad tiene 11 campos, no 2), se abre en un <code>Modal</code> reutilizando <code>FormularioEntidad.jsx</code> (el mismo componente que ya usan <code>Entidades.jsx</code>/<code>EntidadDetalle.jsx</code>) — sigue sin salir de la ficha del documento, solo que como superposición en vez de un bloque plegable, por el volumen de campos. Mismo patrón de dos llamadas seguidas (<code>crearEntidad</code> + <code>relacionarDocumentoEntidad</code>). De paso, los dos selectores de &quot;añadir/relacionar&quot; (grupos y entidades) se agrandaron (de <code>size=&quot;xs&quot; w=200/220</code> a <code>size=&quot;sm&quot; w=340</code>) — ya eran buscables (<code>searchable</code>), pero al ser tan pequeños no se notaba.</p>
+<p>Fuera de alcance por ahora: filtrar el listado principal de documentos por grupo (se puede añadir después, es solo una columna más en <code>DocumentosCRUD.buscar()</code> y un <code>Select</code> más en <code>Documentos.jsx</code>, pero no se pidió y no hacía falta para lo de asignar).</p>
+<p>Quién decidió: usuario (nombre del feature, y las dos preguntas de diseño — muchos-a-muchos, y grupo mínimo sin responsable/estado).
+Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.</p>
+<h3 id="entidades-2026-09-17">Entidades (2026-09-17)</h3>
+<p>El cliente quiere una tabla de clientes/proveedores/empleados relacionable con documentos, con solo los campos básicos de contacto.</p>
+<p><strong><code>gd_entidades</code></strong>: <code>nombre</code>, <code>tipo</code>, <code>direccion</code>, <code>localidad</code>, <code>provincia</code>, <code>codigo_postal</code>, <code>pais</code>, <code>telefono</code>, <code>email</code>, <code>observaciones</code>, <code>codigo</code> (para vincular con el ERP del cliente, único si se rellena). <code>tipo</code> es el campo que el cliente llamó &quot;entidad&quot; en la petición original (&quot;id, nombre, entidad, dirección...&quot;) — aclarado en conversación: es el qué-es-esto (cliente/proveedor/empleado), no un segundo nombre. Se renombró a <code>tipo</code> para no repetir &quot;entidad&quot; dentro de la propia tabla <code>gd_entidades</code> y para seguir el mismo patrón que <code>gd_documentos.tipo_documento</code> — catálogo abierto, texto libre, sin tabla de catálogo aparte (el cliente pidió expresamente &quot;solo los campos básicos&quot;).</p>
+<p><strong>Relación con documentos: muchos-a-muchos</strong>, mismo patrón que grupos — <code>gd_documentos_entidades</code>, sin campo de &quot;rol&quot; en la relación (a diferencia de <code>gd_registros_relaciones</code>, aquí no se pidió distinguir &quot;cliente&quot; de &quot;proveedor&quot; en una factura con dos entidades; si hiciera falta más adelante, se añade un <code>rol</code> a esta tabla sin tocar el resto).</p>
+<p><code>codigo_postal</code> es texto, no número (hay formatos con letras fuera de España, y <code>pais</code> ya es un campo aparte). Sin &quot;archivar&quot; en entidades — a diferencia de documentos: no se pidió, y borrar sin más ya dijo el cliente que no debía tocar los documentos relacionados (limpieza en cascada solo de la fila de relación, <code>ON DELETE CASCADE</code> en <code>gd_documentos_entidades</code>, nunca en <code>gd_documentos</code> ni en <code>gd_entidades</code> entre sí).</p>
+<p><strong>Tools MCP</strong> (<code>mcp_server/herramientas/_herr_entidades.py</code>): <code>crear_entidad_gd</code>, <code>listar_entidades_gd</code> (por nombre y/o tipo), <code>actualizar_entidad_gd</code> (solo toca los campos que se pasen, no borra los que se omiten), <code>eliminar_entidad_gd</code>, <code>relacionar_documento_entidad_gd</code>, <code>quitar_relacion_documento_entidad_gd</code>, <code>listar_documentos_entidad_gd</code>, <code>listar_entidades_documento_gd</code>.</p>
+<p><strong>Panel</strong>: pantalla &quot;Entidades&quot; (lista + buscador por nombre/tipo + modal de alta) y <code>EntidadDetalle.jsx</code> (editar todos los campos, borrar, relacionar/quitar documentos) — mismo componente de formulario (<code>FormularioEntidad.jsx</code>) en los dos sitios, para no mantener 11 campos duplicados. En la ficha de cada documento, <code>EntidadesDocumento.jsx</code> (mismo patrón que <code>GruposDocumento.jsx</code>) muestra sus entidades como chips y deja añadir/quitar sin salir de ahí. <code>tipo</code> se rellena con un <code>Autocomplete</code> (texto libre con sugerencias de los tipos ya usados), no un <code>Select</code> cerrado.</p>
+<p>Quién decidió: usuario (los 11 campos, la relación muchos-a-muchos con documentos); el nombre de columna <code>tipo</code> (en vez de repetir <code>entidad</code>) lo decidió el asistente por claridad, ver arriba.
+Reversible: sí — dos tablas nuevas, sin tocar ninguna existente.</p>
+<h3 id="comunicaciones-y-envíos-2026-09-17">Comunicaciones y envíos (2026-09-17)</h3>
+<p>El despacho manda comunicaciones a clientes y otras entidades con frecuencia, cada una con contenido distinto (nombre, importe, fecha...). Se pidió: el documento hace de plantilla con variables dentro del texto, y desde ahí se programan envíos por email a las entidades que se elijan, a mano o en automático.</p>
+<p><strong>Decisión: la plantilla es un documento normal, no una tabla aparte</strong> — cualquier <code>gd_documentos</code> puede usarse para esto, sin marcarlo de ninguna forma especial. Las variables son <code>{{asi}}</code> (regex <code>\{\{\s*(\w+)\s*\}\}</code>) dentro de <code>nombre</code> (asunto) y del markdown (cuerpo); no hace falta declararlas en ningún sitio aparte, se detectan solas leyendo el texto. Se aprovecha todo lo que ya existe para documentos (versiones, comentarios/incidencias, grupos, entidades relacionadas) sin construir nada nuevo para &quot;plantillas&quot;.</p>
+<p><strong>Tres decisiones de producto, confirmadas con el usuario antes de construir esto</strong>:</p>
+<ol>
+<li><strong>Variables compartidas por lote, no una tabla por entidad.</strong> Al mandar el mismo documento a varias entidades a la vez, las variables que NO coinciden con un campo de la entidad (ver abajo) se escriben una sola vez y valen para todas — no hay una cuadrícula de &quot;un valor por entidad y variable&quot;. Más simple, cubre circulares y avisos generales; no vale para &quot;cada cliente debe un importe distinto&quot; en el mismo lote (eso necesitaría una entrada de datos por fila, descartado por complejidad para esta primera versión).</li>
+<li><strong>Solo envíos programados para una fecha/hora concreta, no recurrentes.</strong> Programar &quot;cada mes&quot; habría exigido que las variables se recalculen solas en cada repetición (fechas relativas, importes que cambian) — no encaja con variables de valor fijo escritas una vez. Para repetir, se crea un envío nuevo cada vez.</li>
+<li><strong>El correo se manda con formato (HTML), no texto plano</strong> — a diferencia de los avisos de caducidad/incidencias (que son avisos internos), una comunicación a un cliente cuida más la imagen. Se reaprovecha la misma conversión que ya usa <code>generar_informe_pdf_gd</code> (librería <code>markdown</code>, ya en <code>requirements.txt</code>) — el correo va como <code>multipart/alternative</code>, con una parte de texto plano (el markdown sin convertir, para clientes que no muestran HTML) y una parte HTML.</li>
+</ol>
+<p><strong>El contenido se resuelve y se guarda YA HECHO al crear el envío, no al mandarlo</strong> (<code>gd_envios.asunto</code>/<code>contenido_html</code>/<code>contenido_texto</code>) — así un envío programado manda exactamente lo que se aprobó, aunque el documento se edite después; y el cron que manda los programados (<code>scripts/procesar_envios.py</code>) no necesita la librería <code>markdown</code> ni la lógica de variables, solo lee esas columnas y las manda tal cual — mismo patrón autocontenido que <code>avisar_caducidades.py</code>/<code>avisar_incidencias.py</code>, y más simple que esos dos porque no hay nada que calcular en el momento de mandar.</p>
+<p>**Variables &quot;auto&quot; vs &quot;personalizadas<code>**: auto = coincide con una columna de </code>gd_entidades<code> (</code>nombre<code>, </code>tipo<code>, </code>direccion<code>, </code>localidad<code>, </code>provincia<code>, </code>codigo_postal<code>, </code>pais<code>, </code>telefono<code>, </code>email<code>, </code>observaciones<code>, </code>codigo<code>) y se resuelve sola por entidad; cualquier otra (</code>importe<code>, </code>fecha_limite<code>...) es personalizada. Una variable sin valor se deja tal cual en el texto (</code>{{asi}}` literal) en vez de desaparecer en blanco — para que se note en la vista previa que falta rellenarla.</p>
+<p><strong><code>gd_envios</code></strong>: un registro por entidad destinataria (aunque el &quot;lote&quot; cree varios a la vez) — cada uno necesita su propio <code>email_destino</code> y sus propias variables auto. <code>estado</code> (<code>programado</code>/<code>enviado</code>/<code>fallido</code>/<code>cancelado</code>); <code>fecha_programada</code> NULL significa &quot;ya&quot; — se manda en el mismo paso de crear el envío, sin esperar al cron. Sin email en la entidad → se crea igual, en <code>fallido</code> con el motivo, en vez de omitirse en silencio.</p>
+<p><strong>Tools MCP</strong> (<code>mcp_server/herramientas/_herr_envios.py</code>): <code>detectar_variables_documento_gd</code>, <code>crear_envios_gd</code> (crea el lote; si no se programa, el propio flujo de chat llama después a <code>enviar_envio_gd</code> por cada uno), <code>enviar_envio_gd</code>, <code>listar_envios_documento_gd</code>, <code>listar_envios_entidad_gd</code>, <code>cancelar_envio_gd</code>, <code>reintentar_envio_gd</code>.</p>
+<p><strong>Panel</strong>: pestaña nueva &quot;Enviar&quot; en <code>DocumentoDetalle.jsx</code> (<code>componentes/EnviosDocumento.jsx</code>) — detecta variables, elige entidades (<code>MultiSelect</code>), pide las personalizadas, fecha opcional, vista previa (con sustitución hecha en el propio JS, reutilizando <code>Markdown.jsx</code> — no hace falta ida y vuelta al servidor solo para previsualizar) y la lista de envíos de ese documento con cancelar/reintentar.</p>
+<p><strong>Cron <code>mcp_gd_procesar_envios</code>, cada 5 minutos</strong> (<code>scripts/procesar_envios.py</code>) — más frecuente que los avisos diarios porque aquí la hora programada importa de verdad, no es un resumen del día.</p>
+<p>Quién decidió: usuario (la idea completa, y las tres decisiones de producto de arriba, cada una con dos opciones planteadas por el asistente).
+Reversible: sí — una tabla nueva, sin tocar ninguna existente; quitar el cron desactiva la parte automática sin afectar a los envíos manuales.</p>
+<h3 id="editor-y-visor-de-documentos-y-exportar-a-pdf-2026-09-17">Editor y visor de documentos, y exportar a PDF (2026-09-17)</h3>
+<p>Tres retoques seguidos sobre cómo se ve/edita un documento en el panel, a petición del usuario (&quot;un poco cutre&quot;):</p>
+<ul>
+<li><strong>Editor</strong>: el <code>Textarea</code> monoespaciado de &quot;Editar&quot; se sustituyó por <code>MDEditor</code> (<code>@uiw/react-md-editor</code>) — mismo componente que ya usaba &quot;Contexto de negocio&quot;, así que no fue una dependencia nueva. Barra de formato + vista previa en vivo (<code>preview=&quot;live&quot;</code>), más alto (560px) que en Contexto por tratarse de documentos completos, no dos párrafos.</li>
+<li><strong>Visor</strong> (<code>Markdown.jsx</code>): fallo real, no solo de estilo — <code>react-markdown</code> sin <code>remark-gfm</code> no interpreta tablas (ni tachado, ni listas de tareas): una tabla se veía como una línea de texto con barras verticales sueltas. El CSS de <code>.contenido-documento</code> para tablas ya existía desde antes pero nunca se llegaba a aplicar porque no se generaba ningún <code>&lt;table&gt;</code>. Añadido <code>remark-gfm</code> (ya lo trae <code>react-markdown</code> como dependencia opcional habitual, se instaló aparte) y completado el CSS que faltaba (h4-h6, blockquote, código/pre, hr).</li>
+<li><strong>Exportar a PDF</strong>: botón &quot;Descargar PDF&quot; en la ficha del documento — la versión vigente, con el mismo formato que se ve en pantalla. Reutiliza el mecanismo que ya existía para los informes que redacta la IA (<code>generar_informe_pdf_gd</code>: markdown → HTML → WeasyPrint en subproceso aparte, por el conflicto de <code>libffi</code> con el entorno conda compartido, ver comentario en el código). Ese render se sacó de <code>mcp_server/herramientas/_herr_pdf.py</code> a <code>database/modelos/_mod_pdf.py</code> — la única carpeta que llega a los dos árboles de despliegue (proyecto y panel) — para que el panel pudiera reutilizarlo sin duplicar el subproceso ni su gotcha de libffi; <code>_herr_pdf.py</code> quedó como una fachada fina sobre ese módulo. CSS de impresión aparte (<code>CSS_DOCUMENTO</code>, distinto de <code>CSS_INFORME</code>): en pantalla el cuerpo va en gris &quot;dimmed&quot; de baja intensidad, que en papel impreso se lee mal, así que el PDF usa texto oscuro/negro sólido.</li>
+</ul>
+<h3 id="scripts-reutilizables-2026-09-25">Scripts reutilizables (2026-09-25)</h3>
+<p>Tabla <code>gd_scripts</code> para que la IA guarde los scripts que ya ha escrito para tareas puntuales del cliente (un backup, un informe ad-hoc, una migración...) y los reaproveche en vez de reescribirlos cada vez. Esquema en <code>database/dependencias/_dep_scripts.py</code>, CRUD en <code>database/modelos/_mod_scripts.py</code>:</p>
+<ul>
+<li>Columnas: <code>titulo</code>, <code>descripcion</code> (qué hace y cuándo usarlo — lo que se lee al buscar), <code>lenguaje</code> (texto libre, catálogo abierto como <code>gd_entidades.tipo</code>), <code>codigo</code>, <code>etiquetas</code> (texto libre, opcional), <code>creado_por</code>, <code>veces_usado</code>/<code>fecha_ultimo_uso</code> (para ver cuáles compensan tener guardados) y <code>archivado</code> (igual que <code>gd_documentos.archivado</code>, para retirar uno obsoleto sin borrarlo).</li>
+<li>Tools MCP (<code>mcp_server/herramientas/_herr_scripts.py</code>): <code>crear_script_gd</code>, <code>buscar_scripts_gd</code>/<code>obtener_script_gd</code> (solo lectura), <code>actualizar_script_gd</code>, <code>marcar_uso_script_gd</code> (incrementa el contador — la IA la llama al reaprovechar uno, no al crearlo) y <code>archivar_script_gd</code>/<code>desarchivar_script_gd</code>.</li>
+<li>Panel: pantalla &quot;Scripts&quot; (listar/buscar por título, descripción o etiqueta, y el detalle) — solo para consultar y curar metadatos, <strong>el código no se puede editar desde el panel a propósito</strong> (<code>ActualizarScript</code> en <code>panel_cliente/servidor.py</code> no lleva ese campo): quien corrige o mejora un script es la IA, vía <code>actualizar_script_gd</code>. El código se muestra coloreado según el lenguaje con <code>@mantine/code-highlight</code> (adaptador <code>highlight.js</code>, añadidos como dependencias nuevas del frontend) — tema oscuro fijo (<code>highlight.js/styles/github-dark.css</code>), no ligado al claro/oscuro del panel, para no tener que mantener dos hojas de estilo sincronizadas con el selector de tema.</li>
+<li><strong>Relación con documentos (2026-09-25)</strong>: tabla <code>gd_documentos_scripts</code>, muchos-a-muchos, mismo patrón que <code>gd_documentos_entidades</code> (índice único <code>(id_documento, id_script)</code>, <code>ON DELETE CASCADE</code> en ambos sentidos — a diferencia de <code>gd_scripts</code> en solitario, esta tabla sí tiene FK hacia <code>gd_documentos</code>, así que un despliegue en un servidor real tiene que registrar también <code>TABLA_DOCUMENTOS</code> en el script <code>ManagerDB</code> ad-hoc, ver [[despliegue_panel_cliente_gotchas]]). Tools MCP: <code>relacionar_documento_script_gd</code>, <code>quitar_relacion_documento_script_gd</code>, <code>listar_scripts_documento_gd</code>/<code>listar_documentos_script_gd</code> (solo lectura). Panel: <code>ScriptsDocumento.jsx</code> (fila de badges en <code>DocumentoDetalle.jsx</code>, mismo patrón visual que <code>EntidadesDocumento.jsx</code> pero sin modal de &quot;crear y relacionar&quot; — los scripts no se crean a mano) y la sección &quot;Documentos relacionados&quot; en <code>ScriptDetalle.jsx</code> (idéntica a la de <code>EntidadDetalle.jsx</code>).</li>
+</ul>
+<p>Quién decidió: usuario (los tres retoques); la extracción a <code>_mod_pdf.py</code> y el CSS de impresión aparte los decidió el asistente por las razones de arriba.
+Reversible: sí — ninguno toca el esquema; quitar el botón o revertir el import no afecta a nada más.</p>
+<h3 id="gds-enlazadas-una-central-de-conocimiento-consultada-por-otras-2026-09-27-plan--sin-implementar">GDs enlazadas: una central de conocimiento consultada por otras (2026-09-27, plan — sin implementar)</h3>
+<p>Idea del usuario: una gestión documental &quot;central&quot; alberga una gran base de conocimiento (p.ej. toda la normativa de la asesoría) y otras GDs &quot;enlazadas&quot; (una por cliente) la consultan para responder lo que no está en sus propios documentos. La central se mantiene una sola vez; las enlazadas se benefician al instante.</p>
+<p>Tres requisitos fijados por el usuario: la enlazada <strong>solo lee</strong>; la central puede <strong>reservar</strong> cierta información para que no salga hacia fuera; y la central <strong>toma nota de las preguntas que no supo resolver</strong> para cubrirlas después.</p>
+<p><strong>Cómo se comunican.</strong> La enlazada llama al servidor MCP público de la central por HTTPS (<code>https://&lt;dominio central&gt;/mcp</code>) como un cliente más, con una API key emitida por la central — exactamente el mismo mecanismo que ya usa el chat del panel contra su propio MCP (<code>panel_cliente/chat_ia.py</code>, cliente <code>fastmcp</code>). No hay acceso directo entre bases de datos (son VPS distintos) ni código nuevo de red: se reutiliza <code>/mcp</code> tal cual. La búsqueda (fulltext o semántica, con las claves de embedding de la central) la hace la central; la enlazada no necesita nada de eso.</p>
+<p><strong>Rol nuevo en el núcleo: <code>gd_enlazada</code> (id 5, <code>mcpc_roles</code>).</strong> Una key con este rol es la que la central le da a cada enlazada. Se comporta como <code>invitado</code> (lista blanca <code>readOnlyHint</code>, <code>apps/mcp_server/core/solo_lectura.py</code>) <strong>más</strong> las herramientas etiquetadas con <code>tags={&quot;gd_enlazada&quot;}</code> (etiqueta nativa de <code>fastmcp</code>, sin depender de campos extra en las anotaciones MCP, que no admiten extras — comprobado en fastmcp 4.0.3). Hace falta un rol propio, no vale <code>invitado</code>, por dos motivos: la central tiene que saber que quien pregunta es una GD ajena (para ocultarle lo reservado y para anotar la pregunta), y necesita permitirle una única escritura (anotar). El contexto de la petición (<code>auth.py</code>, <code>_proyecto_actual</code>) expone también el <code>nombre</code> de la key — la central lo usa como &quot;quién preguntó&quot; (el admin la nombra al emitirla: &quot;GD Maderas Cilpe&quot;). Selector de rol en ambos paneles: opción nueva &quot;GD enlazada&quot;. El rol se propaga solo al desplegar (<code>insertar_registros_iniciales</code> del ORM inserta los que falten).</p>
+<p><strong>Lado central (repo GD):</strong></p>
+<ul>
+<li><code>gd_documentos.reservado</code> BOOLEAN, default False: &quot;no se comparte con GDs enlazadas&quot;. Filtro <code>AND d.reservado = false</code> en <code>buscar_fulltext</code>, <code>buscar_semantico</code>, <code>buscar</code> (metadatos) y <code>obtener_documento_completo_gd</code> <strong>solo cuando la key es de rol <code>gd_enlazada</code></strong> — los usuarios de la propia central lo ven todo. Toggle &quot;Reservado&quot; en <code>DocumentoDetalle.jsx</code> (junto a archivar), badge en el listado, y parámetro opcional en <code>guardar_documento_gd</code>/tool <code>marcar_reservado_gd</code>.
+<ul>
+<li>Por defecto se comparte todo y se marca la excepción (no al revés): una central existe para compartir; obligar a marcar uno a uno los cientos de documentos compartibles sería lo tedioso. Ejemplo: de 300 normativas, se reservan las 5 notas internas de la asesoría.</li>
+</ul>
+</li>
+<li>Tabla nueva <code>gd_preguntas_pendientes</code>: <code>pregunta</code>, <code>origen</code> (nombre de la key = qué GD preguntó), <code>motivo</code> ENUM(<code>sin_resultados</code>, <code>no_resuelta</code>), <code>veces</code> (misma pregunta normalizada + mismo origen → se incrementa, no se duplica), <code>estado</code> ENUM(<code>pendiente</code>, <code>resuelta</code>), <code>fecha_primera</code>, <code>fecha_ultima</code>. Sin FKs.</li>
+<li>Dos vías de anotación: <strong>automática</strong> — <code>consultar_documentos_gd</code> llamada por una key <code>gd_enlazada</code> que devuelve 0 fragmentos anota <code>sin_resultados</code> sola (no depende de que la IA se acuerde); y <strong>explícita</strong> — tool <code>anotar_pregunta_pendiente_gd(pregunta, detalle)</code> etiquetada <code>gd_enlazada</code>, para cuando hubo resultados pero no respondían (<code>no_resuelta</code>), que es lo que solo la IA del lado enlazado puede juzgar.</li>
+<li>Panel de la central: pantalla &quot;Preguntas pendientes&quot; (solo admin): listado ordenado por <code>veces</code> desc, filtro por estado/origen, botón &quot;marcar resuelta&quot;. Tools de solo lectura <code>listar_preguntas_pendientes_gd</code> + <code>resolver_pregunta_pendiente_gd</code> para hacerlo también desde el chat.</li>
+</ul>
+<p><strong>Lado enlazado (mismo repo — toda GD puede ser central y enlazada a la vez):</strong></p>
+<ul>
+<li>Tabla <code>gd_enlaces</code>: <code>nombre</code>, <code>url</code> (el <code>/mcp</code> de la central), <code>api_key_cifrada</code> (Fernet, <code>lib.cifrado</code> del núcleo, igual que <code>gd_credenciales</code>), <code>activo</code>, <code>fecha_alta</code>. Varias filas: enlazar con más de una central cuesta lo mismo que con una.</li>
+<li>Panel: pantalla &quot;GDs enlazadas&quot; (solo admin): alta (nombre, URL, key), botón &quot;probar conexión&quot; (hace <code>list_tools</code> contra la central), activar/desactivar, borrar. La key nunca se vuelve a mostrar.</li>
+<li>Tools MCP nuevas (<code>_herr_enlaces.py</code>), todas <code>SOLO_LECTURA</code> porque no tocan datos propios: <code>consultar_gds_enlazadas_gd(pregunta, limite)</code> — recorre los enlaces activos, llama a <code>consultar_documentos_gd</code> de cada central y devuelve los fragmentos con un campo <code>origen</code>; <code>obtener_documento_enlazado_gd(id_enlace, id_documento)</code> — el documento completo de la central; <code>anotar_pregunta_pendiente_enlazada_gd(id_enlace, pregunta, detalle)</code> — reenvía la anotación a la central. Esta última también va marcada de solo lectura a propósito: no modifica nada de la enlazada y no queremos que el chat pida confirmación por cada anotación (sería un estorbo y las preguntas ya viajan a la central al consultarla). Una central caída no rompe la respuesta: se devuelve el error de ese enlace como un resultado más y se sigue con el resto.</li>
+<li><code>SYSTEM_PROMPT</code> de <code>chat_ia.py</code>: instrucción de consultar primero los documentos propios, después las GDs enlazadas si existen, citar de qué GD viene cada fragmento, y anotar en la central lo que no se resolvió. Sin coste de IA en la central: allí solo se ejecuta una búsqueda; el gasto de Claude sigue siendo únicamente el del chat de la enlazada (una llamada de herramienta más por turno cuando aplica).</li>
+</ul>
+<p><strong>Fases:</strong> (1) núcleo: rol 5, middleware con etiquetas, nombre de key en el contexto, selectores de rol; (2) central: <code>reservado</code> + filtros + <code>gd_preguntas_pendientes</code> + tools + panel; (3) enlazada: <code>gd_enlaces</code> + tools + panel + prompt; (4) prueba real en mcp-d contra sí misma (enlace apuntando a su propio dominio público — vale como prueba de punta a punta) y después contra un servidor real; (5) despliegue a los 5 servidores (todos llevan el mismo código; cada uno hace de central o de enlazada según lo que configure).</p>
+<p>Quién decidió: usuario (idea y los tres requisitos); el asistente propuso rol propio en vez de reutilizar <code>invitado</code>, &quot;compartido por defecto&quot;, la anotación automática al no haber resultados, y no pedir confirmación para anotar.
+Reversible: sí — una columna con default y dos tablas nuevas sin FKs; borrar los enlaces desactiva todo sin tocar documentos.</p>
+
+</body>
+</html>

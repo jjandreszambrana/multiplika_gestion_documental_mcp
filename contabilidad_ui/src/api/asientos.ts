@@ -44,6 +44,10 @@ export interface FiltroApuntes {
   concepto: string
   /** Igual que el concepto, sobre la referencia del documento. */
   documento: string
+  /** Texto del nombre de quien creó el asiento. Opcional: quien no lo usa no lo manda. */
+  usuario?: string
+  /** Texto del nombre de quien lo cambió por última vez (solo cambia mientras es borrador). */
+  usuarioModif?: string
   /** Número de asiento. Con los dos iguales sale un solo asiento. */
   asientoDesde: string
   asientoHasta: string
@@ -69,6 +73,8 @@ export function camposDelFiltro(filtro: Omit<FiltroApuntes, 'offset' | 'limit'>)
     ...(filtro.diario === '' ? {} : { diario: filtro.diario }),
     ...(filtro.concepto === '' ? {} : { concepto: filtro.concepto }),
     ...(filtro.documento === '' ? {} : { documento: filtro.documento }),
+    ...(!filtro.usuario ? {} : { usuario: filtro.usuario }),
+    ...(!filtro.usuarioModif ? {} : { usuario_modif: filtro.usuarioModif }),
     ...(filtro.asientoDesde === '' ? {} : { asiento_desde: Number(filtro.asientoDesde) }),
     ...(filtro.asientoHasta === '' ? {} : { asiento_hasta: Number(filtro.asientoHasta) }),
     ...(filtro.importeDesde === '' ? {} : { importe_desde: filtro.importeDesde }),

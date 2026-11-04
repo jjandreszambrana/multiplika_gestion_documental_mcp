@@ -89,3 +89,29 @@ async def resolver(config: dict, id_propuesta: int, estado: str, id_usuario: int
     if not cambiadas:
         raise LookupError("Esa propuesta no existe o ya estaba resuelta")
     return await obtener(config, id_propuesta)
+
+
+async def anotar_borrador(config: dict, id_propuesta: int, borrador: dict) -> None:
+    """Apunta en la propuesta el borrador que se dejó en el diario del SIF."""
+    propuesta = await obtener(config, id_propuesta)
+    detalle = {**(propuesta.get("detalle") or {}), "borrador": borrador}
+    await AsyncDatabase(**config).query(f'UPDATE "{_T}" SET detalle = %s WHERE id = %s', (json.dumps(detalle, ensure_ascii=False), id_propuesta))
+
+
+async def reabrir(config: dict, id_propuesta: int) -> dict:
+    """Una propuesta aceptada vuelve a pendiente (su borrador ya no existe)."""
+    propuesta = await obtener(config, id_propuesta)
+    detalle = {k: v for k, v in (propuesta.get("detalle") or {}).items() if k != "borrador"}
+    await AsyncDatabase(**config).query(
+        f"UPDATE \"{_T}\" SET estado = 'pendiente', revisado_por = NULL, fecha_revision = NULL, motivo_descarte = NULL, detalle = %s WHERE id = %s",
+        (json.dumps(detalle, ensure_ascii=False), id_propuesta),
+    )
+    return await obtener(config, id_propuesta)
+
+
+async def descartar_siempre(config: dict, id_propuesta: int, motivo: str, id_usuario: int | None) -> None:
+    """Descarta la propuesta esté como esté."""
+    await AsyncDatabase(**config).query(
+        f"UPDATE \"{_T}\" SET estado = 'descartada', motivo_descarte = %s, revisado_por = %s, fecha_revision = %s WHERE id = %s",
+        (motivo, id_usuario, ahora_madrid(), id_propuesta),
+    )

@@ -2,8 +2,10 @@ import { Button, Group, Stack, Tabs, Title } from '@mantine/core'
 import { useState } from 'react'
 import { FACTURAS, MOVIMIENTOS } from '../../api/bandeja'
 import { alcanza } from '../../api/sesion'
+import DialogoRecomprobar from './DialogoRecomprobar'
 import DialogoTraerCodiplika from './DialogoTraerCodiplika'
 import ListaBandeja from './ListaBandeja'
+import PagaresEnCartera from './PagaresEnCartera'
 import TablaLecturas from './TablaLecturas'
 
 interface Props {
@@ -26,6 +28,8 @@ const TITULO = 'Bandeja de Codiplika'
  */
 export default function PantallaBandeja({ ejercicio, nivel, nombreEmpresa, alVerBorradores }: Props) {
   const [trayendo, setTrayendo] = useState(false)
+  const [recomprobando, setRecomprobando] = useState(false)
+  const [verCartera, setVerCartera] = useState(false)
   // Sube al traer o deshacer una lectura: las tres pestañas vuelven a leer.
   const [refresco, setRefresco] = useState(0)
 
@@ -38,9 +42,19 @@ export default function PantallaBandeja({ ejercicio, nivel, nombreEmpresa, alVer
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={3}>{TITULO}</Title>
+        <Group gap="sm">
+          <Button variant="default" onClick={() => setVerCartera(true)}>
+            Pagarés en cartera
+          </Button>
         {alcanza(nivel, 'apuntes') && (
-          <Button onClick={() => setTrayendo(true)}>Traer de Codiplika…</Button>
+          <>
+            <Button variant="default" onClick={() => setRecomprobando(true)}>
+              Volver a comprobar…
+            </Button>
+            <Button onClick={() => setTrayendo(true)}>Traer de Codiplika…</Button>
+          </>
         )}
+        </Group>
       </Group>
 
       {/* Las tres se quedan montadas: al cambiar de pestaña cada una
@@ -75,6 +89,8 @@ export default function PantallaBandeja({ ejercicio, nivel, nombreEmpresa, alVer
         </Tabs.Panel>
       </Tabs>
 
+      <PagaresEnCartera abierto={verCartera} ejercicio={ejercicio} alCerrar={() => setVerCartera(false)} />
+      <DialogoRecomprobar abierto={recomprobando} alCerrar={() => setRecomprobando(false)} alAplicado={recargar} />
       <DialogoTraerCodiplika
         abierto={trayendo}
         ejercicio={ejercicio}

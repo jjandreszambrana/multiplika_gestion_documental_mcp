@@ -32,7 +32,7 @@ import io
 import json
 import os
 import zipfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Literal
 from urllib.parse import quote
 
@@ -61,7 +61,7 @@ from ..database.modelos._mod_chat import _titulo_de_muestra as _titulo_de_muestr
 from ..database.modelos._mod_chunks import ChunksCRUD, limpiar_chunks_no_buscables, reindexar_version
 from ..database.modelos._mod_compartidos import CompartidosCRUD, anular_compartido, crear_compartido
 from ..database.modelos._mod_configuracion import ConfiguracionCRUD
-from ..database.modelos import _mod_conciliacion as conciliacion, _mod_conta_propuestas as conta_propuestas, _mod_contabilidad_sif as conta_sif
+from ..database.modelos import _mod_conciliacion as conciliacion, _mod_conta_borradores as conta_borradores, _mod_conta_propuestas as conta_propuestas, _mod_contabilidad_sif as conta_sif
 from ..database.modelos._mod_credenciales import CredencialesCRUD
 from ..database.modelos._mod_solicitudes_credencial import SolicitudesCredencialCRUD
 from ..database.modelos._tipos_archivo import comprobar_tipo_archivo
@@ -574,6 +574,10 @@ async def listar_propuestas_contables(
 ) -> dict:
     config = get_db_config(proyecto["id"])
     ids = await _ids_visibles(config, identidad)
+    try:
+        await conta_borradores.sincronizar(config, _id_usuario(identidad), [id_empresa] if id_empresa in ids else ids)
+    except (ValueError, LookupError):
+        pass  # el SIF no responde: se enseña lo que hay
     return {"propuestas": await conta_propuestas.listar(config, ids, estado or None, id_empresa)}
 
 
@@ -610,6 +614,97 @@ async def _extracto_visible(config: dict, identidad: Identidad, id_conciliacion:
     if not extracto or extracto["id_empresa"] not in await _ids_visibles(config, identidad):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ese extracto no existe")
     return extracto
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias")
+async def listar_cuentas_bancarias(
+    id_proyecto: int, id_empresa: int | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    return {"cuentas": await conciliacion.cuentas(config, await _ids_visibles(config, identidad), id_empresa)}
+
+
+async def _cuenta_visible(config: dict, identidad: Identidad, id_cuenta: int) -> dict:
+    try:
+        cuenta = await conciliacion._cuenta(config, id_cuenta)
+    except LookupError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
+    if cuenta["id_empresa"] not in await _ids_visibles(config, identidad):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa cuenta bancaria no existe")
+    return cuenta
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias/{id_cuenta}/subcuentas")
+async def subcuentas_cuenta_bancaria(
+    id_proyecto: int, id_cuenta: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Subcuentas 572 de la empresa entre las que elegir la del banco."""
+    config = get_db_config(proyecto["id"])
+    await _cuenta_visible(config, identidad, id_cuenta)
+    try:
+        return {"subcuentas": await conciliacion.subcuentas_banco(config, _id_usuario(identidad), id_cuenta)}
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+class AsociarSubcuenta(BaseModel):
+    subcuenta: str | None = None
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias/{id_cuenta}")
+async def asociar_subcuenta_bancaria(
+    id_proyecto: int, id_cuenta: int, datos: AsociarSubcuenta,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Elige la subcuenta 572 de una cuenta bancaria."""
+    config = get_db_config(proyecto["id"])
+    await _cuenta_visible(config, identidad, id_cuenta)
+    try:
+        return await conciliacion.asociar_subcuenta(config, id_cuenta, datos.subcuenta)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias/{id_cuenta}/movimientos")
+async def movimientos_cuenta_bancaria(
+    id_proyecto: int, id_cuenta: int, estado: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    cuenta = await _cuenta_visible(config, identidad, id_cuenta)
+    try:
+        await conta_borradores.sincronizar(config, _id_usuario(identidad), [cuenta["id_empresa"]])
+    except (ValueError, LookupError):
+        pass
+    return {"cuenta": cuenta, "movimientos": await conciliacion.movimientos_cuenta(config, id_cuenta, estado or None)}
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias/{id_cuenta}/extractos")
+async def extractos_cuenta_bancaria(
+    id_proyecto: int, id_cuenta: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    config = get_db_config(proyecto["id"])
+    cuenta = await _cuenta_visible(config, identidad, id_cuenta)
+    return {"extractos": await conciliacion._extractos_de(config, cuenta)}
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/cuentas_bancarias/{id_cuenta}/comparar")
+async def comparar_cuenta_bancaria(
+    id_proyecto: int, id_cuenta: int, desde: date | None = None, hasta: date | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Compara la cuenta bancaria con el mayor de su subcuenta 572. No escribe en el SIF."""
+    config = get_db_config(proyecto["id"])
+    await _cuenta_visible(config, identidad, id_cuenta)
+    try:
+        return await conciliacion.comparar(config, _id_usuario(identidad), id_cuenta, desde, hasta)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
 
 
 @app.get("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos")
@@ -675,6 +770,54 @@ async def resolver_movimiento_bancario(
         raise _error_contable(e) from e
 
 
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos/{id_movimiento}/asiento")
+async def proponer_asiento_movimiento_bancario(
+    id_proyecto: int, id_conciliacion: int, id_movimiento: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Pasa a Propuestas el asiento propuesto para un movimiento. No escribe en el SIF."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return await conciliacion.proponer_asiento(config, id_movimiento, _id_usuario(identidad))
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+@app.get("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/cuentas")
+async def cuentas_plan_conciliacion(
+    id_proyecto: int, id_conciliacion: int, q: str | None = None,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+) -> dict:
+    """Cuentas del plan de la empresa entre las que elegir la contrapartida de un movimiento."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return {"cuentas": await conciliacion.cuentas_plan(config, _id_usuario(identidad), id_conciliacion, q or "")}
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+class ElegirCuenta(BaseModel):
+    cuenta: str
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}/movimientos/{id_movimiento}/cuenta")
+async def elegir_cuenta_movimiento_bancario(
+    id_proyecto: int, id_conciliacion: int, id_movimiento: int, datos: ElegirCuenta,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Propone el asiento de un movimiento contra la cuenta que elige el contable. No escribe en el SIF."""
+    config = get_db_config(proyecto["id"])
+    await _extracto_visible(config, identidad, id_conciliacion)
+    try:
+        return await conciliacion.asiento_con_cuenta(config, id_conciliacion, id_movimiento, datos.cuenta)
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
 @app.delete("/v1/proyectos/{id_proyecto}/contabilidad/conciliaciones/{id_conciliacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_extracto_bancario(
     id_proyecto: int, id_conciliacion: int,
@@ -718,9 +861,10 @@ async def resolver_propuesta_contable(
     proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
     _escritor: dict = Depends(escritor_gestion_documental_actual),
 ) -> dict:
-    """Aceptar un asiento, una reclasificación o un aviso no toca el SIF: lo
-    pasa el contable. Aceptar un apartado de la memoria lo guarda en el SIF
-    con la clave de quien acepta."""
+    """Aceptar una reclasificación o un aviso no toca el SIF: lo pasa el
+    contable. Aceptar un asiento lo deja como BORRADOR en el diario del SIF y
+    aceptar un apartado de la memoria lo guarda allí, los dos con la clave de
+    quien acepta; un borrador no cuenta hasta que el contable lo confirma."""
     config = get_db_config(proyecto["id"])
     propuesta = await conta_propuestas.obtener(config, id_propuesta)
     if not propuesta or propuesta["id_empresa"] not in await _ids_visibles(config, identidad):
@@ -731,9 +875,58 @@ async def resolver_propuesta_contable(
                 raise ValueError("A esa propuesta le falta el texto del apartado")
             detalle = {**propuesta["detalle"], "texto": datos.texto or propuesta["detalle"]["texto"]}
             await _guardar_apartado_en_sif(config, _id_usuario(identidad), propuesta["id_empresa"], detalle)
-        return await conta_propuestas.resolver(
-            config, id_propuesta, "aceptada" if datos.aceptar else "descartada", _id_usuario(identidad), datos.motivo,
-        )
+        borrador = None
+        if datos.aceptar and propuesta["tipo"] == "asiento" and propuesta["estado"] == "pendiente":
+            # Primero se reserva la propuesta (solo una petición lo consigue) y luego se crea el borrador
+            resuelta = await conta_propuestas.resolver(config, id_propuesta, "aceptada", _id_usuario(identidad), datos.motivo)
+            try:
+                borrador = await _dejar_borrador_en_sif(config, _id_usuario(identidad), propuesta)
+            except Exception:
+                await conta_propuestas.reabrir(config, id_propuesta)
+                raise
+        else:
+            resuelta = await conta_propuestas.resolver(
+                config, id_propuesta, "aceptada" if datos.aceptar else "descartada", _id_usuario(identidad), datos.motivo,
+            )
+        if borrador:
+            await conta_propuestas.anotar_borrador(config, id_propuesta, {k: borrador.get(k) for k in ("id", "ejercicio", "asiento")})
+            resuelta = await conta_propuestas.obtener(config, id_propuesta)
+            await conta_borradores.anotar_conciliado(config, _id_usuario(identidad), resuelta)
+        if not datos.aceptar:
+            await conta_borradores.volver_movimientos(config, id_propuesta)
+        return {**resuelta, "borrador": borrador}
+    except (ValueError, LookupError) as e:
+        raise _error_contable(e) from e
+
+
+async def _dejar_borrador_en_sif(config: dict, id_usuario: int | None, propuesta: dict) -> dict:
+    """El asiento de una propuesta, como borrador en el diario del SIF."""
+    detalle = propuesta["detalle"] or {}
+    fecha = detalle.get("fecha") or datetime.now().date().isoformat()
+    lineas = [
+        {"cuenta": a["cuenta"], "concepto": a.get("concepto") or detalle.get("concepto") or propuesta["titulo"],
+         **({"documento": detalle["documento"]} if detalle.get("documento") else {}),
+         **({"debe": f"{a['debe']:.2f}"} if a.get("debe") else {"haber": f"{a['haber']:.2f}"})}
+        for a in detalle.get("apuntes") or []
+    ]
+    return await conta_sif.pedir(config, id_usuario, propuesta["id_empresa"], "/contabilidad/asientos/borrador/crear", {
+        "ejercicio": int(fecha[:4]), "fecha": fecha, "concepto": detalle.get("concepto") or propuesta["titulo"], "lineas": lineas,
+    })
+
+
+@app.post("/v1/proyectos/{id_proyecto}/contabilidad/propuestas/{id_propuesta}/deshacer")
+async def deshacer_propuesta_contable(
+    id_proyecto: int, id_propuesta: int,
+    proyecto: dict = Depends(proyecto_gestion_documental_actual), identidad: Identidad = Depends(identidad_actual),
+    _escritor: dict = Depends(escritor_gestion_documental_actual),
+) -> dict:
+    """Quita del Diario del SIF el borrador de un asiento aceptado y deja la propuesta pendiente."""
+    config = get_db_config(proyecto["id"])
+    propuesta = await conta_propuestas.obtener(config, id_propuesta)
+    if not propuesta or propuesta["id_empresa"] not in await _ids_visibles(config, identidad):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa propuesta no existe")
+    try:
+        return await conta_borradores.quitar_del_diario(config, _id_usuario(identidad), id_propuesta)
     except (ValueError, LookupError) as e:
         raise _error_contable(e) from e
 

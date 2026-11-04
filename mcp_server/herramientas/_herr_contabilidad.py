@@ -167,6 +167,7 @@ async def informe_contable_gd(
     desde: str | None = None, hasta: str | None = None, cuenta: str | None = None,
     nivel: int | None = None, periodo: str | None = None, libro: Literal["expedidas", "recibidas"] | None = None,
     offset: int = 0, detalle: Literal["epigrafes", "cuentas", "subcuentas"] | None = None,
+    usuario_crea: str | None = None, usuario_modifica: str | None = None,
 ) -> dict:
     """Un informe de la contabilidad real de una empresa en el SIF (solo
     lectura, sin borradores):
@@ -175,7 +176,12 @@ async def informe_contable_gd(
       cuenta; `desde`/`hasta` acotan el periodo.
     - mayor (necesita `cuenta`) y diario: paginan de 50 en 50 con
       `offset`; los totales son los del periodo entero. Acota con fechas y
-      cuenta antes de pedir páginas de más.
+      cuenta antes de pedir páginas de más. Solo en el diario, `usuario_crea`
+      y `usuario_modifica` (texto del nombre, sin importar mayúsculas)
+      dejan los asientos que creó o cambió por última vez esa persona, y
+      cada fila trae `usuario` y `usuario_modif`. Un asiento confirmado no se
+      puede cambiar: el modificador es quien lo cambió siendo borrador, y
+      los asientos anteriores a esta función no lo tienen.
     - iva (base del 303), retenciones (111 y 115), cuadre_iva (facturas
       frente a lo contabilizado), libros_iva (con `libro`): necesitan
       `periodo` ("01".."12" o "1T".."4T").
@@ -196,6 +202,10 @@ async def informe_contable_gd(
             cuerpo["desde"] = desde
         if informe == "sumas_y_saldos":
             cuerpo["nivel"] = nivel
+        if informe == "diario" and (usuario_crea or usuario_modifica):
+            return compactar_informe("diario_usuarios", await _sif(id_empresa, "/contabilidad/asientos/listar", {
+                "ejercicio": ejercicio, "desde": desde, "hasta": hasta, "offset": offset, "limit": LIMITE_APUNTES_IA,
+                "usuario": usuario_crea, "usuario_modif": usuario_modifica}))
         if informe in ("mayor", "diario"):
             if informe == "mayor" and not cuenta:
                 raise ToolError("El mayor necesita `cuenta`")
@@ -709,7 +719,7 @@ async def listar_extractos_bancarios_gd(id_empresa: int | None = None) -> dict:
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def listar_movimientos_conciliacion_gd(
-    id_conciliacion: int, estado: Literal["sin_emparejar", "exacto", "dudoso", "confirmado", "descartado"] | None = None,
+    id_conciliacion: int, estado: Literal["sin_emparejar", "exacto", "dudoso", "asentado", "asiento_propuesto", "confirmado", "descartado"] | None = None,
 ) -> dict:
     """Movimientos de un extracto bancario con la factura que se les ha propuesto
     (`propuesta`: motivo, confianza y candidatas) y lo que decidió el contable.
@@ -731,11 +741,14 @@ async def listar_movimientos_conciliacion_gd(
 
 @mcp_app.tool(annotations=SOLO_LECTURA, tags={TAG_CONTABILIDAD, TAG_SIF})
 async def emparejar_extracto_gd(id_conciliacion: int) -> dict:
-    """Busca, para cada movimiento aún abierto de un extracto, las facturas del SIF
-    (cobros y pagos pendientes) que le corresponden y deja la propuesta
-    anotada: `exacto`, `dudoso` o `sin_emparejar`. No toca lo que el contable
+    """Compara con la contabilidad la cuenta bancaria a la que pertenece un
+    extracto: cada movimiento (de todos sus extractos) se busca en el mayor de
+    su subcuenta 572 y queda `asentado`; a los que faltan se les busca una
+    factura pendiente (`exacto`, `dudoso` o `sin_emparejar`). Devuelve también
+    `sin_banco`: apuntes del mayor que no están en el banco. La subcuenta la
+    elige el contable en la pantalla Conciliación. No toca lo que el contable
     ya confirmó o descartó. Es una propuesta: confirmar cada movimiento lo
-    hace el contable en la pantalla Conciliación; díselo al usuario."""
+    hace el contable en esa pantalla; díselo al usuario."""
     _sin_invitado()
     config, _, id_usuario, _ = await _contexto()
     try:

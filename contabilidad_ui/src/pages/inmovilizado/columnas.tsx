@@ -1,4 +1,4 @@
-import { Badge, Group, Text } from '@mantine/core'
+import { Anchor, Badge, Button, Group, Text } from '@mantine/core'
 import type Decimal from 'decimal.js'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type { Bien } from '../../api/inmovilizado'
@@ -30,8 +30,29 @@ function columnaDeImporte(
   }
 }
 
+/** La cuenta como enlace a su mayor; sin mayor al que ir, solo el texto. */
+function celdaDeCuenta(cuenta: string | null | undefined, alVerMayor?: (cuenta: string) => void) {
+  if (!cuenta || !alVerMayor) return cuenta ?? ""
+  return (
+    <Anchor
+      fz="sm"
+      underline="hover"
+      onClick={(e) => {
+        // La fila entera abre la ficha: esto abre solo el mayor.
+        e.stopPropagation()
+        alVerMayor(cuenta)
+      }}
+    >
+      {cuenta}
+    </Anchor>
+  )
+}
+
 /** Nulo para quien no tiene nivel `apuntes`: se esconde, no se apaga. */
-export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_ColumnDef<Bien>[] {
+export function columnasDeInmovilizado(
+  acciones: AccionesDeBien | null,
+  alVerMayor?: (cuenta: string) => void,
+): MRT_ColumnDef<Bien>[] {
   return [
     {
       accessorKey: 'descripcion',
@@ -46,6 +67,20 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
             <Badge size="xs" variant="light" color="orange">
               Traslado pendiente
             </Badge>
+          )}
+          {!!row.original.traslado_pendiente && acciones && (
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="green"
+              title="Confirma el asiento y el cambio de cuentas se hace con él"
+              onClick={(e) => {
+                e.stopPropagation()
+                acciones.alConfirmarTraslado(row.original)
+              }}
+            >
+              Confirmar asiento
+            </Button>
           )}
           {row.original.es_mejora && (
             <Badge size="xs" variant="light" color="blue">
@@ -66,18 +101,21 @@ export function columnasDeInmovilizado(acciones: AccionesDeBien | null): MRT_Col
     // que cuesta y lo que lleva amortizado incluyen las suyas.
     {
       accessorKey: 'cuenta_activo',
+      Cell: ({ row }) => celdaDeCuenta(row.original.cuenta_activo, alVerMayor),
       header: 'Cta. activo',
       size: 100,
       grow: false,
     },
     {
       accessorKey: 'cuenta_amortizacion',
+      Cell: ({ row }) => celdaDeCuenta(row.original.cuenta_amortizacion, alVerMayor),
       header: 'Cta. amort.',
       size: 100,
       grow: false,
     },
     {
       accessorKey: 'cuenta_gasto',
+      Cell: ({ row }) => celdaDeCuenta(row.original.cuenta_gasto, alVerMayor),
       header: 'Cta. gasto',
       size: 100,
       grow: false,

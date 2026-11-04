@@ -10,6 +10,7 @@ import { configurarCliente } from './api/cliente'
 import { textoDeError } from './api/errores'
 import { listarEmpresas, type Empresa } from './api/sesion'
 import Estructura from './components/Estructura'
+import type { SeccionExterna } from './components/secciones'
 import PantallaActivar from './pages/empresa/PantallaActivar'
 
 /** Lo que el panel anfitrión pone en cada llamada: su dirección, su sesión y la renovación del token. */
@@ -33,6 +34,8 @@ export interface PropsEmbebido {
   ejercicio?: number
   /** Sitio del panel donde poner el ejercicio (junto a la empresa); sin él no se ve. */
   hueco?: HTMLElement | null
+  /** Pantallas del panel que cuelgan del menú de la contabilidad. */
+  extras?: SeccionExterna[]
 }
 
 /**
@@ -54,6 +57,7 @@ export default function Embebido({
   nivel,
   ejercicio,
   hueco = null,
+  extras = [],
 }: PropsEmbebido) {
   // En el render y no en un efecto: los efectos de las pantallas corren antes
   // que los de este componente y sus primeras llamadas saldrían sin configurar.
@@ -134,6 +138,7 @@ export default function Embebido({
         alActivarEsta={nivelSif === 'admin' ? () => setActivando(true) : null}
         ejercicioInicial={ejercicio}
         hueco={hueco}
+        extras={extras}
       />
     </DatesProvider>
   )

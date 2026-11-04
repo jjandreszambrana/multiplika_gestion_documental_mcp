@@ -25,6 +25,11 @@ export const theme = createTheme({
     Badge: {
       defaultProps: { radius: 'xl' },
     },
+    // Con la coma como separador decimal, el punto del teclado (el del teclado
+    // numérico, sobre todo) también vale como decimal en vez de descartarse.
+    NumberInput: {
+      defaultProps: { allowedDecimalSeparators: ['.', ','] },
+    },
   },
 })
 

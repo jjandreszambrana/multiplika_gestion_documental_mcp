@@ -12,7 +12,7 @@ const Embebido = lazy(() => import('@contabilidad/Embebido.tsx'))
  * es el de la GD (va en la dirección del proxy, que elige el acceso al SIF);
  * `id_obligado_sif`, el de la empresa en su SIF.
  */
-export default function ContabilidadSIF({ proyecto, empresa, hueco }) {
+export default function ContabilidadSIF({ proyecto, empresa, hueco, extras }) {
   return (
     <Suspense fallback={<Center py="xl"><Loader /></Center>}>
       <Embebido
@@ -24,6 +24,7 @@ export default function ContabilidadSIF({ proyecto, empresa, hueco }) {
         nif={empresa.nif}
         nivel={empresa.nivel || undefined}
         hueco={hueco}
+        extras={extras}
       />
     </Suspense>
   )

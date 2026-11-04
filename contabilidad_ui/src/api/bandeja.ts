@@ -15,10 +15,19 @@ export const MOVIMIENTOS = 'movimientos'
 
 export type TipoDocumento = typeof FACTURAS | typeof MOVIMIENTOS
 
-export type EstadoBandeja = 'pendiente' | 'duplicada' | 'en_conflicto' | 'contabilizada' | 'descartada'
+export type EstadoBandeja =
+  | 'pendiente'
+  | 'duplicada'
+  | 'en_conflicto'
+  | 'posible_duplicado'
+  | 'contabilizada'
+  | 'descartada'
 
-/** `sif` y `importada`, solo en conflicto; `recuperar`, solo una descartada. */
-export type Decision = 'sif' | 'importada' | 'descartar' | 'recuperar'
+/**
+ * `sif` y `importada`, solo en conflicto; `recuperar`, solo una descartada;
+ * `ya_contabilizado`, solo un posible duplicado (con `importada` se dice que no lo es).
+ */
+export type Decision = 'sif' | 'importada' | 'descartar' | 'recuperar' | 'ya_contabilizado'
 
 /** Lo que comparten facturas y movimientos. */
 interface Comun {
@@ -33,6 +42,35 @@ interface Comun {
   ref_id_sif?: number | null
   /** 1 = el otro programa lo cambió después de contabilizarlo. */
   cambio_en_origen?: number | null
+  /** Qué campos distintos trae el ERP respecto a lo contabilizado; vacío si no se sabe. */
+  cambio_en_origen_detalle?: { campo: string; antes?: unknown; ahora?: unknown }[] | null
+  /** Apunte del diario con el que parece coincidir (0 si ninguno). */
+  diario_ejercicio?: number | null
+  diario_asiento?: number | null
+  diario_pase?: number | null
+  /** 1 = coincide por importe o número de factura; 2 = solo por concepto (el importe no cuadra). */
+  diario_criterio?: number | null
+  /** Cobros con pagaré, cheque o confirming ([5.47] del canal): cada paso es un documento aparte. */
+  fase_pagare?: 'cartera' | 'negociado' | 'devuelto' | '' | null
+  medio_pago?: string | null
+  medio_pago_tipo?: string | null
+  fecha_vencimiento?: string | null
+  fecha_negociado?: string | null
+  /** Grupo de cobros o pagos que en el diario son un solo apunte ([5.52] del canal); 0 = ninguno. */
+  id_grupo?: number | null
+  grupo_total?: number | null
+  grupo_documentos?: number | null
+  /** 1 = bloqueado: no se contabiliza hasta desbloquearlo ([5.42] del canal). */
+  bloqueado?: number | null
+  /** 1 = un contable lo ha marcado como revisado ([5.44] del canal); no cambia el estado. */
+  revisado?: number | null
+  revisado_por?: string | null
+  revisado_fecha?: string | null
+  /** Nota libre de un contable ([5.46] del canal); no cambia el estado. */
+  anotacion?: string | null
+  anotacion_por?: string | null
+  anotacion_fecha?: string | null
+  motivo_bloqueo?: string | null
   id_borrador?: number | null
   ejercicio_asiento?: number | null
   asiento?: number | null
@@ -111,6 +149,19 @@ export interface FiltroBandeja {
   /** Mes, de 01 a 12. Vacío es el ejercicio entero. */
   periodo: string
   buscar: string
+  /** Vacío, todos; '1', solo los bloqueados. */
+  bloqueado?: string
+  /** Vacío, todos; o `cartera`, `negociado`, `devuelto` (cobros con pagaré, cheque o confirming). */
+  fasePagare?: string
+  /** Vacío, todos; '1', solo los revisados; '0', solo los sin revisar. */
+  revisado?: string
+  /** Vacío, todos; '1', solo los que tienen anotación; '0', solo los que no. */
+  conAnotacion?: string
+  /** Principio de la cuenta del tercero o del banco o caja ([5.51] del canal); vacío = todas. */
+  cuenta?: string
+  /** Importe de la línea, en valor absoluto; vacío = sin límite. Con coma o punto. */
+  importeDesde?: string
+  importeHasta?: string
   pagina: number
   porPagina: number
 }
@@ -121,6 +172,12 @@ export interface ListaBandeja {
   por_pagina: number
   /** Cuántos hay de cada estado con el resto del filtro puesto. */
   por_estado: Record<string, number>
+  /** Cuántos bloqueados hay con el resto del filtro puesto. */
+  bloqueados: number
+  /** Cuántos revisados hay con el resto del filtro puesto. */
+  revisados: number
+  /** Cuántos tienen anotación con el resto del filtro puesto. */
+  con_anotacion: number
   documentos: DocumentoBandeja[]
 }
 
@@ -129,6 +186,9 @@ interface RespuestaListar {
   pagina: number
   por_pagina: number
   por_estado?: Record<string, number>
+  bloqueados?: number
+  revisados?: number
+  con_anotacion?: number
   facturas?: FacturaBandeja[]
   movimientos?: MovimientoBandeja[]
 }
@@ -257,6 +317,13 @@ export async function listarBandeja(filtro: FiltroBandeja, senal?: AbortSignal):
       ...(filtro.libro === '' ? {} : { libro: filtro.libro }),
       ...(filtro.periodo === '' ? {} : { periodo: filtro.periodo }),
       ...(filtro.buscar.trim() === '' ? {} : { buscar: filtro.buscar.trim() }),
+      ...(filtro.bloqueado ? { bloqueado: Number(filtro.bloqueado) } : {}),
+      ...(filtro.fasePagare ? { fase_pagare: filtro.fasePagare } : {}),
+      ...(filtro.cuenta?.trim() ? { cuenta: filtro.cuenta.trim() } : {}),
+      ...(filtro.revisado ? { revisado: Number(filtro.revisado) } : {}),
+      ...(filtro.conAnotacion ? { con_anotacion: Number(filtro.conAnotacion) } : {}),
+      ...(filtro.importeDesde ? { importe_desde: filtro.importeDesde.replace(',', '.') } : {}),
+      ...(filtro.importeHasta ? { importe_hasta: filtro.importeHasta.replace(',', '.') } : {}),
       pagina: filtro.pagina,
       por_pagina: filtro.porPagina,
     },
@@ -267,6 +334,9 @@ export async function listarBandeja(filtro: FiltroBandeja, senal?: AbortSignal):
     pagina: respuesta.pagina,
     por_pagina: respuesta.por_pagina,
     por_estado: respuesta.por_estado ?? {},
+    bloqueados: respuesta.bloqueados ?? 0,
+    revisados: respuesta.revisados ?? 0,
+    con_anotacion: respuesta.con_anotacion ?? 0,
     documentos:
       filtro.tipo === FACTURAS ? (respuesta.facturas ?? []) : (respuesta.movimientos ?? []),
   }
@@ -304,6 +374,34 @@ export function contabilizarBandeja(
       ? { tipo, ids: cuales.ids }
       : { tipo, ejercicio: cuales.ejercicio, ...(cuales.periodo === '' ? {} : { periodo: cuales.periodo }) }
   return pedir<ResultadoContabilizar>('/contabilidad/bandeja/contabilizar', cuerpo)
+}
+
+/** Bloquea o desbloquea documentos: un bloqueado no se contabiliza, ni uno a uno ni en bloque. */
+export function bloquearDocumentos(
+  tipo: TipoDocumento,
+  ids: number[],
+  bloquear: boolean,
+  motivo?: string,
+): Promise<{ cambiados: number; no_se_pueden: { id: number; motivo: string }[] }> {
+  return pedir('/contabilidad/bandeja/bloquear', { tipo, ids, bloquear, ...(motivo ? { motivo } : {}) })
+}
+
+/** Marca o desmarca como revisados: solo informa, no cambia el estado ni impide contabilizar. */
+export function revisarDocumentos(
+  tipo: TipoDocumento,
+  ids: number[],
+  revisado: boolean,
+): Promise<{ cambiados: number; no_se_pueden: { id: number; motivo: string }[] }> {
+  return pedir('/contabilidad/bandeja/revisar', { tipo, ids, revisado })
+}
+
+/** Escribe (o, con texto vacío, borra) la anotación de un documento. */
+export function anotarDocumento(
+  tipo: TipoDocumento,
+  id: number,
+  texto: string,
+): Promise<{ anotacion: string; anotacion_por: string; anotacion_fecha: string | null }> {
+  return pedir('/contabilidad/bandeja/anotar', { tipo, id, texto })
 }
 
 /** Devuelve a pendiente lo que siga en borrador. Lo confirmado no se toca. */
@@ -357,4 +455,123 @@ export function leerCodiplika(
     ensayo,
     ...(marcar === undefined ? {} : { marcar }),
   })
+}
+
+export interface CambioRecomprobar {
+  tipo: TipoDocumento
+  id: number
+  estado_antes: string
+  estado_despues: string
+  motivo?: string | null
+}
+
+export interface ResultadoRecomprobar {
+  ensayo: boolean
+  revisados: number
+  pasan_a_posible_duplicado: number
+  siguen_posibles_duplicados: number
+  vuelven_a_pendiente: number
+  siguen_pendientes: number
+  cambios: CambioRecomprobar[]
+}
+
+/**
+ * Repasa lo pendiente contra el diario, sin volver a leer Codiplika ([5.40] del
+ * canal). Con `ensayo` solo cuenta; sin él, aplica. Repetirlo no cambia nada.
+ */
+export function recomprobarBandeja(ensayo: boolean, desde?: string, hasta?: string): Promise<ResultadoRecomprobar> {
+  return pedir<ResultadoRecomprobar>('/contabilidad/bandeja/recomprobar', {
+    ensayo,
+    ...(desde ? { desde } : {}),
+    ...(hasta ? { hasta } : {}),
+  })
+}
+
+/** Cuántos días antes y después de la fecha de un cobro o pago se busca su apunte en el diario ([5.50] del canal). */
+export interface MargenDiario {
+  margen_dias_antes: number
+  margen_dias_despues: number
+}
+
+export function obtenerMargenDiario(): Promise<MargenDiario> {
+  return pedir<MargenDiario>('/contabilidad/bandeja/margen_diario/obtener', {})
+}
+
+/** Se guarda en la empresa. No recalcula nada: lo ya apartado cambia al volver a comprobar. */
+export function guardarMargenDiario(margen: MargenDiario): Promise<MargenDiario> {
+  return pedir<MargenDiario>('/contabilidad/bandeja/margen_diario/guardar', { ...margen })
+}
+
+/** Un apunte del diario que podría ser el de una remesa ([5.52] del canal). `donde`: en el banco o en la cuenta del tercero. */
+export interface ApuntePosible {
+  ejercicio: number
+  asiento: number
+  pase: number
+  fecha: string
+  cuenta: string
+  concepto: string
+  documento: string
+  importe: number
+  lado: string
+  donde?: 'tesoreria' | 'tercero'
+  /** 0 = borrador. */
+  contabilizado?: number
+  motivo?: string
+}
+
+export interface ResultadoBuscarGrupo {
+  clase: string
+  suma: number
+  documentos: number
+  desde: string
+  hasta: string
+  apuntes: ApuntePosible[]
+  excluidos: ApuntePosible[]
+  avisos: string[]
+}
+
+export interface Grupo {
+  id_grupo: number
+  clase: string
+  total: number
+  documentos: number
+  apunte: ApuntePosible
+  usuario: string
+  fecha_alta: string
+  lista: {
+    id: number
+    id_origen: string
+    fecha: string
+    importe: number
+    concepto: string
+    nombre_tercero: string
+    cuenta_tercero: string
+    cuenta_tesoreria: string
+    numero_factura: string
+  }[]
+}
+
+export function buscarAgrupacion(ids: number[], desde?: string, hasta?: string): Promise<ResultadoBuscarGrupo> {
+  return pedir<ResultadoBuscarGrupo>('/contabilidad/bandeja/agrupar/buscar', {
+    ids,
+    ...(desde ? { desde } : {}),
+    ...(hasta ? { hasta } : {}),
+  })
+}
+
+export function confirmarAgrupacion(ids: number[], apunte: Pick<ApuntePosible, 'ejercicio' | 'asiento' | 'pase'>): Promise<Grupo> {
+  return pedir<Grupo>('/contabilidad/bandeja/agrupar/confirmar', {
+    ids,
+    ejercicio: apunte.ejercicio,
+    asiento: apunte.asiento,
+    pase: apunte.pase,
+  })
+}
+
+export function obtenerGrupo(idGrupo: number): Promise<Grupo> {
+  return pedir<Grupo>('/contabilidad/bandeja/grupo/obtener', { id_grupo: idGrupo })
+}
+
+export function deshacerGrupo(idGrupo: number): Promise<{ id_grupo: number; deshechos: number; ids: number[] }> {
+  return pedir('/contabilidad/bandeja/agrupar/deshacer', { id_grupo: idGrupo })
 }

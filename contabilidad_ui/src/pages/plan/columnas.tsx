@@ -1,4 +1,4 @@
-import { Badge, Text } from '@mantine/core'
+import { Anchor, Badge, Text } from '@mantine/core'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type { CuentaPlan } from '../../api/plan'
 import { nombreDeTipo } from '../../lib/cuenta'
@@ -29,6 +29,7 @@ interface Mantenimiento {
 export function columnasDelPlan(
   mantenimiento: Mantenimiento | null,
   ancho: number,
+  alVerMayor?: (cuenta: string) => void,
 ): MRT_ColumnDef<CuentaPlan>[] {
   const columnas: MRT_ColumnDef<CuentaPlan>[] = [
     {
@@ -38,7 +39,18 @@ export function columnasDelPlan(
       grow: false,
       Cell: ({ row }) => (
         <Text ff="monospace" fz="sm" pl={row.original.nivel * SANGRIA_POR_NIVEL} style={{ whiteSpace: 'nowrap' }}>
-          {row.original.codigo}
+          {alVerMayor && row.original.auxiliar ? (
+            <Anchor
+              ff="monospace"
+              fz="sm"
+              underline="hover"
+              onClick={() => alVerMayor(row.original.codigo)}
+            >
+              {row.original.codigo}
+            </Anchor>
+          ) : (
+            row.original.codigo
+          )}
         </Text>
       ),
     },

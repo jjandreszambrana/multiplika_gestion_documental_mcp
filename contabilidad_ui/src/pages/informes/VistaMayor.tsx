@@ -1,5 +1,5 @@
 import { ActionIcon, Alert, Checkbox, Group, Loader, Stack, Text, Tooltip } from '@mantine/core'
-import { IconFileSpreadsheet } from '@tabler/icons-react'
+import { IconFileSpreadsheet, IconPencil } from '@tabler/icons-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
@@ -7,11 +7,13 @@ import { textoDeError } from '../../api/errores'
 import { mayorEnExcel, mayorEntero, type ApunteMayor, type Mayor } from '../../api/informes'
 import BotonDeAyuda from '../../components/BotonDeAyuda'
 import { CasillaFecha } from '../../components/CasillaFecha'
+import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
 import { opcionesDeTabla } from '../../components/tabla'
 import { guardarFichero, nombreDeFichero } from '../../lib/descarga'
 import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
 import { guardarPreferencia, leerPreferencia } from '../../lib/preferencias'
 import { formatearEntero, formatearImporte } from '../../lib/format'
+import DialogoEditarCuenta from '../plan/DialogoEditarCuenta'
 import { columnasDeMayor } from './columnasMayor'
 import { sumarSeleccion } from './sumasMayor'
 
@@ -25,6 +27,8 @@ interface Props {
   alEditarBorrador?: (idBorrador: number) => void
   /** Cambia para volver a pedir el mayor: lo que se corrigió ya no vale. */
   refresco?: number
+  /** Pase del apunte desde el que se ha abierto: la tabla se desplaza hasta él y lo resalta. */
+  pase?: number
   /**
    * Quién lo está mirando, para recordarle su periodo la próxima vez. **Sin
    * esto no se guarda nada**, que es lo que interesa cuando el mayor se abre en
@@ -62,6 +66,7 @@ export default function VistaMayor({
   alEditarBorrador,
   refresco,
   usuario,
+  pase,
 }: Props) {
   const guardado =
     usuario === undefined ? null : leerPreferencia<FiltroGuardado>(usuario, PREFERENCIA)
@@ -76,6 +81,9 @@ export default function VistaMayor({
   const [error, setError] = useState<string | null>(null)
   const [seleccion, setSeleccion] = useState<Record<string, boolean>>({})
   const [bajando, setBajando] = useState(false)
+  const plan = usePlanEnMemoria()
+  const datosCuenta = plan.porCodigo.get(cuenta) ?? null
+  const [editandoCuenta, setEditandoCuenta] = useState(false)
 
   const desdeApi = fechaParaApi(desde)
   const hastaApi = fechaParaApi(hasta)
@@ -124,6 +132,16 @@ export default function VistaMayor({
 
   const columnas = useMemo(() => columnasDeMayor(alEditarBorrador), [alEditarBorrador])
 
+  // Al abrir desde un apunte, la tabla baja hasta su línea (cuando ya hay filas pintadas).
+  const hayFilas = mayor !== null && mayor.apuntes.some((f) => f.pase === pase)
+  useEffect(() => {
+    if (pase === undefined || !hayFilas) return
+    const espera = window.setTimeout(() => {
+      document.querySelector(`[data-pase="${pase}"]`)?.scrollIntoView({ block: 'center' })
+    }, 350)
+    return () => window.clearTimeout(espera)
+  }, [pase, hayFilas])
+
   async function bajarExcel() {
     setError(null)
     setBajando(true)
@@ -171,12 +189,16 @@ export default function VistaMayor({
     // en azul por encima, porque lo que se acaba de señalar tiene que verse
     // aunque sea un borrador.
     mantineTableBodyRowProps: ({ row }) => {
+      const datos = { 'data-pase': row.original.pase }
       if (row.getIsSelected()) {
-        return { style: { backgroundColor: 'var(--mantine-color-blue-1)' } }
+        return { ...datos, style: { backgroundColor: 'var(--mantine-color-blue-1)' } }
+      }
+      if (row.original.pase === pase) {
+        return { ...datos, style: { backgroundColor: 'var(--mantine-color-yellow-2)' } }
       }
       return row.original.es_borrador
-        ? { style: { backgroundColor: 'var(--mantine-color-orange-0)' } }
-        : {}
+        ? { ...datos, style: { backgroundColor: 'var(--mantine-color-orange-0)' } }
+        : datos
     },
     // Solo la primera vez: en una recarga las filas de antes se quedan puestas
     // hasta que llegan las nuevas, y así la tabla no parpadea ni pierde el
@@ -189,6 +211,34 @@ export default function VistaMayor({
 
   return (
     <Stack gap="md">
+      <Group gap="xs" align="center">
+        <Text fw={600} ff="monospace">
+          {cuenta}
+        </Text>
+        <Text fw={500}>{datosCuenta?.descripcion ?? ''}</Text>
+        {datosCuenta !== null && (
+          <Tooltip label="Cambiar el título de la cuenta" withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label="Cambiar el título de la cuenta"
+              onClick={() => setEditandoCuenta(true)}
+            >
+              <IconPencil size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
+      <DialogoEditarCuenta
+        cuenta={editandoCuenta ? datosCuenta : null}
+        ejercicio={ejercicio}
+        alCerrar={() => setEditandoCuenta(false)}
+        alGuardada={() => {
+          setEditandoCuenta(false)
+          plan.refrescar()
+        }}
+      />
       <Group align="flex-end" gap="md">
         <CasillaFecha
           label="Desde"

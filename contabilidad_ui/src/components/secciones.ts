@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Nivel } from '../api/sesion'
 
 export interface Seccion {
@@ -121,3 +122,19 @@ export const SECCIONES: Seccion[] = [
   },
   { id: 'accesos', etiqueta: 'Accesos', nivelMinimo: 'admin' },
 ]
+
+/**
+ * Una pantalla que pone el panel anfitrión (en la GD: propuestas y conciliación)
+ * y que cuelga del menú de la contabilidad. Va suelta, justo antes del cierre.
+ */
+export interface SeccionExterna {
+  id: string
+  etiqueta: string
+  contenido: ReactNode
+}
+
+export function conExternas(externas: readonly SeccionExterna[]): Seccion[] {
+  const nuevas = externas.map((e): Seccion => ({ id: e.id, etiqueta: e.etiqueta, nivelMinimo: 'consulta' }))
+  const antesDelCierre = SECCIONES.findIndex((s) => s.id === 'cierre')
+  return [...SECCIONES.slice(0, antesDelCierre), ...nuevas, ...SECCIONES.slice(antesDelCierre)]
+}

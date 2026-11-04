@@ -14,9 +14,10 @@ from mtpk_postgres.core_sync import SQLLiteral
 
 NOMBRE_TABLA_CONCILIACIONES = "gd_conciliaciones"
 NOMBRE_TABLA_CONCILIACION_MOVIMIENTOS = "gd_conciliacion_movimientos"
+NOMBRE_TABLA_CUENTAS_BANCARIAS = "gd_cuentas_bancarias"
 __DB_NAME__ = get_db_name("gestion_documental")
 
-ESTADOS_MOVIMIENTO = ["sin_emparejar", "exacto", "dudoso", "confirmado", "descartado"]
+ESTADOS_MOVIMIENTO = ["sin_emparejar", "exacto", "dudoso", "asentado", "asiento_propuesto", "confirmado", "descartado"]
 
 TABLA_CONCILIACIONES = Tabla(
     nombre=NOMBRE_TABLA_CONCILIACIONES,
@@ -81,4 +82,22 @@ TABLA_CONCILIACION_MOVIMIENTOS = Tabla(
     db_name=__DB_NAME__,
 )
 
-__TABLAS__ = [TABLA_CONCILIACIONES, TABLA_CONCILIACION_MOVIMIENTOS]
+TABLA_CUENTAS_BANCARIAS = Tabla(
+    nombre=NOMBRE_TABLA_CUENTAS_BANCARIAS,
+    columnas=[
+        Columna(nombre="id", tipo="INT", primary_key=True, auto_increment=True),
+        Columna(nombre="id_empresa", tipo="INT", not_null=True, comentario="→ gd_conta_empresas.id (sin FK: se conserva)"),
+        Columna(nombre="banco", tipo="VARCHAR", longitud=4, not_null=True),
+        Columna(nombre="oficina", tipo="VARCHAR", longitud=4, not_null=True),
+        Columna(nombre="cuenta", tipo="VARCHAR", longitud=10, not_null=True),
+        Columna(nombre="subcuenta", tipo="VARCHAR", longitud=20,
+                comentario="Subcuenta 572 del plan de la empresa en el SIF; la elige el contable una vez"),
+        Columna(nombre="fecha_alta", tipo="TIMESTAMP", not_null=True, default=SQLLiteral("CURRENT_TIMESTAMP"),
+                protegido_actualizar=True),
+    ],
+    indices=[Index(columnas=["id_empresa", "banco", "oficina", "cuenta"], unico=True, nombre="gd_cuentas_bancarias_idx")],
+    comentario="Cuentas bancarias de cada empresa y su subcuenta contable",
+    db_name=__DB_NAME__,
+)
+
+__TABLAS__ = [TABLA_CUENTAS_BANCARIAS, TABLA_CONCILIACIONES, TABLA_CONCILIACION_MOVIMIENTOS]

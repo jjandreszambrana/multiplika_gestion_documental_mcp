@@ -229,8 +229,22 @@ export const api = {
   empresasContables: (idProyecto) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/sif/empresas`),
   listarPropuestasContables: (idProyecto, idEmpresa, estado) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/propuestas?id_empresa=${idEmpresa}&estado=${estado || ""}`),
+  deshacerPropuestaContable: (idProyecto, idPropuesta) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/propuestas/${idPropuesta}/deshacer`),
   resolverPropuestaContable: (idProyecto, idPropuesta, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/propuestas/${idPropuesta}/resolver`, datos),
+  listarCuentasBancarias: (idProyecto, idEmpresa) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias?id_empresa=${idEmpresa}`),
+  asociarSubcuenta: (idProyecto, idCuenta, subcuenta) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias/${idCuenta}`, { subcuenta }),
+  subcuentasBanco: (idProyecto, idCuenta) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias/${idCuenta}/subcuentas`),
+  movimientosCuenta: (idProyecto, idCuenta) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias/${idCuenta}/movimientos`),
+  extractosCuenta: (idProyecto, idCuenta) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias/${idCuenta}/extractos`),
+  compararCuenta: (idProyecto, idCuenta, desde, hasta) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/cuentas_bancarias/${idCuenta}/comparar?desde=${desde || ""}&hasta=${hasta || ""}`),
   listarExtractos: (idProyecto, idEmpresa) =>
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones?id_empresa=${idEmpresa}`),
   subirExtracto: (idProyecto, idEmpresa, archivo) => {
@@ -247,6 +261,12 @@ export const api = {
     peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}/candidatas?q=${encodeURIComponent(q || "")}`),
   resolverMovimientoBancario: (idProyecto, idConciliacion, idMovimiento, datos) =>
     peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}`, datos),
+  proponerAsientoMovimiento: (idProyecto, idConciliacion, idMovimiento) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}/asiento`),
+  cuentasPlanConciliacion: (idProyecto, idConciliacion, q) =>
+    peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/cuentas?q=${encodeURIComponent(q || "")}`),
+  elegirCuentaMovimiento: (idProyecto, idConciliacion, idMovimiento, cuenta) =>
+    peticion(BASE_CLIENTE, "POST", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}/movimientos/${idMovimiento}/cuenta`, { cuenta }),
   eliminarExtracto: (idProyecto, idConciliacion) =>
     peticion(BASE_CLIENTE, "DELETE", `/proyectos/${idProyecto}/contabilidad/conciliaciones/${idConciliacion}`),
   catalogoMemoria: (idProyecto, modelo) => peticion(BASE_CLIENTE, "GET", `/proyectos/${idProyecto}/contabilidad/memoria/catalogo/${modelo}`),

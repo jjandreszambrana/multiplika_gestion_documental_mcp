@@ -92,7 +92,21 @@ export default function DialogoCambiarCuentas({
     }
   }
 
+  /** Las cuentas que tienen ahora; si los bienes no coinciden, todas las distintas. */
+  const actuales = (campo: Campo): string => {
+    const clave = { activo: 'cuenta_activo', amortizacion: 'cuenta_amortizacion', gasto: 'cuenta_gasto' }[campo] as
+      | 'cuenta_activo'
+      | 'cuenta_amortizacion'
+      | 'cuenta_gasto'
+    const distintas = [...new Set(bienes.map((b) => b[clave]).filter(Boolean))]
+    return distintas.length > 0 ? distintas.join(', ') : 'ninguna'
+  }
+
   const casilla = (campo: Campo, rotulo: string) => (
+    <Stack gap={2}>
+    <Text size="xs" c="dimmed">
+      Ahora: {actuales(campo)}
+    </Text>
     <CasillaDeCuenta
       id={`cambiar-cuenta-${campo}`}
       label={rotulo}
@@ -102,6 +116,7 @@ export default function DialogoCambiarCuentas({
       alCambiar={(valor) => cambiar(campo, valor)}
       alCrear={(codigo) => setCreandoCuenta({ campo, codigo })}
     />
+    </Stack>
   )
 
   return (

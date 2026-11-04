@@ -23,6 +23,7 @@ import { opcionesDeTabla } from '../../components/tabla'
 import { columnasDelPlan } from './columnas'
 import DialogoAccionCuenta, { type Accion } from './DialogoAccionCuenta'
 import DialogoEditarCuenta from './DialogoEditarCuenta'
+import ModalMayor from '../informes/ModalMayor'
 import DialogoNuevaMayor from './DialogoNuevaMayor'
 import DialogoNuevaSubcuenta from './DialogoNuevaSubcuenta'
 import AvisoDeAuxiliares from './AvisoDeAuxiliares'
@@ -108,6 +109,8 @@ export default function PantallaPlan({ ejercicio, nivel, ancho }: Props) {
     recarga,
   ])
 
+  const [mayorDe, setMayorDe] = useState('')
+
   const columnas = useMemo(
     () =>
       columnasDelPlan(
@@ -118,6 +121,7 @@ export default function PantallaPlan({ ejercicio, nivel, ancho }: Props) {
             }
           : null,
         ancho,
+        setMayorDe,
       ),
     [mantiene, ancho],
   )
@@ -194,6 +198,8 @@ export default function PantallaPlan({ ejercicio, nivel, ancho }: Props) {
       </Group>
 
       <MantineReactTable table={tabla} />
+
+      <ModalMayor cuenta={mayorDe} ejercicio={ejercicio} alCerrar={() => setMayorDe('')} />
 
       <DialogoNuevaSubcuenta
         abierto={creandoSubcuenta}

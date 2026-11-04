@@ -1,5 +1,5 @@
 import { Alert, Button, Group, Modal, Stack, Text } from '@mantine/core'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { textoDeError } from '../../api/errores'
 import {
   altaDeBien,
@@ -104,6 +104,10 @@ export default function DialogoBien({
         : BIEN_EN_BLANCO,
   )
   const [error, setError] = useState<string | null>(null)
+  const avisoDeError = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (error) avisoDeError.current?.scrollIntoView({ block: 'nearest' })
+  }, [error])
   const [guardando, setGuardando] = useState(false)
   const [alta, setAlta] = useState<{ campo: CampoDeCuenta; codigo: string } | null>(null)
 
@@ -202,7 +206,9 @@ export default function DialogoBien({
       <form onSubmit={enviar}>
         <Stack gap="md">
           {error && (
-            <Alert color="red" role="alert">
+            // El formulario es largo: el aviso está arriba y quien pulsa
+            // Guardar está abajo, así que se trae a la vista al aparecer.
+            <Alert color="red" role="alert" ref={avisoDeError}>
               {error}
             </Alert>
           )}

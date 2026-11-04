@@ -38,6 +38,9 @@ MAX_REGISTROS = 200000
 DIAS_PRIMERA_VEZ = 730
 DIAS_CADA_NOCHE = 90
 TIEMPO_ESPERA = 60
+# Repasar toda la bandeja contra el diario tarda más que una consulta normal
+TIEMPO_ESPERA_LARGO = 280  # por debajo de los 300 s de Apache
+RUTAS_LARGAS = ("/bandeja/recomprobar", "/bandeja/leer_erp")
 
 
 class ErrorSIF(ValueError):
@@ -75,6 +78,8 @@ class ClienteSIF:
         content, headers...)."""
         for intento in range(2):
             try:
+                if ruta.endswith(RUTAS_LARGAS):
+                    kwargs.setdefault("timeout", TIEMPO_ESPERA_LARGO)
                 r = await self.http.request(metodo, ruta, **kwargs)
             except httpx.HTTPError as e:
                 raise ErrorSIF(f"Fallo de conexión con SIF ({ruta}): {e}") from e

@@ -1,5 +1,6 @@
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
   Checkbox,
@@ -16,6 +17,7 @@ import {
 import { useDebouncedValue } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import {
+  bloquearDocumentos,
   contabilizarBandeja,
   deshacerContabilizacion,
   FACTURAS,
@@ -31,17 +33,21 @@ import { esAbortada } from '../../api/cliente'
 import { textoDeError } from '../../api/errores'
 import { alcanza } from '../../api/sesion'
 import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
+import ModalMayor from '../informes/ModalMayor'
 import { aDecimal } from '../../lib/dinero'
 import { formatearEntero, formatearFecha, formatearImporte } from '../../lib/format'
 import DialogoConfirmar from '../traspasos/DialogoConfirmar'
 import { comoSeLlama, MESES, TODO_EL_EJERCICIO } from '../traspasos/meses'
+import DialogoCotejo from './DialogoCotejo'
 import DialogoDocumento from './DialogoDocumento'
 import ResumenBandeja from './ResumenBandeja'
 import {
   AVISO_CAMBIADA,
   cuantosDocumentos,
   ESTADOS,
+  aspectoDeEstado,
   EXPLICACION_ESTADO,
+  FASES_PAGARE,
   esFactura,
   LIBROS,
 } from './textos'
@@ -92,6 +98,20 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
   const [estado, setEstado] = useState(TODOS)
   const [libro, setLibro] = useState(TODOS)
   const [periodo, setPeriodo] = useState(TODO_EL_EJERCICIO)
+  const [soloBloqueados, setSoloBloqueados] = useState('')
+  const [bloqueados, setBloqueados] = useState(0)
+  const [revision, setRevision] = useState('')
+  const [fasePagare, setFasePagare] = useState('')
+  const [mayor, setMayor] = useState('')
+  const [cuentaTexto, setCuentaTexto] = useState('')
+  const [cuenta] = useDebouncedValue(cuentaTexto, ESPERA_TECLEO_MS)
+  const [importeDesde, setImporteDesde] = useState('')
+  const [importeHasta, setImporteHasta] = useState('')
+  const [importes] = useDebouncedValue(`${importeDesde}|${importeHasta}`, 400)
+  const [desdeImporte, hastaImporte] = importes.split('|')
+  const [revisados, setRevisados] = useState(0)
+  const [notas, setNotas] = useState('')
+  const [conNotas, setConNotas] = useState(0)
   const [texto, setTexto] = useState('')
   const [buscar] = useDebouncedValue(texto, ESPERA_TECLEO_MS)
   const [pagina, setPagina] = useState(1)
@@ -106,7 +126,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
 
   const [elegidos, setElegidos] = useState<Set<number>>(new Set())
   const [abierto, setAbierto] = useState<number | null>(null)
-  const [preguntando, setPreguntando] = useState<'elegidos' | 'periodo' | 'deshacer' | null>(null)
+  const [preguntando, setPreguntando] = useState<'elegidos' | 'periodo' | 'deshacer' | 'agrupar' | null>(null)
   const [contabilizado, setContabilizado] = useState<ResultadoContabilizar | null>(null)
   const [deshecho, setDeshecho] = useState<ResultadoDeshacer | null>(null)
 
@@ -114,11 +134,11 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
   useEffect(() => {
     setPagina(1)
     setElegidos(new Set())
-  }, [estado, libro, periodo, buscar, refresco])
+  }, [estado, libro, periodo, buscar, soloBloqueados, revision, fasePagare, cuenta, notas, importes, refresco])
 
   useEffect(() => {
     const control = new AbortController()
-    const filtro = { tipo, ejercicio, estado, libro, periodo, buscar, pagina, porPagina: POR_PAGINA }
+    const filtro = { tipo, ejercicio, estado, libro, periodo, buscar, bloqueado: soloBloqueados, fasePagare, cuenta, revisado: revision, conAnotacion: notas, importeDesde: desdeImporte, importeHasta: hastaImporte, pagina, porPagina: POR_PAGINA }
     setCargando(true)
     Promise.all([
       listarBandeja(filtro, control.signal),
@@ -129,6 +149,9 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
       .then(([pedida, sinEstado]) => {
         setLista(pedida)
         setPorEstado((sinEstado ?? pedida).por_estado)
+        setBloqueados(pedida.bloqueados)
+        setRevisados(pedida.revisados)
+        setConNotas(pedida.con_anotacion)
         setError(null)
         setCargando(false)
       })
@@ -138,7 +161,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
         setCargando(false)
       })
     return () => control.abort()
-  }, [tipo, ejercicio, estado, libro, periodo, buscar, pagina, refresco, recarga])
+  }, [tipo, ejercicio, estado, libro, periodo, buscar, soloBloqueados, revision, fasePagare, cuenta, notas, importes, pagina, refresco, recarga])
 
   const puedeApuntar = alcanza(nivel, 'apuntes')
   const documentos = lista?.documentos ?? []
@@ -147,8 +170,15 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
   const pendientesDelPeriodo = porEstado.pendiente ?? 0
   // Contabilizar el mes no entiende de tipo ni de búsqueda: con esos filtros
   // puestos, el recuento de la pantalla no es lo que va a entrar.
-  const filtroParcial = libro !== TODOS || buscar.trim() !== ''
-  const todosElegidos = documentos.length > 0 && documentos.every((d) => elegidos.has(d.id))
+  const filtroParcial = libro !== TODOS || buscar.trim() !== '' || importes !== '|'
+  // Solo se puede elegir lo que está por contabilizar: lo demás no entra.
+  const elegibles = documentos.filter((d) => d.estado === 'pendiente')
+  const sumaElegidos = documentos
+    .filter((d) => elegidos.has(d.id))
+    .reduce((suma, d) => suma.plus(aDecimal(columnas(d, tipo).importe)), aDecimal(0))
+  const primero = documentos.find((d) => elegidos.has(d.id)) as MovimientoBandeja | undefined
+  const cuentaDeLoElegido = primero?.cuenta_tesoreria ?? ''
+  const todosElegidos = elegibles.length > 0 && elegibles.every((d) => elegidos.has(d.id))
 
   function elegir(id: number, si: boolean) {
     setElegidos((antes) => {
@@ -163,6 +193,17 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
   function volverALeer() {
     setElegidos(new Set())
     setRecarga((n) => n + 1)
+  }
+
+  async function bloquear(si: boolean) {
+    setError(null)
+    try {
+      const r = await bloquearDocumentos(tipo, [...elegidos], si)
+      if (r.no_se_pueden.length > 0) setError(`No se han podido ${si ? 'bloquear' : 'desbloquear'} ${r.no_se_pueden.length}: ${r.no_se_pueden[0].motivo}`)
+      volverALeer()
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    }
   }
 
   async function contabilizar(cuales: { ids: number[] } | { ejercicio: number; periodo: string }) {
@@ -210,6 +251,58 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
           allowDeselect={false}
           w={180}
         />
+        <Select
+          label="Bloqueo"
+          data={[
+            { value: '', label: 'Todos' },
+            { value: '1', label: `Solo bloqueados (${formatearEntero(bloqueados)})` },
+            { value: '0', label: 'Sin los bloqueados' },
+          ]}
+          value={soloBloqueados}
+          onChange={(valor) => setSoloBloqueados(valor ?? '')}
+          allowDeselect={false}
+          w={200}
+        />
+        {tipo !== FACTURAS && (
+          <Select
+            label="Pagarés y confirming"
+            data={[
+              { value: '', label: 'Todos los cobros y pagos' },
+              ...Object.entries(FASES_PAGARE).map(([valor, f]) => ({ value: valor, label: f.nombre })),
+            ]}
+            value={fasePagare}
+            onChange={(valor) => setFasePagare(valor ?? '')}
+            allowDeselect={false}
+            w={220}
+          />
+        )}
+        <Select
+          label="Revisión"
+          data={[
+            { value: '', label: 'Todos' },
+            { value: '1', label: `Revisados (${formatearEntero(revisados)})` },
+            { value: '0', label: 'Sin revisar' },
+          ]}
+          value={revision}
+          onChange={(valor) => setRevision(valor ?? '')}
+          allowDeselect={false}
+          w={190}
+        />
+        <Select
+          label="Anotaciones"
+          data={[
+            { value: '', label: 'Todos' },
+            { value: '1', label: `Con anotación (${formatearEntero(conNotas)})` },
+            { value: '0', label: 'Sin anotación' },
+          ]}
+          value={notas}
+          onChange={(valor) => setNotas(valor ?? '')}
+          allowDeselect={false}
+          w={200}
+        />
+        <TextInput label="Cuenta" placeholder="430000581" inputMode="numeric" value={cuentaTexto} onChange={(e) => setCuentaTexto(e.currentTarget.value)} w={140} />
+        <TextInput label="Importe desde" inputMode="decimal" value={importeDesde} onChange={(e) => setImporteDesde(e.currentTarget.value)} w={120} />
+        <TextInput label="Importe hasta" inputMode="decimal" value={importeHasta} onChange={(e) => setImporteHasta(e.currentTarget.value)} w={120} />
         <TextInput
           label="Buscar"
           placeholder={tipo === FACTURAS ? 'Número, NIF o nombre' : 'Concepto, NIF o nombre'}
@@ -239,6 +332,22 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
           >
             Deshacer lo elegido…
           </Button>
+          <Button variant="default" onClick={() => void bloquear(true)} disabled={elegidos.size === 0}>
+            Bloquear lo elegido
+          </Button>
+          <Button variant="default" onClick={() => void bloquear(false)} disabled={elegidos.size === 0}>
+            Desbloquear lo elegido
+          </Button>
+          {tipo !== FACTURAS && (
+            <Button variant="default" onClick={() => setPreguntando('agrupar')}>
+              Cotejar con el mayor…
+            </Button>
+          )}
+          {elegidos.size > 0 && (
+            <Text fw={600}>
+              {formatearEntero(elegidos.size)} elegidos · suma {formatearImporte(sumaElegidos)}
+            </Text>
+          )}
         </Group>
       )}
 
@@ -274,7 +383,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
                         indeterminate={!todosElegidos && documentos.some((d) => elegidos.has(d.id))}
                         onChange={(e) => {
                           const si = e.currentTarget.checked
-                          documentos.forEach((d) => elegir(d.id, si))
+                          elegibles.forEach((d) => elegir(d.id, si))
                         }}
                       />
                     </Table.Th>
@@ -282,6 +391,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
                   <Table.Th w={110}>Fecha</Table.Th>
                   <Table.Th w={150}>{tipo === FACTURAS ? 'Número' : 'Factura'}</Table.Th>
                   <Table.Th>{tipo === FACTURAS ? 'Cliente o proveedor' : 'Concepto'}</Table.Th>
+                  <Table.Th w={120}>Cuenta</Table.Th>
                   <Table.Th w={130} ta="right">
                     {tipo === FACTURAS ? 'Total' : 'Importe'}
                   </Table.Th>
@@ -292,7 +402,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
               <Table.Tbody>
                 {documentos.map((documento) => {
                   const fila = columnas(documento, tipo)
-                  const aspecto = ESTADOS[documento.estado]
+                  const aspecto = aspectoDeEstado(documento)
                   const explicacion = documento.motivo || EXPLICACION_ESTADO[documento.estado] || ''
                   return (
                     <Table.Tr
@@ -306,6 +416,7 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
                           <Checkbox
                             aria-label="Elegir"
                             checked={elegidos.has(documento.id)}
+                            disabled={documento.estado !== 'pendiente'}
                             onChange={(e) => elegir(documento.id, e.currentTarget.checked)}
                           />
                         </Table.Td>
@@ -319,6 +430,20 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
                             ? [fila.detalle, documento.nif_tercero].filter(Boolean).join(' · ')
                             : [documento.nombre_tercero, documento.nif_tercero].filter(Boolean).join(' · ')}
                         </Text>
+                      </Table.Td>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        {documento.cuenta_tercero ? (
+                          <Anchor component="button" type="button" fz="sm" ff="monospace" title="Ver el mayor" onClick={() => setMayor(documento.cuenta_tercero ?? '')}>
+                            {documento.cuenta_tercero}
+                          </Anchor>
+                        ) : (
+                          ''
+                        )}
+                        {documento.cuenta_tercero && (
+                          <Text size="xs" c="dimmed">
+                            {plan.porCodigo.get(documento.cuenta_tercero)?.descripcion ?? ''}
+                          </Text>
+                        )}
                       </Table.Td>
                       <Table.Td ta="right" ff="monospace">
                         {formatearImporte(aDecimal(fila.importe))}
@@ -336,6 +461,40 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
                               {aspecto?.nombre ?? documento.estado}
                             </Badge>
                           </Tooltip>
+                          {documento.bloqueado === 1 && (
+                            <Badge color="red" variant="outline" size="xs">
+                              Bloqueado
+                            </Badge>
+                          )}
+                          {'fase_pagare' in documento && documento.fase_pagare && FASES_PAGARE[documento.fase_pagare] && (
+                            <Tooltip
+                              label={`${documento.medio_pago ?? ''}${documento.fecha_vencimiento ? ` · vence ${formatearFecha(documento.fecha_vencimiento)}` : ''}${documento.fecha_negociado ? ` · negociado ${formatearFecha(documento.fecha_negociado)}` : ''} — ${FASES_PAGARE[documento.fase_pagare].explicacion}`}
+                              withArrow
+                              multiline
+                              maw={360}
+                            >
+                              <Badge color={FASES_PAGARE[documento.fase_pagare].color} variant="light" size="xs">
+                                {documento.medio_pago_tipo ?? 'Efecto'} · {FASES_PAGARE[documento.fase_pagare].nombre}
+                              </Badge>
+                            </Tooltip>
+                          )}
+                          {documento.revisado === 1 && (
+                            <Tooltip
+                              label={`Revisado${documento.revisado_por ? ` por ${documento.revisado_por}` : ''}${documento.revisado_fecha ? ` el ${formatearFecha(documento.revisado_fecha)}` : ''}`}
+                              withArrow
+                            >
+                              <Badge color="teal" variant="outline" size="xs">
+                                ✓ Revisado
+                              </Badge>
+                            </Tooltip>
+                          )}
+                          {documento.anotacion && (
+                            <Tooltip label={`${documento.anotacion}${documento.anotacion_por ? ` — ${documento.anotacion_por}` : ''}`} withArrow multiline maw={360}>
+                              <Badge color="grape" variant="outline" size="xs">
+                                Nota
+                              </Badge>
+                            </Tooltip>
+                          )}
                           {documento.cambio_en_origen === 1 && (
                             <Text fz="xs" c="orange">
                               {AVISO_CAMBIADA}
@@ -357,10 +516,11 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
             </Text>
           )}
 
+          <ModalMayor cuenta={mayor} ejercicio={ejercicio} alCerrar={() => setMayor('')} />
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
               {cuantosDocumentos(lista.total, tipo)}
-              {elegidos.size > 0 ? ` · ${formatearEntero(elegidos.size)} elegidos` : ''}
+              {elegidos.size > 0 ? ` · ${formatearEntero(elegidos.size)} elegidos, suma ${formatearImporte(sumaElegidos)}` : ''}
             </Text>
             {paginas > 1 && <Pagination total={paginas} value={pagina} onChange={setPagina} size="sm" />}
           </Group>
@@ -373,6 +533,19 @@ export default function ListaBandeja({ tipo, ejercicio, nivel, refresco, alVerBo
         nivel={nivel}
         alCerrar={() => setAbierto(null)}
         alCambiado={() => setRecarga((n) => n + 1)}
+      />
+
+      <DialogoCotejo
+        abierto={preguntando === 'agrupar'}
+        ejercicio={ejercicio}
+        idsIniciales={[...elegidos]}
+        cuentaInicial={cuentaTexto.trim() || cuentaDeLoElegido}
+        libroInicial={libro === TODOS ? '' : libro}
+        alCerrar={() => setPreguntando(null)}
+        alHecho={() => {
+          setElegidos(new Set())
+          volverALeer()
+        }}
       />
 
       <DialogoConfirmar

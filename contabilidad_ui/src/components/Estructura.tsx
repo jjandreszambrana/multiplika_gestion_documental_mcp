@@ -42,7 +42,7 @@ import RedDeSeguridad from './RedDeSeguridad'
 import { ProveedorCuadre } from './CuadreEnMemoria'
 import { ProveedorPlan } from './PlanEnMemoria'
 import SelectorEjercicio from './SelectorEjercicio'
-import { SECCIONES, SECCION_DE_ENTRADA } from './secciones'
+import { conExternas, SECCION_DE_ENTRADA, type SeccionExterna } from './secciones'
 import { guardarPreferencia, leerPreferencia } from '../lib/preferencias'
 
 interface Props {
@@ -63,6 +63,8 @@ interface Props {
   ejercicioInicial?: number
   /** Embebido: el panel pone la empresa y aquí se deja el ejercicio, en su fila. */
   hueco?: HTMLElement | null
+  /** Pantallas del panel que cuelgan del menú. */
+  extras?: SeccionExterna[]
 }
 
 const ALTO_CABECERA = 64
@@ -91,7 +93,9 @@ export default function Estructura({
   embebido = false,
   ejercicioInicial,
   hueco = null,
+  extras = [],
 }: Props) {
+  const SECCIONES = conExternas(extras)
   const [configuracion, setConfiguracion] = useState<Configuracion | null>(null)
   const [ejercicios, setEjercicios] = useState<Ejercicio[] | null>(null)
   const [ejercicio, setEjercicio] = useState<number | null>(null)
@@ -227,6 +231,18 @@ export default function Estructura({
 
   const etiquetaDe = (id: string) => SECCIONES.find((s) => s.id === id)?.etiqueta ?? ''
 
+  // La pestaña del navegador dice en qué pantalla se está; al salir de la
+  // contabilidad vuelve el título que tenía.
+  const etiquetaActiva = etiquetaDe(seccion)
+  useEffect(() => {
+    if (etiquetaActiva === '') return
+    const anterior = document.title
+    document.title = etiquetaActiva
+    return () => {
+      document.title = anterior
+    }
+  }, [etiquetaActiva])
+
   const cabeceraEmpresa = (
     <CabeceraEmpresa
       empresa={empresa}
@@ -252,6 +268,7 @@ export default function Estructura({
 
   const menu = (
     <MenuModulo
+      secciones={SECCIONES}
       nivel={nivel}
       rol={rolSif}
       activa={seccion}
@@ -392,6 +409,8 @@ export default function Estructura({
         nombreEmpresa={empresa.NombreRazon ?? ''}
         alVerBorradores={irABorradores}
       />
+    ) : extras.some((e) => e.id === id) ? (
+      extras.find((e) => e.id === id)?.contenido
     ) : (
       <Text c="dimmed">{etiquetaDe(id)}: pantalla pendiente.</Text>
     )
@@ -448,6 +467,9 @@ export default function Estructura({
                 pr="xs"
               >
                 {menu}
+                <Text size="xs" c="dimmed" ta="center" pt="xs">
+                  {`Compilado el ${compiladoEl()}`}
+                </Text>
               </Box>
               <Box style={{ flex: 1, minWidth: 0 }}>{contenido}</Box>
             </Group>

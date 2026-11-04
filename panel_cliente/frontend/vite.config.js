@@ -55,5 +55,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(version),
     __APP_REVISION__: JSON.stringify(revisionGit()),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+    // Lo lee contabilidad_ui (lib/compilacion.ts) para su rótulo «Compilado el».
+    __COMPILADO__: JSON.stringify(new Date().toISOString()),
   },
 })

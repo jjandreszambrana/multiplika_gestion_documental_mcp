@@ -1,7 +1,13 @@
-import { Alert, Badge, Button, Group, Loader, Modal, SimpleGrid, Stack, Table, Text } from '@mantine/core'
+import { Alert, Badge, Button, Checkbox, Textarea, Group, List, Loader, Modal, SimpleGrid, Stack, Table, Text } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   obtenerDocumento,
+  bloquearDocumentos,
+  revisarDocumentos,
+  anotarDocumento,
+  deshacerGrupo,
+  obtenerGrupo,
+  type Grupo,
   resolverDocumento,
   type Decision,
   type DocumentoBandeja,
@@ -12,8 +18,9 @@ import {
 import { textoDeError } from '../../api/errores'
 import { alcanza } from '../../api/sesion'
 import { aDecimal } from '../../lib/dinero'
-import { formatearFecha, formatearImporte } from '../../lib/format'
-import { AVISO_CAMBIADA, ESTADOS, EXPLICACION_ESTADO, esFactura } from './textos'
+import { formatearEntero, formatearFecha, formatearImporte } from '../../lib/format'
+import ApuntesDelDiario from './ApuntesDelDiario'
+import { AVISO_CAMBIADA, EXPLICACION_ESTADO, FASES_PAGARE, aspectoDeEstado, esFactura } from './textos'
 
 interface Props {
   tipo: TipoDocumento
@@ -139,6 +146,70 @@ function DatosFactura({ factura }: { factura: FacturaBandeja }) {
   )
 }
 
+/** Aviso de que el registro forma parte de una remesa agrupada, con su lista y la opción de deshacerla. */
+function BloqueGrupo({
+  movimiento,
+  puedeDeshacer,
+  alDeshecho,
+}: {
+  movimiento: MovimientoBandeja
+  puedeDeshacer: boolean
+  alDeshecho: () => void
+}) {
+  const [grupo, setGrupo] = useState<Grupo | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const idGrupo = Number(movimiento.id_grupo)
+
+  useEffect(() => {
+    setGrupo(null)
+    obtenerGrupo(idGrupo)
+      .then(setGrupo)
+      .catch((fallo: unknown) => setError(textoDeError(fallo)))
+  }, [idGrupo])
+
+  async function deshacer() {
+    setError(null)
+    try {
+      await deshacerGrupo(idGrupo)
+      alDeshecho()
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    }
+  }
+
+  return (
+    <Alert color="indigo" title="Forma parte de un grupo">
+      <Text size="sm">
+        {formatearEntero(Number(movimiento.grupo_documentos))} documentos por {importe(movimiento.grupo_total)}, que en el
+        diario son un solo apunte
+        {grupo ? ` (asiento ${grupo.apunte.asiento} de ${grupo.apunte.ejercicio}, ${grupo.apunte.cuenta})` : ''}.
+      </Text>
+      {error && <Text size="sm" c="red">{error}</Text>}
+      {grupo && (
+        <Table mt="xs" withRowBorders={false}>
+          <Table.Tbody>
+            {grupo.lista.map((d) => (
+              <Table.Tr key={d.id}>
+                <Table.Td>{formatearFecha(d.fecha)}</Table.Td>
+                <Table.Td>{d.nombre_tercero}</Table.Td>
+                <Table.Td>{d.numero_factura}</Table.Td>
+                <Table.Td ta="right" ff="monospace">
+                  {importe(d.importe)}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
+      {puedeDeshacer && (
+        <Button mt="xs" size="xs" variant="default" color="red" onClick={() => void deshacer()}>
+          Deshacer el grupo
+        </Button>
+      )}
+    </Alert>
+  )
+}
+
 function DatosMovimiento({ movimiento }: { movimiento: MovimientoBandeja }) {
   const esCobro = movimiento.clase === 'cobro'
   return (
@@ -153,6 +224,14 @@ function DatosMovimiento({ movimiento }: { movimiento: MovimientoBandeja }) {
       <Dato rotulo="Cuenta">{movimiento.cuenta_tercero}</Dato>
       <Dato rotulo="Banco o caja">{movimiento.cuenta_tesoreria}</Dato>
       <Dato rotulo="Concepto">{movimiento.concepto}</Dato>
+      {movimiento.fase_pagare && FASES_PAGARE[movimiento.fase_pagare] && (
+        <>
+          <Dato rotulo="Medio de pago">{movimiento.medio_pago}</Dato>
+          <Dato rotulo="Fase">{FASES_PAGARE[movimiento.fase_pagare].nombre}</Dato>
+          <Dato rotulo="Vencimiento">{movimiento.fecha_vencimiento ? formatearFecha(movimiento.fecha_vencimiento) : ''}</Dato>
+          {movimiento.fecha_negociado && <Dato rotulo="Negociado">{formatearFecha(movimiento.fecha_negociado)}</Dato>}
+        </>
+      )}
       <Dato rotulo="Factura">
         {movimiento.numero_factura}
         {movimiento.fecha_factura ? ` del ${formatearFecha(movimiento.fecha_factura)}` : ''}
@@ -166,15 +245,30 @@ function DatosMovimiento({ movimiento }: { movimiento: MovimientoBandeja }) {
  * sobre él. Lo que ya tiene asiento no se resuelve aquí: primero se deshace
  * su contabilización desde la lista.
  */
+const valorDeCambio = (v: unknown) => (v === null || v === undefined || v === '' ? 'vacío' : String(v))
+
+function fechaDelRegistro(documento: DocumentoBandeja): string {
+  if ('libro' in documento) return documento.fecha_contable || documento.fecha_expedicion || ''
+  return documento.fecha || ''
+}
+
+function importeDelRegistro(documento: DocumentoBandeja, tipo: TipoDocumento): number {
+  return Number(esFactura(documento, tipo) ? documento.importe_total : (documento as MovimientoBandeja).importe)
+}
+
 export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado }: Props) {
   const [documento, setDocumento] = useState<DocumentoBandeja | null>(null)
+  // Texto de la anotación mientras se edita; nulo = sin cambios respecto a lo guardado.
+  const [nota, setNota] = useState<string | null>(null)
+  const [guardandoNota, setGuardandoNota] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [decidiendo, setDecidiendo] = useState<Decision | null>(null)
+  const [decidiendo, setDecidiendo] = useState<Decision | 'bloquear' | 'desbloquear' | null>(null)
 
   useEffect(() => {
     if (id === null) return
     setDocumento(null)
     setError(null)
+    setNota(null)
     obtenerDocumento(tipo, id)
       .then(setDocumento)
       .catch((fallo: unknown) => setError(textoDeError(fallo)))
@@ -195,8 +289,54 @@ export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado
     }
   }
 
+  async function guardarNota() {
+    if (id === null || nota === null) return
+    setError(null)
+    setGuardandoNota(true)
+    try {
+      await anotarDocumento(tipo, id, nota)
+      alCambiado()
+      const nuevo = await obtenerDocumento(tipo, id)
+      setDocumento(nuevo)
+      setNota(null)
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    } finally {
+      setGuardandoNota(false)
+    }
+  }
+
+  async function revisar(si: boolean) {
+    if (id === null) return
+    setError(null)
+    try {
+      const r = await revisarDocumentos(tipo, [id], si)
+      if (r.no_se_pueden.length > 0) setError(r.no_se_pueden[0].motivo)
+      alCambiado()
+      setDocumento(await obtenerDocumento(tipo, id))
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    }
+  }
+
+  async function bloquear(si: boolean) {
+    if (id === null) return
+    setError(null)
+    setDecidiendo(si ? 'bloquear' : 'desbloquear')
+    try {
+      const r = await bloquearDocumentos(tipo, [id], si)
+      if (r.no_se_pueden.length > 0) setError(r.no_se_pueden[0].motivo)
+      alCambiado()
+      setDocumento(await obtenerDocumento(tipo, id))
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    } finally {
+      setDecidiendo(null)
+    }
+  }
+
   const puedeDecidir = alcanza(nivel, 'apuntes')
-  const estado = documento ? ESTADOS[documento.estado] : undefined
+  const estado = documento ? aspectoDeEstado(documento) : undefined
   const titulo = tipo === 'facturas' ? 'Factura de Codiplika' : 'Cobro o pago de Codiplika'
 
   return (
@@ -224,11 +364,35 @@ export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado
               ) : null}
             </Group>
 
+            {documento.bloqueado === 1 && (
+              <Alert color="red">Bloqueado: no se contabiliza hasta que lo desbloquees.</Alert>
+            )}
+
             {documento.cambio_en_origen === 1 && (
               <Alert color="orange">
                 {AVISO_CAMBIADA}. El asiento no se ha tocado: si hay que corregirlo, deshaz la
                 contabilización y vuelve a traerla.
+                {documento.cambio_en_origen_detalle?.length ? (
+                  <List size="sm" mt="xs">
+                    {documento.cambio_en_origen_detalle.map((c) => (
+                      <List.Item key={c.campo}>
+                        {c.campo}: antes «{valorDeCambio(c.antes)}», ahora «{valorDeCambio(c.ahora)}»
+                      </List.Item>
+                    ))}
+                  </List>
+                ) : null}
               </Alert>
+            )}
+
+            {!esFactura(documento, tipo) && Number((documento as MovimientoBandeja).id_grupo) > 0 && (
+              <BloqueGrupo
+                movimiento={documento as MovimientoBandeja}
+                puedeDeshacer={puedeDecidir}
+                alDeshecho={() => {
+                  alCambiado()
+                  if (id !== null) obtenerDocumento(tipo, id).then(setDocumento)
+                }}
+              />
             )}
 
             {(documento.motivo || EXPLICACION_ESTADO[documento.estado]) && (
@@ -243,8 +407,68 @@ export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado
               <DatosMovimiento movimiento={documento as MovimientoBandeja} />
             )}
 
+            {fechaDelRegistro(documento) && (
+              <ApuntesDelDiario
+                fecha={fechaDelRegistro(documento)}
+                importe={importeDelRegistro(documento, tipo)}
+                cuentaTercero={documento.cuenta_tercero}
+                estado={documento.estado}
+              />
+            )}
+
+            <Stack gap={4}>
+              <Textarea
+                label="Anotación"
+                autosize
+                minRows={2}
+                maxLength={2000}
+                disabled={!puedeDecidir}
+                value={nota ?? documento.anotacion ?? ''}
+                onChange={(e) => setNota(e.currentTarget.value)}
+                description={
+                  documento.anotacion && nota === null
+                    ? `${documento.anotacion_por ? `${documento.anotacion_por}` : ''}${documento.anotacion_fecha ? ` · ${formatearFecha(documento.anotacion_fecha)}` : ''}`
+                    : undefined
+                }
+              />
+              {puedeDecidir && nota !== null && (
+                <Group justify="flex-end">
+                  <Button size="xs" variant="default" onClick={() => setNota(null)}>
+                    Deshacer
+                  </Button>
+                  <Button size="xs" loading={guardandoNota} onClick={() => void guardarNota()}>
+                    Guardar anotación
+                  </Button>
+                </Group>
+              )}
+            </Stack>
+
+            {puedeDecidir && (
+              <Checkbox
+                label={
+                  documento.revisado === 1
+                    ? `Revisado${documento.revisado_por ? ` por ${documento.revisado_por}` : ''}${documento.revisado_fecha ? ` el ${formatearFecha(documento.revisado_fecha)}` : ''}`
+                    : 'Marcar como revisado'
+                }
+                checked={documento.revisado === 1}
+                onChange={(e) => void revisar(e.currentTarget.checked)}
+              />
+            )}
+
             {puedeDecidir && (
               <Group justify="flex-end" gap="sm">
+                {documento.bloqueado === 1 ? (
+                  <Button variant="default" loading={decidiendo === 'desbloquear'} onClick={() => void bloquear(false)}>
+                    Desbloquear
+                  </Button>
+                ) : (
+                  documento.estado !== 'contabilizada' &&
+                  documento.estado !== 'descartada' && (
+                    <Button variant="default" loading={decidiendo === 'bloquear'} onClick={() => void bloquear(true)}>
+                      Bloquear
+                    </Button>
+                  )
+                )}
                 {documento.estado === 'en_conflicto' && (
                   <>
                     <Button
@@ -259,7 +483,18 @@ export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado
                     </Button>
                   </>
                 )}
-                {(documento.estado === 'pendiente' || documento.estado === 'en_conflicto') && (
+                {documento.estado === 'posible_duplicado' && (
+                  <>
+                    <Button
+                      variant="default"
+                      loading={decidiendo === 'importada'}
+                      onClick={() => void decidir('importada')}
+                    >
+                      No es el mismo
+                    </Button>
+                  </>
+                )}
+                {(documento.estado === 'pendiente' || documento.estado === 'en_conflicto' || documento.estado === 'posible_duplicado') && (
                   <Button
                     color="red"
                     variant="light"
@@ -276,6 +511,12 @@ export default function DialogoDocumento({ tipo, id, nivel, alCerrar, alCambiado
                 )}
               </Group>
             )}
+
+            <Group justify="flex-end">
+              <Button variant="default" onClick={alCerrar}>
+                Cerrar
+              </Button>
+            </Group>
           </>
         )}
       </Stack>

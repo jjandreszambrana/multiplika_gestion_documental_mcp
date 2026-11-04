@@ -94,9 +94,14 @@ export default function PantallaDiario({
   const [asientoRecienConfirmado, setAsientoRecienConfirmado] = useState<number | null>(null)
   /** La cuenta cuyo mayor se está mirando, sin salir del diario. */
   const [mayorDe, setMayorDe] = useState('')
+  /** El apunte pulsado al abrir el mayor, para llevarlo a su línea. */
+  const [paseMayor, setPaseMayor] = useState<number | undefined>(undefined)
   const [bajandoExcel, setBajandoExcel] = useState(false)
   const [errorExcel, setErrorExcel] = useState<string | null>(null)
-  const columnasTabla = useMemo(() => columnasDelDiario(setMayorDe), [])
+  const columnasTabla = useMemo(() => columnasDelDiario((cuenta, pase) => {
+    setPaseMayor(pase)
+    setMayorDe(cuenta)
+  }), [])
   const porDefecto = useMemo(() => filtroDeEntrada(ejercicio, cierre), [ejercicio, cierre])
   const [filtrando, setFiltrando] = useState(false)
   const [traspasando, setTraspasando] = useState(false)
@@ -633,9 +638,13 @@ export default function PantallaDiario({
           enseñarlo hacía la animación de apertura entera y saltaba todo. */}
       <ModalMayor
         cuenta={mayorDe}
+        pase={paseMayor}
         zIndex={150}
         ejercicio={ejercicio}
-        alCerrar={() => setMayorDe('')}
+        alCerrar={() => {
+          setMayorDe('')
+          setPaseMayor(undefined)
+        }}
         alEditarBorrador={
           puedeApuntar
             ? (id) => {

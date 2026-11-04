@@ -17,6 +17,8 @@ export interface AccionesDeBien {
   alAnadirMejora: (bien: Bien) => void
   alDejarDeAmortizar: (bien: Bien) => void
   alDarDeBaja: (bien: Bien) => void
+  /** Confirma el asiento que mueve las cuentas del bien; el cambio se hace con él. */
+  alConfirmarTraslado: (bien: Bien) => void
 }
 
 /**

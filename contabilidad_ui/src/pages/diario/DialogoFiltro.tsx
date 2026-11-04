@@ -129,6 +129,19 @@ export default function DialogoFiltro({ abierto, filtro, porDefecto, ancho, alAp
 
         <Group grow align="flex-start">
           <TextInput
+            label="Creado por"
+            value={borrador.usuario}
+            onChange={(e) => setBorrador({ ...borrador, usuario: e.currentTarget.value })}
+          />
+          <TextInput
+            label="Cambiado por"
+            value={borrador.usuarioModif}
+            onChange={(e) => setBorrador({ ...borrador, usuarioModif: e.currentTarget.value })}
+          />
+        </Group>
+
+        <Group grow align="flex-start">
+          <TextInput
             label="Asiento desde"
             inputMode="numeric"
             value={borrador.asientoDesde}

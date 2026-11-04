@@ -1,8 +1,10 @@
-import { Alert, Button, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core'
+import { ActionIcon, Alert, Button, Group, SegmentedControl, Stack, Text, TextInput, Title, Tooltip } from '@mantine/core'
+import { IconRefresh } from '@tabler/icons-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { esAbortada } from '../../api/cliente'
 import { textoDeError } from '../../api/errores'
+import { confirmarBorrador } from '../../api/borradores'
 import { listarBienes, type Bien } from '../../api/inmovilizado'
 import { alcanza } from '../../api/sesion'
 import BotonDeAyuda from '../../components/BotonDeAyuda'
@@ -14,6 +16,7 @@ import DialogoCambiarCuentas from './DialogoCambiarCuentas'
 import DialogoCorregirValor from './DialogoCorregirValor'
 import DialogoDejarDeAmortizar from './DialogoDejarDeAmortizar'
 import DialogoDotar from './DialogoDotar'
+import ModalMayor from '../informes/ModalMayor'
 import FichaBien from './FichaBien'
 
 interface Props {
@@ -58,6 +61,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
   const [aDarDeBaja, setADarDeBaja] = useState<Bien | null>(null)
   const [aCorregirValor, setACorregirValor] = useState<Bien | null>(null)
   const [aCambiarCuentas, setACambiarCuentas] = useState<Bien[] | null>(null)
+  const [mayorDe, setMayorDe] = useState('')
   const [recarga, setRecarga] = useState(0)
   const [ultimoEditado, setUltimoEditado] = useState<number | null>(leerUltimoEditado)
 
@@ -100,6 +104,16 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     rehacer()
   }
 
+  async function confirmarTraslado(bien: Bien) {
+    setError(null)
+    try {
+      await confirmarBorrador(Number(bien.traslado_pendiente))
+      marcarEditado(bien.id)
+    } catch (fallo) {
+      setError(textoDeError(fallo))
+    }
+  }
+
   /** Tras cualquier cambio, la lista se rehace: los totales han cambiado. */
   function rehacer() {
     setEnFormulario(null)
@@ -123,8 +137,10 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
               alAnadirMejora: (bien) => setEnFormulario({ bien: null, mejoraDe: bien }),
               alDejarDeAmortizar: setADejarDeAmortizar,
               alDarDeBaja: setADarDeBaja,
+              alConfirmarTraslado: confirmarTraslado,
             }
           : null,
+        setMayorDe,
       ),
     [apunta],
   )
@@ -154,6 +170,8 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
     positionToolbarAlertBanner: 'none',
     getSubRows: (fila) => fila.mejoras,
     filterFromLeafRows: true,
+    enableGlobalFilter: true,
+    globalFilterFn: 'contains',
     state: { isLoading: bienes === null },
     localization: {
       noRecordsToDisplay: 'Esta empresa no tiene ningún bien de inmovilizado.',
@@ -182,6 +200,17 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
           <BotonDeAyuda clave="amortizaciones" />
         </Group>
         <Group gap="sm">
+          <Tooltip label="Recargar el inmovilizado" withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Recargar el inmovilizado"
+              loading={bienes === null}
+              onClick={() => setRecarga((n) => n + 1)}
+            >
+              <IconRefresh size={20} />
+            </ActionIcon>
+          </Tooltip>
           <SegmentedControl
             size="xs"
             value={soloActivos ? 'activos' : 'todos'}
@@ -205,7 +234,7 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
       </Group>
 
       {error && (
-        <Alert color="red" role="alert" title="No se pudo cargar el inmovilizado">
+        <Alert color="red" role="alert" title="No se pudo completar">
           {error}
         </Alert>
       )}
@@ -224,7 +253,16 @@ export default function PantallaInmovilizado({ ejercicio, nivel, ancho }: Props)
         </Group>
       )}
 
+      <TextInput
+        aria-label="Buscar bien"
+        placeholder="Buscar por nombre, cuenta de activo, de amortización o de gasto…"
+        value={(tabla.getState().globalFilter as string) ?? ''}
+        onChange={(e) => tabla.setGlobalFilter(e.currentTarget.value)}
+      />
+
       <MantineReactTable table={tabla} />
+
+      <ModalMayor cuenta={mayorDe} ejercicio={ejercicio} alCerrar={() => setMayorDe('')} />
 
       <FichaBien idInmovilizado={fichaDe} ejercicio={ejercicio} alCerrar={() => setFichaDe(null)} />
 

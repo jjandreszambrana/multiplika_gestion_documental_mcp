@@ -18178,6 +18178,21 @@ export interface components {
              */
             usuario?: string | null;
             /**
+             * Id Usuario Modif
+             * @description ID del ultimo usuario que lo cambio. 0 = nadie lo ha cambiado.
+             */
+            id_usuario_modif?: number | null;
+            /**
+             * Usuario Modif
+             * @description Nombre del ultimo usuario que lo cambio.
+             */
+            usuario_modif?: string | null;
+            /**
+             * Fecha Modif
+             * @description Cuando se cambio por ultima vez. Vacio = nadie lo ha cambiado.
+             */
+            fecha_modif?: string | null;
+            /**
              * Registro
              * @description Fecha y hora en que se registro el apunte.
              */
@@ -28414,6 +28429,26 @@ export interface components {
              */
             documento?: string | null;
             /**
+             * Id Usuario
+             * @description Solo los asientos que CREO ese usuario.
+             */
+            id_usuario?: number | null;
+            /**
+             * Id Usuario Modif
+             * @description Solo los asientos que cambio por ultima vez ese usuario.
+             */
+            id_usuario_modif?: number | null;
+            /**
+             * Usuario
+             * @description Texto que aparezca en el nombre de quien CREO el asiento.
+             */
+            usuario?: string | null;
+            /**
+             * Usuario Modif
+             * @description Texto que aparezca en el nombre de quien lo cambio por ultima vez.
+             */
+            usuario_modif?: string | null;
+            /**
              * Asiento Desde
              * @description Numero de asiento minimo. Con desde y hasta iguales se ve un solo asiento.
              */
@@ -29295,6 +29330,26 @@ export interface components {
              * @description Texto que aparezca en la referencia externa. No distingue mayusculas ni acentos.
              */
             documento?: string | null;
+            /**
+             * Id Usuario
+             * @description Solo los asientos que CREO ese usuario.
+             */
+            id_usuario?: number | null;
+            /**
+             * Id Usuario Modif
+             * @description Solo los asientos que cambio por ultima vez ese usuario.
+             */
+            id_usuario_modif?: number | null;
+            /**
+             * Usuario
+             * @description Texto que aparezca en el nombre de quien CREO el asiento.
+             */
+            usuario?: string | null;
+            /**
+             * Usuario Modif
+             * @description Texto que aparezca en el nombre de quien lo cambio por ultima vez.
+             */
+            usuario_modif?: string | null;
             /**
              * Asiento Desde
              * @description Numero de asiento minimo. Con desde y hasta iguales se ve un solo asiento.

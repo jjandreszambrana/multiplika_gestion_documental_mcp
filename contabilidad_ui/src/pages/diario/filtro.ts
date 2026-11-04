@@ -19,6 +19,10 @@ export interface Filtro {
   diario: string
   concepto: string
   documento: string
+  /** Texto del nombre de quien creó el asiento. */
+  usuario: string
+  /** Texto del nombre de quien lo cambió por última vez. */
+  usuarioModif: string
   asientoDesde: string
   asientoHasta: string
   importeDesde: string
@@ -30,6 +34,8 @@ export const SIN_CONDICIONES: Omit<Filtro, 'desde' | 'hasta' | 'incluir'> = {
   diario: '',
   concepto: '',
   documento: '',
+  usuario: '',
+  usuarioModif: '',
   asientoDesde: '',
   asientoHasta: '',
   importeDesde: '',
@@ -81,6 +87,8 @@ export function resumenDeFiltro(filtro: Filtro): string {
   if (filtro.diario) partes.push(`diario ${filtro.diario}`)
   if (filtro.concepto) partes.push(`concepto «${filtro.concepto}»`)
   if (filtro.documento) partes.push(`documento «${filtro.documento}»`)
+  if (filtro.usuario) partes.push(`creado por «${filtro.usuario}»`)
+  if (filtro.usuarioModif) partes.push(`cambiado por «${filtro.usuarioModif}»`)
   if (filtro.asientoDesde && filtro.asientoDesde === filtro.asientoHasta) {
     partes.push(`asiento ${filtro.asientoDesde}`)
   } else if (filtro.asientoDesde || filtro.asientoHasta) {
@@ -125,6 +133,8 @@ export function normalizarFiltro(leido: unknown, porDefecto: Filtro): Filtro {
     diario: texto('diario'),
     concepto: texto('concepto'),
     documento: texto('documento'),
+    usuario: texto('usuario'),
+    usuarioModif: texto('usuarioModif'),
     asientoDesde: texto('asientoDesde'),
     asientoHasta: texto('asientoHasta'),
     importeDesde: texto('importeDesde'),

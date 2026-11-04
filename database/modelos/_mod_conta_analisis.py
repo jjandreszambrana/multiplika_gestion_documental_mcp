@@ -128,7 +128,7 @@ def asiento_valido(detalle: dict) -> dict:
     if abs(debe - haber) > TOLERANCIA_SALDO:
         raise ValueError(f"El asiento no cuadra: debe {debe:.2f} y haber {haber:.2f}")
     return {"fecha": detalle.get("fecha"), "concepto": detalle.get("concepto"), "apuntes": normalizados,
-            "total": round(debe, 2)}
+            "total": round(debe, 2), **({"documento": str(detalle["documento"])[:50]} if detalle.get("documento") else {})}
 
 
 # ---------- Informes del SIF, compactados para la IA ----------
@@ -140,6 +140,8 @@ COLUMNAS_INFORME = {
     "sumas_y_saldos": ("lineas", ["cuenta", "descripcion", "saldo_anterior", "debe", "haber", "saldo"]),
     "mayor": ("apuntes", ["fecha", "asiento", "concepto", "documento", "debe", "haber", "saldo"]),
     "diario": ("apuntes", ["fecha", "asiento", "cuenta", "concepto", "documento", "debe", "haber"]),
+    # El diario filtrado por quién creó o cambió el asiento (sale del listado de asientos, no del informe)
+    "diario_usuarios": ("apuntes", ["fecha", "asiento", "cuenta", "concepto", "documento", "debe", "haber", "usuario", "usuario_modif"]),
     "libros_iva": ("renglones", None),
 }
 CAMPOS_IMPORTE = ("saldo_anterior", "debe", "haber", "saldo")

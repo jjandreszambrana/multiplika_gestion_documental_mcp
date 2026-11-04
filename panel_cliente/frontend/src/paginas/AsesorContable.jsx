@@ -219,7 +219,7 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
 
   const conAcceso = accesos?.length > 0
   const empresa = empresas?.find((e) => String(e.id_empresa) === idEmpresa)
-  const deEmpresa = ["contabilidad", "propuestas", "conciliacion", "memoria"].includes(pestana)
+  const deEmpresa = ["contabilidad", "memoria"].includes(pestana)
   const sinAccesoQueFuncione = conAcceso && !empresas?.length
 
   return (
@@ -230,8 +230,6 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
         <Tabs.List style={{ flex: 1 }}>
           {conAcceso && <Tabs.Tab value="contabilidad">Contabilidad</Tabs.Tab>}
           <Tabs.Tab value="biblioteca">Biblioteca</Tabs.Tab>
-          {conAcceso && <Tabs.Tab value="propuestas">Propuestas</Tabs.Tab>}
-          {conAcceso && <Tabs.Tab value="conciliacion">Conciliación</Tabs.Tab>}
           {conAcceso && <Tabs.Tab value="memoria">Memoria anual</Tabs.Tab>}
         </Tabs.List>
         )}
@@ -260,13 +258,13 @@ function Contabilidad({ proyecto, cabecera, versionAccesos, onVerAccesos }) {
 
       <Tabs.Panel value="biblioteca"><Biblioteca proyecto={proyecto} /></Tabs.Panel>
       <Tabs.Panel value="contabilidad">
-        {abiertas.has("contabilidad") && empresa && <ContabilidadSIF key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} hueco={hueco} />}
-      </Tabs.Panel>
-      <Tabs.Panel value="propuestas">
-        {abiertas.has("propuestas") && empresa && <PropuestasContables key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
-      </Tabs.Panel>
-      <Tabs.Panel value="conciliacion">
-        {abiertas.has("conciliacion") && empresa && <Conciliacion key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}
+        {abiertas.has("contabilidad") && empresa && <ContabilidadSIF
+          key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} hueco={hueco}
+          extras={[
+            { id: "conciliacion", etiqueta: "Conciliación bancaria", contenido: <Conciliacion proyecto={proyecto} empresa={empresa} /> },
+            { id: "propuestas", etiqueta: "Propuestas", contenido: <PropuestasContables proyecto={proyecto} empresa={empresa} /> },
+          ]}
+        />}
       </Tabs.Panel>
       <Tabs.Panel value="memoria">
         {abiertas.has("memoria") && empresa && <MemoriaAnual key={empresa.id_empresa} proyecto={proyecto} empresa={empresa} />}

@@ -4,6 +4,7 @@ import {
 } from "@mantine/core"
 import { api } from "../../api"
 import Markdown from "../Markdown"
+import CuentaMayor from "./CuentaMayor"
 
 // Bandeja de propuestas de la IA y avisos de la revisión automática (ver
 // docs/contabilidad/planificacion.md → fase 4). Aceptar un asiento o un
@@ -24,7 +25,7 @@ function Asiento({ detalle }) {
         <Table.Tbody>
           {detalle.apuntes.map((a, i) => (
             <Table.Tr key={i}>
-              <Table.Td>{a.cuenta}</Table.Td><Table.Td>{a.concepto}</Table.Td>
+              <Table.Td><CuentaMayor cuenta={a.cuenta} ejercicio={String(detalle.fecha || "").slice(0, 4)} /></Table.Td><Table.Td>{a.concepto}</Table.Td>
               <Table.Td ta="right" style={{ fontVariantNumeric: "tabular-nums" }}>{importe(a.debe)}</Table.Td>
               <Table.Td ta="right" style={{ fontVariantNumeric: "tabular-nums" }}>{importe(a.haber)}</Table.Td>
             </Table.Tr>
@@ -40,6 +41,16 @@ function Propuesta({ proyecto, propuesta, onResuelta, onError }) {
   const [motivo, setMotivo] = useState("")
   const [trabajando, setTrabajando] = useState(false)
   const pendiente = propuesta.estado === "pendiente"
+
+  const deshacer = () => {
+    setTrabajando(true)
+    api
+      .deshacerPropuestaContable(proyecto.id, propuesta.id)
+      .then(onResuelta)
+      .catch((err) => onError(err.message))
+      .finally(() => setTrabajando(false))
+  }
+  const enDiario = propuesta.estado === "aceptada" && propuesta.tipo === "asiento" && propuesta.detalle?.borrador
 
   const resolver = (aceptar) => {
     setTrabajando(true)
@@ -84,13 +95,24 @@ function Propuesta({ proyecto, propuesta, onResuelta, onError }) {
         {pendiente ? (
           <Group align="flex-end" wrap="wrap">
             <Button onClick={() => resolver(true)} loading={trabajando}>
-              {propuesta.tipo === "memoria" ? "Aceptar y guardar en el SIF" : propuesta.tipo === "aviso" ? "Revisado" : "Aceptar (la paso yo al SIF)"}
+              {propuesta.tipo === "memoria" ? "Aceptar y guardar en el SIF" : propuesta.tipo === "aviso" ? "Revisado" : propuesta.tipo === "asiento" ? "Aceptar y dejar en Diario" : "Aceptar (la paso yo al SIF)"}
             </Button>
             <Textarea id={`motivo-${propuesta.id}`} aria-label="Motivo de descartarla" placeholder="Motivo (opcional)" autosize minRows={1} value={motivo} onChange={(e) => setMotivo(e.currentTarget.value)} style={{ flex: 1, minWidth: 200 }} />
             <Button variant="default" onClick={() => resolver(false)} loading={trabajando}>Descartar</Button>
           </Group>
         ) : (
-          <Text fz="sm" c="dimmed">{propuesta.estado === "aceptada" ? "Aceptada" : `Descartada${propuesta.motivo_descarte ? `: ${propuesta.motivo_descarte}` : ""}`}</Text>
+          <Group justify="space-between" wrap="wrap">
+            <Text fz="sm" c="dimmed">
+              {propuesta.estado === "aceptada"
+                ? (propuesta.tipo === "asiento"
+                  ? (propuesta.detalle?.borrador?.final === "confirmado" ? "Aceptada: ya está confirmado en el Diario" : "Aceptada: queda en el Diario, pendiente de que lo confirmes allí")
+                  : "Aceptada")
+                : `Descartada${propuesta.motivo_descarte ? `: ${propuesta.motivo_descarte}` : ""}`}
+            </Text>
+            {enDiario && propuesta.detalle.borrador.final !== "confirmado" && (
+              <Button size="compact-xs" variant="default" onClick={deshacer} loading={trabajando}>Deshacer (quitar del Diario)</Button>
+            )}
+          </Group>
         )}
       </Stack>
     </Card>

@@ -14,6 +14,7 @@ export const COLUMNAS_DE_FABRICA: MRT_VisibilityState = {
   diario: false,
   id_obra: false,
   usuario: false,
+  usuario_modif: false,
   registro: false,
 }
 
@@ -61,7 +62,7 @@ function Importe({ valor }: { valor: Apunte['debe'] }) {
  * `alVerMayor` abre el mayor de esa cuenta sin salir del diario. Es lo que se
  * mira al toparse con un apunte y querer saber qué lleva esa cuenta.
  */
-export function columnasDelDiario(alVerMayor: (cuenta: string) => void): MRT_ColumnDef<Apunte>[] {
+export function columnasDelDiario(alVerMayor: (cuenta: string, pase?: number) => void): MRT_ColumnDef<Apunte>[] {
   return [
     {
       accessorKey: 'fecha',
@@ -122,7 +123,7 @@ export function columnasDelDiario(alVerMayor: (cuenta: string) => void): MRT_Col
             onClick={(e) => {
               // La fila tiene su propio clic para marcarla: verlo no la marca.
               e.stopPropagation()
-              alVerMayor(row.original.cuenta)
+              alVerMayor(row.original.cuenta, row.original.pase)
             }}
           >
             {row.original.cuenta}
@@ -141,7 +142,8 @@ export function columnasDelDiario(alVerMayor: (cuenta: string) => void): MRT_Col
     { accessorKey: 'documento', header: 'Documento', size: 140, grow: false },
     { accessorKey: 'diario', header: 'Diario', size: 90, grow: false },
     { accessorKey: 'id_obra', header: 'Obra', size: 80, grow: false },
-    { accessorKey: 'usuario', header: 'Usuario', size: 120, grow: false },
+    { accessorKey: 'usuario', header: 'Creado por', size: 120, grow: false },
+    { accessorKey: 'usuario_modif', header: 'Cambiado por', size: 120, grow: false },
     {
       accessorKey: 'registro',
       header: 'Fecha de registro',

@@ -1,5 +1,4 @@
 import { Modal } from '@mantine/core'
-import { usePlanEnMemoria } from '../../components/PlanEnMemoria'
 import VistaMayor from './VistaMayor'
 
 interface Props {
@@ -21,6 +20,8 @@ interface Props {
   alEditarBorrador?: (idBorrador: number) => void
   /** Cambia para volver a pedir el mayor tras corregir uno de sus borradores. */
   refresco?: number
+  /** Apunte desde el que se abre: el mayor se desplaza a su línea. */
+  pase?: number
 }
 
 /**
@@ -34,16 +35,15 @@ export default function ModalMayor({
   alCerrar,
   alEditarBorrador,
   refresco,
+  pase,
 }: Props) {
-  const plan = usePlanEnMemoria()
-  const titulo = plan.porCodigo.get(cuenta)?.descripcion ?? ''
 
   return (
     <Modal
       opened={cuenta !== '' && ejercicio !== null}
       zIndex={zIndex}
       onClose={alCerrar}
-      title={titulo === '' ? `Mayor de ${cuenta}` : `Mayor de ${cuenta} · ${titulo}`}
+      title="Mayor"
       size="90%"
       centered
     >
@@ -54,6 +54,7 @@ export default function ModalMayor({
           cuenta={cuenta}
           alEditarBorrador={alEditarBorrador}
           refresco={refresco}
+          pase={pase}
         />
       )}
     </Modal>
