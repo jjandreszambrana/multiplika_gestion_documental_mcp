@@ -385,7 +385,7 @@ export default function App() {
   // El laboratorio no desplaza toda la página: solo sus tablas, con filtros y cabeceras fijos
   const enLab = vista === "laboratorio" && !idDocumentoActivo
   const pantallaContable = enConta
-  const menuOculto = (pantallaContable || enErp) && !menuAbierto
+  const menuOculto = (pantallaContable || enErp || enLab) && !menuAbierto
 
   return (
     <AppShell
@@ -475,7 +475,10 @@ export default function App() {
               onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)} onAlternarChat={alternarChat}
             />
           ) : vista === "laboratorio" ? (
-            <Laboratorio proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")} />
+            <Laboratorio
+              proyecto={proyecto} onVerAccesos={() => navegar("accesos-sif")}
+              onAlternarMenu={() => setMenuAbierto((abierto) => !abierto)} onAlternarChat={alternarChat}
+            />
           ) : vista === "accesos-sif" ? (
             <AccesosSif proyecto={proyecto} onVolver={() => navegar("inicio")} onCambiar={() => setVersionAccesos((v) => v + 1)} />
           ) : vista === "ayuda" ? (

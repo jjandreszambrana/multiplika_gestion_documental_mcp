@@ -13,13 +13,15 @@ export interface PropsEmbebidoLaboratorio {
   idProyecto: number
   /** Número de la empresa en la GD: va en la dirección del proxy. */
   idEmpresa: number
+  /** Pantalla que se enseña (la elige el menú del panel): muestras, facturar, catalogos o portal. */
+  seccion: string
 }
 
 /**
  * El laboratorio dentro del panel de la GD. Es independiente de la
  * contabilidad: tiene su propio proxy y su propia conexión al SIF.
  */
-export default function EmbebidoLaboratorio({ sesion, idProyecto, idEmpresa }: PropsEmbebidoLaboratorio) {
+export default function EmbebidoLaboratorio({ sesion, idProyecto, idEmpresa, seccion }: PropsEmbebidoLaboratorio) {
   // En el render y no en un efecto: los efectos de las pantallas corren antes.
   configurarLaboratorio({
     prefijo: `${sesion.base()}/proyectos/${idProyecto}/laboratorio/sif/proxy/${idEmpresa}`,
@@ -50,7 +52,7 @@ export default function EmbebidoLaboratorio({ sesion, idProyecto, idEmpresa }: P
           El laboratorio no está habilitado para esta empresa en el SIF. Pídeselo a quien administre el SIF.
         </Alert>
       ) : (
-        <PantallaLaboratorio estado={estado} alActivado={() => setVuelta((n) => n + 1)} />
+        <PantallaLaboratorio seccion={seccion} estado={estado} alActivado={() => setVuelta((n) => n + 1)} />
       )}
     </DatesProvider>
   )

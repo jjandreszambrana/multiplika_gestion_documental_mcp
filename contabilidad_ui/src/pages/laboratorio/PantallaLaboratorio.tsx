@@ -1,4 +1,4 @@
-import { Alert, Button, Stack, Tabs, Text, Title } from '@mantine/core'
+import { Alert, Button, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import { activarLaboratorio, type EstadoLaboratorio } from '../../api/laboratorio'
@@ -8,16 +8,16 @@ import PestanaFacturar from './PestanaFacturar'
 import PestanaMuestras from './PestanaMuestras'
 import PestanaPortal from './PestanaPortal'
 
-const PANEL_FIJO = { ...PESTANA_FIJA, display: 'flex', flexDirection: 'column' } as const
-
 interface Props {
+  /** Qué pantalla enseñar: muestras, facturar, catalogos o portal. */
+  seccion: string
   estado: EstadoLaboratorio
   /** Tras activarlo, para que el marco vuelva a preguntar. */
   alActivado: () => void
 }
 
 /** Las pantallas del personal del laboratorio ([5.54]). */
-export default function PantallaLaboratorio({ estado, alActivado }: Props) {
+export default function PantallaLaboratorio({ seccion, estado, alActivado }: Props) {
   const [activando, setActivando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,29 +49,18 @@ export default function PantallaLaboratorio({ estado, alActivado }: Props) {
     )
   }
 
+  // La pestaña la elige el menú del panel anfitrión, a la izquierda.
   return (
     <Stack gap="md" style={PESTANA_FIJA}>
-      <Title order={3}>Laboratorio</Title>
-      <Tabs defaultValue="muestras" keepMounted={false} style={{ ...PESTANA_FIJA, display: 'flex', flexDirection: 'column' }}>
-        <Tabs.List>
-          <Tabs.Tab value="muestras">Muestras</Tabs.Tab>
-          <Tabs.Tab value="facturar">Facturar</Tabs.Tab>
-          <Tabs.Tab value="catalogos">Catálogos</Tabs.Tab>
-          <Tabs.Tab value="portal">Portal de clientes</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="muestras" pt="md" style={PANEL_FIJO}>
-          <PestanaMuestras />
-        </Tabs.Panel>
-        <Tabs.Panel value="facturar" pt="md" style={PANEL_FIJO}>
-          <PestanaFacturar />
-        </Tabs.Panel>
-        <Tabs.Panel value="catalogos" pt="md" style={PANEL_FIJO}>
-          <PestanaCatalogos />
-        </Tabs.Panel>
-        <Tabs.Panel value="portal" pt="md" style={PANEL_FIJO}>
-          <PestanaPortal />
-        </Tabs.Panel>
-      </Tabs>
+      {seccion === 'facturar' ? (
+        <PestanaFacturar />
+      ) : seccion === 'catalogos' ? (
+        <PestanaCatalogos />
+      ) : seccion === 'portal' ? (
+        <PestanaPortal />
+      ) : (
+        <PestanaMuestras />
+      )}
     </Stack>
   )
 }
