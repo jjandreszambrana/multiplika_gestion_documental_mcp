@@ -5,7 +5,7 @@
  * ve el usuario son las etiquetas.
  */
 
-export type TipoCampo = 'texto' | 'area' | 'entero' | 'numero' | 'si_no' | 'lista'
+export type TipoCampo = 'texto' | 'area' | 'entero' | 'numero' | 'si_no' | 'lista' | 'color'
 
 /** De dónde salen las opciones de un campo que apunta a otra fila. */
 export type Origen = { catalogo: string; etiqueta: string } | 'articulos' | { fijas: readonly [string, string][] }
@@ -89,11 +89,11 @@ export const CATALOGOS: Catalogo[] = [
   {
     id: 'estados',
     etiqueta: 'Estados',
-    columnas: ['codigo', 'denominacion', 'orden', 'publica_cliente', 'activo'],
+    columnas: ['codigo', 'denominacion', 'color', 'orden', 'publica_cliente', 'activo'],
     campos: [
       { clave: 'codigo', etiqueta: 'Código', tipo: 'entero', obligatorio: true },
       { clave: 'denominacion', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true },
-      { clave: 'color', etiqueta: 'Color', tipo: 'texto' },
+      { clave: 'color', etiqueta: 'Color de la fila', tipo: 'color' },
       { clave: 'orden', etiqueta: 'Orden', tipo: 'entero' },
       { clave: 'publica_cliente', etiqueta: 'El cliente ve sus informes en este estado', tipo: 'si_no' },
       ACTIVO,

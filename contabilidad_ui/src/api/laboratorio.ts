@@ -77,6 +77,9 @@ export interface ResumenMuestra {
   punto_toma: string | null
   id_estado: number
   estado: string
+  /** Color de fondo de la fila (hexadecimal) y código del estado. */
+  color_estado?: string | null
+  codigo_estado?: number
   importe_neto: number | string | null
   id_albaran: number | null
   id_factura: number | null
@@ -125,6 +128,13 @@ export interface Informe {
 /** Lo que se puede dar de alta o editar de una muestra, sin las líneas. */
 export interface DatosMuestra {
   id_receptor?: number | null
+  /** Cliente escrito a mano; solo vale si no hay `id_receptor`. */
+  cliente_nif?: string | null
+  cliente_nombre?: string | null
+  cliente_direccion?: string | null
+  cliente_localidad?: string | null
+  cliente_codigo_postal?: string | null
+  cliente_provincia?: string | null
   fecha_toma?: string | null
   fecha_entrada?: string | null
   fecha_prevista?: string | null

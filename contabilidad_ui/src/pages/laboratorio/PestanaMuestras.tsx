@@ -97,7 +97,7 @@ export default function PestanaMuestras() {
 
       {lista.error && <Alert color="red">{lista.error}</Alert>}
 
-      <Table highlightOnHover stickyHeader>
+      <Table stickyHeader>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Nº</Table.Th>
@@ -112,7 +112,7 @@ export default function PestanaMuestras() {
         </Table.Thead>
         <Table.Tbody>
           {(lista.datos?.registros ?? []).map((m) => (
-            <Table.Tr key={m.id} onClick={() => setAbierta(m.id)} style={{ cursor: 'pointer' }}>
+            <Table.Tr key={m.id} onClick={() => setAbierta(m.id)} style={{ cursor: 'pointer', backgroundColor: m.color_estado || undefined, color: m.color_estado ? '#212529' : undefined }}>
               <Table.Td>{m.numero_entrada}</Table.Td>
               <Table.Td>{m.cliente_nombre}</Table.Td>
               <Table.Td>{m.referencia}</Table.Td>

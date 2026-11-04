@@ -36,6 +36,12 @@ const idTexto = (v: number | null | undefined) => (v ? String(v) : null)
 function inicialesDe(m: Muestra | null): Valores {
   return {
     id_receptor: idTexto(m?.id_receptor),
+    cliente_nif: texto(m?.cliente_nif),
+    cliente_nombre: m?.id_receptor ? '' : texto(m?.cliente_nombre),
+    cliente_direccion: texto(m?.cliente_direccion),
+    cliente_localidad: texto(m?.cliente_localidad),
+    cliente_codigo_postal: texto(m?.cliente_codigo_postal),
+    cliente_provincia: texto(m?.cliente_provincia),
     fecha_toma: texto(m?.fecha_toma).slice(0, 10),
     fecha_entrada: texto(m?.fecha_entrada).slice(0, 10),
     fecha_prevista: texto(m?.fecha_prevista).slice(0, 10),
@@ -115,7 +121,18 @@ export default function FormularioMuestra({ muestra, alCerrar, alGuardada }: Pro
           onChange={poner('id_receptor')}
           searchable
           clearable
+          description="Elige uno de la lista o déjalo vacío y escríbelo a mano"
         />
+        {!v.id_receptor && (
+          <SimpleGrid cols={2}>
+            <TextInput label="Nombre del cliente" {...texto_('cliente_nombre')} />
+            <TextInput label="NIF" {...texto_('cliente_nif')} />
+            <TextInput label="Dirección" {...texto_('cliente_direccion')} />
+            <TextInput label="Localidad" {...texto_('cliente_localidad')} />
+            <TextInput label="Código postal" {...texto_('cliente_codigo_postal')} />
+            <TextInput label="Provincia" {...texto_('cliente_provincia')} />
+          </SimpleGrid>
+        )}
         <SimpleGrid cols={3}>
           <CasillaFecha label="Fecha de toma" {...fecha('fecha_toma')} />
           <CasillaFecha label="Fecha de entrada" {...fecha('fecha_entrada')} />

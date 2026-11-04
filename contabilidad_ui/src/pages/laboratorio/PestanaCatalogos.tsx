@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, Modal, NumberInput, Select, Stack, Switch, Table, Text, Textarea, TextInput } from '@mantine/core'
+import { Alert, Badge, Button, ColorInput, Group, Modal, NumberInput, Select, Stack, Switch, Table, Text, Textarea, TextInput } from '@mantine/core'
 import { Fragment, useState } from 'react'
 import { textoDeError } from '../../api/errores'
 import {
@@ -86,7 +86,13 @@ export default function PestanaCatalogos() {
             <Table.Tr key={f.id} onClick={() => setEdicion(f)} style={{ cursor: 'pointer' }}>
               {columnas.map((c) => (
                 <Table.Td key={c.clave}>
-                  {c.clave === 'activo' && !Number(f.activo) ? <Badge color="gray">Sin uso</Badge> : textoDe(c, f, opciones.datos ?? {})}
+                  {c.clave === 'activo' && !Number(f.activo) ? (
+                    <Badge color="gray">Sin uso</Badge>
+                  ) : c.tipo === 'color' ? (
+                    f[c.clave] ? <Badge style={{ backgroundColor: String(f[c.clave]), color: '#212529' }}>{String(f[c.clave])}</Badge> : null
+                  ) : (
+                    textoDe(c, f, opciones.datos ?? {})
+                  )}
                 </Table.Td>
               ))}
             </Table.Tr>
@@ -176,6 +182,8 @@ function DialogoCatalogo({ catalogo, fila, opciones, alCerrar, alGuardada }: Pro
             return <Switch {...comun} checked={Boolean(v[c.clave])} onChange={(e) => cambiar(e.currentTarget.checked)} />
           if (c.tipo === 'lista')
             return <Select {...comun} data={opciones[c.clave] ?? []} value={(v[c.clave] as string) || null} onChange={cambiar} searchable clearable={!c.obligatorio} />
+          if (c.tipo === 'color')
+            return <ColorInput {...comun} format="hex" value={String(v[c.clave] ?? '')} onChange={cambiar} />
           if (c.tipo === 'area')
             return <Textarea {...comun} autosize minRows={2} value={String(v[c.clave] ?? '')} onChange={(e) => cambiar(e.currentTarget.value)} />
           if (c.tipo === 'entero' || c.tipo === 'numero')
