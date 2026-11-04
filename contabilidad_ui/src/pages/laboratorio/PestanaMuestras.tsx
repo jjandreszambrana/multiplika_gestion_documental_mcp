@@ -6,7 +6,7 @@ import { CasillaFecha } from '../../components/CasillaFecha'
 import { fechaDeApi, fechaParaApi } from '../../lib/fecha'
 import { formatearEntero, formatearFecha } from '../../lib/format'
 import { FILAS_POR_PAGINA, importeLab, useCarga, CUERPO_SCROLL, PESTANA_FIJA } from './comun'
-import Confirmar from './Confirmar'
+import DialogoDuplicar, { type OpcionesDuplicado } from './DialogoDuplicar'
 import FichaMuestra from './FichaMuestra'
 import FormularioMuestra from './FormularioMuestra'
 
@@ -57,8 +57,8 @@ export default function PestanaMuestras() {
       return n
     })
 
-  /** Copia los datos y los parámetros de cada muestra marcada; los resultados quedan en blanco. */
-  async function duplicar() {
+  /** Copia los datos y los parámetros de cada muestra marcada, con las fechas elegidas; solo las fechas de toma y entrada se rellenan. */
+  async function duplicar(opciones: OpcionesDuplicado) {
     let hechas = 0
     for (const id of [...marcadas]) {
       const o = await obtenerMuestra(id)
@@ -70,9 +70,10 @@ export default function PestanaMuestras() {
         cliente_localidad: o.cliente_localidad,
         cliente_codigo_postal: o.cliente_codigo_postal,
         cliente_provincia: o.cliente_provincia,
-        fecha_toma: o.fecha_toma,
-        fecha_entrada: o.fecha_entrada,
-        fecha_prevista: o.fecha_prevista,
+        fecha_toma: `${opciones.fecha_toma}T00:00:00`,
+        fecha_entrada: `${opciones.fecha_entrada}T00:00:00`,
+        fecha_prevista: null,
+        fecha_informe: null,
         referencia: o.referencia,
         punto_toma: o.punto_toma,
         normativa: o.normativa,
@@ -89,6 +90,7 @@ export default function PestanaMuestras() {
           id_parametro: l.id_parametro,
           grupo: l.grupo,
           parametro: l.parametro,
+          resultado: opciones.conservarResultados ? l.resultado : null,
           unidad: l.unidad,
           metodo: l.metodo,
           limite: l.limite,
@@ -98,7 +100,9 @@ export default function PestanaMuestras() {
       hechas += 1
     }
     setMarcadas(new Set())
-    setHecho(`${hechas === 1 ? 'Se ha duplicado 1 muestra' : `Se han duplicado ${hechas} muestras`}, con sus parámetros y sin resultados.`)
+    setHecho(
+      `${hechas === 1 ? 'Se ha duplicado 1 muestra' : `Se han duplicado ${hechas} muestras`}, con sus parámetros y ${opciones.conservarResultados ? 'con' : 'sin'} resultados.`,
+    )
     lista.recargar()
   }
 
@@ -213,13 +217,7 @@ export default function PestanaMuestras() {
       </Group>
 
       {duplicando && (
-        <Confirmar
-          titulo="Duplicar muestras"
-          texto={`Se crearán ${marcadas.size} muestras nuevas con los mismos datos y parámetros, sin resultados.`}
-          etiqueta="Duplicar"
-          alConfirmar={duplicar}
-          alCerrar={() => setDuplicando(false)}
-        />
+        <DialogoDuplicar cantidad={marcadas.size} alDuplicar={duplicar} alCerrar={() => setDuplicando(false)} />
       )}
       {abierta !== null && (
         <FichaMuestra id={abierta} alCerrar={() => setAbierta(null)} alCambiar={lista.recargar} />
