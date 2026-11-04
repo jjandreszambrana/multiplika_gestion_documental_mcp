@@ -438,8 +438,8 @@ export default function App() {
             </Container>
           </Box>
         )}
-        <Box h="100%" p={enErp ? "xs" : "xl"} hidden={enConta} style={enLab ? { overflow: "hidden", display: "flex", flexDirection: "column" } : { overflowY: "auto" }}>
-        <Container size="lg" px={0} fluid={enErp} style={enLab ? { flex: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column" } : undefined}>
+        <Box h="100%" p={enErp || enLab ? "xs" : "xl"} hidden={enConta} style={enLab ? { overflow: "hidden", display: "flex", flexDirection: "column" } : { overflowY: "auto" }}>
+        <Container size="lg" px={0} fluid={enErp || enLab} style={enLab ? { flex: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column" } : undefined}>
           {idDocumentoActivo ? (
             <DocumentoDetalle
               proyecto={proyecto}
